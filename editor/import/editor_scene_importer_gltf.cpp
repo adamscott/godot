@@ -514,6 +514,10 @@ Error EditorSceneImporterGLTF::_parse_accessors(GLTFState &state) {
 			accessor.min = d["min"];
 		}
 
+		if (d.has("normalized")) {
+			accessor.normalized = d["normalized"];
+		}
+
 		if (d.has("sparse")) {
 			//eeh..
 
