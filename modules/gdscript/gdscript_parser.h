@@ -302,6 +302,8 @@ public:
 		int start_column = 0, end_column = 0;
 		int leftmost_column = 0, rightmost_column = 0;
 		Node *next = nullptr;
+		Vector<String> header_comment;
+		String inline_comment;
 		List<AnnotationNode *> annotations;
 #ifdef DEBUG_ENABLED
 		Vector<GDScriptWarning::Code> ignored_warnings;
@@ -350,6 +352,7 @@ public:
 
 	struct ArrayNode : public ExpressionNode {
 		Vector<ExpressionNode *> elements;
+		Vector<String> footer_comments;
 
 		ArrayNode() {
 			type = ARRAY;
@@ -466,6 +469,7 @@ public:
 		Vector<ExpressionNode *> arguments;
 		StringName function_name;
 		bool is_super = false;
+		Vector<String> params_footer_comment;
 
 		CallNode() {
 			type = CALL;
@@ -713,6 +717,13 @@ public:
 		bool annotated_static_unload = false;
 		String extends_path;
 		Vector<IdentifierNode *> extends; // List for indexing: extends A.B.C
+		String extends_inline_comment;
+		Vector<String> extends_header_comment;
+		String tool_inline_comment;
+		Vector<String> tool_header_comment;
+		String icon_inline_comment;
+		Vector<String> icon_header_comment;
+		Vector<String> footer_comment;
 		DataType base_type;
 		String fqcn; // Fully-qualified class name. Identifies uniquely any class in the project.
 #ifdef TOOLS_ENABLED
@@ -780,6 +791,7 @@ public:
 			ExpressionNode *value = nullptr;
 		};
 		Vector<Pair> elements;
+		Vector<String> footer_comments;
 
 		enum Style {
 			LUA_TABLE,
@@ -820,6 +832,7 @@ public:
 
 		bool resolved_signature = false;
 		bool resolved_body = false;
+		Vector<String> params_footer_comments;
 
 		FunctionNode() {
 			type = FUNCTION;
@@ -898,6 +911,8 @@ public:
 
 	struct LiteralNode : public ExpressionNode {
 		Variant value;
+		bool is_builtin_constant = false;
+		GDScriptTokenizer::Token::Type constant_type = GDScriptTokenizer::Token::EMPTY;
 
 		LiteralNode() {
 			type = LITERAL;
@@ -1001,6 +1016,7 @@ public:
 		IdentifierNode *identifier = nullptr;
 		Vector<ParameterNode *> parameters;
 		HashMap<StringName, int> parameters_indices;
+		bool has_empty_parameter_list = false;
 #ifdef TOOLS_ENABLED
 		String doc_description;
 #endif // TOOLS_ENABLED
@@ -1110,6 +1126,7 @@ public:
 		Local empty;
 		Vector<Local> locals;
 		HashMap<StringName, int> locals_indices;
+		Vector<String> footer_comment;
 
 		FunctionNode *parent_function = nullptr;
 		IfNode *parent_if = nullptr;
@@ -1301,6 +1318,7 @@ private:
 	CompletionContext completion_context;
 	CompletionCall completion_call;
 	List<CompletionCall> completion_call_stack;
+	Vector<String> last_comment_block;
 	bool passed_cursor = false;
 	bool in_lambda = false;
 	bool lambda_ended = false; // Marker for when a lambda ends, to apply an end of statement if needed.
@@ -1389,6 +1407,8 @@ private:
 	}
 #endif
 
+	String turn_disabled_lines_into_headers(const String &p_source);
+
 	void make_completion_context(CompletionType p_type, Node *p_node, int p_argument = -1, bool p_force = false);
 	void make_completion_context(CompletionType p_type, Variant::Type p_builtin_type, bool p_force = false);
 	void push_completion_call(Node *p_call);
@@ -1437,6 +1457,8 @@ private:
 	bool rpc_annotation(const AnnotationNode *p_annotation, Node *p_target);
 	bool static_unload_annotation(const AnnotationNode *p_annotation, Node *p_target);
 	// Statements.
+	Vector<String> check_for_comment_block();
+	String check_for_comment();
 	Node *parse_statement();
 	VariableNode *parse_variable(bool p_is_static);
 	VariableNode *parse_variable(bool p_is_static, bool p_allow_property);
