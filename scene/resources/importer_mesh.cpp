@@ -643,7 +643,18 @@ Ref<ArrayMesh> ImporterMesh::get_mesh(const Ref<ArrayMesh> &p_base) {
 			Array bs_data;
 			if (surfaces[i].blend_shape_data.size()) {
 				for (int j = 0; j < surfaces[i].blend_shape_data.size(); j++) {
-					bs_data.push_back(surfaces[i].blend_shape_data[j].arrays);
+					Array bs = surfaces[i].blend_shape_data[j].arrays;
+
+					// Enforce blend shape array format
+					for (int k = 0; k < bs.size(); k++) {
+						if (bs[k].get_type() != Variant::NIL) {
+							if (((1 << k) | RS::ARRAY_FORMAT_BLEND_SHAPE_MASK) != RS::ARRAY_FORMAT_BLEND_SHAPE_MASK) {
+								bs[k] = Variant();
+							}
+						}
+					}
+
+					bs_data.push_back(bs);
 				}
 			}
 			Dictionary lods;
