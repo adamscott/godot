@@ -1045,7 +1045,12 @@ void Variant::callp(const StringName &p_method, const Variant **p_args, int p_ar
 		}
 
 #endif
-		r_ret = _get_obj().obj->callp(p_method, p_args, p_argcount, r_error);
+		Ref<WeakRef> this_wref = *this;
+		if (this_wref.is_valid()) {
+			r_ret = this_wref->get_ref()._get_obj().obj->callp(p_method, p_args, p_argcount, r_error);
+		} else {
+			r_ret = _get_obj().obj->callp(p_method, p_args, p_argcount, r_error);
+		}
 
 	} else {
 		r_error.error = Callable::CallError::CALL_OK;
