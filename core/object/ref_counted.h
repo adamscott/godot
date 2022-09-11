@@ -55,8 +55,6 @@ public:
 
 template <class T>
 class Ref {
-	T *reference = nullptr;
-
 	void ref(const Ref &p_from) {
 		if (p_from.reference == reference) {
 			return;
@@ -77,6 +75,9 @@ class Ref {
 			reference = p_ref;
 		}
 	}
+
+protected:
+	T *reference = nullptr;
 
 	//virtual RefCounted * get_reference() const { return reference; }
 public:
