@@ -3218,9 +3218,16 @@ void GDScriptAnalyzer::reduce_preload(GDScriptParser::PreloadNode *p_preload) {
 		if (!ResourceLoader::exists(p_preload->resolved_path)) {
 			push_error(vformat(R"(Preload file "%s" does not exist.)", p_preload->resolved_path), p_preload->path);
 		} else {
-			p_preload->resource = GDScriptCache::get_shallow_script(p_preload->resolved_path, parser->script_path);
-			if (p_preload->resource.is_null()) {
-				push_error(vformat(R"(Could not preload resource file "%s".)", p_preload->resolved_path), p_preload->path);
+			if (ResourceLoader::get_resource_type(p_preload->resolved_path) == "GDScript") {
+				p_preload->resource = GDScriptCache::get_shallow_script(p_preload->resolved_path, parser->script_path);
+				if (p_preload->resource.is_null()) {
+					push_error(vformat(R"(Could not preload script file "%s".)", p_preload->resolved_path), p_preload->path);
+				}
+			} else {
+				p_preload->resource = ResourceLoader::load(p_preload->resolved_path);
+				if (p_preload->resource.is_null()) {
+					push_error(vformat(R"(Could not preload resource file "%s".)", p_preload->resolved_path), p_preload->path);
+				}
 			}
 		}
 	}
