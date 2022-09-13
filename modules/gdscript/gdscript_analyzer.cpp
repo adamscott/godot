@@ -3271,9 +3271,9 @@ void GDScriptAnalyzer::reduce_subscript(GDScriptParser::SubscriptNode *p_subscri
 			Variant value = p_subscript->base->reduced_value.get_named(p_subscript->attribute->name, valid);
 
 			if (!valid && Ref<GDScript>(p_subscript->base->reduced_value).is_valid()) {
-				// Maybe the script isn't compiled yet. Let's try to load it.
+				// Maybe the script isn't compiled yet. Let's try to reload it.
 				Ref<GDScript> script = p_subscript->base->reduced_value;
-				p_subscript->base->reduced_value = ResourceLoader::load(script->get_path());
+				script->reload();
 				value = p_subscript->base->reduced_value.get_named(p_subscript->attribute->name, valid);
 			}
 
