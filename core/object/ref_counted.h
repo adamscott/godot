@@ -217,7 +217,7 @@ public:
 		// do a lot of referencing on references and stuff
 		// mutexes will avoid more crashes?
 
-		if (reference && reference->unreference()) {
+		if (reference && reference->reference_get_count() > 0 && reference->unreference()) {
 			memdelete(reference);
 		}
 		reference = nullptr;
