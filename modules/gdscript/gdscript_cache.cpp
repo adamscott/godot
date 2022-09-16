@@ -203,13 +203,13 @@ Ref<GDScript> GDScriptCache::get_shallow_script(const String &p_path, const Stri
 		singleton->dependencies[p_owner].insert(p_path);
 	}
 	if (singleton->full_gdscript_cache.has(p_path)) {
-		if (singleton->full_gdscript_cache[p_path]->reference_get_count() == 0) {
+		if (singleton->full_gdscript_cache[p_path] == nullptr) {
 			return Ref<GDScript>(nullptr);
 		}
 		return singleton->full_gdscript_cache[p_path];
 	}
 	if (singleton->shallow_gdscript_cache.has(p_path)) {
-		if (singleton->shallow_gdscript_cache[p_path]->reference_get_count() == 0) {
+		if (singleton->shallow_gdscript_cache[p_path] == nullptr) {
 			return Ref<GDScript>(nullptr);
 		}
 		return singleton->shallow_gdscript_cache[p_path];
