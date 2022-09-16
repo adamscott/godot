@@ -112,7 +112,7 @@ void GDScriptCache::remove_script(const String &p_path) {
 	MutexLock lock(singleton->lock);
 
 	for (String dependency : singleton->dependencies[p_path]) {
-		if (singleton->dependencies[dependency].has(dependency)) {
+		if (singleton->dependencies[dependency].has(p_path)) {
 			return;
 		}
 	}
@@ -120,7 +120,7 @@ void GDScriptCache::remove_script(const String &p_path) {
 	remove_dependencies(p_path);
 }
 
-void GDScriptCache::remove_dependencies(const String &p_path) {
+void GDScriptCache::remove_dependencies(const String &p_path, const bool &repeat) {
 	MutexLock lock(singleton->lock);
 
 	if (singleton->shallow_gdscript_cache.has(p_path)) {
@@ -145,8 +145,12 @@ void GDScriptCache::remove_dependencies(const String &p_path) {
 		singleton->full_gdscript_cache.erase(p_path);
 	}
 
+	if (!repeat) {
+		return;
+	}
+
 	for (String dependency : singleton->dependencies[p_path]) {
-		remove_dependencies(dependency);
+		remove_dependencies(dependency, !singleton->dependencies[dependency].has(p_path));
 	}
 }
 
@@ -269,8 +273,6 @@ Error GDScriptCache::finish_compiling(const String &p_owner) {
 			err = this_err;
 		}
 	}
-
-	singleton->dependencies.erase(p_owner);
 
 	return err;
 }

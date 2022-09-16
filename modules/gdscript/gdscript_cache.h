@@ -82,7 +82,7 @@ class GDScriptCache {
 	static GDScriptCache *singleton;
 
 	Mutex lock;
-	static void remove_dependencies(const String &p_path);
+	static void remove_dependencies(const String &p_path, const bool &repeat = true);
 
 public:
 	static Ref<GDScriptParserRef> get_parser(const String &p_path, GDScriptParserRef::Status status, Error &r_error, const String &p_owner = String());
