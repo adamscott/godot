@@ -590,10 +590,6 @@ GDScriptTest::TestResult GDScriptTest::execute_test_code(bool p_is_generating) {
 
 	GDScriptCache::remove_script(source_file);
 
-	if (obj_ref.is_null()) {
-		memdelete(obj);
-	}
-
 	enable_stdout();
 	return result;
 }
