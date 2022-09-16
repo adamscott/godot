@@ -455,20 +455,15 @@ GDScriptTest::TestResult GDScriptTest::execute_test_code(bool p_is_generating) {
 	result.output = String();
 	result.passed = false;
 
-	Error err = OK;
-
-	// Create script.
-	Ref<GDScript> script;
-	script.instantiate();
-	script->set_path(source_file);
-	script->set_script_path(source_file);
-	err = script->load_source_code(source_file);
-	if (err != OK) {
+	Ref<GDScript> script = GDScriptCache::get_shallow_script(source_file);
+	if (script.is_null()) {
 		enable_stdout();
 		result.status = GDTEST_LOAD_ERROR;
 		result.passed = false;
 		ERR_FAIL_V_MSG(result, "\nCould not load source code for: '" + source_file + "'");
 	}
+
+	Error err = OK;
 
 	// Test parsing.
 	GDScriptParser parser;
