@@ -110,8 +110,44 @@ GDScriptCache *GDScriptCache::singleton = nullptr;
 
 void GDScriptCache::remove_script(const String &p_path) {
 	MutexLock lock(singleton->lock);
-	singleton->shallow_gdscript_cache.erase(p_path);
-	singleton->full_gdscript_cache.erase(p_path);
+
+	for (String dependency : singleton->dependencies[p_path]) {
+		if (singleton->dependencies[dependency].has(dependency)) {
+			return;
+		}
+	}
+
+	remove_dependencies(p_path);
+}
+
+void GDScriptCache::remove_dependencies(const String &p_path) {
+	MutexLock lock(singleton->lock);
+
+	if (singleton->shallow_gdscript_cache.has(p_path)) {
+		int reference_count = singleton->shallow_gdscript_cache[p_path]->reference_get_count();
+		if (reference_count > 1) {
+			for (int i = 1; i < reference_count; i++) {
+				singleton->shallow_gdscript_cache[p_path]->unreference();
+			}
+		}
+
+		singleton->shallow_gdscript_cache.erase(p_path);
+	}
+
+	if (singleton->full_gdscript_cache.has(p_path)) {
+		int reference_count = singleton->full_gdscript_cache[p_path]->reference_get_count();
+		if (reference_count > 1) {
+			for (int i = 1; i < reference_count; i++) {
+				singleton->full_gdscript_cache[p_path]->unreference();
+			}
+		}
+
+		singleton->full_gdscript_cache.erase(p_path);
+	}
+
+	for (String dependency : singleton->dependencies[p_path]) {
+		remove_dependencies(dependency);
+	}
 }
 
 Ref<GDScriptParserRef> GDScriptCache::get_parser(const String &p_path, GDScriptParserRef::Status p_status, Error &r_error, const String &p_owner) {
@@ -221,7 +257,7 @@ Error GDScriptCache::finish_compiling(const String &p_owner) {
 	singleton->full_gdscript_cache[p_owner] = script.ptr();
 	singleton->shallow_gdscript_cache.erase(p_owner);
 
-	HashSet<String> depends = singleton->dependencies[p_owner];
+	RBSet<String> depends = singleton->dependencies[p_owner];
 
 	Error err = OK;
 	for (const String &E : depends) {

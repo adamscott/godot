@@ -74,7 +74,7 @@ class GDScriptCache {
 	HashMap<String, GDScriptParserRef *> parser_map;
 	HashMap<String, GDScript *> shallow_gdscript_cache;
 	HashMap<String, GDScript *> full_gdscript_cache;
-	HashMap<String, HashSet<String>> dependencies;
+	HashMap<String, RBSet<String>> dependencies;
 
 	friend class GDScript;
 	friend class GDScriptParserRef;
@@ -83,6 +83,7 @@ class GDScriptCache {
 
 	Mutex lock;
 	static void remove_script(const String &p_path);
+	static void remove_dependencies(const String &p_path);
 
 public:
 	static Ref<GDScriptParserRef> get_parser(const String &p_path, GDScriptParserRef::Status status, Error &r_error, const String &p_owner = String());
