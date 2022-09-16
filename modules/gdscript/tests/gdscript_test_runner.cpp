@@ -588,11 +588,11 @@ GDScriptTest::TestResult GDScriptTest::execute_test_code(bool p_is_generating) {
 		result.passed = check_output(result.output);
 	}
 
+	GDScriptCache::remove_script(source_file);
+
 	if (obj_ref.is_null()) {
 		memdelete(obj);
 	}
-
-	GDScriptCache::remove_script(source_file);
 
 	enable_stdout();
 	return result;
