@@ -82,7 +82,6 @@ class GDScriptCache {
 	static GDScriptCache *singleton;
 
 	Mutex lock;
-	static void remove_script(const String &p_path);
 	static void remove_dependencies(const String &p_path);
 
 public:
@@ -91,6 +90,7 @@ public:
 	static Ref<GDScript> get_shallow_script(const String &p_path, const String &p_owner = String());
 	static Ref<GDScript> get_full_script(const String &p_path, Error &r_error, const String &p_owner = String());
 	static Error finish_compiling(const String &p_owner);
+	static void remove_script(const String &p_path);
 
 	GDScriptCache();
 	~GDScriptCache();
