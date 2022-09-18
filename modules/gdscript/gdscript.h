@@ -214,6 +214,8 @@ public:
 	virtual void set_source_code(const String &p_code) override;
 	virtual void update_exports() override;
 
+	virtual void clear();
+
 #ifdef TOOLS_ENABLED
 	virtual Vector<DocData::ClassDoc> get_documentation() const override {
 		return docs;

@@ -874,9 +874,7 @@ Error GDScript::reload(bool p_keep_state) {
 		}
 		if (!source_path.is_empty()) {
 			MutexLock lock(GDScriptCache::singleton->lock);
-			if (!GDScriptCache::singleton->shallow_gdscript_cache.has(source_path)) {
-				GDScriptCache::singleton->shallow_gdscript_cache[source_path] = this;
-			}
+			GDScriptCache::get_shallow_script(source_path);
 		}
 	}
 
@@ -1256,7 +1254,7 @@ void GDScript::_init_rpc_methods_properties() {
 	}
 }
 
-GDScript::~GDScript() {
+void GDScript::clear() {
 	{
 		MutexLock lock(GDScriptLanguage::get_singleton()->lock);
 
@@ -1280,13 +1278,13 @@ GDScript::~GDScript() {
 		memdelete(implicit_ready);
 	}
 
+	_save_orphaned_subclasses();
+
 	if (GDScriptCache::singleton) { // Cache may have been already destroyed at engine shutdown.
 		GDScriptCache::remove_script(get_path());
 	}
 
-	_save_orphaned_subclasses();
-
-#ifdef TOOLS_ENABLED
+	#ifdef TOOLS_ENABLED
 	// Clearing inner class doc, script doc only cleared when the script source deleted.
 	if (_owner) {
 		_clear_doc();
@@ -1300,6 +1298,10 @@ GDScript::~GDScript() {
 		GDScriptLanguage::get_singleton()->script_list.remove(&script_list);
 	}
 #endif
+}
+
+GDScript::~GDScript() {
+	clear();
 }
 
 //////////////////////////////

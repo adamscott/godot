@@ -124,10 +124,12 @@ void GDScriptCache::remove_dependencies(const String &p_source, const String &p_
 	MutexLock lock(singleton->lock);
 
 	if (singleton->shallow_gdscript_cache.has(p_path)) {
+		singleton->shallow_gdscript_cache[p_path]->clear();
 		singleton->shallow_gdscript_cache.erase(p_path);
 	}
 
 	if (singleton->full_gdscript_cache.has(p_path)) {
+		singleton->full_gdscript_cache[p_path]->clear();
 		singleton->full_gdscript_cache.erase(p_path);
 	}
 
