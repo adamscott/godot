@@ -117,40 +117,24 @@ void GDScriptCache::remove_script(const String &p_path) {
 		}
 	}
 
-	remove_dependencies(p_path);
+	remove_dependencies(p_path, p_path);
 }
 
-void GDScriptCache::remove_dependencies(const String &p_path, const bool &repeat) {
+void GDScriptCache::remove_dependencies(const String &p_source, const String &p_path, const bool &repeat) {
 	MutexLock lock(singleton->lock);
 
 	if (singleton->shallow_gdscript_cache.has(p_path)) {
-		int reference_count = singleton->shallow_gdscript_cache[p_path]->reference_get_count();
-		if (reference_count > 1) {
-			for (int i = 1; i < reference_count; i++) {
-				singleton->shallow_gdscript_cache[p_path]->unreference();
-			}
-		}
-
 		singleton->shallow_gdscript_cache.erase(p_path);
 	}
 
 	if (singleton->full_gdscript_cache.has(p_path)) {
-		int reference_count = singleton->full_gdscript_cache[p_path]->reference_get_count();
-		if (reference_count > 1) {
-			for (int i = 1; i < reference_count; i++) {
-				singleton->full_gdscript_cache[p_path]->unreference();
-			}
-		}
-
 		singleton->full_gdscript_cache.erase(p_path);
 	}
 
-	if (!repeat) {
-		return;
-	}
-
-	for (String dependency : singleton->dependencies[p_path]) {
-		remove_dependencies(dependency, !singleton->dependencies[dependency].has(p_path));
+	if (repeat) {
+		for (String dependency : singleton->dependencies[p_path]) {
+			remove_dependencies(p_source, dependency, !singleton->dependencies[dependency].has(p_path));
+		}
 	}
 }
 
