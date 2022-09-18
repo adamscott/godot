@@ -1254,7 +1254,7 @@ void GDScript::_init_rpc_methods_properties() {
 	}
 }
 
-void GDScript::clear() {
+GDScript::~GDScript() {
 	{
 		MutexLock lock(GDScriptLanguage::get_singleton()->lock);
 
@@ -1298,10 +1298,6 @@ void GDScript::clear() {
 		GDScriptLanguage::get_singleton()->script_list.remove(&script_list);
 	}
 #endif
-}
-
-GDScript::~GDScript() {
-	clear();
 }
 
 //////////////////////////////
