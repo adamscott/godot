@@ -2356,6 +2356,9 @@ GDScriptLanguage::~GDScriptLanguage() {
 		}
 
 		s = s->next();
+
+		print_line(vformat(R"(script %s %s: %s)", script->get_path(), script, script->reference_get_count()));
+
 		script->unreference();
 	}
 
@@ -2388,7 +2391,7 @@ Ref<Resource> ResourceFormatLoaderGDScript::load(const String &p_path, const Str
 	}
 
 	Error err;
-	Ref<GDScript> script = GDScriptCache::get_full_script(p_path, err);
+	Ref<GDScript> script = GDScriptCache::get_full_script(p_path, err)->get_script();
 
 	// TODO: Reintroduce binary and encrypted scripts.
 

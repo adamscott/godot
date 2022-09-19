@@ -38,6 +38,7 @@
 #include "core/object/script_language.h"
 #include "core/templates/hash_map.h"
 #include "gdscript.h"
+#include "gdscript_cache.h"
 #include "gdscript_utility_functions.h"
 
 static MethodInfo info_from_utility_func(const StringName &p_function) {
@@ -3219,10 +3220,15 @@ void GDScriptAnalyzer::reduce_preload(GDScriptParser::PreloadNode *p_preload) {
 			push_error(vformat(R"(Preload file "%s" does not exist.)", p_preload->resolved_path), p_preload->path);
 		} else {
 			if (ResourceLoader::get_resource_type(p_preload->resolved_path) == "GDScript") {
-				p_preload->resource = GDScriptCache::get_shallow_script(p_preload->resolved_path, parser->script_path);
-				if (p_preload->resource.is_null()) {
-					push_error(vformat(R"(Could not preload script file "%s".)", p_preload->resolved_path), p_preload->path);
+				Ref<GDScriptRef> wref = GDScriptCache::get_shallow_script(p_preload->resolved_path, parser->script_path);
+				if (wref->get_script() != nullptr) {
+					p_preload->resource = wref->get_script();
+					p_preload->is_constant = true;
+					p_preload->reduced_value = p_preload->resource;
+					p_preload->set_datatype(type_from_variant(wref->get_script(), p_preload));
+					return;
 				}
+				push_error(vformat(R"(Could not preload script file "%s".)", p_preload->resolved_path), p_preload->path);
 			} else {
 				p_preload->resource = ResourceLoader::load(p_preload->resolved_path);
 				if (p_preload->resource.is_null()) {
@@ -3273,7 +3279,7 @@ void GDScriptAnalyzer::reduce_subscript(GDScriptParser::SubscriptNode *p_subscri
 			if (!valid && Ref<GDScript>(p_subscript->base->reduced_value).is_valid()) {
 				// Maybe the script isn't compiled yet. Let's try to reload it.
 				Ref<GDScript> script = p_subscript->base->reduced_value;
-				Error err;
+				Error err = OK;
 				GDScriptCache::get_full_script(script->get_path(), err);
 				if (err == OK) {
 					value = p_subscript->base->reduced_value.get_named(p_subscript->attribute->name, valid);

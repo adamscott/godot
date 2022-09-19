@@ -69,11 +69,21 @@ public:
 	~GDScriptParserRef();
 };
 
+class GDScriptRef : public WeakRef {
+public:
+	Ref<GDScript> get_script() const {
+		return get_ref();
+	};
+	void set_script(const Ref<GDScript> &p_ref) {
+		set_ref(p_ref);
+	};
+};
+
 class GDScriptCache {
 	// String key is full path.
 	HashMap<String, GDScriptParserRef *> parser_map;
-	HashMap<String, GDScript *> shallow_gdscript_cache;
-	HashMap<String, GDScript *> full_gdscript_cache;
+	HashMap<String, Ref<GDScript>> shallow_gdscript_cache;
+	HashMap<String, Ref<GDScript>> full_gdscript_cache;
 	HashMap<String, RBSet<String>> dependencies;
 
 	friend class GDScript;
@@ -87,8 +97,8 @@ class GDScriptCache {
 public:
 	static Ref<GDScriptParserRef> get_parser(const String &p_path, GDScriptParserRef::Status status, Error &r_error, const String &p_owner = String());
 	static String get_source_code(const String &p_path);
-	static Ref<GDScript> get_shallow_script(const String &p_path, const String &p_owner = String());
-	static Ref<GDScript> get_full_script(const String &p_path, Error &r_error, const String &p_owner = String());
+	static Ref<GDScriptRef> get_shallow_script(const String &p_path, const String &p_owner = String());
+	static Ref<GDScriptRef> get_full_script(const String &p_path, Error &r_error, const String &p_owner = String());
 	static Error finish_compiling(const String &p_owner);
 	static void remove_script(const String &p_path);
 

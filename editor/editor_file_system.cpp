@@ -43,6 +43,8 @@
 #include "editor/editor_paths.h"
 #include "editor/editor_resource_preview.h"
 #include "editor/editor_settings.h"
+#include "modules/gdscript/gdscript.h"
+#include "modules/gdscript/gdscript_cache.h"
 
 EditorFileSystem *EditorFileSystem::singleton = nullptr;
 //the name is the version, to keep compatibility with different versions of Godot
@@ -919,7 +921,12 @@ void EditorFileSystem::_scan_new_dir(EditorFileSystemDirectory *p_dir, Ref<DirAc
 		for (int i = 0; i < ScriptServer::get_language_count(); i++) {
 			ScriptLanguage *lang = ScriptServer::get_language(i);
 			if (lang->supports_documentation() && fi->type == lang->get_type()) {
-				Ref<Script> script = ResourceLoader::load(path);
+				Ref<Script> script = nullptr;
+				if (fi->type == "GDScript") {
+					script = GDScriptCache::get_shallow_script(path)->get_script();
+				} else {
+					script = ResourceLoader::load(path);
+				}
 				if (script == nullptr) {
 					continue;
 				}
