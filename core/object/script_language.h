@@ -235,6 +235,16 @@ public:
 	virtual ~ScriptCodeCompletionCache() {}
 };
 
+class ScriptRef : public WeakRef {
+public:
+	Ref<Script> get_ref() const {
+		return WeakRef::get_ref();
+	};
+	void set_ref(const Ref<Script> &p_ref) {
+		WeakRef::set_ref(p_ref);
+	};
+};
+
 class ScriptLanguage : public Object {
 	GDCLASS(ScriptLanguage, Object)
 public:
@@ -361,7 +371,7 @@ public:
 
 	struct LookupResult {
 		LookupResultType type;
-		Ref<Script> script;
+		Ref<ScriptRef> script;
 		String class_name;
 		String class_member;
 		String class_path;
@@ -481,16 +491,6 @@ public:
 
 	PlaceHolderScriptInstance(ScriptLanguage *p_language, Ref<Script> p_script, Object *p_owner);
 	~PlaceHolderScriptInstance();
-};
-
-class ScriptRef : public WeakRef {
-public:
-	Ref<Script> get_ref() const {
-		return WeakRef::get_ref();
-	};
-	void set_ref(const Ref<Script> &p_ref) {
-		WeakRef::set_ref(p_ref);
-	};
 };
 
 #endif // SCRIPT_LANGUAGE_H

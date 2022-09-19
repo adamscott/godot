@@ -31,6 +31,7 @@
 #include "gdscript.h"
 
 #include "core/config/engine.h"
+#include "core/object/script_language.h"
 #include "core/core_constants.h"
 #include "core/io/file_access.h"
 #include "gdscript_analyzer.h"
@@ -1011,42 +1012,42 @@ static void _find_identifiers_in_base(const GDScriptCompletionIdentifier &p_base
 				base_type = GDScriptParser::DataType();
 			} break;
 			case GDScriptParser::DataType::SCRIPT: {
-				Ref<Script> scr = base_type.script_type;
-				if (scr.is_valid()) {
+				Ref<ScriptRef> wref = base_type.script_type;
+				if (wref.is_valid() && wref->get_ref() != nullptr) {
 					if (!p_only_functions) {
 						if (!_static) {
 							List<PropertyInfo> members;
-							scr->get_script_property_list(&members);
+							wref->get_ref()->get_script_property_list(&members);
 							for (const PropertyInfo &E : members) {
-								int location = p_recursion_depth + _get_property_location(scr->get_class_name(), E.class_name);
+								int location = p_recursion_depth + _get_property_location(wref->get_ref()->get_class_name(), E.class_name);
 								ScriptLanguage::CodeCompletionOption option(E.name, ScriptLanguage::CODE_COMPLETION_KIND_MEMBER, location);
 								r_result.insert(option.display, option);
 							}
 						}
 						HashMap<StringName, Variant> constants;
-						scr->get_constants(&constants);
+						wref->get_ref()->get_constants(&constants);
 						for (const KeyValue<StringName, Variant> &E : constants) {
-							int location = p_recursion_depth + _get_constant_location(scr->get_class_name(), E.key);
+							int location = p_recursion_depth + _get_constant_location(wref->get_ref()->get_class_name(), E.key);
 							ScriptLanguage::CodeCompletionOption option(E.key.operator String(), ScriptLanguage::CODE_COMPLETION_KIND_CONSTANT, location);
 							r_result.insert(option.display, option);
 						}
 
 						List<MethodInfo> signals;
-						scr->get_script_signal_list(&signals);
+						wref->get_ref()->get_script_signal_list(&signals);
 						for (const MethodInfo &E : signals) {
-							int location = p_recursion_depth + _get_signal_location(scr->get_class_name(), E.name);
+							int location = p_recursion_depth + _get_signal_location(wref->get_ref()->get_class_name(), E.name);
 							ScriptLanguage::CodeCompletionOption option(E.name, ScriptLanguage::CODE_COMPLETION_KIND_SIGNAL, location);
 							r_result.insert(option.display, option);
 						}
 					}
 
 					List<MethodInfo> methods;
-					scr->get_script_method_list(&methods);
+					wref->get_ref()->get_script_method_list(&methods);
 					for (const MethodInfo &E : methods) {
 						if (E.name.begins_with("@")) {
 							continue;
 						}
-						int location = p_recursion_depth + _get_method_location(scr->get_class_name(), E.name);
+						int location = p_recursion_depth + _get_method_location(wref->get_ref()->get_class_name(), E.name);
 						ScriptLanguage::CodeCompletionOption option(E.name, ScriptLanguage::CODE_COMPLETION_KIND_FUNCTION, location);
 						if (E.arguments.size()) {
 							option.insert_text += "(";
@@ -1056,12 +1057,15 @@ static void _find_identifiers_in_base(const GDScriptCompletionIdentifier &p_base
 						r_result.insert(option.display, option);
 					}
 
-					Ref<Script> base_script = scr->get_base_script();
+					Ref<Script> base_script = wref->get_ref()->get_base_script();
 					if (base_script.is_valid()) {
-						base_type.script_type = base_script;
+						Ref<ScriptRef> wr;
+						wr.instantiate();
+						wr->set_ref(base_script);
+						base_type.script_type = wr;
 					} else {
 						base_type.kind = GDScriptParser::DataType::NATIVE;
-						base_type.native_type = scr->get_instance_base_type();
+						base_type.native_type = wref->get_ref()->get_instance_base_type();
 					}
 				} else {
 					return;
@@ -3051,28 +3055,32 @@ static Error _lookup_symbol_from_base(const GDScriptParser::DataType &p_base, co
 						r_result.type = ScriptLanguage::LOOKUP_RESULT_SCRIPT_LOCATION;
 						r_result.location = base_type.class_type->get_member(p_symbol).get_line();
 						r_result.class_path = base_type.script_path;
-						r_result.script = GDScriptCache::get_shallow_script(r_result.class_path)->get_script();
+						r_result.script = GDScriptCache::get_shallow_script(r_result.class_path);
 						return OK;
 					}
 					base_type = base_type.class_type->base_type;
 				}
 			} break;
 			case GDScriptParser::DataType::SCRIPT: {
-				Ref<Script> scr = base_type.script_type;
-				if (scr.is_valid()) {
-					int line = scr->get_member_line(p_symbol);
+				Ref<ScriptRef> wref = base_type.script_type;
+				if (wref.is_valid() && wref->get_ref() != nullptr) {
+					int line = wref->get_ref()->get_member_line(p_symbol);
 					if (line >= 0) {
 						r_result.type = ScriptLanguage::LOOKUP_RESULT_SCRIPT_LOCATION;
 						r_result.location = line;
-						r_result.script = scr;
+						r_result.script = wref;
 						return OK;
 					}
-					Ref<Script> base_script = scr->get_base_script();
+
+					Ref<Script> base_script = wref->get_ref()->get_base_script();
 					if (base_script.is_valid()) {
-						base_type.script_type = base_script;
+						Ref<ScriptRef> wr;
+						wr.instantiate();
+						wr->set_ref(base_script);
+						base_type.script_type = wr;
 					} else {
 						base_type.kind = GDScriptParser::DataType::NATIVE;
-						base_type.native_type = scr->get_instance_base_type();
+						base_type.native_type = wref->get_ref()->get_instance_base_type();
 					}
 				} else {
 					base_type.kind = GDScriptParser::DataType::UNRESOLVED;

@@ -30,6 +30,7 @@
 
 #include "gdscript_function.h"
 
+#include "core/object/script_language.h"
 #include "gdscript.h"
 
 const int *GDScriptFunction::get_code() const {
