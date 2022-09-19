@@ -3234,7 +3234,7 @@ void GDScriptAnalyzer::reduce_preload(GDScriptParser::PreloadNode *p_preload) {
 				if (wref->get_ref() != nullptr) {
 					p_preload->resource = wref;
 					p_preload->is_constant = true;
-					p_preload->reduced_value = p_preload->resource;
+					p_preload->reduced_value = wref;
 					p_preload->set_datatype(type_from_variant(wref, p_preload));
 					return;
 				}
