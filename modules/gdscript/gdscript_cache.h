@@ -69,13 +69,23 @@ public:
 	~GDScriptParserRef();
 };
 
-class GDScriptRef : public WeakRef {
+class ScriptRef : public WeakRef {
 public:
-	Ref<GDScript> get_script() const {
-		return get_ref();
+	Ref<Script> get_ref() const {
+		return WeakRef::get_ref();
 	};
-	void set_script(const Ref<GDScript> &p_ref) {
-		set_ref(p_ref);
+	void set_ref(const Ref<Script> &p_ref) {
+		WeakRef::set_ref(p_ref);
+	};
+};
+
+class GDScriptRef : public ScriptRef {
+public:
+	Ref<GDScript> get_ref() const {
+		return ScriptRef::get_ref();
+	};
+	void set_ref(const Ref<GDScript> &p_ref) {
+		ScriptRef::set_ref(p_ref);
 	};
 };
 

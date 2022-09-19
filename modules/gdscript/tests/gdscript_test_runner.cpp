@@ -458,7 +458,7 @@ GDScriptTest::TestResult GDScriptTest::execute_test_code(bool p_is_generating) {
 	result.output = String();
 	result.passed = false;
 
-	Ref<GDScript> script = GDScriptCache::get_shallow_script(source_file)->get_script();
+	Ref<GDScript> script = GDScriptCache::get_shallow_script(source_file)->get_ref();
 	if (script.is_null()) {
 		enable_stdout();
 		result.status = GDTEST_LOAD_ERROR;

@@ -214,7 +214,7 @@ Ref<GDScriptRef> GDScriptCache::get_shallow_script(const String &p_path, const S
 	Ref<GDScriptRef> wref;
 	wref.instantiate();
 	if (script.is_valid()) {
-		wref->set_script(singleton->shallow_gdscript_cache[p_path]);
+		wref->set_ref(singleton->shallow_gdscript_cache[p_path]);
 	} else {
 		// print_line(vformat(R"(Error: %s is not valid)", script));
 	}
@@ -236,7 +236,7 @@ Ref<GDScriptRef> GDScriptCache::get_full_script(const String &p_path, Error &r_e
 	if (singleton->full_gdscript_cache.has(p_path)) {
 		Ref<GDScriptRef> wref;
 		wref.instantiate();
-		wref->set_script(singleton->full_gdscript_cache[p_path]);
+		wref->set_ref(singleton->full_gdscript_cache[p_path]);
 		return wref;
 	}
 
@@ -244,7 +244,7 @@ Ref<GDScriptRef> GDScriptCache::get_full_script(const String &p_path, Error &r_e
 	if (script.is_null()) {
 		Ref<GDScriptRef> wref;
 		wref.instantiate();
-		wref->set_script(Ref<GDScript>());
+		wref->set_ref(Ref<GDScript>());
 		return wref;
 	}
 
@@ -264,7 +264,7 @@ Ref<GDScriptRef> GDScriptCache::get_full_script(const String &p_path, Error &r_e
 
 	Ref<GDScriptRef> wref;
 	wref.instantiate();
-	wref->set_script(singleton->full_gdscript_cache[p_path]);
+	wref->set_ref(singleton->full_gdscript_cache[p_path]);
 	return wref;
 }
 

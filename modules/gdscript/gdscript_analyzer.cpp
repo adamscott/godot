@@ -3221,11 +3221,11 @@ void GDScriptAnalyzer::reduce_preload(GDScriptParser::PreloadNode *p_preload) {
 		} else {
 			if (ResourceLoader::get_resource_type(p_preload->resolved_path) == "GDScript") {
 				Ref<GDScriptRef> wref = GDScriptCache::get_shallow_script(p_preload->resolved_path, parser->script_path);
-				if (wref->get_script() != nullptr) {
-					p_preload->resource = wref->get_script();
+				if (wref->get_ref() != nullptr) {
+					p_preload->resource = wref->get_ref();
 					p_preload->is_constant = true;
 					p_preload->reduced_value = p_preload->resource;
-					p_preload->set_datatype(type_from_variant(wref->get_script(), p_preload));
+					p_preload->set_datatype(type_from_variant(wref->get_ref(), p_preload));
 					return;
 				}
 				push_error(vformat(R"(Could not preload script file "%s".)", p_preload->resolved_path), p_preload->path);
