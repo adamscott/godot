@@ -79,17 +79,23 @@ class GDScriptCompiler {
 				Object *obj = p_constant;
 				if (obj) {
 					type.kind = GDScriptDataType::NATIVE;
-					type.native_type = obj->get_class_name();
+					if (static_cast<Ref<ScriptRef>>(obj).is_valid()) {
+						Ref<Script> script = static_cast<Ref<ScriptRef>>(obj)->get_ref();
+						if (script.is_valid()) {
+							type.native_type = script->get_class_name();
+							type.script_type = script.ptr();
+							Ref<GDScript> gdscript = script;
+							if (gdscript.is_valid()) {
+								type.kind = GDScriptDataType::GDSCRIPT;
+							} else {
+								type.kind = GDScriptDataType::SCRIPT;
+							}
 
-					Ref<Script> script = obj->get_script();
-					if (script.is_valid()) {
-						type.script_type = script.ptr();
-						Ref<GDScript> gdscript = script;
-						if (gdscript.is_valid()) {
-							type.kind = GDScriptDataType::GDSCRIPT;
-						} else {
-							type.kind = GDScriptDataType::SCRIPT;
+							uint32_t addr = generator->add_or_get_constant(script);
+							return GDScriptCodeGenerator::Address(GDScriptCodeGenerator::Address::CONSTANT, addr, type);
 						}
+					} else {
+						type.native_type = obj->get_class_name();
 					}
 				} else {
 					type.builtin_type = Variant::NIL;
