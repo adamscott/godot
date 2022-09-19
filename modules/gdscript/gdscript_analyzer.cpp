@@ -3286,11 +3286,10 @@ void GDScriptAnalyzer::reduce_subscript(GDScriptParser::SubscriptNode *p_subscri
 			bool valid = false;
 			Variant value = p_subscript->base->reduced_value.get_named(p_subscript->attribute->name, valid);
 
-			if (!valid && Ref<GDScript>(p_subscript->base->reduced_value).is_valid()) {
+			if (!valid && Ref<GDScriptRef>(p_subscript->base->reduced_value).is_valid()) {
 				// Maybe the script isn't compiled yet. Let's try to reload it.
-				Ref<GDScript> script = p_subscript->base->reduced_value;
 				Error err = OK;
-				GDScriptCache::get_full_script(script->get_path(), err);
+				GDScriptCache::get_full_script(Ref<GDScriptRef>(p_subscript->base->reduced_value)->get_ref()->get_path(), err);
 				if (err == OK) {
 					value = p_subscript->base->reduced_value.get_named(p_subscript->attribute->name, valid);
 				}
