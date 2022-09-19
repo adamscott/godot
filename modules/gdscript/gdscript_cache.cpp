@@ -128,6 +128,7 @@ void GDScriptCache::remove_dependencies(const String &p_source, const String &p_
 
 	singleton->shallow_gdscript_cache.erase(p_path);
 	singleton->full_gdscript_cache.erase(p_path);
+	singleton->parser_map.erase(p_path);
 
 	if (repeat) {
 		for (String dependency : singleton->dependencies[p_path]) {

@@ -534,4 +534,14 @@ public:
 	virtual bool recognize(const Ref<Resource> &p_resource) const;
 };
 
+class GDScriptRef : public ScriptRef {
+public:
+	Ref<GDScript> get_ref() const {
+		return ScriptRef::get_ref();
+	};
+	void set_ref(const Ref<GDScript> &p_ref) {
+		ScriptRef::set_ref(p_ref);
+	};
+};
+
 #endif // GDSCRIPT_H

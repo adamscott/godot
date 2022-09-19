@@ -35,6 +35,7 @@
 #include "core/os/mutex.h"
 #include "core/templates/hash_map.h"
 #include "core/templates/hash_set.h"
+#include "core/object/script_language.h"
 #include "gdscript.h"
 
 class GDScriptAnalyzer;
@@ -67,26 +68,6 @@ public:
 
 	GDScriptParserRef() {}
 	~GDScriptParserRef();
-};
-
-class ScriptRef : public WeakRef {
-public:
-	Ref<Script> get_ref() const {
-		return WeakRef::get_ref();
-	};
-	void set_ref(const Ref<Script> &p_ref) {
-		WeakRef::set_ref(p_ref);
-	};
-};
-
-class GDScriptRef : public ScriptRef {
-public:
-	Ref<GDScript> get_ref() const {
-		return ScriptRef::get_ref();
-	};
-	void set_ref(const Ref<GDScript> &p_ref) {
-		ScriptRef::set_ref(p_ref);
-	};
 };
 
 class GDScriptCache {

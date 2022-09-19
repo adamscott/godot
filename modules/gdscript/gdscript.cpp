@@ -39,6 +39,7 @@
 #include "core/io/file_access.h"
 #include "core/io/file_access_encrypted.h"
 #include "core/os/os.h"
+#include "core/object/script_language.h"
 #include "gdscript_analyzer.h"
 #include "gdscript_cache.h"
 #include "gdscript_compiler.h"
@@ -2347,13 +2348,33 @@ GDScriptLanguage::~GDScriptLanguage() {
 		for (KeyValue<StringName, GDScriptFunction *> &E : script->member_functions) {
 			GDScriptFunction *func = E.value;
 			for (int i = 0; i < func->argument_types.size(); i++) {
-				func->argument_types.write[i].script_type_ref = Ref<Script>();
+				Ref<ScriptRef> wref;
+				wref.instantiate();
+				wref->set_ref(Ref<Script>());
+				func->argument_types.write[i].script_type_ref = wref;
 			}
-			func->return_type.script_type_ref = Ref<Script>();
+			Ref<ScriptRef> wref;
+			wref.instantiate();
+			wref->set_ref(Ref<Script>());
+			func->return_type.script_type_ref = wref;
 		}
+
 		for (KeyValue<StringName, GDScript::MemberInfo> &E : script->member_indices) {
-			E.value.data_type.script_type_ref = Ref<Script>();
+			Ref<ScriptRef> wref;
+			wref.instantiate();
+			wref->set_ref(Ref<Script>());
+			E.value.data_type.script_type_ref = wref;
 		}
+
+#ifdef TOOLS_ENABLED
+		// for (KeyValue<StringName, GDScript::MemberInfo> &E : script->member_lines) {
+		// 	E.value.data_type.script_type_ref = Ref<Script>();
+		// }
+
+		script->base_cache = Ref<Script>();
+#endif
+
+		script->base = Ref<Script>();
 
 		s = s->next();
 

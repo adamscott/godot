@@ -3222,10 +3222,10 @@ void GDScriptAnalyzer::reduce_preload(GDScriptParser::PreloadNode *p_preload) {
 			if (ResourceLoader::get_resource_type(p_preload->resolved_path) == "GDScript") {
 				Ref<GDScriptRef> wref = GDScriptCache::get_shallow_script(p_preload->resolved_path, parser->script_path);
 				if (wref->get_ref() != nullptr) {
-					p_preload->resource = wref->get_ref();
+					p_preload->resource = wref;
 					p_preload->is_constant = true;
 					p_preload->reduced_value = p_preload->resource;
-					p_preload->set_datatype(type_from_variant(wref->get_ref(), p_preload));
+					p_preload->set_datatype(type_from_variant(wref, p_preload));
 					return;
 				}
 				push_error(vformat(R"(Could not preload script file "%s".)", p_preload->resolved_path), p_preload->path);
@@ -3647,20 +3647,27 @@ void GDScriptAnalyzer::const_fold_dictionary(GDScriptParser::DictionaryNode *p_d
 }
 
 GDScriptParser::DataType GDScriptAnalyzer::type_from_variant(const Variant &p_value, const GDScriptParser::Node *p_source) {
+	Variant value = p_value;
+	if (value.get_type() == Variant::OBJECT) {
+		if (static_cast<Ref<GDScriptRef>>(value).is_valid()) {
+			value = static_cast<Ref<GDScriptRef>>(value)->get_ref();
+		}
+	}
+
 	GDScriptParser::DataType result;
 	result.is_constant = true;
 	result.kind = GDScriptParser::DataType::BUILTIN;
 	result.builtin_type = p_value.get_type();
 	result.type_source = GDScriptParser::DataType::ANNOTATED_EXPLICIT; // Constant has explicit type.
 
-	if (p_value.get_type() == Variant::OBJECT) {
+	if (value.get_type() == Variant::OBJECT) {
 		Object *obj = p_value;
 		if (!obj) {
 			return GDScriptParser::DataType();
 		}
 		result.native_type = obj->get_class_name();
 
-		Ref<Script> scr = p_value; // Check if value is a script itself.
+		Ref<Script> scr = value; // Check if value is a script itself.
 		if (scr.is_valid()) {
 			result.is_meta_type = true;
 		} else {
@@ -3668,10 +3675,15 @@ GDScriptParser::DataType GDScriptAnalyzer::type_from_variant(const Variant &p_va
 			scr = obj->get_script();
 		}
 		if (scr.is_valid()) {
-			result.script_type = scr;
 			result.script_path = scr->get_path();
 			Ref<GDScript> gds = scr;
 			if (gds.is_valid()) {
+				// This is a GDScript script
+				Ref<GDScriptRef> wref;
+				wref.instantiate();
+				wref->set_ref(scr);
+				result.script_type = wref;
+
 				result.kind = GDScriptParser::DataType::CLASS;
 				// This might be an inner class, so we want to get the parser for the root.
 				// But still get the inner class from that tree.
@@ -3702,6 +3714,11 @@ GDScriptParser::DataType GDScriptAnalyzer::type_from_variant(const Variant &p_va
 				result.class_type = found;
 				result.script_path = ref->get_parser()->script_path;
 			} else {
+				// This is not a gdscript script
+				Ref<ScriptRef> wref;
+				wref.instantiate();
+				wref->set_ref(scr);
+				result.script_type = wref;
 				result.kind = GDScriptParser::DataType::SCRIPT;
 			}
 			result.native_type = scr->get_instance_base_type();
@@ -3762,7 +3779,11 @@ GDScriptParser::DataType GDScriptAnalyzer::type_from_property(const PropertyInfo
 				elem_type.kind = GDScriptParser::DataType::SCRIPT;
 				elem_type.builtin_type = Variant::OBJECT;
 				elem_type.native_type = script->get_instance_base_type();
-				elem_type.script_type = script;
+
+				Ref<ScriptRef> wref;
+				wref.instantiate();
+				wref->set_ref(script);
+				elem_type.script_type = wref;
 			} else {
 				ERR_FAIL_V_MSG(result, "Could not find element type from property hint of a typed array.");
 			}
@@ -3848,15 +3869,21 @@ bool GDScriptAnalyzer::get_function_signature(GDScriptParser::Node *p_source, bo
 		return true;
 	}
 
-	Ref<Script> base_script = p_base_type.script_type;
+	Ref<ScriptRef> base_script = p_base_type.script_type;
 
-	while (base_script.is_valid() && base_script->has_method(function_name)) {
-		MethodInfo info = base_script->get_method_info(function_name);
+	print_line(vformat(R"(base_script %s)", base_script));
+
+	while (base_script.is_valid() && base_script->get_ref() != nullptr && base_script->get_ref()->has_method(function_name)) {
+		MethodInfo info = base_script->get_ref()->get_method_info(function_name);
 
 		if (!(info == MethodInfo())) {
 			return function_signature_from_info(info, r_return_type, r_par_types, r_default_arg_count, r_static, r_vararg);
 		}
-		base_script = base_script->get_base_script();
+
+		Ref<ScriptRef> wref;
+		wref.instantiate();
+		wref->set_ref(base_script->get_ref()->get_base_script());
+		base_script = wref;
 	}
 
 	// If the base is a script, it might be trying to access members of the Script class itself.

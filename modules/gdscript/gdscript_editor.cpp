@@ -1515,12 +1515,12 @@ static bool _guess_expression_type(GDScriptParser::CompletionContext &p_context,
 
 						while (native_type.kind == GDScriptParser::DataType::SCRIPT) {
 							if (native_type.script_type.is_valid()) {
-								Ref<Script> parent = native_type.script_type->get_base_script();
+								Ref<Script> parent = native_type.script_type->get_ref()->get_base_script();
 								if (parent.is_valid()) {
 									native_type.script_type = parent;
 								} else {
 									native_type.kind = GDScriptParser::DataType::NATIVE;
-									native_type.native_type = native_type.script_type->get_instance_base_type();
+									native_type.native_type = native_type.script_type->get_ref()->get_instance_base_type();
 									if (!ClassDB::class_exists(native_type.native_type)) {
 										native_type.kind = GDScriptParser::DataType::UNRESOLVED;
 									}

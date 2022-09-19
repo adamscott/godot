@@ -483,4 +483,14 @@ public:
 	~PlaceHolderScriptInstance();
 };
 
+class ScriptRef : public WeakRef {
+public:
+	Ref<Script> get_ref() const {
+		return WeakRef::get_ref();
+	};
+	void set_ref(const Ref<Script> &p_ref) {
+		WeakRef::set_ref(p_ref);
+	};
+};
+
 #endif // SCRIPT_LANGUAGE_H

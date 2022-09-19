@@ -126,7 +126,7 @@ public:
 		Variant::Type builtin_type = Variant::NIL;
 		StringName native_type;
 		StringName enum_type; // Enum name or the value name in an enum.
-		Ref<Script> script_type;
+		Ref<ScriptRef> script_type;
 		String script_path;
 		ClassNode *class_type = nullptr;
 

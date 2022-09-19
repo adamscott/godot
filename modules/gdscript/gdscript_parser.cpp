@@ -3771,7 +3771,7 @@ bool GDScriptParser::export_annotations(const AnnotationNode *p_annotation, Node
 			case GDScriptParser::DataType::SCRIPT: {
 				StringName class_name;
 				if (export_type.script_type != nullptr && export_type.script_type.is_valid()) {
-					class_name = export_type.script_type->get_language()->get_global_class_name(export_type.script_type->get_path());
+					class_name = export_type.script_type->get_ref()->get_language()->get_global_class_name(export_type.script_type->get_ref()->get_path());
 				}
 				if (class_name == StringName()) {
 					Ref<Script> script = ResourceLoader::load(export_type.script_path, SNAME("Script"));
@@ -4001,7 +4001,7 @@ String GDScriptParser::DataType::to_string() const {
 			if (is_meta_type) {
 				return script_type->get_class_name().operator String();
 			}
-			String name = script_type->get_name();
+			String name = script_type->get_ref()->get_name();
 			if (!name.is_empty()) {
 				return name;
 			}

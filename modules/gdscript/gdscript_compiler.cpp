@@ -103,8 +103,13 @@ GDScriptDataType GDScriptCompiler::_gdtype_from_datatype(const GDScriptParser::D
 		} break;
 		case GDScriptParser::DataType::SCRIPT: {
 			result.kind = GDScriptDataType::SCRIPT;
-			result.script_type_ref = Ref<Script>(p_datatype.script_type);
-			result.script_type = result.script_type_ref.ptr();
+
+			Ref<ScriptRef> wref;
+			wref.instantiate();
+			wref->set_ref(Ref<Script>(p_datatype.script_type));
+
+			result.script_type_ref = wref;
+			result.script_type = result.script_type_ref->get_ref().ptr();
 			result.native_type = result.script_type->get_instance_base_type();
 		} break;
 		case GDScriptParser::DataType::CLASS: {
@@ -159,16 +164,21 @@ GDScriptDataType GDScriptCompiler::_gdtype_from_datatype(const GDScriptParser::D
 								if (!valid) {
 									continue;
 								}
-								result.script_type_ref = Ref<GDScript>(script);
+
+								Ref<GDScriptRef> wref;
+								wref.instantiate();
+								wref->set_ref(Ref<GDScript>(script));
+
+								result.script_type_ref = wref;
 								break;
 							}
 						}
 					}
 					if (result.script_type_ref.is_null()) {
-						result.script_type_ref = GDScriptCache::get_shallow_script(p_datatype.script_path, main_script->path)->get_script();
+						result.script_type_ref = GDScriptCache::get_shallow_script(p_datatype.script_path, main_script->path);
 					}
 
-					result.script_type = result.script_type_ref.ptr();
+					result.script_type = result.script_type_ref->get_ref().ptr();
 					result.native_type = p_datatype.native_type;
 				}
 			}
@@ -195,7 +205,10 @@ GDScriptDataType GDScriptCompiler::_gdtype_from_datatype(const GDScriptParser::D
 	// Only hold strong reference to the script if it's not the owner of the
 	// element qualified with this type, to avoid cyclic references (leaks).
 	if (result.script_type && result.script_type == p_owner) {
-		result.script_type_ref = Ref<Script>();
+		Ref<ScriptRef> wref;
+		wref.instantiate();
+		wref->set_ref(Ref<Script>());
+		result.script_type_ref = wref;
 	}
 
 	return result;
