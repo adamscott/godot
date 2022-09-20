@@ -241,7 +241,7 @@ Ref<GDScriptRef> GDScriptCache::get_full_script(const String &p_path, Error &r_e
 		return wref;
 	}
 
-	Ref<GDScript> script = get_shallow_script(p_path)->get_script();
+	Ref<GDScript> script = get_shallow_script(p_path)->get_ref();
 	if (script.is_null()) {
 		Ref<GDScriptRef> wref;
 		wref.instantiate();
@@ -271,7 +271,7 @@ Ref<GDScriptRef> GDScriptCache::get_full_script(const String &p_path, Error &r_e
 
 Error GDScriptCache::finish_compiling(const String &p_owner) {
 	// Mark this as compiled.
-	Ref<GDScript> script = get_shallow_script(p_owner)->get_script();
+	Ref<GDScript> script = get_shallow_script(p_owner)->get_ref();
 	singleton->full_gdscript_cache[p_owner] = script;
 	singleton->shallow_gdscript_cache.erase(p_owner);
 

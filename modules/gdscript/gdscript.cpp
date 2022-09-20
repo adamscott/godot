@@ -2412,7 +2412,7 @@ Ref<Resource> ResourceFormatLoaderGDScript::load(const String &p_path, const Str
 	}
 
 	Error err;
-	Ref<GDScript> script = GDScriptCache::get_full_script(p_path, err)->get_script();
+	Ref<GDScript> script = GDScriptCache::get_full_script(p_path, err)->get_ref();
 
 	// TODO: Reintroduce binary and encrypted scripts.
 
