@@ -3881,8 +3881,6 @@ bool GDScriptAnalyzer::get_function_signature(GDScriptParser::Node *p_source, bo
 
 	Ref<ScriptRef> base_script = p_base_type.script_type;
 
-	print_line(vformat(R"(base_script %s)", base_script));
-
 	while (base_script.is_valid() && base_script->get_ref() != nullptr && base_script->get_ref()->has_method(function_name)) {
 		MethodInfo info = base_script->get_ref()->get_method_info(function_name);
 
