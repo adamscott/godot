@@ -31,9 +31,9 @@
 #include "gdscript.h"
 
 #include "core/config/engine.h"
-#include "core/object/script_language.h"
 #include "core/core_constants.h"
 #include "core/io/file_access.h"
+#include "core/object/script_language.h"
 #include "gdscript_analyzer.h"
 #include "gdscript_compiler.h"
 #include "gdscript_parser.h"

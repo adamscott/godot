@@ -38,8 +38,8 @@
 #include "core/core_string_names.h"
 #include "core/io/file_access.h"
 #include "core/io/file_access_encrypted.h"
-#include "core/os/os.h"
 #include "core/object/script_language.h"
+#include "core/os/os.h"
 #include "gdscript_analyzer.h"
 #include "gdscript_cache.h"
 #include "gdscript_compiler.h"
@@ -1285,7 +1285,7 @@ GDScript::~GDScript() {
 		GDScriptCache::remove_script(get_path());
 	}
 
-	#ifdef TOOLS_ENABLED
+#ifdef TOOLS_ENABLED
 	// Clearing inner class doc, script doc only cleared when the script source deleted.
 	if (_owner) {
 		_clear_doc();

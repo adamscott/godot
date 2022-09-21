@@ -32,10 +32,10 @@
 #define GDSCRIPT_CACHE_H
 
 #include "core/object/ref_counted.h"
+#include "core/object/script_language.h"
 #include "core/os/mutex.h"
 #include "core/templates/hash_map.h"
 #include "core/templates/hash_set.h"
-#include "core/object/script_language.h"
 #include "gdscript.h"
 
 class GDScriptAnalyzer;

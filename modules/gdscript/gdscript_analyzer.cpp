@@ -3665,9 +3665,7 @@ GDScriptParser::DataType GDScriptAnalyzer::type_from_variant(const Variant &p_va
 	bool script_is_valid = false;
 
 	if (p_value.get_type() == Variant::OBJECT) {
-		script_is_valid = static_cast<Ref<ScriptRef>>(p_value).is_valid()
-		&& static_cast<Ref<ScriptRef>>(p_value)->get_ref() != nullptr
-		&& static_cast<Ref<ScriptRef>>(p_value)->get_ref().is_valid();
+		script_is_valid = static_cast<Ref<ScriptRef>>(p_value).is_valid() && static_cast<Ref<ScriptRef>>(p_value)->get_ref() != nullptr && static_cast<Ref<ScriptRef>>(p_value)->get_ref().is_valid();
 
 		if (script_is_valid) {
 			result.builtin_type = static_cast<Variant>(static_cast<Ref<ScriptRef>>(p_value)->get_ref()).get_type();
@@ -3700,9 +3698,7 @@ GDScriptParser::DataType GDScriptAnalyzer::type_from_variant(const Variant &p_va
 		result.is_meta_type = false;
 		static_cast<Ref<ScriptRef>>(p_value)->set_ref(static_cast<Ref<ScriptRef>>(p_value)->get_ref()->get_script());
 
-		script_is_valid = static_cast<Ref<ScriptRef>>(p_value).is_valid()
-		&& static_cast<Ref<ScriptRef>>(p_value)->get_ref() != nullptr
-		&& static_cast<Ref<ScriptRef>>(p_value)->get_ref().is_valid();
+		script_is_valid = static_cast<Ref<ScriptRef>>(p_value).is_valid() && static_cast<Ref<ScriptRef>>(p_value)->get_ref() != nullptr && static_cast<Ref<ScriptRef>>(p_value)->get_ref().is_valid();
 	}
 
 	if (!script_is_valid) {
@@ -3714,8 +3710,7 @@ GDScriptParser::DataType GDScriptAnalyzer::type_from_variant(const Variant &p_va
 	}
 
 	result.script_path = static_cast<Ref<ScriptRef>>(p_value)->get_ref()->get_path();
-	bool gds_is_valid = static_cast<Ref<GDScriptRef>>(p_value).is_valid()
-		&& static_cast<Ref<GDScriptRef>>(p_value)->get_ref().is_valid();
+	bool gds_is_valid = static_cast<Ref<GDScriptRef>>(p_value).is_valid() && static_cast<Ref<GDScriptRef>>(p_value)->get_ref().is_valid();
 
 	if (gds_is_valid) {
 		// This is a GDScript script
