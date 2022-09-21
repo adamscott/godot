@@ -137,7 +137,7 @@ void GDScriptCache::remove_dependencies(const String &p_source, const String &p_
 	}
 }
 
-Ref<GDScriptParserRef> GDScriptCache::get_parser(const String &p_path, GDScriptParserRef::Status p_status, Error &r_error, const String &p_owner) {
+Ref<GDScriptParserRefRef> GDScriptCache::get_parser(const String &p_path, GDScriptParserRef::Status p_status, Error &r_error, const String &p_owner) {
 	MutexLock lock(singleton->lock);
 	Ref<GDScriptParserRef> ref;
 	if (!p_owner.is_empty()) {
@@ -147,7 +147,11 @@ Ref<GDScriptParserRef> GDScriptCache::get_parser(const String &p_path, GDScriptP
 		ref = Ref<GDScriptParserRef>(singleton->parser_map[p_path]);
 		if (ref.is_null()) {
 			r_error = ERR_INVALID_DATA;
-			return ref;
+
+			Ref<GDScriptParserRefRef> wref;
+			wref.instantiate();
+			wref->set_ref(ref);
+			return wref;
 		}
 	} else {
 		if (!FileAccess::exists(p_path)) {
@@ -158,11 +162,14 @@ Ref<GDScriptParserRef> GDScriptCache::get_parser(const String &p_path, GDScriptP
 		ref.instantiate();
 		ref->parser = parser;
 		ref->path = p_path;
-		singleton->parser_map[p_path] = ref.ptr();
+		singleton->parser_map[p_path] = ref;
 	}
 	r_error = ref->raise_status(p_status);
 
-	return ref;
+	Ref<GDScriptParserRefRef> wref;
+	wref.instantiate();
+	wref->set_ref(ref);
+	return wref;
 }
 
 String GDScriptCache::get_source_code(const String &p_path) {
