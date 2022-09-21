@@ -3660,10 +3660,23 @@ GDScriptParser::DataType GDScriptAnalyzer::type_from_variant(const Variant &p_va
 	GDScriptParser::DataType result;
 	result.is_constant = true;
 	result.kind = GDScriptParser::DataType::BUILTIN;
-	result.builtin_type = p_value.get_type();
 	result.type_source = GDScriptParser::DataType::ANNOTATED_EXPLICIT; // Constant has explicit type.
 
-	if (p_value.get_type() != Variant::OBJECT) {
+	bool script_is_valid = false;
+
+	if (p_value.get_type() == Variant::OBJECT) {
+		script_is_valid = static_cast<Ref<ScriptRef>>(p_value).is_valid()
+		&& static_cast<Ref<ScriptRef>>(p_value)->get_ref() != nullptr
+		&& static_cast<Ref<ScriptRef>>(p_value)->get_ref().is_valid();
+
+		if (script_is_valid) {
+			result.builtin_type = static_cast<Variant>(static_cast<Ref<ScriptRef>>(p_value)->get_ref()).get_type();
+		} else {
+			result.builtin_type = p_value.get_type();
+			return result;
+		}
+	} else {
+		result.builtin_type = p_value.get_type();
 		return result;
 	}
 
@@ -3680,15 +3693,16 @@ GDScriptParser::DataType GDScriptAnalyzer::type_from_variant(const Variant &p_va
 
 	result.native_type = obj->get_class_name();
 
-	Ref<Script> scr = p_value; // Check if value is a script itself.
-	bool script_is_valid = static_cast<Ref<ScriptRef>>(p_value).is_valid()
-		&& static_cast<Ref<ScriptRef>>(p_value)->get_ref() != nullptr
-		&& static_cast<Ref<ScriptRef>>(p_value)->get_ref().is_valid();
 	if (script_is_valid) {
 		result.is_meta_type = true;
+		result.builtin_type = static_cast<Variant>(static_cast<Ref<ScriptRef>>(p_value)->get_ref()).get_type();
 	} else {
 		result.is_meta_type = false;
-		scr = obj->get_script();
+		static_cast<Ref<ScriptRef>>(p_value)->set_ref(static_cast<Ref<ScriptRef>>(p_value)->get_ref()->get_script());
+
+		script_is_valid = static_cast<Ref<ScriptRef>>(p_value).is_valid()
+		&& static_cast<Ref<ScriptRef>>(p_value)->get_ref() != nullptr
+		&& static_cast<Ref<ScriptRef>>(p_value)->get_ref().is_valid();
 	}
 
 	if (!script_is_valid) {
