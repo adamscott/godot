@@ -103,12 +103,7 @@ GDScriptDataType GDScriptCompiler::_gdtype_from_datatype(const GDScriptParser::D
 		} break;
 		case GDScriptParser::DataType::SCRIPT: {
 			result.kind = GDScriptDataType::SCRIPT;
-
-			Ref<ScriptRef> wref;
-			wref.instantiate();
-			wref->set_ref(Ref<Script>(p_datatype.script_type));
-
-			result.script_type_ref = wref;
+			result.script_type_ref = p_datatype.script_type;
 			result.script_type = result.script_type_ref->get_ref().ptr();
 			result.native_type = result.script_type->get_instance_base_type();
 		} break;
