@@ -3663,12 +3663,13 @@ GDScriptParser::DataType GDScriptAnalyzer::type_from_variant(const Variant &p_va
 	result.type_source = GDScriptParser::DataType::ANNOTATED_EXPLICIT; // Constant has explicit type.
 
 	bool script_is_valid = false;
+	Ref<ScriptRef> script_wref = p_value;
 
 	if (p_value.get_type() == Variant::OBJECT) {
-		script_is_valid = static_cast<Ref<ScriptRef>>(p_value).is_valid() && static_cast<Ref<ScriptRef>>(p_value)->get_ref() != nullptr && static_cast<Ref<ScriptRef>>(p_value)->get_ref().is_valid();
+		script_is_valid = script_wref.is_valid() && script_wref->get_ref() != nullptr && script_wref->get_ref().is_valid();
 
 		if (script_is_valid) {
-			result.builtin_type = static_cast<Variant>(static_cast<Ref<ScriptRef>>(p_value)->get_ref()).get_type();
+			result.builtin_type = static_cast<Variant>(script_wref->get_ref()).get_type();
 		} else {
 			result.builtin_type = p_value.get_type();
 			return result;
@@ -3679,8 +3680,8 @@ GDScriptParser::DataType GDScriptAnalyzer::type_from_variant(const Variant &p_va
 	}
 
 	Object *obj = nullptr;
-	if (static_cast<Ref<ScriptRef>>(p_value).is_valid()) {
-		obj = *(static_cast<Ref<ScriptRef>>(p_value)->get_ref());
+	if (script_wref.is_valid()) {
+		obj = *(script_wref->get_ref());
 	} else {
 		obj = p_value;
 	}
@@ -3693,12 +3694,12 @@ GDScriptParser::DataType GDScriptAnalyzer::type_from_variant(const Variant &p_va
 
 	if (script_is_valid) {
 		result.is_meta_type = true;
-		result.builtin_type = static_cast<Variant>(static_cast<Ref<ScriptRef>>(p_value)->get_ref()).get_type();
+		result.builtin_type = static_cast<Variant>(script_wref->get_ref()).get_type();
 	} else {
 		result.is_meta_type = false;
-		static_cast<Ref<ScriptRef>>(p_value)->set_ref(static_cast<Ref<ScriptRef>>(p_value)->get_ref()->get_script());
+		script_wref->set_ref(script_wref->get_ref()->get_script());
 
-		script_is_valid = static_cast<Ref<ScriptRef>>(p_value).is_valid() && static_cast<Ref<ScriptRef>>(p_value)->get_ref() != nullptr && static_cast<Ref<ScriptRef>>(p_value)->get_ref().is_valid();
+		script_is_valid = script_wref.is_valid() && script_wref->get_ref() != nullptr && script_wref->get_ref().is_valid();
 	}
 
 	if (!script_is_valid) {
@@ -3709,15 +3710,16 @@ GDScriptParser::DataType GDScriptAnalyzer::type_from_variant(const Variant &p_va
 		return result;
 	}
 
-	result.script_path = static_cast<Ref<ScriptRef>>(p_value)->get_ref()->get_path();
-	bool gds_is_valid = static_cast<Ref<GDScriptRef>>(p_value).is_valid() && static_cast<Ref<GDScriptRef>>(p_value)->get_ref().is_valid();
+	result.script_path = script_wref->get_ref()->get_path();
+	Ref<GDScriptRef> gdscript_wref = p_value;
+	bool gds_is_valid = gdscript_wref.is_valid() && gdscript_wref->get_ref().is_valid();
 
 	if (gds_is_valid) {
 		// This is a GDScript script
 		result.kind = GDScriptParser::DataType::CLASS;
 		// This might be an inner class, so we want to get the parser for the root.
 		// But still get the inner class from that tree.
-		GDScript *current = static_cast<Ref<GDScriptRef>>(p_value)->get_ref().ptr();
+		GDScript *current = gdscript_wref->get_ref().ptr();
 		List<StringName> class_chain;
 		while (current->_owner) {
 			// Push to front so it's in reverse.
@@ -3725,16 +3727,16 @@ GDScriptParser::DataType GDScriptAnalyzer::type_from_variant(const Variant &p_va
 			current = current->_owner;
 		}
 
-		Ref<GDScriptParserRefRef> wref = get_parser_for(current->get_path());
-		if (wref.is_null() || wref->get_ref() == nullptr) {
+		Ref<GDScriptParserRefRef> parser_wref = get_parser_for(current->get_path());
+		if (parser_wref.is_null() || parser_wref->get_ref() == nullptr) {
 			push_error("Could not find script in path.", p_source);
 			GDScriptParser::DataType error_type;
 			error_type.kind = GDScriptParser::DataType::VARIANT;
 			return error_type;
 		}
-		wref->get_ref()->raise_status(GDScriptParserRef::INTERFACE_SOLVED);
+		parser_wref->get_ref()->raise_status(GDScriptParserRef::INTERFACE_SOLVED);
 
-		GDScriptParser::ClassNode *found = wref->get_ref()->get_parser()->head;
+		GDScriptParser::ClassNode *found = parser_wref->get_ref()->get_parser()->head;
 
 		// It should be okay to assume this exists, since we have a complete script already.
 		for (const StringName &E : class_chain) {
@@ -3742,13 +3744,13 @@ GDScriptParser::DataType GDScriptAnalyzer::type_from_variant(const Variant &p_va
 		}
 
 		result.class_type = found;
-		result.script_path = wref->get_ref()->get_parser()->script_path;
+		result.script_path = parser_wref->get_ref()->get_parser()->script_path;
 	} else {
 		// This is not a gdscript script
-		result.script_type = static_cast<Ref<ScriptRef>>(p_value);
+		result.script_type = script_wref;
 		result.kind = GDScriptParser::DataType::SCRIPT;
 	}
-	result.native_type = static_cast<Ref<ScriptRef>>(p_value)->get_ref()->get_instance_base_type();
+	result.native_type = script_wref->get_ref()->get_instance_base_type();
 
 	return result;
 }

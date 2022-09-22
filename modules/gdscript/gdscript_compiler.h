@@ -60,13 +60,15 @@ class GDScriptCompiler {
 		}
 
 		GDScriptCodeGenerator::Address add_local_constant(const StringName &p_name, const Variant &p_value) {
-			if (static_cast<Ref<ScriptRef>>(p_value).is_valid()) {
-				uint32_t addr = generator->add_local_constant(p_name, static_cast<Ref<ScriptRef>>(p_value)->get_ref());
-				locals[p_name] = GDScriptCodeGenerator::Address(GDScriptCodeGenerator::Address::CONSTANT, addr);
-				return locals[p_name];
+			Ref<ScriptRef> script_wref = p_value;
+			uint32_t addr;
+
+			if (script_wref.is_valid()) {
+				addr = generator->add_local_constant(p_name, script_wref->get_ref());
+			} else {
+				addr = generator->add_local_constant(p_name, p_value);
 			}
 
-			uint32_t addr = generator->add_local_constant(p_name, p_value);
 			locals[p_name] = GDScriptCodeGenerator::Address(GDScriptCodeGenerator::Address::CONSTANT, addr);
 			return locals[p_name];
 		}
@@ -85,16 +87,17 @@ class GDScriptCompiler {
 				Object *obj = p_constant;
 				if (obj) {
 					type.kind = GDScriptDataType::NATIVE;
-					if (static_cast<Ref<ScriptRef>>(obj).is_valid() && static_cast<Ref<ScriptRef>>(obj)->get_ref().is_valid()) {
-						type.native_type = static_cast<Ref<ScriptRef>>(obj)->get_ref()->get_class_name();
-						type.script_type = static_cast<Ref<ScriptRef>>(obj)->get_ref().ptr();
-						if (static_cast<Ref<GDScript>>(static_cast<Ref<ScriptRef>>(obj)->get_ref()).is_valid()) {
+					Ref<ScriptRef> script_wref = static_cast<Ref<ScriptRef>>(obj);
+					if (script_wref.is_valid() && script_wref->get_ref().is_valid()) {
+						type.native_type = script_wref->get_ref()->get_class_name();
+						type.script_type = script_wref->get_ref().ptr();
+						if (static_cast<Ref<GDScript>>(script_wref->get_ref()).is_valid()) {
 							type.kind = GDScriptDataType::GDSCRIPT;
 						} else {
 							type.kind = GDScriptDataType::SCRIPT;
 						}
 
-						uint32_t addr = generator->add_or_get_constant(static_cast<Ref<ScriptRef>>(obj)->get_ref());
+						uint32_t addr = generator->add_or_get_constant(script_wref->get_ref());
 						return GDScriptCodeGenerator::Address(GDScriptCodeGenerator::Address::CONSTANT, addr, type);
 					} else {
 						type.native_type = obj->get_class_name();

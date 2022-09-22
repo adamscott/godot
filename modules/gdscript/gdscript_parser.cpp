@@ -3770,8 +3770,9 @@ bool GDScriptParser::export_annotations(const AnnotationNode *p_annotation, Node
 				break;
 			case GDScriptParser::DataType::SCRIPT: {
 				StringName class_name;
-				if (export_type.script_type != nullptr && export_type.script_type.is_valid()) {
-					class_name = export_type.script_type->get_ref()->get_language()->get_global_class_name(export_type.script_type->get_ref()->get_path());
+				Ref<ScriptRef> script_wref = export_type.script_type;
+				if (script_wref != nullptr && script_wref.is_valid()) {
+					class_name = script_wref->get_ref()->get_language()->get_global_class_name(script_wref->get_ref()->get_path());
 				}
 				if (class_name == StringName()) {
 					Ref<Script> script = ResourceLoader::load(export_type.script_path, SNAME("Script"));
