@@ -1279,11 +1279,11 @@ GDScript::~GDScript() {
 		memdelete(implicit_ready);
 	}
 
-	_save_orphaned_subclasses();
-
 	if (GDScriptCache::singleton) { // Cache may have been already destroyed at engine shutdown.
 		GDScriptCache::remove_script(get_path());
 	}
+
+	_save_orphaned_subclasses();
 
 #ifdef TOOLS_ENABLED
 	// Clearing inner class doc, script doc only cleared when the script source deleted.
