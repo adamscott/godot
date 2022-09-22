@@ -109,7 +109,6 @@ GDScriptParserRef::~GDScriptParserRef() {
 GDScriptCache *GDScriptCache::singleton = nullptr;
 
 void GDScriptCache::remove_script(const String &p_path) {
-	// print_line(vformat(R"(remove_script(%s))", p_path));
 	MutexLock lock(singleton->lock);
 
 	for (String dependency : singleton->dependencies[p_path]) {
@@ -122,13 +121,19 @@ void GDScriptCache::remove_script(const String &p_path) {
 }
 
 void GDScriptCache::remove_dependencies(const String &p_source, const String &p_path, const bool &repeat) {
-	// print_line(vformat(R"(remove_dependencies(%s, %s, %s))", p_source, p_path, repeat));
-
 	MutexLock lock(singleton->lock);
 
-	singleton->shallow_gdscript_cache.erase(p_path);
-	singleton->full_gdscript_cache.erase(p_path);
-	singleton->parser_map.erase(p_path);
+	if (singleton->shallow_gdscript_cache.has(p_path)) {
+		singleton->shallow_gdscript_cache.erase(p_path);
+	}
+
+	if (singleton->full_gdscript_cache.has(p_path)) {
+		singleton->full_gdscript_cache.erase(p_path);
+	}
+
+	if (singleton->parser_map.has(p_path)) {
+		singleton->parser_map.erase(p_path);
+	}
 
 	if (repeat) {
 		for (String dependency : singleton->dependencies[p_path]) {
