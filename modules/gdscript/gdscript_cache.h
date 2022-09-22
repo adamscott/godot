@@ -41,7 +41,7 @@
 class GDScriptAnalyzer;
 class GDScriptParser;
 
-class GDScriptParserRef : public RefCounted {
+class GDScriptParserData : public RefCounted {
 public:
 	enum Status {
 		EMPTY,
@@ -66,29 +66,29 @@ public:
 	GDScriptParser *get_parser() const;
 	Error raise_status(Status p_new_status);
 
-	GDScriptParserRef() {}
-	~GDScriptParserRef();
+	GDScriptParserData() {}
+	~GDScriptParserData();
 };
 
-class GDScriptParserRefRef : public WeakRef {
+class GDScriptParserDataRef : public WeakRef {
 public:
-	Ref<GDScriptParserRef> get_ref() const {
+	Ref<GDScriptParserData> get_ref() const {
 		return WeakRef::get_ref();
 	};
-	void set_ref(const Ref<GDScriptParserRef> &p_ref) {
+	void set_ref(const Ref<GDScriptParserData> &p_ref) {
 		WeakRef::set_ref(p_ref);
 	};
 };
 
 class GDScriptCache {
 	// String key is full path.
-	HashMap<String, Ref<GDScriptParserRef>> parser_map;
+	HashMap<String, Ref<GDScriptParserData>> parser_map;
 	HashMap<String, Ref<GDScript>> shallow_gdscript_cache;
 	HashMap<String, Ref<GDScript>> full_gdscript_cache;
 	HashMap<String, RBSet<String>> dependencies;
 
 	friend class GDScript;
-	friend class GDScriptParserRef;
+	friend class GDScriptParserData;
 
 	static GDScriptCache *singleton;
 	static bool destructing;
@@ -98,7 +98,7 @@ class GDScriptCache {
 	static void remove_dependencies(const String &p_source, const String &p_path, const bool &repeat = true);
 
 public:
-	static Ref<GDScriptParserRefRef> get_parser(const String &p_path, GDScriptParserRef::Status status, Error &r_error, const String &p_owner = String());
+	static Ref<GDScriptParserDataRef> get_parser(const String &p_path, GDScriptParserData::Status status, Error &r_error, const String &p_owner = String());
 	static String get_source_code(const String &p_path);
 	static Ref<GDScriptRef> get_shallow_script(const String &p_path, const String &p_owner = String());
 	static Ref<GDScriptRef> get_full_script(const String &p_path, Error &r_error, const String &p_owner = String());

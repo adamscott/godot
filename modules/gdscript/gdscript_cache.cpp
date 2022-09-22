@@ -36,19 +36,19 @@
 #include "gdscript_analyzer.h"
 #include "gdscript_parser.h"
 
-bool GDScriptParserRef::is_valid() const {
+bool GDScriptParserData::is_valid() const {
 	return parser != nullptr;
 }
 
-GDScriptParserRef::Status GDScriptParserRef::get_status() const {
+GDScriptParserData::Status GDScriptParserData::get_status() const {
 	return status;
 }
 
-GDScriptParser *GDScriptParserRef::get_parser() const {
+GDScriptParser *GDScriptParserData::get_parser() const {
 	return parser;
 }
 
-Error GDScriptParserRef::raise_status(Status p_new_status) {
+Error GDScriptParserData::raise_status(Status p_new_status) {
 	ERR_FAIL_COND_V(parser == nullptr, ERR_INVALID_DATA);
 
 	if (result != OK) {
@@ -95,7 +95,7 @@ Error GDScriptParserRef::raise_status(Status p_new_status) {
 	return result;
 }
 
-GDScriptParserRef::~GDScriptParserRef() {
+GDScriptParserData::~GDScriptParserData() {
 	if (parser != nullptr) {
 		memdelete(parser);
 	}
@@ -143,18 +143,18 @@ void GDScriptCache::remove_dependencies(const String &p_source, const String &p_
 	}
 }
 
-Ref<GDScriptParserRefRef> GDScriptCache::get_parser(const String &p_path, GDScriptParserRef::Status p_status, Error &r_error, const String &p_owner) {
+Ref<GDScriptParserDataRef> GDScriptCache::get_parser(const String &p_path, GDScriptParserData::Status p_status, Error &r_error, const String &p_owner) {
 	MutexLock lock(singleton->lock);
-	Ref<GDScriptParserRef> ref;
+	Ref<GDScriptParserData> ref;
 	if (!p_owner.is_empty()) {
 		singleton->dependencies[p_owner].insert(p_path);
 	}
 	if (singleton->parser_map.has(p_path)) {
-		ref = Ref<GDScriptParserRef>(singleton->parser_map[p_path]);
+		ref = Ref<GDScriptParserData>(singleton->parser_map[p_path]);
 		if (ref.is_null()) {
 			r_error = ERR_INVALID_DATA;
 
-			Ref<GDScriptParserRefRef> wref;
+			Ref<GDScriptParserDataRef> wref;
 			wref.instantiate();
 			wref->set_ref(ref);
 			return wref;
@@ -172,7 +172,7 @@ Ref<GDScriptParserRefRef> GDScriptCache::get_parser(const String &p_path, GDScri
 	}
 	r_error = ref->raise_status(p_status);
 
-	Ref<GDScriptParserRefRef> wref;
+	Ref<GDScriptParserDataRef> wref;
 	wref.instantiate();
 	wref->set_ref(ref);
 	return wref;

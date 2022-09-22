@@ -1198,7 +1198,7 @@ public:
 		Variant::Type builtin_type = Variant::VARIANT_MAX;
 		Node *node = nullptr;
 		Object *base = nullptr;
-		List<Ref<GDScriptParserRef>> dependent_parsers;
+		List<Ref<GDScriptParserData>> dependent_parsers;
 	};
 
 	struct CompletionCall {
