@@ -91,8 +91,10 @@ class GDScriptCache {
 	friend class GDScriptParserRef;
 
 	static GDScriptCache *singleton;
+	static bool destructing;
 
 	Mutex lock;
+
 	static void remove_dependencies(const String &p_source, const String &p_path, const bool &repeat = true);
 
 public:

@@ -107,8 +107,13 @@ GDScriptParserRef::~GDScriptParserRef() {
 }
 
 GDScriptCache *GDScriptCache::singleton = nullptr;
+bool GDScriptCache::destructing = false;
 
 void GDScriptCache::remove_script(const String &p_path) {
+	if (destructing) {
+		return;
+	}
+
 	MutexLock lock(singleton->lock);
 
 	for (String dependency : singleton->dependencies[p_path]) {
@@ -121,19 +126,15 @@ void GDScriptCache::remove_script(const String &p_path) {
 }
 
 void GDScriptCache::remove_dependencies(const String &p_source, const String &p_path, const bool &repeat) {
+	if (destructing) {
+		return;
+	}
+
 	MutexLock lock(singleton->lock);
 
-	if (singleton->shallow_gdscript_cache.has(p_path)) {
-		singleton->shallow_gdscript_cache.erase(p_path);
-	}
-
-	if (singleton->full_gdscript_cache.has(p_path)) {
-		singleton->full_gdscript_cache.erase(p_path);
-	}
-
-	if (singleton->parser_map.has(p_path)) {
-		singleton->parser_map.erase(p_path);
-	}
+	singleton->shallow_gdscript_cache.erase(p_path);
+	singleton->full_gdscript_cache.erase(p_path);
+	singleton->parser_map.erase(p_path);
 
 	if (repeat) {
 		for (String dependency : singleton->dependencies[p_path]) {
@@ -197,8 +198,6 @@ String GDScriptCache::get_source_code(const String &p_path) {
 }
 
 Ref<GDScriptRef> GDScriptCache::get_shallow_script(const String &p_path, const String &p_owner) {
-	// print_line(vformat(R"(get_shallow_script(%s, %s))", p_path, p_owner));
-
 	MutexLock lock(singleton->lock);
 	if (!p_owner.is_empty()) {
 		singleton->dependencies[p_owner].insert(p_path);
@@ -228,17 +227,12 @@ Ref<GDScriptRef> GDScriptCache::get_shallow_script(const String &p_path, const S
 	wref.instantiate();
 	if (script.is_valid()) {
 		wref->set_ref(singleton->shallow_gdscript_cache[p_path]);
-	} else {
-		// print_line(vformat(R"(Error: %s is not valid)", script));
 	}
-
-	// print_line(wref);
 
 	return wref;
 }
 
 Ref<GDScriptRef> GDScriptCache::get_full_script(const String &p_path, Error &r_error, const String &p_owner) {
-	// print_line(vformat(R"(get_full_script(%s, %s))", p_path, p_owner));
 	MutexLock lock(singleton->lock);
 
 	if (!p_owner.is_empty()) {
@@ -300,16 +294,16 @@ Error GDScriptCache::finish_compiling(const String &p_owner) {
 		}
 	}
 
-	// singleton->dependencies.erase(p_owner);
-
 	return err;
 }
 
 GDScriptCache::GDScriptCache() {
 	singleton = this;
+	destructing = false;
 }
 
 GDScriptCache::~GDScriptCache() {
+	destructing = true;
 	parser_map.clear();
 	shallow_gdscript_cache.clear();
 	full_gdscript_cache.clear();
