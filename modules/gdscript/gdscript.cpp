@@ -2366,20 +2366,7 @@ GDScriptLanguage::~GDScriptLanguage() {
 			E.value.data_type.script_type_ref = wref;
 		}
 
-#ifdef TOOLS_ENABLED
-		// for (KeyValue<StringName, GDScript::MemberInfo> &E : script->member_lines) {
-		// 	E.value.data_type.script_type_ref = Ref<Script>();
-		// }
-
-		script->base_cache = Ref<Script>();
-#endif
-
-		script->base = Ref<Script>();
-
 		s = s->next();
-
-		print_line(vformat(R"(script %s %s: %s)", script->get_path(), script, script->reference_get_count()));
-
 		script->unreference();
 	}
 
