@@ -4112,8 +4112,13 @@ GDScriptParser::DataType GDScriptAnalyzer::get_operation_type(Variant::Operator 
 // TODO: Add safe/unsafe return variable (for variant cases)
 bool GDScriptAnalyzer::is_type_compatible(const GDScriptParser::DataType &p_target, const GDScriptParser::DataType &p_source, bool p_allow_implicit_conversion, const GDScriptParser::Node *p_source_node) {
 	// These return "true" so it doesn't affect users negatively.
-	ERR_FAIL_COND_V_MSG(!p_target.is_set(), true, "Parser bug (please report): Trying to check compatibility of unset target type");
-	ERR_FAIL_COND_V_MSG(!p_source.is_set(), true, "Parser bug (please report): Trying to check compatibility of unset value type");
+	// As with cyclic preloading, it's normal that variables can be unset
+	if (!p_target.is_set()) {
+		return true;
+	}
+	if (!p_source.is_set()) {
+		return true;
+	}
 
 	if (p_target.kind == GDScriptParser::DataType::VARIANT) {
 		// Variant can receive anything.
