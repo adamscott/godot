@@ -1580,7 +1580,7 @@ static bool _guess_expression_type(GDScriptParser::CompletionContext &p_context,
 
 														if (FileAccess::exists(script)) {
 															Error err = OK;
-															Ref<GDScriptParserDataRef> parser_data_wref = GDScriptCache::get_parser(script, GDScriptParserData::INTERFACE_SOLVED, err)->get_ref();
+															Ref<GDScriptParserDataRef> parser_data_wref = GDScriptCache::get_parser(script, GDScriptParserData::INTERFACE_SOLVED, err);
 															if (err == OK) {
 																r_type.type.type_source = GDScriptParser::DataType::ANNOTATED_EXPLICIT;
 																r_type.type.script_path = script;
@@ -2005,7 +2005,7 @@ static bool _guess_identifier_type(GDScriptParser::CompletionContext &p_context,
 		String script = ScriptServer::get_global_class_path(p_identifier);
 		if (ResourceLoader::get_resource_type(script) == GDScriptLanguage::get_singleton()->get_type()) {
 			Error err = OK;
-			Ref<GDScriptParserDataRef> parser_data_wref = GDScriptCache::get_parser(script, GDScriptParserData::INTERFACE_SOLVED, err)->get_ref();
+			Ref<GDScriptParserDataRef> parser_data_wref = GDScriptCache::get_parser(script, GDScriptParserData::INTERFACE_SOLVED, err);
 			if (err == OK) {
 				r_type.type.type_source = GDScriptParser::DataType::ANNOTATED_EXPLICIT;
 				r_type.type.script_path = script;
