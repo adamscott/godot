@@ -49,6 +49,10 @@ GDScriptParser *GDScriptParserData::get_parser() const {
 	return parser;
 }
 
+GDScriptAnalyzer *GDScriptParserData::get_analyzer() const {
+	return analyzer;
+}
+
 Error GDScriptParserData::raise_status(Status p_new_status) {
 	ERR_FAIL_COND_V(parser == nullptr, ERR_INVALID_DATA);
 
@@ -320,6 +324,31 @@ Error GDScriptCache::finish_compiling(const String &p_owner) {
 	}
 
 	return err;
+}
+
+void GDScriptCache::reload_script(const String &p_path) {
+	if (!singleton) {
+		return;
+	}
+
+	MutexLock lock(singleton->lock);
+	if (singleton->destructing) {
+		return;
+	}
+
+	for (const KeyValue<String, Ref<GDScript>> &E : singleton->shallow_gdscript_cache) {
+		if (E.key == p_path && E.value.is_valid()) {
+			Ref<GDScript> script = E.value;
+			script->reload();
+		}
+	}
+
+	for (const KeyValue<String, Ref<GDScript>> &E : singleton->full_gdscript_cache) {
+		if (E.key == p_path && E.value.is_valid()) {
+			Ref<GDScript> script = E.value;
+			script->reload();
+		}
+	}
 }
 
 Ref<PackedSceneRef> GDScriptCache::load_scene(const String &p_path, const String &p_owner) {

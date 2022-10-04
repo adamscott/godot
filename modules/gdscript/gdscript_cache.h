@@ -65,6 +65,7 @@ public:
 	bool is_valid() const;
 	Status get_status() const;
 	GDScriptParser *get_parser() const;
+	GDScriptAnalyzer *get_analyzer() const;
 	Error raise_status(Status p_new_status);
 
 	GDScriptParserData() {}
@@ -135,6 +136,7 @@ public:
 	static Ref<GDScriptRef> get_shallow_script(const String &p_path, const String &p_owner = String());
 	static Ref<GDScriptRef> get_full_script(const String &p_path, Error &r_error, const String &p_owner = String(), bool p_update_from_disk = false);
 	static Error finish_compiling(const String &p_owner);
+	static void reload_script(const String &p_path);
 	static void remove_script(const String &p_path);
 	static Ref<PackedSceneRef> load_scene(const String &p_path, const String &p_owner);
 
