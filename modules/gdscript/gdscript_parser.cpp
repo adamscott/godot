@@ -4001,7 +4001,7 @@ String GDScriptParser::DataType::to_string() const {
 			if (is_meta_type) {
 				return script_type->get_ref()->get_class_name().operator String();
 			}
-			String name = script_type->get_ref() != nullptr ? script_type->get_ref()->get_name() : "";
+			String name = script_type->get_ref().is_valid() ? script_type->get_ref()->get_name() : "";
 			if (!name.is_empty()) {
 				return name;
 			}
