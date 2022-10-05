@@ -1218,6 +1218,7 @@ private:
 	bool is_continue_match = false; // Whether a `continue` will act on a `match`.
 	bool is_ignoring_warnings = false;
 	List<bool> multiline_stack;
+	uint8_t clear_counter = 0;
 
 	ClassNode *head = nullptr;
 	Node *list = nullptr;
