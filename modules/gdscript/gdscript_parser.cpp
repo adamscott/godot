@@ -315,10 +315,7 @@ void GDScriptParser::set_last_completion_call_arg(int p_argument) {
 }
 
 Error GDScriptParser::parse(const String &p_source_code, const String &p_script_path, bool p_for_completion) {
-	if (clear_counter == 0) {
-		clear();
-	}
-	clear_counter += 1;
+	clear();
 
 	String source = p_source_code;
 	int cursor_line = -1;
@@ -395,8 +392,6 @@ Error GDScriptParser::parse(const String &p_source_code, const String &p_script_
 		ERR_PRINT("Parser bug: Imbalanced multiline stack.");
 	}
 #endif
-
-	clear_counter -= 1;
 
 	if (errors.is_empty()) {
 		return OK;
