@@ -174,6 +174,9 @@ protected:
 	static void _bind_methods();
 
 public:
+	bool reference();
+	bool unreference();
+
 	virtual bool is_valid() const override { return valid; }
 
 	bool inherits_script(const Ref<Script> &p_script) const override;
@@ -266,6 +269,7 @@ class GDScriptInstance : public ScriptInstance {
 	friend class GDScriptLambdaCallable;
 	friend class GDScriptLambdaSelfCallable;
 	friend class GDScriptCompiler;
+	friend class GDScriptCache;
 	friend struct GDScriptUtilityFunctionsDefinitions;
 
 	ObjectID owner_id;
@@ -280,6 +284,9 @@ class GDScriptInstance : public ScriptInstance {
 	SelfList<GDScriptFunctionState>::List pending_func_states;
 
 public:
+	void refcount_incremented();
+	bool refcount_decremented();
+
 	virtual Object *get_owner() { return owner; }
 
 	virtual bool set(const StringName &p_name, const Variant &p_value);

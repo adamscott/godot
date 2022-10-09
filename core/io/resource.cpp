@@ -473,7 +473,7 @@ void ResourceCache::clear() {
 		ERR_PRINT("Resources still in use at exit (run with --verbose for details).");
 		if (OS::get_singleton()->is_stdout_verbose()) {
 			for (const KeyValue<String, Resource *> &E : resources) {
-				print_line(vformat("Resource still in use: %s (%s)", E.key, E.value->get_class()));
+				print_line(vformat("Resource still in use: %s (%s) %s", E.key, E.value->get_class(), E.value->get_reference_count()));
 			}
 		}
 	}

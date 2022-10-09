@@ -78,8 +78,11 @@ class GDScriptCache {
 
 	friend class GDScript;
 	friend class GDScriptParserRef;
+	friend class GDScriptInstance;
 
 	static GDScriptCache *singleton;
+
+	bool destructing;
 
 	Mutex lock;
 	static void remove_script(const String &p_path);

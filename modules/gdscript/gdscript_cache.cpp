@@ -210,13 +210,15 @@ Ref<GDScript> GDScriptCache::get_full_script(const String &p_path, Error &r_erro
 		return script;
 	}
 
-	r_error = script->reload();
-	if (r_error) {
-		return script;
-	}
-
 	singleton->full_gdscript_cache[p_path] = script.ptr();
 	singleton->shallow_gdscript_cache.erase(p_path);
+
+	r_error = script->reload();
+	if (r_error) {
+		singleton->shallow_gdscript_cache[p_path] = script.ptr();
+		singleton->full_gdscript_cache.erase(p_path);
+		return script;
+	}
 
 	return script;
 }
@@ -247,11 +249,28 @@ Error GDScriptCache::finish_compiling(const String &p_owner) {
 
 GDScriptCache::GDScriptCache() {
 	singleton = this;
+	destructing = false;
 }
 
 GDScriptCache::~GDScriptCache() {
+	destructing = true;
+
 	parser_map.clear();
+
+	for (KeyValue<String, GDScript *> &E : shallow_gdscript_cache) {
+		Ref<GDScript> ref = Ref<GDScript>(E.value);
+		while (ref->get_reference_count() > 1) {
+			ref->unreference();
+		}
+	}
 	shallow_gdscript_cache.clear();
+
+	for (KeyValue<String, GDScript *> &E : full_gdscript_cache) {
+		Ref<GDScript> ref = Ref<GDScript>(E.value);
+		while (ref->get_reference_count() > 1) {
+			ref->unreference();
+		}
+	}
 	full_gdscript_cache.clear();
 	singleton = nullptr;
 }

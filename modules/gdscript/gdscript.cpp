@@ -874,7 +874,7 @@ Error GDScript::reload(bool p_keep_state) {
 		}
 		if (!source_path.is_empty()) {
 			MutexLock lock(GDScriptCache::singleton->lock);
-			if (!GDScriptCache::singleton->shallow_gdscript_cache.has(source_path)) {
+			if (!GDScriptCache::singleton->shallow_gdscript_cache.has(source_path) && !GDScriptCache::singleton->full_gdscript_cache.has(source_path)) {
 				GDScriptCache::singleton->shallow_gdscript_cache[source_path] = this;
 			}
 		}
@@ -1302,6 +1302,21 @@ GDScript::~GDScript() {
 #endif
 }
 
+bool GDScript::reference() {
+	if (GDScriptCache::singleton != nullptr && GDScriptCache::singleton->destructing) {
+		return RefCounted::reference();
+	}
+
+	return get_reference_count() == 0;
+}
+
+bool GDScript::unreference() {
+	if (GDScriptCache::singleton != nullptr && GDScriptCache::singleton->destructing) {
+		return RefCounted::unreference();
+	}
+	return false;
+}
+
 //////////////////////////////
 //         INSTANCE         //
 //////////////////////////////
@@ -1714,6 +1729,25 @@ void GDScriptInstance::reload_members() {
 	}
 
 #endif
+}
+
+void GDScriptInstance::refcount_incremented() {
+	// RefCounted *rc_owner = Object::cast_to<RefCounted>(owner);
+	// int refcount = rc_owner->get_reference_count();
+	// print_line(vformat("refcount_incremented: %s", refcount));
+	(void)0;
+}
+
+bool GDScriptInstance::refcount_decremented() {
+	// RefCounted *rc_owner = Object::cast_to<RefCounted>(owner);
+	// int refcount = rc_owner->get_reference_count();
+	// print_line(vformat("refcount_decremented: %s", refcount));
+	(void)0;
+
+	if (GDScriptCache::singleton == nullptr || GDScriptCache::singleton->destructing) {
+		return true;
+	}
+	return false;
 }
 
 GDScriptInstance::GDScriptInstance() {
