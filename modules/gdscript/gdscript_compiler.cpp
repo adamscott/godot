@@ -165,7 +165,14 @@ GDScriptDataType GDScriptCompiler::_gdtype_from_datatype(const GDScriptParser::D
 						}
 					}
 					if (result.script_type_ref.is_null()) {
-						result.script_type_ref = GDScriptCache::get_shallow_script(p_datatype.script_path, main_script->path);
+						Ref<GDScript> scr;
+						if (!class_type->fqcn.is_empty()) {
+							scr = GDScript::get_script_by_fully_qualified_name(class_type->fqcn);
+						}
+						if (scr.is_null()) {
+							scr = GDScriptCache::get_shallow_script(p_datatype.script_path, main_script->path);
+						}
+						result.script_type_ref = scr;
 					}
 
 					result.script_type = result.script_type_ref.ptr();
@@ -190,12 +197,6 @@ GDScriptDataType GDScriptCompiler::_gdtype_from_datatype(const GDScriptParser::D
 
 	if (p_datatype.has_container_element_type()) {
 		result.set_container_element_type(_gdtype_from_datatype(p_datatype.get_container_element_type()));
-	}
-
-	// Only hold strong reference to the script if it's not the owner of the
-	// element qualified with this type, to avoid cyclic references (leaks).
-	if (result.script_type && result.script_type == p_owner) {
-		result.script_type_ref = Ref<Script>();
 	}
 
 	return result;
@@ -390,11 +391,22 @@ GDScriptCodeGenerator::Address GDScriptCompiler::_parse_expression(CodeGen &code
 				if (class_node->identifier && class_node->identifier->name == identifier) {
 					res = Ref<GDScript>(main_script);
 				} else {
-					res = ResourceLoader::load(ScriptServer::get_global_class_path(identifier));
-					if (res.is_null()) {
-						_set_error("Can't load global class " + String(identifier) + ", cyclic reference?", p_expression);
-						r_error = ERR_COMPILATION_FAILED;
-						return GDScriptCodeGenerator::Address();
+					String global_class_path = ScriptServer::get_global_class_path(identifier);
+					if (ResourceLoader::get_resource_type(global_class_path) == "GDScript") {
+						Error err = OK;
+						res = GDScriptCache::get_full_script(global_class_path, err);
+						if (err != OK) {
+							_set_error("Can't load global class " + String(identifier), p_expression);
+							r_error = ERR_COMPILATION_FAILED;
+							return GDScriptCodeGenerator::Address();
+						}
+					} else {
+						res = ResourceLoader::load(global_class_path);
+						if (res.is_null()) {
+							_set_error("Can't load global class " + String(identifier) + ", cyclic reference?", p_expression);
+							r_error = ERR_COMPILATION_FAILED;
+							return GDScriptCodeGenerator::Address();
+						}
 					}
 				}
 
@@ -2212,6 +2224,8 @@ Error GDScriptCompiler::_parse_class_level(GDScript *p_script, const GDScriptPar
 		}
 	}
 
+	p_script->clearing = true;
+
 #ifdef TOOLS_ENABLED
 	p_script->doc_functions.clear();
 	p_script->doc_variables.clear();
@@ -2234,10 +2248,24 @@ Error GDScriptCompiler::_parse_class_level(GDScript *p_script, const GDScriptPar
 	p_script->base = Ref<GDScript>();
 	p_script->_base = nullptr;
 	p_script->members.clear();
+
+	// This makes possible to clear script constants and member_functions without heap-use-after-free errors.
+	HashMap<StringName, Variant> constants;
+	for (const KeyValue<StringName, Variant> &E : p_script->constants) {
+		constants.insert(E.key, E.value);
+	}
 	p_script->constants.clear();
+	constants.clear();
+	HashMap<StringName, GDScriptFunction *> member_functions;
 	for (const KeyValue<StringName, GDScriptFunction *> &E : p_script->member_functions) {
+		member_functions.insert(E.key, E.value);
+	}
+	p_script->member_functions.clear();
+	for (const KeyValue<StringName, GDScriptFunction *> &E : member_functions) {
 		memdelete(E.value);
 	}
+	member_functions.clear();
+
 	if (p_script->implicit_initializer) {
 		memdelete(p_script->implicit_initializer);
 	}
@@ -2251,6 +2279,8 @@ Error GDScriptCompiler::_parse_class_level(GDScript *p_script, const GDScriptPar
 	p_script->initializer = nullptr;
 	p_script->implicit_initializer = nullptr;
 	p_script->implicit_ready = nullptr;
+
+	p_script->clearing = false;
 
 	p_script->tool = parser->is_tool();
 	p_script->name = p_class->identifier ? p_class->identifier->name : "";
@@ -2275,6 +2305,19 @@ Error GDScriptCompiler::_parse_class_level(GDScript *p_script, const GDScriptPar
 		} break;
 		case GDScriptDataType::GDSCRIPT: {
 			Ref<GDScript> base = Ref<GDScript>(base_type.script_type);
+			if (base.is_valid()) {
+				Error err = OK;
+				GDScriptCache::get_full_script(base->get_path(), err, main_script->path);
+				if (err != OK) {
+					return err;
+				}
+				if (p_class->extends.size() > 1) {
+					for (int i = 1; i < p_class->extends.size(); i++) {
+						StringName extend = p_class->extends.get(i);
+						base = base->constants[extend];
+					}
+				}
+			}
 			p_script->base = base;
 			p_script->_base = base.ptr();
 
@@ -2290,15 +2333,6 @@ Error GDScriptCompiler::_parse_class_level(GDScript *p_script, const GDScriptPar
 						if (err) {
 							return err;
 						}
-					}
-				} else {
-					Error err = OK;
-					base = GDScriptCache::get_full_script(p_class->base_type.script_path, err, main_script->path);
-					if (err) {
-						return err;
-					}
-					if (base.is_null() || !base->is_valid()) {
-						return ERR_COMPILATION_FAILED;
 					}
 				}
 			}
