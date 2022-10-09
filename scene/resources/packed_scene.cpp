@@ -547,7 +547,7 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Has
 			nd.instance |= FLAG_INSTANCE_IS_PLACEHOLDER;
 		} else {
 			//must instance ourselves
-			Ref<PackedScene> instance = ResourceLoader::load(p_node->get_scene_file_path());
+			Ref<PackedScene> instance = ResourceLoader::load(p_node->get_scene_file_path(), "PackedScene");
 			if (!instance.is_valid()) {
 				return ERR_CANT_OPEN;
 			}
@@ -939,7 +939,7 @@ Error SceneState::pack(Node *p_scene) {
 	// If using scene inheritance, pack the scene it inherits from.
 	if (scene->get_scene_inherited_state().is_valid()) {
 		String scene_path = scene->get_scene_inherited_state()->get_path();
-		Ref<PackedScene> instance = ResourceLoader::load(scene_path);
+		Ref<PackedScene> instance = ResourceLoader::load(scene_path, "PackedScene");
 		if (instance.is_valid()) {
 			base_scene_idx = _vm_get_variant(instance, variant_map);
 		}
@@ -1808,6 +1808,60 @@ void PackedScene::_bind_methods() {
 	BIND_ENUM_CONSTANT(GEN_EDIT_STATE_MAIN_INHERITED);
 }
 
-PackedScene::PackedScene() {
+PackedScene::PackedScene() :
+		scene_list(this) {
 	state = Ref<SceneState>(memnew(SceneState));
+
+	if (PackedSceneList::singleton != nullptr) {
+		MutexLock lock(PackedSceneList::singleton->mutex);
+		PackedSceneList::singleton->scene_list.add(&scene_list);
+	}
+}
+
+PackedScene::~PackedScene() {
+	if (PackedSceneList::singleton != nullptr) {
+		MutexLock lock(PackedSceneList::singleton->mutex);
+		PackedSceneList::singleton->scene_list.remove(&scene_list);
+	}
+}
+
+////////////////
+
+PackedSceneList *PackedSceneList::singleton = nullptr;
+
+void PackedSceneList::initialize() {
+	memnew(PackedSceneList);
+}
+
+void PackedSceneList::deinitialize() {
+	memdelete(singleton);
+}
+
+Ref<PackedScene> PackedSceneList::get_scene_by_path(const String &p_path) {
+	if (p_path.is_empty()) {
+		return Ref<PackedScene>();
+	}
+
+	{
+		MutexLock lock(PackedSceneList::singleton->mutex);
+
+		SelfList<PackedScene> *elem = PackedSceneList::singleton->scene_list.first();
+		while (elem) {
+			PackedScene *scene = elem->self();
+			if (scene->get_path() == p_path) {
+				return scene;
+			}
+			elem = elem->next();
+		}
+	}
+	return Ref<PackedScene>();
+}
+
+PackedSceneList::PackedSceneList() {
+	ERR_FAIL_COND(singleton);
+	singleton = this;
+}
+
+PackedSceneList::~PackedSceneList() {
+	singleton = nullptr;
 }

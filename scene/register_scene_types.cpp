@@ -266,6 +266,7 @@
 #include "scene/resources/fog_material.h"
 #include "scene/resources/importer_mesh.h"
 #include "scene/resources/mesh_library.h"
+#include "scene/resources/packed_scene.h"
 #endif // _3D_DISABLED
 
 static Ref<ResourceFormatSaverText> resource_saver_text;
@@ -1151,6 +1152,8 @@ void register_scene_types() {
 		ColorPicker::init_shaders(); // RenderingServer needs to exist for this to succeed.
 	}
 
+	PackedSceneList::initialize();
+
 	SceneDebugger::initialize();
 }
 
@@ -1196,6 +1199,8 @@ void unregister_scene_types() {
 	CanvasItemMaterial::finish_shaders();
 	ColorPicker::finish_shaders();
 	SceneStringNames::free();
+
+	PackedSceneList::deinitialize();
 }
 
 void register_scene_singletons() {

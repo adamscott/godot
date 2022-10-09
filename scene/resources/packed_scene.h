@@ -203,11 +203,14 @@ public:
 
 VARIANT_ENUM_CAST(SceneState::GenEditState)
 
+////////////////
+
 class PackedScene : public Resource {
 	GDCLASS(PackedScene, Resource);
 	RES_BASE_EXTENSION("scn");
 
 	Ref<SceneState> state;
+	SelfList<PackedScene> scene_list;
 
 	void _set_bundled_scene(const Dictionary &p_scene);
 	Dictionary _get_bundled_scene() const;
@@ -245,8 +248,31 @@ public:
 	Ref<SceneState> get_state() const;
 
 	PackedScene();
+	~PackedScene();
 };
 
 VARIANT_ENUM_CAST(PackedScene::GenEditState)
+
+////////////////
+
+class PackedSceneList : public Object {
+	static PackedSceneList *singleton;
+	Mutex mutex;
+
+	SelfList<PackedScene>::List scene_list;
+
+	static void initialize();
+	static void deinitialize();
+
+	friend class PackedScene;
+	friend void register_scene_types();
+	friend void unregister_scene_types();
+
+public:
+	static Ref<PackedScene> get_scene_by_path(const String &p_path);
+
+	PackedSceneList();
+	~PackedSceneList();
+};
 
 #endif // PACKED_SCENE_H
