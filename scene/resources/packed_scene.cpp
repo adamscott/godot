@@ -43,6 +43,11 @@
 #include "scene/main/missing_node.h"
 #include "scene/property_utils.h"
 
+#include "modules/modules_enabled.gen.h" // For GDScript
+#ifdef MODULE_GDSCRIPT_ENABLED
+#include "modules/gdscript/gdscript_cache.h"
+#endif
+
 #define PACKED_SCENE_VERSION 2
 #define META_POINTER_PROPERTY_BASE "metadata/_editor_prop_ptr_"
 bool SceneState::can_instantiate() const {
@@ -547,7 +552,7 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Has
 			nd.instance |= FLAG_INSTANCE_IS_PLACEHOLDER;
 		} else {
 			//must instance ourselves
-			Ref<PackedScene> instance = ResourceLoader::load(p_node->get_scene_file_path());
+			Ref<PackedScene> instance = ResourceLoader::load(p_node->get_scene_file_path(), "PackedScene");
 			if (!instance.is_valid()) {
 				return ERR_CANT_OPEN;
 			}
@@ -939,7 +944,7 @@ Error SceneState::pack(Node *p_scene) {
 	// If using scene inheritance, pack the scene it inherits from.
 	if (scene->get_scene_inherited_state().is_valid()) {
 		String scene_path = scene->get_scene_inherited_state()->get_path();
-		Ref<PackedScene> instance = ResourceLoader::load(scene_path);
+		Ref<PackedScene> instance = ResourceLoader::load(scene_path, "PackedScene");
 		if (instance.is_valid()) {
 			base_scene_idx = _vm_get_variant(instance, variant_map);
 		}
@@ -1810,4 +1815,10 @@ void PackedScene::_bind_methods() {
 
 PackedScene::PackedScene() {
 	state = Ref<SceneState>(memnew(SceneState));
+}
+
+PackedScene::~PackedScene() {
+#ifdef MODULE_GDSCRIPT_ENABLED
+	GDScriptCache::remove_scene(get_path());
+#endif
 }
