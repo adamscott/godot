@@ -256,21 +256,7 @@ GDScriptCache::~GDScriptCache() {
 	destructing = true;
 
 	parser_map.clear();
-
-	for (KeyValue<String, GDScript *> &E : shallow_gdscript_cache) {
-		Ref<GDScript> ref = Ref<GDScript>(E.value);
-		while (ref->get_reference_count() > 1) {
-			ref->unreference();
-		}
-	}
 	shallow_gdscript_cache.clear();
-
-	for (KeyValue<String, GDScript *> &E : full_gdscript_cache) {
-		Ref<GDScript> ref = Ref<GDScript>(E.value);
-		while (ref->get_reference_count() > 1) {
-			ref->unreference();
-		}
-	}
 	full_gdscript_cache.clear();
 	singleton = nullptr;
 }
