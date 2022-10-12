@@ -1302,21 +1302,6 @@ GDScript::~GDScript() {
 #endif
 }
 
-bool GDScript::reference() {
-	if (GDScriptCache::singleton != nullptr && GDScriptCache::singleton->destructing) {
-		return RefCounted::reference();
-	}
-
-	return get_reference_count() == 0;
-}
-
-bool GDScript::unreference() {
-	if (GDScriptCache::singleton != nullptr && GDScriptCache::singleton->destructing) {
-		return RefCounted::unreference();
-	}
-	return false;
-}
-
 //////////////////////////////
 //         INSTANCE         //
 //////////////////////////////

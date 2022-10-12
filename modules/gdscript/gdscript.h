@@ -174,9 +174,6 @@ protected:
 	static void _bind_methods();
 
 public:
-	bool reference();
-	bool unreference();
-
 	virtual bool is_valid() const override { return valid; }
 
 	bool inherits_script(const Ref<Script> &p_script) const override;
