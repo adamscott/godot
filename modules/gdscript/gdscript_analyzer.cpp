@@ -266,7 +266,7 @@ Error GDScriptAnalyzer::resolve_inheritance(GDScriptParser::ClassNode *p_class, 
 			}
 
 			Ref<GDScriptParserDataRef> ext_parser_data_wref = get_parser_for(p_class->extends_path);
-			if (ext_parser_data_wref.is_null() || parser_data_wref->get_ref().is_null()) {
+			if (ext_parser_data_wref.is_null() || ext_parser_data_wref->get_ref().is_null()) {
 				push_error(vformat(R"(Could not resolve super class path "%s".)", p_class->extends_path), p_class);
 				return ERR_PARSE_ERROR;
 			}
