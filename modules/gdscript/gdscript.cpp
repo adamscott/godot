@@ -2430,7 +2430,7 @@ Ref<Resource> ResourceFormatLoaderGDScript::load(const String &p_path, const Str
 		*r_error = OK;
 	}
 
-	return scr;
+	return script;
 }
 
 void ResourceFormatLoaderGDScript::get_recognized_extensions(List<String> *p_extensions) const {
