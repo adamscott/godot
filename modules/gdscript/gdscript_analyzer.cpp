@@ -3236,9 +3236,8 @@ void GDScriptAnalyzer::reduce_preload(GDScriptParser::PreloadNode *p_preload) {
 		} else {
 			// TODO: Don't load if validating: use completion cache.
 			if (ResourceLoader::get_resource_type(p_preload->resolved_path) == "GDScript") {
-				Error err = OK;
-				p_preload->resource = GDScriptCache::get_full_script(p_preload->resolved_path, err, parser->script_path);
-				if (p_preload->resource.is_null() || err != OK) {
+				p_preload->resource = GDScriptCache::get_shallow_script(p_preload->resolved_path, parser->script_path);
+				if (p_preload->resource.is_null()) {
 					push_error(vformat(R"(Could not preload resource script "%s".)", p_preload->resolved_path), p_preload->path);
 				}
 			} else {

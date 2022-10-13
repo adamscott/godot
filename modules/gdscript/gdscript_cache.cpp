@@ -110,8 +110,8 @@ GDScriptCache *GDScriptCache::singleton = nullptr;
 
 void GDScriptCache::remove_script(const String &p_path) {
 	MutexLock lock(singleton->lock);
-	singleton->shallow_gdscript_cache.erase(p_path);
-	singleton->full_gdscript_cache.erase(p_path);
+	// singleton->shallow_gdscript_cache.erase(p_path);
+	// singleton->full_gdscript_cache.erase(p_path);
 }
 
 Ref<GDScriptParserRef> GDScriptCache::get_parser(const String &p_path, GDScriptParserRef::Status p_status, Error &r_error, const String &p_owner) {
@@ -179,7 +179,7 @@ Ref<GDScript> GDScriptCache::get_shallow_script(const String &p_path, const Stri
 	script->set_script_path(p_path);
 	script->load_source_code(p_path);
 
-	singleton->shallow_gdscript_cache[p_path] = script.ptr();
+	singleton->shallow_gdscript_cache[p_path] = script;
 	return script;
 }
 
@@ -210,12 +210,12 @@ Ref<GDScript> GDScriptCache::get_full_script(const String &p_path, Error &r_erro
 		return script;
 	}
 
-	singleton->full_gdscript_cache[p_path] = script.ptr();
+	singleton->full_gdscript_cache[p_path] = script;
 	singleton->shallow_gdscript_cache.erase(p_path);
 
 	r_error = script->reload();
 	if (r_error) {
-		singleton->shallow_gdscript_cache[p_path] = script.ptr();
+		singleton->shallow_gdscript_cache[p_path] = script;
 		singleton->full_gdscript_cache.erase(p_path);
 		return script;
 	}
@@ -226,7 +226,7 @@ Ref<GDScript> GDScriptCache::get_full_script(const String &p_path, Error &r_erro
 Error GDScriptCache::finish_compiling(const String &p_owner) {
 	// Mark this as compiled.
 	Ref<GDScript> script = get_shallow_script(p_owner);
-	singleton->full_gdscript_cache[p_owner] = script.ptr();
+	singleton->full_gdscript_cache[p_owner] = script;
 	singleton->shallow_gdscript_cache.erase(p_owner);
 
 	HashSet<String> depends = singleton->dependencies[p_owner];
@@ -256,7 +256,50 @@ GDScriptCache::~GDScriptCache() {
 	destructing = true;
 
 	parser_map.clear();
-	shallow_gdscript_cache.clear();
-	full_gdscript_cache.clear();
+
+	for (KeyValue<String, Ref<GDScript>> &E : shallow_gdscript_cache) {
+		E.value->clear();
+	}
+
+	for (KeyValue<String, Ref<GDScript>> &E : full_gdscript_cache) {
+		E.value->clear();
+	}
+
+	while (shallow_gdscript_cache.size() > 0 || full_gdscript_cache.size() > 0) {
+		int16_t reference_count = INT16_MAX;
+		GDScript *reference = nullptr;
+		String key;
+		for (KeyValue<String, Ref<GDScript>> &E : shallow_gdscript_cache) {
+			print_line(vformat("testing %s at %s", E.key, E.value->get_reference_count()));
+			if (E.value->get_reference_count() < reference_count) {
+				key = E.key;
+				reference = E.value.ptr();
+				reference_count = E.value->get_reference_count();
+				print_line(vformat("%s is at %s", key, reference_count));
+			}
+		}
+
+		for (KeyValue<String, Ref<GDScript>> &E : full_gdscript_cache) {
+			print_line(vformat("testing %s at %s", E.key, E.value->get_reference_count()));
+			if (E.value->get_reference_count() < reference_count) {
+				key = E.key;
+				reference = E.value.ptr();
+				reference_count = E.value->get_reference_count();
+				print_line(vformat("%s is at %s", key, reference_count));
+			}
+		}
+
+		if (reference->get_reference_count() > 1) {
+			print_line(vformat("%s is more than one, unreferencing()", key));
+			reference->unreference();
+			continue;
+		}
+
+		print_line(vformat("Erasing %s", key));
+		shallow_gdscript_cache.erase(key);
+		full_gdscript_cache.erase(key);
+	}
+
+
 	singleton = nullptr;
 }

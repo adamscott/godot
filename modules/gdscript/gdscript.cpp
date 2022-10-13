@@ -875,7 +875,7 @@ Error GDScript::reload(bool p_keep_state) {
 		if (!source_path.is_empty()) {
 			MutexLock lock(GDScriptCache::singleton->lock);
 			if (!GDScriptCache::singleton->shallow_gdscript_cache.has(source_path) && !GDScriptCache::singleton->full_gdscript_cache.has(source_path)) {
-				GDScriptCache::singleton->shallow_gdscript_cache[source_path] = this;
+				GDScriptCache::singleton->shallow_gdscript_cache[source_path] = Ref<GDScript>(this);
 			}
 		}
 	}
@@ -1257,6 +1257,10 @@ void GDScript::_init_rpc_methods_properties() {
 }
 
 GDScript::~GDScript() {
+	// _clear();
+}
+
+void GDScript::clear() {
 	{
 		MutexLock lock(GDScriptLanguage::get_singleton()->mutex);
 
@@ -1281,7 +1285,7 @@ GDScript::~GDScript() {
 	}
 
 	if (GDScriptCache::singleton) { // Cache may have been already destroyed at engine shutdown.
-		GDScriptCache::remove_script(get_path());
+		// GDScriptCache::remove_script(get_path());
 	}
 
 	_save_orphaned_subclasses();
@@ -2351,6 +2355,7 @@ GDScriptLanguage::GDScriptLanguage() {
 }
 
 GDScriptLanguage::~GDScriptLanguage() {
+	print_line(vformat("~GDScriptLanguage"));
 	if (_call_stack) {
 		memdelete_arr(_call_stack);
 	}
