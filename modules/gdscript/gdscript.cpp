@@ -875,7 +875,7 @@ Error GDScript::reload(bool p_keep_state) {
 		if (!source_path.is_empty()) {
 			MutexLock lock(GDScriptCache::singleton->lock);
 			if (!GDScriptCache::singleton->shallow_gdscript_cache.has(source_path) && !GDScriptCache::singleton->full_gdscript_cache.has(source_path)) {
-				GDScriptCache::singleton->shallow_gdscript_cache[source_path] = Ref<GDScript>(this);
+				GDScriptCache::singleton->shallow_gdscript_cache[source_path] = this;
 			}
 		}
 	}
@@ -1257,10 +1257,6 @@ void GDScript::_init_rpc_methods_properties() {
 }
 
 GDScript::~GDScript() {
-	// _clear();
-}
-
-void GDScript::clear() {
 	{
 		MutexLock lock(GDScriptLanguage::get_singleton()->mutex);
 
