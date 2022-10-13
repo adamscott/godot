@@ -1285,7 +1285,7 @@ void GDScript::clear() {
 	}
 
 	if (GDScriptCache::singleton) { // Cache may have been already destroyed at engine shutdown.
-		// GDScriptCache::remove_script(get_path());
+		GDScriptCache::remove_script(get_path());
 	}
 
 	_save_orphaned_subclasses();
