@@ -3236,7 +3236,8 @@ void GDScriptAnalyzer::reduce_preload(GDScriptParser::PreloadNode *p_preload) {
 		} else {
 			// TODO: Don't load if validating: use completion cache.
 			if (ResourceLoader::get_resource_type(p_preload->resolved_path) == "GDScript") {
-				p_preload->resource = GDScriptCache::get_shallow_script(p_preload->resolved_path, parser->script_path);
+				Ref<GDScript> res = GDScriptCache::get_shallow_script(p_preload->resolved_path, parser->script_path);
+				p_preload->resource = res;
 				if (p_preload->resource.is_null()) {
 					push_error(vformat(R"(Could not preload resource script "%s".)", p_preload->resolved_path), p_preload->path);
 				}
@@ -3286,6 +3287,15 @@ void GDScriptAnalyzer::reduce_subscript(GDScriptParser::SubscriptNode *p_subscri
 			// Just try to get it.
 			bool valid = false;
 			Variant value = p_subscript->base->reduced_value.get_named(p_subscript->attribute->name, valid);
+
+			Ref<GDScript> gdscr = Ref<GDScript>(p_subscript->base->reduced_value);
+			if (!valid && gdscr.is_valid()) {
+				Error err = OK;
+				GDScriptCache::get_full_script(gdscr->get_path(), err);
+				if (err == OK) {
+					value = p_subscript->base->reduced_value.get_named(p_subscript->attribute->name, valid);
+				}
+			}
 
 			if (!valid) {
 				push_error(vformat(R"(Cannot get member "%s" from "%s".)", p_subscript->attribute->name, p_subscript->base->reduced_value), p_subscript->index);
