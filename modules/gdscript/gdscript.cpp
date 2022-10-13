@@ -1720,25 +1720,6 @@ void GDScriptInstance::reload_members() {
 #endif
 }
 
-void GDScriptInstance::refcount_incremented() {
-	// RefCounted *rc_owner = Object::cast_to<RefCounted>(owner);
-	// int refcount = rc_owner->get_reference_count();
-	// print_line(vformat("refcount_incremented: %s", refcount));
-	(void)0;
-}
-
-bool GDScriptInstance::refcount_decremented() {
-	// RefCounted *rc_owner = Object::cast_to<RefCounted>(owner);
-	// int refcount = rc_owner->get_reference_count();
-	// print_line(vformat("refcount_decremented: %s", refcount));
-	(void)0;
-
-	if (GDScriptCache::singleton == nullptr || GDScriptCache::singleton->destructing) {
-		return true;
-	}
-	return false;
-}
-
 GDScriptInstance::GDScriptInstance() {
 	owner = nullptr;
 	base_ref_counted = false;

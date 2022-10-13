@@ -283,9 +283,6 @@ class GDScriptInstance : public ScriptInstance {
 	SelfList<GDScriptFunctionState>::List pending_func_states;
 
 public:
-	void refcount_incremented();
-	bool refcount_decremented();
-
 	virtual Object *get_owner() { return owner; }
 
 	virtual bool set(const StringName &p_name, const Variant &p_value);
