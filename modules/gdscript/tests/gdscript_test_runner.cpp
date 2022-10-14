@@ -597,6 +597,10 @@ GDScriptTest::TestResult GDScriptTest::execute_test_code(bool p_is_generating) {
 	}
 
 	enable_stdout();
+
+	script = Ref<GDScript>();
+	GDScriptCache::clean();
+
 	return result;
 }
 

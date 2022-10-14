@@ -92,6 +92,8 @@ public:
 	static Ref<GDScript> get_full_script(const String &p_path, Error &r_error, const String &p_owner = String(), bool p_update_from_disk = false);
 	static Error finish_compiling(const String &p_owner);
 
+	static void clean();
+
 	GDScriptCache();
 	~GDScriptCache();
 };

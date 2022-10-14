@@ -249,6 +249,13 @@ Error GDScriptCache::finish_compiling(const String &p_owner) {
 	return err;
 }
 
+void GDScriptCache::clean() {
+	MutexLock lock(singleton->lock);
+
+	singleton->shallow_gdscript_cache.clear();
+	singleton->full_gdscript_cache.clear();
+}
+
 GDScriptCache::GDScriptCache() {
 	singleton = this;
 }
