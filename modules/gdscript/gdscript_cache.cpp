@@ -110,8 +110,8 @@ GDScriptCache *GDScriptCache::singleton = nullptr;
 
 void GDScriptCache::remove_script(const String &p_path) {
 	MutexLock lock(singleton->lock);
-	// singleton->shallow_gdscript_cache.erase(p_path);
-	// singleton->full_gdscript_cache.erase(p_path);
+	singleton->shallow_gdscript_cache.erase(p_path);
+	singleton->full_gdscript_cache.erase(p_path);
 }
 
 Ref<GDScriptParserRef> GDScriptCache::get_parser(const String &p_path, GDScriptParserRef::Status p_status, Error &r_error, const String &p_owner) {
@@ -162,6 +162,10 @@ String GDScriptCache::get_source_code(const String &p_path) {
 }
 
 Ref<GDScript> GDScriptCache::get_shallow_script(const String &p_path, const String &p_owner) {
+	if (p_path.is_empty()) {
+		return ResourceLoader::load(p_path);
+	}
+
 	MutexLock lock(singleton->lock);
 	if (!p_owner.is_empty()) {
 		singleton->dependencies[p_owner].insert(p_path);
@@ -249,13 +253,6 @@ Error GDScriptCache::finish_compiling(const String &p_owner) {
 	return err;
 }
 
-void GDScriptCache::clean() {
-	MutexLock lock(singleton->lock);
-
-	singleton->shallow_gdscript_cache.clear();
-	singleton->full_gdscript_cache.clear();
-}
-
 GDScriptCache::GDScriptCache() {
 	singleton = this;
 }
@@ -268,6 +265,12 @@ GDScriptCache::~GDScriptCache() {
 		GDScript *reference = nullptr;
 		String key;
 		for (KeyValue<String, GDScript *> &E : shallow_gdscript_cache) {
+			if (E.value == nullptr) {
+				shallow_gdscript_cache.erase(E.key);
+				continue;
+			}
+
+			print_line(vformat("testing %s", E.key));
 			print_line(vformat("testing %s at %s", E.key, E.value->get_reference_count()));
 			if (E.value->get_reference_count() < reference_count) {
 				key = E.key;
@@ -280,6 +283,11 @@ GDScriptCache::~GDScriptCache() {
 		}
 
 		for (KeyValue<String, GDScript *> &E : full_gdscript_cache) {
+			if (E.value == nullptr) {
+				full_gdscript_cache.erase(E.key);
+				continue;
+			}
+
 			print_line(vformat("testing %s at %s", E.key, E.value->get_reference_count()));
 			if (E.value->get_reference_count() < reference_count) {
 				key = E.key;
