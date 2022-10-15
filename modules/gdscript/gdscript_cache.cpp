@@ -264,6 +264,7 @@ RBSet<String> GDScriptCache::get_dependencies(const String &p_path) {
 		get_dependencies(E, query_dependencies);
 	}
 
+	query_dependencies.erase(p_path);
 	return query_dependencies;
 }
 
@@ -289,6 +290,8 @@ RBSet<String> GDScriptCache::get_inverted_dependencies(const String &p_path) {
 		if (E.key == p_path || !E.value.has(p_path)) continue;
 		get_inverted_dependencies(E.key, query_dependencies, p_path);
 	}
+
+	query_dependencies.erase(p_path);
 
 	return query_dependencies;
 }

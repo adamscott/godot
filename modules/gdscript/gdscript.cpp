@@ -1211,6 +1211,19 @@ void GDScript::_save_orphaned_subclasses() {
 
 	// clear subclasses to allow unused subclasses to be deleted
 	subclasses.clear();
+
+	for (const KeyValue<StringName, Variant> &E : constants) {
+		print_line(vformat("  clearing constant %s %s", E.key, E.value));
+
+		// if (Variant::Type::OBJECT != E.value.get_type()) continue;
+		// Object *obj = E.value;
+		// if (obj == nullptr) continue;
+		// Ref<GDScript> scr = Ref<GDScript>(obj);
+		// if (scr.is_valid()) {
+
+		// }
+	}
+
 	// subclasses are also held by constants, clear those as well
 	constants.clear();
 
@@ -1257,38 +1270,38 @@ void GDScript::_init_rpc_methods_properties() {
 }
 
 void GDScript::clear() {
-	print_line(vformat("Clearing %s", get_path()));
-	RBSet<String> deps = GDScriptCache::get_dependencies(get_path());
-	RBSet<String> inverted_deps = GDScriptCache::get_inverted_dependencies(get_path());
-	RBSet<String> must_clear_deps;
+	print_line(vformat("Clearing %s (%s)", get_path(), clearing));
+	// if (clearing) return;
+	// clearing = true;
+
+	String path = get_path();
+	RBSet<String> deps = GDScriptCache::get_dependencies(path);
+	RBSet<String> inverted_deps = GDScriptCache::get_inverted_dependencies(path);
+	RBSet<Ref<GDScript>> must_clear_deps;
 	for (const String &E : deps) {
+		if (E == path) continue;
 		bool must_clear = !inverted_deps.has(E);
 
 		if (must_clear) {
 			print_line(vformat("  dep: %s [must clear]", E));
-			must_clear_deps.insert(E);
+			must_clear_deps.insert(GDScriptCache::get_shallow_script(E));
 		} else {
 			print_line(vformat("  dep: %s", E));
 		}
 	}
 
-	for (const String &E : must_clear_deps) {
-		Ref<GDScript> must_clear = GDScriptCache::get_shallow_script(E);
-		must_clear->clear();
-	}
-
-	{
-		MutexLock lock(GDScriptLanguage::get_singleton()->mutex);
-
-		while (SelfList<GDScriptFunctionState> *E = pending_func_states.first()) {
-			// Order matters since clearing the stack may already cause
-			// the GDSCriptFunctionState to be destroyed and thus removed from the list.
-			pending_func_states.remove(E);
-			E->self()->_clear_stack();
-		}
+	for (const KeyValue<StringName, Variant> &E : constants) {
+		print_line(vformat("  constant: %s: %s", E.key, E.value));
+		// constants.erase(E.key);
 	}
 
 	for (const KeyValue<StringName, GDScriptFunction *> &E : member_functions) {
+		print_line(vformat("  member func %s:", E.key));
+		for (const Variant &F : E.value->constants) {
+			print_line(vformat("    %s", F));
+			// E.value->constants.erase(F);
+		}
+
 		memdelete(E.value);
 	}
 	member_functions.clear();
@@ -1316,6 +1329,30 @@ void GDScript::clear() {
 	}
 #endif
 
+	for (Ref<GDScript> &E : must_clear_deps) {
+		print_line(vformat("-> start clearing: %s", E->get_path()));
+		E->clear();
+		print_line(vformat("-> end clearing:   %s", E->get_path()));
+	}
+
+	{
+		MutexLock lock(GDScriptLanguage::get_singleton()->mutex);
+
+		while (SelfList<GDScriptFunctionState> *E = pending_func_states.first()) {
+			// Order matters since clearing the stack may already cause
+			// the GDScriptFunctionState to be destroyed and thus removed from the list.
+			pending_func_states.remove(E);
+			E->self()->_clear_stack();
+		}
+	}
+
+	// clearing = false;
+}
+
+GDScript::~GDScript() {
+	print_line(vformat("~GDScript %s", get_path()));
+	clear();
+
 #ifdef DEBUG_ENABLED
 	{
 		MutexLock lock(GDScriptLanguage::get_singleton()->mutex);
@@ -1323,11 +1360,8 @@ void GDScript::clear() {
 		GDScriptLanguage::get_singleton()->script_list.remove(&script_list);
 	}
 #endif
-}
 
-GDScript::~GDScript() {
-	print_line(vformat("~GDScript %s", get_path()));
-	clear();
+	print_line(vformat("~~GDScript %s", get_path()));
 }
 
 //////////////////////////////
