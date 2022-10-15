@@ -92,7 +92,8 @@ public:
 	static Ref<GDScript> get_full_script(const String &p_path, Error &r_error, const String &p_owner = String(), bool p_update_from_disk = false);
 	static Error finish_compiling(const String &p_owner);
 
-	static void clean();
+	static RBSet<String> get_dependencies(const String &p_path);
+	static void get_dependencies(const String &p_path, RBSet<String> &p_dependencies);
 
 	GDScriptCache();
 	~GDScriptCache();

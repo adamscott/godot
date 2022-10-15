@@ -1257,6 +1257,12 @@ void GDScript::_init_rpc_methods_properties() {
 }
 
 GDScript::~GDScript() {
+	print_line(vformat("~GDScript %s", get_path()));
+	RBSet<String> deps = GDScriptCache::get_dependencies(get_path());
+	for (const String &E : deps) {
+		print_line(vformat("  dep: %s", E));
+	}
+
 	{
 		MutexLock lock(GDScriptLanguage::get_singleton()->mutex);
 
