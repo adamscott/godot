@@ -94,6 +94,8 @@ public:
 
 	static RBSet<String> get_dependencies(const String &p_path);
 	static void get_dependencies(const String &p_path, RBSet<String> &p_dependencies);
+	static RBSet<String> get_inverted_dependencies(const String &p_path);
+	static void get_inverted_dependencies(const String &p_path, RBSet<String> &p_dependencies, const String &p_except);
 
 	GDScriptCache();
 	~GDScriptCache();

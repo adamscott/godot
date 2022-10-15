@@ -110,6 +110,7 @@ GDScriptCache *GDScriptCache::singleton = nullptr;
 
 void GDScriptCache::remove_script(const String &p_path) {
 	MutexLock lock(singleton->lock);
+	singleton->dependencies.erase(p_path);
 	singleton->shallow_gdscript_cache.erase(p_path);
 	singleton->full_gdscript_cache.erase(p_path);
 }
@@ -275,6 +276,37 @@ void GDScriptCache::get_dependencies(const String &p_path, RBSet<String> &p_depe
 
 	for (const String &E : singleton->dependencies[p_path]) {
 		get_dependencies(E, p_dependencies);
+	}
+}
+
+RBSet<String> GDScriptCache::get_inverted_dependencies(const String &p_path) {
+	MutexLock lock(singleton->lock);
+
+	RBSet<String> query_dependencies;
+	if (!singleton->dependencies.has(p_path)) return query_dependencies;
+
+	for (const KeyValue<String, HashSet<String>> &E : singleton->dependencies) {
+		if (E.key == p_path || !E.value.has(p_path)) continue;
+		get_inverted_dependencies(E.key, query_dependencies, p_path);
+	}
+
+	return query_dependencies;
+}
+
+void GDScriptCache::get_inverted_dependencies(const String &p_path, RBSet<String> &p_dependencies, const String &p_except) {
+	MutexLock lock(singleton->lock);
+	if (p_dependencies.has(p_path)) return;
+
+	if (singleton->dependencies.has(p_path)) {
+		for (const String &E : singleton->dependencies[p_path]) {
+			if (E == p_except) continue;
+			get_dependencies(E, p_dependencies);
+		}
+	}
+
+	for (const KeyValue<String, HashSet<String>> &E : singleton->dependencies) {
+		if (E.key == p_path || !E.value.has(p_path)) continue;
+		get_inverted_dependencies(E.key, p_dependencies, p_except);
 	}
 }
 

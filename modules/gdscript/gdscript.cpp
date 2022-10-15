@@ -1256,11 +1256,25 @@ void GDScript::_init_rpc_methods_properties() {
 	}
 }
 
-GDScript::~GDScript() {
-	print_line(vformat("~GDScript %s", get_path()));
+void GDScript::clear() {
+	print_line(vformat("Clearing %s", get_path()));
 	RBSet<String> deps = GDScriptCache::get_dependencies(get_path());
+	RBSet<String> inverted_deps = GDScriptCache::get_inverted_dependencies(get_path());
+	RBSet<String> must_clear_deps;
 	for (const String &E : deps) {
-		print_line(vformat("  dep: %s", E));
+		bool must_clear = !inverted_deps.has(E);
+
+		if (must_clear) {
+			print_line(vformat("  dep: %s [must clear]", E));
+			must_clear_deps.insert(E);
+		} else {
+			print_line(vformat("  dep: %s", E));
+		}
+	}
+
+	for (const String &E : must_clear_deps) {
+		Ref<GDScript> must_clear = GDScriptCache::get_shallow_script(E);
+		must_clear->clear();
 	}
 
 	{
@@ -1277,14 +1291,17 @@ GDScript::~GDScript() {
 	for (const KeyValue<StringName, GDScriptFunction *> &E : member_functions) {
 		memdelete(E.value);
 	}
+	member_functions.clear();
 
 	if (implicit_initializer) {
 		memdelete(implicit_initializer);
 	}
+	implicit_initializer = nullptr;
 
 	if (implicit_ready) {
 		memdelete(implicit_ready);
 	}
+	implicit_ready = nullptr;
 
 	if (GDScriptCache::singleton) { // Cache may have been already destroyed at engine shutdown.
 		GDScriptCache::remove_script(get_path());
@@ -1306,6 +1323,11 @@ GDScript::~GDScript() {
 		GDScriptLanguage::get_singleton()->script_list.remove(&script_list);
 	}
 #endif
+}
+
+GDScript::~GDScript() {
+	print_line(vformat("~GDScript %s", get_path()));
+	clear();
 }
 
 //////////////////////////////
