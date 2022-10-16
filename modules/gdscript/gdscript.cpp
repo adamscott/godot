@@ -1284,7 +1284,6 @@ void GDScript::clear() {
 
 	print_line(vformat("Clearing %s", get_path()));
 
-	String path = get_path();
 	RBSet<String> deps = GDScriptCache::get_dependencies(path);
 	RBSet<String> inverted_deps = GDScriptCache::get_inverted_dependencies(path);
 	RBSet<Ref<GDScript>> must_clear_deps;
