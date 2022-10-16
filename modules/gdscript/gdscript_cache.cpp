@@ -96,7 +96,8 @@ Error GDScriptParserRef::raise_status(Status p_new_status) {
 }
 
 void GDScriptParserRef::clear() {
-	if (cleared) return;
+	if (cleared)
+		return;
 	cleared = true;
 
 	print_line(vformat("GDScriptParserRef::clear()"));
@@ -290,7 +291,8 @@ RBSet<String> GDScriptCache::get_dependencies(const String &p_path) {
 	MutexLock lock(singleton->lock);
 
 	RBSet<String> query_dependencies;
-	if (!singleton->dependencies.has(p_path)) return query_dependencies;
+	if (!singleton->dependencies.has(p_path))
+		return query_dependencies;
 
 	for (const String &E : singleton->dependencies[p_path]) {
 		get_dependencies(E, query_dependencies);
@@ -302,10 +304,12 @@ RBSet<String> GDScriptCache::get_dependencies(const String &p_path) {
 
 void GDScriptCache::get_dependencies(const String &p_path, RBSet<String> &p_dependencies) {
 	MutexLock lock(singleton->lock);
-	if (p_dependencies.has(p_path)) return;
+	if (p_dependencies.has(p_path))
+		return;
 	p_dependencies.insert(p_path);
 
-	if (!singleton->dependencies.has(p_path)) return;
+	if (!singleton->dependencies.has(p_path))
+		return;
 
 	for (const String &E : singleton->dependencies[p_path]) {
 		get_dependencies(E, p_dependencies);
@@ -316,10 +320,12 @@ RBSet<String> GDScriptCache::get_inverted_dependencies(const String &p_path) {
 	MutexLock lock(singleton->lock);
 
 	RBSet<String> query_dependencies;
-	if (!singleton->dependencies.has(p_path)) return query_dependencies;
+	if (!singleton->dependencies.has(p_path))
+		return query_dependencies;
 
 	for (const KeyValue<String, HashSet<String>> &E : singleton->dependencies) {
-		if (E.key == p_path || !E.value.has(p_path)) continue;
+		if (E.key == p_path || !E.value.has(p_path))
+			continue;
 		if (singleton->dependencies.has(E.key) && !singleton->dependencies[E.key].has(p_path)) {
 			get_inverted_dependencies(E.key, query_dependencies, p_path);
 		}
@@ -332,17 +338,20 @@ RBSet<String> GDScriptCache::get_inverted_dependencies(const String &p_path) {
 
 void GDScriptCache::get_inverted_dependencies(const String &p_path, RBSet<String> &p_dependencies, const String &p_except) {
 	MutexLock lock(singleton->lock);
-	if (p_dependencies.has(p_path)) return;
+	if (p_dependencies.has(p_path))
+		return;
 
 	if (singleton->dependencies.has(p_path)) {
 		for (const String &E : singleton->dependencies[p_path]) {
-			if (E == p_except) continue;
+			if (E == p_except)
+				continue;
 			get_dependencies(E, p_dependencies);
 		}
 	}
 
 	for (const KeyValue<String, HashSet<String>> &E : singleton->dependencies) {
-		if (E.key == p_path || !E.value.has(p_path)) continue;
+		if (E.key == p_path || !E.value.has(p_path))
+			continue;
 		get_inverted_dependencies(E.key, p_dependencies, p_except);
 	}
 }

@@ -1279,7 +1279,8 @@ void GDScript::_init_rpc_methods_properties() {
 }
 
 void GDScript::clear() {
-	if (cleared) return;
+	if (cleared)
+		return;
 	cleared = true;
 
 	print_line(vformat("Clearing %s", get_path()));
@@ -1288,7 +1289,8 @@ void GDScript::clear() {
 	RBSet<String> inverted_deps = GDScriptCache::get_inverted_dependencies(path);
 	RBSet<Ref<GDScript>> must_clear_deps;
 	for (const String &E : deps) {
-		if (E == path) continue;
+		if (E == path)
+			continue;
 		bool must_clear = !inverted_deps.has(E);
 
 		if (must_clear) {
