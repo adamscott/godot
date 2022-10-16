@@ -362,9 +362,17 @@ GDScriptCache::GDScriptCache() {
 
 GDScriptCache::~GDScriptCache() {
 	print_line("~GDScriptCache()");
-	// for (KeyValue<String, GDScriptParserRef *> &E : parser_map) {
-	// 	print_line(vformat("cached GDScriptParserRef %s: %s", E.key, E.value));
-	// }
+	RBSet<Ref<GDScriptParserRef>> parser_map_refs;
+	for (KeyValue<String, GDScriptParserRef *> &E : parser_map) {
+		parser_map_refs.insert(E.value);
+	}
+
+	for (Ref<GDScriptParserRef> &E : parser_map_refs) {
+		if (E.is_valid())
+			E->clear();
+	}
+
+	parser_map_refs.clear();
 	parser_map.clear();
 
 	while (shallow_gdscript_cache.size() > 0 || full_gdscript_cache.size() > 0) {
