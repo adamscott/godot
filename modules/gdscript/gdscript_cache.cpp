@@ -95,13 +95,25 @@ Error GDScriptParserRef::raise_status(Status p_new_status) {
 	return result;
 }
 
-GDScriptParserRef::~GDScriptParserRef() {
+void GDScriptParserRef::clear() {
+	if (cleared) return;
+	cleared = true;
+
+	print_line(vformat("GDScriptParserRef::clear()"));
+
 	if (parser != nullptr) {
 		memdelete(parser);
 	}
+
 	if (analyzer != nullptr) {
 		memdelete(analyzer);
 	}
+}
+
+GDScriptParserRef::~GDScriptParserRef() {
+	print_line(vformat("~GDScriptParserRef::clear()"));
+	clear();
+
 	MutexLock lock(GDScriptCache::singleton->lock);
 	GDScriptCache::singleton->parser_map.erase(path);
 }
@@ -110,6 +122,12 @@ GDScriptCache *GDScriptCache::singleton = nullptr;
 
 void GDScriptCache::remove_script(const String &p_path) {
 	MutexLock lock(singleton->lock);
+
+	if (singleton->parser_map.has(p_path)) {
+		singleton->parser_map[p_path]->clear();
+		singleton->parser_map.erase(p_path);
+	}
+
 	singleton->dependencies.erase(p_path);
 	singleton->shallow_gdscript_cache.erase(p_path);
 	singleton->full_gdscript_cache.erase(p_path);
@@ -334,6 +352,10 @@ GDScriptCache::GDScriptCache() {
 }
 
 GDScriptCache::~GDScriptCache() {
+	print_line("~GDScriptCache()");
+	// for (KeyValue<String, GDScriptParserRef *> &E : parser_map) {
+	// 	print_line(vformat("cached GDScriptParserRef %s: %s", E.key, E.value));
+	// }
 	parser_map.clear();
 
 	while (shallow_gdscript_cache.size() > 0 || full_gdscript_cache.size() > 0) {

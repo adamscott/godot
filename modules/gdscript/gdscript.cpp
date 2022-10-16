@@ -1362,13 +1362,17 @@ void GDScript::clear() {
 	}
 #endif
 
+	if (GDScriptCache::singleton) { // Cache may have been already destroyed at engine shutdown.
+		GDScriptCache::remove_script(get_path());
+	}
+
 	print_line(vformat("  => must_clear_deps %s", path));
 	for (Ref<GDScript> &E : must_clear_deps) {
-		print_line(vformat("    -> start clearing: %s (%s)", E->get_path(), E->get_reference_count()));
 		if (E.is_valid()) {
+			print_line(vformat("    -> start clearing: %s (%s)", E->get_path(), E->get_reference_count()));
 			E->clear();
+			print_line(vformat("    -> end clearing:   %s (%s)", E->get_path(), E->get_reference_count()));
 		}
-		print_line(vformat("    -> end clearing:   %s (%s)", E->get_path(), E->get_reference_count()));
 	}
 
 	print_line(vformat("  => end must_clear_deps %s", path));
@@ -1391,10 +1395,6 @@ void GDScript::clear() {
 GDScript::~GDScript() {
 	print_line(vformat("~GDScript %s", get_path()));
 	clear();
-
-	if (GDScriptCache::singleton) { // Cache may have been already destroyed at engine shutdown.
-		GDScriptCache::remove_script(get_path());
-	}
 
 #ifdef DEBUG_ENABLED
 	{

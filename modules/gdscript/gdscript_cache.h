@@ -56,6 +56,7 @@ private:
 	Status status = EMPTY;
 	Error result = OK;
 	String path;
+	bool cleared = false;
 
 	friend class GDScriptCache;
 
@@ -64,6 +65,7 @@ public:
 	Status get_status() const;
 	GDScriptParser *get_parser() const;
 	Error raise_status(Status p_new_status);
+	void clear();
 
 	GDScriptParserRef() {}
 	~GDScriptParserRef();
