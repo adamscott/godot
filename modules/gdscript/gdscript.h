@@ -124,7 +124,7 @@ class GDScript : public Script {
 
 	int subclass_count = 0;
 	RBSet<Object *> instances;
-	bool clearing = false;
+	bool cleared = false;
 	//exported members
 	String source;
 	String path;
