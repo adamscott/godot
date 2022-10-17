@@ -1195,8 +1195,6 @@ GDScript::GDScript() :
 }
 
 void GDScript::_save_orphaned_subclasses() {
-	print_line(vformat("    _save_orphaned_subclasses() %s", get_path()));
-
 	struct ClassRefWithName {
 		ObjectID id;
 		String fully_qualified_name;
@@ -1204,7 +1202,6 @@ void GDScript::_save_orphaned_subclasses() {
 	Vector<ClassRefWithName> weak_subclasses;
 	// collect subclasses ObjectID and name
 	for (KeyValue<StringName, Ref<GDScript>> &E : subclasses) {
-		print_line(vformat("    subclass for %s: %s", get_path(), E.value->get_path()));
 		E.value->_owner = nullptr; //bye, you are no longer owned cause I died
 		ClassRefWithName subclass;
 		subclass.id = E.value->get_instance_id();
@@ -1215,24 +1212,8 @@ void GDScript::_save_orphaned_subclasses() {
 	// clear subclasses to allow unused subclasses to be deleted
 	subclasses.clear();
 
-	for (const KeyValue<StringName, Variant> &E : constants) {
-		int ref_count = 0;
-		if (E.value.get_type() == Variant::Type::OBJECT) {
-			Object *obj = E.value;
-			if (obj != nullptr) {
-				Ref<GDScript> scr = Ref<GDScript>(obj);
-				if (scr.is_valid()) {
-					ref_count = scr->get_reference_count();
-				}
-			}
-		}
-
-		print_line(vformat("  clearing constant %s %s (%s)", E.key, E.value, ref_count));
-	}
-
 	// subclasses are also held by constants, clear those as well
 	constants.clear();
-	print_line(vformat("  constants clear"));
 
 	// keep orphan subclass only for subclasses that are still in use
 	for (int i = 0; i < weak_subclasses.size(); i++) {
@@ -1244,8 +1225,6 @@ void GDScript::_save_orphaned_subclasses() {
 		// subclass is not released
 		GDScriptLanguage::get_singleton()->add_orphan_subclass(subclass.fully_qualified_name, subclass.id);
 	}
-
-	print_line(vformat("    _save_orphaned_subclasses() end %s", get_path()));
 }
 
 void GDScript::_init_rpc_methods_properties() {
@@ -1283,60 +1262,22 @@ void GDScript::clear() {
 		return;
 	cleared = true;
 
-	print_line(vformat("Clearing %s", get_path()));
-
 	RBSet<String> deps = GDScriptCache::get_dependencies(path);
 	RBSet<String> inverted_deps = GDScriptCache::get_inverted_dependencies(path);
 	RBSet<Ref<GDScript>> must_clear_deps;
 	for (const String &E : deps) {
 		if (E == path)
 			continue;
-		bool must_clear = !inverted_deps.has(E);
 
+		bool must_clear = !inverted_deps.has(E);
 		if (must_clear) {
-			print_line(vformat("  dep: %s [must clear]", E));
 			must_clear_deps.insert(GDScriptCache::get_cached_script(E));
-		} else {
-			print_line(vformat("  dep: %s", E));
 		}
 	}
 	deps.clear();
 	inverted_deps.clear();
 
-	for (const KeyValue<StringName, Variant> &E : constants) {
-		if (E.value.get_type() == Variant::Type::OBJECT) {
-			Object *obj = E.value;
-			if (obj != nullptr) {
-				Ref<GDScript> scr = Ref<GDScript>(obj);
-				if (scr.is_valid()) {
-					print_line(vformat("  constant: %s: %s (%s)", E.key, E.value, scr->get_reference_count()));
-					continue;
-				}
-			}
-		}
-
-		print_line(vformat("  constant: %s: %s", E.key, E.value));
-		// constants.erase(E.key);
-	}
-
 	for (const KeyValue<StringName, GDScriptFunction *> &E : member_functions) {
-		print_line(vformat("  member func %s:", E.key));
-		for (const Variant &F : E.value->constants) {
-			if (F.get_type() == Variant::Type::OBJECT) {
-				Object *obj = F;
-				if (obj != nullptr) {
-					Ref<GDScript> scr = Ref<GDScript>(obj);
-					if (scr.is_valid()) {
-						print_line(vformat("    %s (%s)", scr, scr->get_reference_count()));
-						continue;
-					}
-				}
-			}
-
-			print_line(vformat("    %s", F));
-			// E.value->constants.erase(F);
-		}
-
 		memdelete(E.value);
 	}
 	member_functions.clear();
@@ -1352,14 +1293,11 @@ void GDScript::clear() {
 	implicit_ready = nullptr;
 
 	_save_orphaned_subclasses();
-	print_line(vformat("  => right after _save_orphaned_subclasses()"));
 
 #ifdef TOOLS_ENABLED
 	// Clearing inner class doc, script doc only cleared when the script source deleted.
 	if (_owner) {
-		print_line("  => clear doc %s", path);
 		_clear_doc();
-		print_line("  => clear doc end %s", path);
 	}
 #endif
 
@@ -1367,16 +1305,12 @@ void GDScript::clear() {
 		GDScriptCache::remove_script(get_path());
 	}
 
-	print_line(vformat("  => must_clear_deps %s", path));
 	for (Ref<GDScript> &E : must_clear_deps) {
 		if (E.is_valid()) {
-			print_line(vformat("    -> start clearing: %s (%s)", E->get_path(), E->get_reference_count()));
 			E->clear();
-			print_line(vformat("    -> end clearing:   %s (%s)", E->get_path(), E->get_reference_count()));
 		}
 	}
 
-	print_line(vformat("  => end must_clear_deps %s", path));
 	must_clear_deps.clear();
 
 	{
@@ -1389,12 +1323,9 @@ void GDScript::clear() {
 			E->self()->_clear_stack();
 		}
 	}
-
-	print_line(vformat("Clearing end %s", path));
 }
 
 GDScript::~GDScript() {
-	print_line(vformat("~GDScript %s", get_path()));
 	clear();
 
 #ifdef DEBUG_ENABLED
@@ -1404,8 +1335,6 @@ GDScript::~GDScript() {
 		GDScriptLanguage::get_singleton()->script_list.remove(&script_list);
 	}
 #endif
-
-	print_line(vformat("~~GDScript %s", get_path()));
 }
 
 //////////////////////////////
@@ -2438,7 +2367,6 @@ GDScriptLanguage::GDScriptLanguage() {
 }
 
 GDScriptLanguage::~GDScriptLanguage() {
-	print_line(vformat("~GDScriptLanguage"));
 	if (_call_stack) {
 		memdelete_arr(_call_stack);
 	}

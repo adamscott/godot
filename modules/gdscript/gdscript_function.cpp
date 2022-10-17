@@ -149,7 +149,6 @@ GDScriptFunction::GDScriptFunction() {
 }
 
 GDScriptFunction::~GDScriptFunction() {
-	print_line(vformat("  ~GDScriptFunction (%s) (%s)", get_script()->get_path(), get_script()->get_reference_count()));
 	for (int i = 0; i < lambdas.size(); i++) {
 		memdelete(lambdas[i]);
 	}

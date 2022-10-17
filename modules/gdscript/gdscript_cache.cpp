@@ -101,8 +101,6 @@ void GDScriptParserRef::clear() {
 		return;
 	cleared = true;
 
-	print_line(vformat("GDScriptParserRef::clear()"));
-
 	if (parser != nullptr) {
 		memdelete(parser);
 	}
@@ -113,7 +111,6 @@ void GDScriptParserRef::clear() {
 }
 
 GDScriptParserRef::~GDScriptParserRef() {
-	print_line(vformat("~GDScriptParserRef::clear()"));
 	clear();
 
 	MutexLock lock(GDScriptCache::singleton->lock);
@@ -297,7 +294,7 @@ Ref<PackedScene> GDScriptCache::get_scene(const String &p_path) {
 	Ref<PackedScene> scene;
 	scene.instantiate();
 	scene->set_path(p_path);
-
+	scene->recreate_state();
 	singleton->packed_scene_cache[p_path] = scene.ptr();
 
 	scene->reload_from_file();
@@ -383,7 +380,6 @@ GDScriptCache::GDScriptCache() {
 }
 
 GDScriptCache::~GDScriptCache() {
-	print_line("~GDScriptCache()");
 	RBSet<Ref<GDScriptParserRef>> parser_map_refs;
 	for (KeyValue<String, GDScriptParserRef *> &E : parser_map) {
 		parser_map_refs.insert(E.value);
@@ -407,14 +403,9 @@ GDScriptCache::~GDScriptCache() {
 				continue;
 			}
 
-			print_line(vformat("testing %s", E.key));
-			print_line(vformat("testing %s at %s", E.key, E.value->get_reference_count()));
 			if (E.value->get_reference_count() < reference_count) {
 				key = E.key;
-
 				reference_count = E.value->get_reference_count();
-				print_line(vformat("%s is at %s", key, reference_count));
-
 				reference = E.value;
 			}
 		}
@@ -425,13 +416,9 @@ GDScriptCache::~GDScriptCache() {
 				continue;
 			}
 
-			print_line(vformat("testing %s at %s", E.key, E.value->get_reference_count()));
 			if (E.value->get_reference_count() < reference_count) {
 				key = E.key;
-
 				reference_count = E.value->get_reference_count();
-				print_line(vformat("%s is at %s", key, reference_count));
-
 				reference = E.value;
 			}
 		}
@@ -441,12 +428,10 @@ GDScriptCache::~GDScriptCache() {
 		}
 
 		if (reference_count > 1) {
-			print_line(vformat("%s is more than one, unreferencing()", key));
 			reference->unreference();
 			continue;
 		}
 
-		print_line(vformat("Erasing %s", key));
 		shallow_gdscript_cache.erase(key);
 		full_gdscript_cache.erase(key);
 
