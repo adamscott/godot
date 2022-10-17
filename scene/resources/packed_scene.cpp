@@ -36,6 +36,7 @@
 #include "core/io/missing_resource.h"
 #include "core/io/resource_loader.h"
 #include "core/templates/local_vector.h"
+#include "modules/gdscript/gdscript_cache.h"
 #include "scene/2d/node_2d.h"
 #include "scene/3d/node_3d.h"
 #include "scene/gui/control.h"
@@ -1810,4 +1811,8 @@ void PackedScene::_bind_methods() {
 
 PackedScene::PackedScene() {
 	state = Ref<SceneState>(memnew(SceneState));
+}
+
+PackedScene::~PackedScene() {
+	GDScriptCache::remove_scene(get_path());
 }

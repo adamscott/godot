@@ -39,6 +39,7 @@
 #include "core/templates/hash_map.h"
 #include "gdscript.h"
 #include "gdscript_utility_functions.h"
+#include "scene/resources/packed_scene.h"
 
 static MethodInfo info_from_utility_func(const StringName &p_function) {
 	ERR_FAIL_COND_V(!Variant::has_utility_function(p_function), MethodInfo());
@@ -3240,6 +3241,12 @@ void GDScriptAnalyzer::reduce_preload(GDScriptParser::PreloadNode *p_preload) {
 				p_preload->resource = res;
 				if (p_preload->resource.is_null()) {
 					push_error(vformat(R"(Could not preload resource script "%s".)", p_preload->resolved_path), p_preload->path);
+				}
+			} else if (ResourceLoader::get_resource_type(p_preload->resolved_path) == "PackedScene") {
+				Ref<PackedScene> res = GDScriptCache::get_scene(p_preload->resolved_path);
+				p_preload->resource = res;
+				if (p_preload->resource.is_null()) {
+					push_error(vformat(R"(Could not preload resource scene "%s".)", p_preload->resolved_path), p_preload->path);
 				}
 			} else {
 				p_preload->resource = ResourceLoader::load(p_preload->resolved_path);

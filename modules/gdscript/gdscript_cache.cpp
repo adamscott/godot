@@ -35,6 +35,7 @@
 #include "gdscript.h"
 #include "gdscript_analyzer.h"
 #include "gdscript_parser.h"
+#include "scene/resources/packed_scene.h"
 
 bool GDScriptParserRef::is_valid() const {
 	return parser != nullptr;
@@ -285,6 +286,27 @@ Error GDScriptCache::finish_compiling(const String &p_owner) {
 	// singleton->dependencies.erase(p_owner);
 
 	return err;
+}
+
+Ref<PackedScene> GDScriptCache::get_scene(const String &p_path) {
+	MutexLock lock(singleton->lock);
+
+	if (singleton->packed_scene_cache.has(p_path))
+		return singleton->packed_scene_cache[p_path];
+
+	Ref<PackedScene> scene;
+	scene.instantiate();
+	scene->set_path(p_path);
+
+	singleton->packed_scene_cache[p_path] = scene.ptr();
+
+	scene->reload_from_file();
+	return scene;
+}
+
+void GDScriptCache::remove_scene(const String &p_path) {
+	MutexLock lock(singleton->lock);
+	singleton->packed_scene_cache.erase(p_path);
 }
 
 RBSet<String> GDScriptCache::get_dependencies(const String &p_path) {

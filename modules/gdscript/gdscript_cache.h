@@ -36,6 +36,7 @@
 #include "core/templates/hash_map.h"
 #include "core/templates/hash_set.h"
 #include "gdscript.h"
+#include "scene/resources/packed_scene.h"
 
 class GDScriptAnalyzer;
 class GDScriptParser;
@@ -77,6 +78,7 @@ class GDScriptCache {
 	HashMap<String, GDScript *> shallow_gdscript_cache;
 	HashMap<String, GDScript *> full_gdscript_cache;
 	HashMap<String, HashSet<String>> dependencies;
+	HashMap<String, PackedScene *> packed_scene_cache;
 
 	friend class GDScript;
 	friend class GDScriptParserRef;
@@ -94,6 +96,9 @@ public:
 	static Ref<GDScript> get_full_script(const String &p_path, Error &r_error, const String &p_owner = String(), bool p_update_from_disk = false);
 	static GDScript *get_cached_script(const String &p_path);
 	static Error finish_compiling(const String &p_owner);
+
+	static Ref<PackedScene> get_scene(const String &p_path);
+	static void remove_scene(const String &p_path);
 
 	static RBSet<String> get_dependencies(const String &p_path);
 	static void get_dependencies(const String &p_path, RBSet<String> &p_dependencies);
