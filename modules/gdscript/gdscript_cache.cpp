@@ -280,7 +280,7 @@ Error GDScriptCache::finish_compiling(const String &p_owner) {
 		}
 	}
 
-	// singleton->dependencies.erase(p_owner);
+	singleton->dependencies.erase(p_owner);
 
 	return err;
 }
