@@ -1131,6 +1131,24 @@ bool GDScript::inherits_script(const Ref<Script> &p_script) const {
 	return false;
 }
 
+RBSet<Ref<GDScript>> GDScript::get_dependencies() {
+	RBSet<Ref<GDScript>> dependencies;
+
+	_get_dependencies(dependencies, this);
+	dependencies.erase(this);
+
+	return dependencies;
+}
+
+RBSet<Ref<GDScript>> GDScript::get_inverted_dependencies() {
+	RBSet<Ref<GDScript>> inverted_dependencies;
+
+	if (_owner == nullptr) return inverted_dependencies;
+
+	_owner->_get_inverted_dependencies(inverted_dependencies, this);
+	return inverted_dependencies;
+}
+
 bool GDScript::has_script_signal(const StringName &p_signal) const {
 	if (_signals.has(p_signal)) {
 		return true;
@@ -1190,6 +1208,78 @@ String GDScript::_get_gdscript_reference_class_name(const GDScript *p_gdscript) 
 		p_gdscript = p_gdscript->_owner;
 	}
 	return class_name;
+}
+
+Ref<GDScript> GDScript::_get_gdscript_from_variant(const Variant &p_variant) {
+	Ref<GDScript> scr;
+	scr.instantiate();
+
+	Variant::Type type = p_variant.get_type();
+	if (type != Variant::Type::OBJECT)
+		return scr;
+
+	Object *obj = p_variant;
+	if (obj == nullptr)
+		return scr;
+
+	return Ref<GDScript>(obj);
+}
+
+void GDScript::_get_dependencies(RBSet<Ref<GDScript>> &p_dependencies, const GDScript *p_except) {
+	if (p_dependencies.has(this))
+		return;
+	p_dependencies.insert(this);
+
+	for (const KeyValue<StringName, GDScriptFunction *> &E : member_functions) {
+		for (const Variant &V : E.value->constants) {
+			Ref<GDScript> scr = _get_gdscript_from_variant(V);
+			if (scr.is_valid() && scr != p_except) {
+				scr->_get_dependencies(p_dependencies, p_except);
+			}
+		}
+	}
+
+	if (implicit_initializer) {
+		for (const Variant &V : implicit_initializer->constants) {
+			Ref<GDScript> scr = _get_gdscript_from_variant(V);
+			if (scr.is_valid() && scr != p_except) {
+				scr->_get_dependencies(p_dependencies, p_except);
+			}
+		}
+	}
+
+	if (implicit_ready) {
+		for (const Variant &V : implicit_ready->constants) {
+			Ref<GDScript> scr = _get_gdscript_from_variant(V);
+			if (scr.is_valid() && scr != p_except) {
+				scr->_get_dependencies(p_dependencies, p_except);
+			}
+		}
+	}
+
+	for (KeyValue<StringName, Ref<GDScript>> &E : subclasses) {
+		if (E.value != p_except) {
+			E.value->_get_dependencies(p_dependencies, p_except);
+		}
+	}
+
+	for (const KeyValue<StringName, Variant> &E : constants) {
+		Ref<GDScript> scr = _get_gdscript_from_variant(E.value);
+		if (scr.is_valid() && scr != p_except) {
+			scr->_get_dependencies(p_dependencies, p_except);
+		}
+	}
+}
+
+void GDScript::_get_inverted_dependencies(RBSet<Ref<GDScript>> &p_dependencies, const GDScript *p_except) {
+	if (p_dependencies.has(this))
+		return;
+	p_dependencies.insert(this);
+
+	_get_dependencies(p_dependencies, p_except);
+
+	if (_owner == nullptr) return;
+	_owner->_get_inverted_dependencies(p_dependencies, p_except);
 }
 
 GDScript::GDScript() :
@@ -1271,16 +1361,16 @@ void GDScript::clear() {
 		return;
 	cleared = true;
 
-	RBSet<String> deps = GDScriptCache::get_dependencies(path);
-	RBSet<String> inverted_deps = GDScriptCache::get_inverted_dependencies(path);
+	RBSet<Ref<GDScript>> deps = get_dependencies();
+	RBSet<Ref<GDScript>> inverted_deps = get_inverted_dependencies();
 	RBSet<Ref<GDScript>> must_clear_deps;
-	for (const String &E : deps) {
-		if (E == path)
+	for (Ref<GDScript> &E : deps) {
+		if (E == this)
 			continue;
 
 		bool must_clear = !inverted_deps.has(E);
 		if (must_clear) {
-			must_clear_deps.insert(GDScriptCache::get_cached_script(E));
+			must_clear_deps.insert(E);
 		}
 	}
 	deps.clear();

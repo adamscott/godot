@@ -166,6 +166,10 @@ class GDScript : public Script {
 	// This method will map the class name from "RefCounted" to "MyClass.InnerClass".
 	static String _get_gdscript_reference_class_name(const GDScript *p_gdscript);
 
+	Ref<GDScript> _get_gdscript_from_variant(const Variant &p_variant);
+	void _get_dependencies(RBSet<Ref<GDScript>> &p_dependencies, const GDScript *p_except);
+	void _get_inverted_dependencies(RBSet<Ref<GDScript>> &p_dependencies, const GDScript *p_except);
+
 protected:
 	bool _get(const StringName &p_name, Variant &r_ret) const;
 	bool _set(const StringName &p_name, const Variant &p_value);
@@ -192,6 +196,9 @@ public:
 	const HashMap<StringName, GDScriptFunction *> &get_member_functions() const { return member_functions; }
 	const Ref<GDScriptNativeClass> &get_native() const { return native; }
 	const String &get_script_class_name() const { return name; }
+
+	RBSet<Ref<GDScript>> get_dependencies();
+	RBSet<Ref<GDScript>> get_inverted_dependencies();
 
 	virtual bool has_script_signal(const StringName &p_signal) const override;
 	virtual void get_script_signal_list(List<MethodInfo> *r_signals) const override;

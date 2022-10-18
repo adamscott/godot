@@ -100,11 +100,6 @@ public:
 	static Ref<PackedScene> get_scene(const String &p_path);
 	static void remove_scene(const String &p_path);
 
-	static RBSet<String> get_dependencies(const String &p_path);
-	static void get_dependencies(const String &p_path, RBSet<String> &p_dependencies);
-	static RBSet<String> get_inverted_dependencies(const String &p_path);
-	static void get_inverted_dependencies(const String &p_path, RBSet<String> &p_dependencies, const String &p_except);
-
 	GDScriptCache();
 	~GDScriptCache();
 };
