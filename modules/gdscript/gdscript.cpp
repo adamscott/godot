@@ -841,6 +841,10 @@ String GDScript::_get_debug_path() const {
 }
 
 Error GDScript::reload(bool p_keep_state) {
+	if (reloading)
+		return OK;
+	reloading = true;
+
 	bool has_instances;
 	{
 		MutexLock lock(GDScriptLanguage::singleton->mutex);
@@ -863,6 +867,7 @@ Error GDScript::reload(bool p_keep_state) {
 // Loading a template, don't parse.
 #ifdef TOOLS_ENABLED
 	if (EditorPaths::get_singleton() && basedir.begins_with(EditorPaths::get_singleton()->get_project_script_templates_dir())) {
+		reloading = false;
 		return OK;
 	}
 #endif
@@ -889,6 +894,7 @@ Error GDScript::reload(bool p_keep_state) {
 		}
 		// TODO: Show all error messages.
 		_err_print_error("GDScript::reload", path.is_empty() ? "built-in" : (const char *)path.utf8().get_data(), parser.get_errors().front()->get().line, ("Parse Error: " + parser.get_errors().front()->get().message).utf8().get_data(), false, ERR_HANDLER_SCRIPT);
+		reloading = false;
 		return ERR_PARSE_ERROR;
 	}
 
@@ -905,6 +911,7 @@ Error GDScript::reload(bool p_keep_state) {
 			_err_print_error("GDScript::reload", path.is_empty() ? "built-in" : (const char *)path.utf8().get_data(), e->get().line, ("Parse Error: " + e->get().message).utf8().get_data(), false, ERR_HANDLER_SCRIPT);
 			e = e->next();
 		}
+		reloading = false;
 		return ERR_PARSE_ERROR;
 	}
 
@@ -918,6 +925,7 @@ Error GDScript::reload(bool p_keep_state) {
 #endif
 
 	if (err) {
+		reloading = false;
 		if (can_run) {
 			if (EngineDebugger::is_active()) {
 				GDScriptLanguage::get_singleton()->debug_break_parse(_get_debug_path(), compiler.get_error_line(), "Parser Error: " + compiler.get_error());
@@ -945,6 +953,7 @@ Error GDScript::reload(bool p_keep_state) {
 
 	_init_rpc_methods_properties();
 
+	reloading = false;
 	return OK;
 }
 
