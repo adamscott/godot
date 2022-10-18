@@ -295,13 +295,18 @@ Ref<PackedScene> GDScriptCache::get_scene(const String &p_path) {
 	scene.instantiate();
 	scene->set_path(p_path);
 	scene->recreate_state();
-	singleton->packed_scene_cache[p_path] = scene.ptr();
+
+	if (!p_path.is_empty())
+		singleton->packed_scene_cache[p_path] = scene.ptr();
 
 	scene->reload_from_file();
 	return scene;
 }
 
 void GDScriptCache::remove_scene(const String &p_path) {
+	if (p_path.is_empty())
+		return;
+
 	MutexLock lock(singleton->lock);
 	singleton->packed_scene_cache.erase(p_path);
 }
