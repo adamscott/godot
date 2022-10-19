@@ -1459,6 +1459,8 @@ void GDScript::clear() {
 		return;
 	cleared = true;
 
+	RBSet<GDScript *> must_clear_dependencies;
+
 	for (const KeyValue<StringName, GDScriptFunction *> &E : member_functions) {
 		memdelete(E.value);
 	}
@@ -1483,14 +1485,9 @@ void GDScript::clear() {
 	}
 #endif
 
-	if (GDScriptCache::singleton) { // Cache may have been already destroyed at engine shutdown.
-		GDScriptCache::remove_script(get_path());
-	}
-
-	RBSet<GDScript *> must_clear_dependencies;
 	do {
-		must_clear_dependencies.clear();
-		must_clear_dependencies = get_must_clear_dependencies();
+		// must_clear_dependencies.clear();
+		// must_clear_dependencies = get_must_clear_dependencies();
 
 		// Access the first, clear it
 		for (GDScript *E : must_clear_dependencies) {
@@ -1525,6 +1522,10 @@ GDScript::~GDScript() {
 		GDScriptLanguage::get_singleton()->script_list.remove(&script_list);
 	}
 #endif
+
+	if (GDScriptCache::singleton) { // Cache may have been already destroyed at engine shutdown.
+		GDScriptCache::remove_script(get_path());
+	}
 }
 
 //////////////////////////////
