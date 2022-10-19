@@ -1142,10 +1142,31 @@ RBSet<GDScript *> GDScript::get_dependencies() {
 
 RBSet<GDScript *> GDScript::get_inverted_dependencies() {
 	RBSet<GDScript *> inverted_dependencies;
+	RBSet<GDScript *> dependencies = get_dependencies();
 
-	if (_owner == nullptr) return inverted_dependencies;
+	List<Ref<GDScript>> scripts;
+	{
+		MutexLock lock(GDScriptLanguage::singleton->mutex);
 
-	_owner->_get_inverted_dependencies(inverted_dependencies, this);
+		SelfList<GDScript> *elem = GDScriptLanguage::singleton->script_list.first();
+		while (elem) {
+			scripts.push_back(Ref<GDScript>(elem->self())); //cast to gdscript to avoid being erased by accident
+			elem = elem->next();
+		}
+	}
+
+	for (Ref<GDScript> &scr : scripts) {
+		if (scr.is_null())
+			continue;
+
+		RBSet<GDScript *> scr_dependencies = scr->get_dependencies();
+		if (scr_dependencies.has(this)) {
+			if (!dependencies.has(scr.ptr())) {
+				inverted_dependencies.insert(scr.ptr());
+			}
+		}
+	}
+
 	return inverted_dependencies;
 }
 
