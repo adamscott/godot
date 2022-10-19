@@ -1190,6 +1190,13 @@ RBSet<GDScript *> GDScript::get_must_clear_dependencies() {
 	return must_clear_dependencies;
 }
 
+int GDScript::get_cyclic_references_count() {
+	RBSet<GDScript *> checks;
+	int cyclic_references_count = _get_cyclic_references_count(checks, this);
+	checks.clear();
+	return cyclic_references_count;
+}
+
 bool GDScript::has_script_signal(const StringName &p_signal) const {
 	if (_signals.has(p_signal)) {
 		return true;
@@ -1313,15 +1320,64 @@ void GDScript::_get_dependencies(RBSet<GDScript *> &p_dependencies, const GDScri
 	}
 }
 
-void GDScript::_get_inverted_dependencies(RBSet<GDScript *> &p_dependencies, const GDScript *p_except) {
-	if (p_dependencies.has(this))
-		return;
-	p_dependencies.insert(this);
+int GDScript::_get_cyclic_references_count(RBSet<GDScript *> &p_checks, const GDScript *p_target) {
+	if (p_checks.has(this))
+		return 0;
+	p_checks.insert(this);
 
-	_get_dependencies(p_dependencies, p_except);
+	int cyclic_references_count = 0;
 
-	if (_owner == nullptr) return;
-	_owner->_get_inverted_dependencies(p_dependencies, p_except);
+	for (const KeyValue<StringName, GDScriptFunction *> &E : member_functions) {
+		for (const Variant &V : E.value->constants) {
+			GDScript *scr = _get_gdscript_from_variant(V);
+			if (scr == p_target) {
+				cyclic_references_count++;
+			} else {
+				cyclic_references_count += scr->_get_cyclic_references_count(p_checks, p_target);
+			}
+		}
+	}
+
+	if (implicit_initializer) {
+		for (const Variant &V : implicit_initializer->constants) {
+			GDScript *scr = _get_gdscript_from_variant(V);
+			if (scr == p_target) {
+				cyclic_references_count++;
+			} else {
+				cyclic_references_count += scr->_get_cyclic_references_count(p_checks, p_target);
+			}
+		}
+	}
+
+	if (implicit_ready) {
+		for (const Variant &V : implicit_ready->constants) {
+			GDScript *scr = _get_gdscript_from_variant(V);
+			if (scr == p_target) {
+				cyclic_references_count++;
+			} else {
+				cyclic_references_count += scr->_get_cyclic_references_count(p_checks, p_target);
+			}
+		}
+	}
+
+	for (KeyValue<StringName, Ref<GDScript>> &E : subclasses) {
+		if (E.value == p_target) {
+			cyclic_references_count++;
+		} else {
+			cyclic_references_count += E.value->_get_cyclic_references_count(p_checks, p_target);
+		}
+	}
+
+	for (const KeyValue<StringName, Variant> &E : constants) {
+		GDScript *scr = _get_gdscript_from_variant(E.value);
+		if (scr == p_target) {
+			cyclic_references_count++;
+		} else {
+			cyclic_references_count += scr->_get_cyclic_references_count(p_checks, p_target);
+		}
+	}
+
+	return cyclic_references_count;
 }
 
 GDScript::GDScript() :
