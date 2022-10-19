@@ -201,7 +201,7 @@ Ref<GDScript> GDScriptCache::get_shallow_script(const String &p_path, const Stri
 	script->set_script_path(p_path);
 	script->load_source_code(p_path);
 
-	singleton->shallow_gdscript_cache[p_path] = script.ptr();
+	singleton->shallow_gdscript_cache[p_path] = script;
 	return script;
 }
 
@@ -232,12 +232,12 @@ Ref<GDScript> GDScriptCache::get_full_script(const String &p_path, Error &r_erro
 		return script;
 	}
 
-	singleton->full_gdscript_cache[p_path] = script.ptr();
+	singleton->full_gdscript_cache[p_path] = script;
 	singleton->shallow_gdscript_cache.erase(p_path);
 
 	r_error = script->reload();
 	if (r_error) {
-		singleton->shallow_gdscript_cache[p_path] = script.ptr();
+		singleton->shallow_gdscript_cache[p_path] = script;
 		singleton->full_gdscript_cache.erase(p_path);
 		return script;
 	}
@@ -264,7 +264,7 @@ Error GDScriptCache::finish_compiling(const String &p_owner) {
 
 	// Mark this as compiled.
 	Ref<GDScript> script = get_shallow_script(p_owner);
-	singleton->full_gdscript_cache[p_owner] = script.ptr();
+	singleton->full_gdscript_cache[p_owner] = script;
 	singleton->shallow_gdscript_cache.erase(p_owner);
 
 	HashSet<String> depends = singleton->dependencies[p_owner];
