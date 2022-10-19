@@ -165,8 +165,7 @@ GDScriptDataType GDScriptCompiler::_gdtype_from_datatype(const GDScriptParser::D
 						}
 					}
 					if (result.script_type_ref.is_null()) {
-						Error err = OK;
-						result.script_type_ref = GDScriptCache::get_full_script(p_datatype.script_path, err, main_script->path);
+						result.script_type_ref = GDScriptCache::get_shallow_script(p_datatype.script_path, main_script->path);
 					}
 
 					result.script_type = result.script_type_ref.ptr();
