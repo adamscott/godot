@@ -168,7 +168,7 @@ class GDScript : public Script {
 
 	GDScript * _get_gdscript_from_variant(const Variant &p_variant);
 	void _get_dependencies(RBSet<GDScript *> &p_dependencies, const GDScript *p_except);
-	int _get_cyclic_references_count(RBSet<GDScript *> &checks, const GDScript *p_target);
+	int _get_cyclic_reference_count(RBSet<GDScript *> &checks, const GDScript *p_target);
 
 protected:
 	bool _get(const StringName &p_name, Variant &r_ret) const;
@@ -200,7 +200,7 @@ public:
 	RBSet<GDScript *> get_dependencies();
 	RBSet<GDScript *> get_inverted_dependencies();
 	RBSet<GDScript *> get_must_clear_dependencies();
-	int get_cyclic_references_count();
+	int get_cyclic_reference_count();
 
 	virtual bool has_script_signal(const StringName &p_signal) const override;
 	virtual void get_script_signal_list(List<MethodInfo> *r_signals) const override;
