@@ -1258,7 +1258,7 @@ String GDScript::_get_gdscript_reference_class_name(const GDScript *p_gdscript) 
 	return class_name;
 }
 
-GDScript * GDScript::_get_gdscript_from_variant(const Variant &p_variant) {
+GDScript *GDScript::_get_gdscript_from_variant(const Variant &p_variant) {
 	Variant::Type type = p_variant.get_type();
 	if (type != Variant::Type::OBJECT)
 		return nullptr;
@@ -1338,6 +1338,20 @@ int GDScript::_get_cyclic_reference_count(RBSet<GDScript *> &p_checks, const GDS
 			} else {
 				cyclic_reference_count += scr->_get_cyclic_reference_count(p_checks, p_target);
 			}
+		}
+	}
+
+	for (KeyValue<StringName, GDScript::MemberInfo> &E : member_indices) {
+		Ref<GDScript> scr_ref = E.value.data_type.script_type_ref;
+		if (scr_ref.is_null())
+			continue;
+		GDScript *scr = scr_ref.ptr();
+		scr_ref = Ref<GDScript>();
+
+		if (E.value.data_type.script_type_ref == p_target) {
+			cyclic_reference_count++;
+		} else {
+			cyclic_reference_count += scr->_get_cyclic_reference_count(p_checks, p_target);
 		}
 	}
 
@@ -1471,12 +1485,16 @@ void GDScript::clear() {
 		return;
 	cleared = true;
 
-	RBSet<GDScript *> must_clear_dependencies;
+	RBSet<GDScript *> must_clear_dependencies = get_must_clear_dependencies();
 
 	for (const KeyValue<StringName, GDScriptFunction *> &E : member_functions) {
 		memdelete(E.value);
 	}
 	member_functions.clear();
+
+	for (KeyValue<StringName, GDScript::MemberInfo> &E : member_indices) {
+		E.value.data_type.script_type_ref = Ref<Script>();
+	}
 
 	if (implicit_initializer) {
 		memdelete(implicit_initializer);
@@ -2593,6 +2611,10 @@ GDScriptLanguage::~GDScriptLanguage() {
 		}
 		for (KeyValue<StringName, GDScript::MemberInfo> &E : scr->member_indices) {
 			E.value.data_type.script_type_ref = Ref<Script>();
+		}
+
+		if (scr->get_cyclic_reference_count() > 0) {
+			scr->clear();
 		}
 
 		s = s->next();

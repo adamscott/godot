@@ -245,7 +245,7 @@ Ref<GDScript> GDScriptCache::get_full_script(const String &p_path, Error &r_erro
 	return script;
 }
 
-GDScript *GDScriptCache::get_cached_script(const String &p_path) {
+Ref<GDScript> GDScriptCache::get_cached_script(const String &p_path) {
 	MutexLock lock(singleton->lock);
 
 	if (singleton->full_gdscript_cache.has(p_path)) {
@@ -256,7 +256,19 @@ GDScript *GDScriptCache::get_cached_script(const String &p_path) {
 		return singleton->shallow_gdscript_cache[p_path];
 	}
 
-	return nullptr;
+	return Ref<GDScript>();
+}
+
+bool GDScriptCache::is_cached_script(const String &p_path) {
+	if (singleton == nullptr)
+		return false;
+
+	MutexLock lock(singleton->lock);
+
+	if (singleton->full_gdscript_cache.has(p_path))
+		return true;
+
+	return singleton->shallow_gdscript_cache.has(p_path);
 }
 
 Error GDScriptCache::finish_compiling(const String &p_owner) {
@@ -297,13 +309,16 @@ Ref<PackedScene> GDScriptCache::get_scene(const String &p_path) {
 	scene->recreate_state();
 
 	if (!p_path.is_empty())
-		singleton->packed_scene_cache[p_path] = scene.ptr();
+		singleton->packed_scene_cache[p_path] = scene;
 
 	scene->reload_from_file();
 	return scene;
 }
 
 void GDScriptCache::remove_scene(const String &p_path) {
+	if (singleton == nullptr)
+		return;
+
 	if (p_path.is_empty())
 		return;
 
@@ -328,55 +343,6 @@ GDScriptCache::~GDScriptCache() {
 
 	parser_map_refs.clear();
 	parser_map.clear();
-
-	while (shallow_gdscript_cache.size() > 0 || full_gdscript_cache.size() > 0) {
-		int16_t reference_count = INT16_MAX;
-		GDScript *reference = nullptr;
-		String key;
-		for (KeyValue<String, GDScript *> &E : shallow_gdscript_cache) {
-			if (E.value == nullptr) {
-				shallow_gdscript_cache.erase(E.key);
-				continue;
-			}
-
-			if (E.value->get_reference_count() < reference_count) {
-				key = E.key;
-				reference_count = E.value->get_reference_count();
-				reference = E.value;
-			}
-		}
-
-		for (KeyValue<String, GDScript *> &E : full_gdscript_cache) {
-			if (E.value == nullptr) {
-				full_gdscript_cache.erase(E.key);
-				continue;
-			}
-
-			if (E.value->get_reference_count() < reference_count) {
-				key = E.key;
-				reference_count = E.value->get_reference_count();
-				reference = E.value;
-			}
-		}
-
-		if (reference == nullptr) {
-			break;
-		}
-
-		if (reference_count > 1) {
-			reference->unreference();
-			continue;
-		}
-
-		shallow_gdscript_cache.erase(key);
-		full_gdscript_cache.erase(key);
-
-		if (reference_count == 1) {
-			Ref<GDScript> ref = reference;
-			ref->unreference();
-			ref = Ref<GDScript>();
-		}
-	}
 
 	singleton = nullptr;
 }
