@@ -1330,6 +1330,9 @@ int GDScript::_get_cyclic_references_count(RBSet<GDScript *> &p_checks, const GD
 	for (const KeyValue<StringName, GDScriptFunction *> &E : member_functions) {
 		for (const Variant &V : E.value->constants) {
 			GDScript *scr = _get_gdscript_from_variant(V);
+			if (scr == nullptr)
+				continue;
+
 			if (scr == p_target) {
 				cyclic_references_count++;
 			} else {
@@ -1341,6 +1344,9 @@ int GDScript::_get_cyclic_references_count(RBSet<GDScript *> &p_checks, const GD
 	if (implicit_initializer) {
 		for (const Variant &V : implicit_initializer->constants) {
 			GDScript *scr = _get_gdscript_from_variant(V);
+			if (scr == nullptr)
+				continue;
+
 			if (scr == p_target) {
 				cyclic_references_count++;
 			} else {
@@ -1352,6 +1358,9 @@ int GDScript::_get_cyclic_references_count(RBSet<GDScript *> &p_checks, const GD
 	if (implicit_ready) {
 		for (const Variant &V : implicit_ready->constants) {
 			GDScript *scr = _get_gdscript_from_variant(V);
+			if (scr == nullptr)
+				continue;
+
 			if (scr == p_target) {
 				cyclic_references_count++;
 			} else {
@@ -1370,6 +1379,9 @@ int GDScript::_get_cyclic_references_count(RBSet<GDScript *> &p_checks, const GD
 
 	for (const KeyValue<StringName, Variant> &E : constants) {
 		GDScript *scr = _get_gdscript_from_variant(E.value);
+		if (scr == nullptr)
+			continue;
+
 		if (scr == p_target) {
 			cyclic_references_count++;
 		} else {
