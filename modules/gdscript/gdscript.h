@@ -166,7 +166,7 @@ class GDScript : public Script {
 	// This method will map the class name from "RefCounted" to "MyClass.InnerClass".
 	static String _get_gdscript_reference_class_name(const GDScript *p_gdscript);
 
-	GDScript * _get_gdscript_from_variant(const Variant &p_variant);
+	GDScript *_get_gdscript_from_variant(const Variant &p_variant);
 	void _get_dependencies(RBSet<GDScript *> &p_dependencies, const GDScript *p_except);
 	int _get_cyclic_reference_count(RBSet<GDScript *> &checks, const GDScript *p_target);
 
