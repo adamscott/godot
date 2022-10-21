@@ -36,7 +36,11 @@
 #include "core/io/missing_resource.h"
 #include "core/io/resource_loader.h"
 #include "core/templates/local_vector.h"
+
+#ifdef GDSCRIPT_CACHE_H
 #include "modules/gdscript/gdscript_cache.h"
+#endif
+
 #include "scene/2d/node_2d.h"
 #include "scene/3d/node_3d.h"
 #include "scene/gui/control.h"
@@ -1814,5 +1818,7 @@ PackedScene::PackedScene() {
 }
 
 PackedScene::~PackedScene() {
+#ifdef GDSCRIPT_CACHE_H
 	GDScriptCache::remove_scene(get_path());
+#endif
 }
