@@ -1267,11 +1267,7 @@ GDScript *GDScript::_get_gdscript_from_variant(const Variant &p_variant) {
 	if (obj == nullptr)
 		return nullptr;
 
-	if (static_cast<Ref<GDScript>>(obj).is_null()) {
-		return nullptr;
-	}
-
-	return (GDScript *)(obj);
+	return Object::cast_to<GDScript>(obj);
 }
 
 void GDScript::_get_dependencies(RBSet<GDScript *> &p_dependencies, const GDScript *p_except) {
@@ -1478,6 +1474,25 @@ void GDScript::_init_rpc_methods_properties() {
 			cscript = nullptr;
 		}
 	}
+}
+
+bool GDScript::unreference() {
+	bool r_result = RefCounted::unreference();
+	if (unreference_check)
+		return r_result;
+	unreference_check = true;
+
+	int reference_count = get_reference_count();
+	int cyclic_reference_count = get_cyclic_reference_count();
+	int non_cyclic_reference_count = reference_count - cyclic_reference_count;
+
+	if (cyclic_reference_count > 0 && non_cyclic_reference_count == 1) {
+		clear();
+		GDScriptCache::remove_script(get_path());
+	}
+
+	unreference_check = false;
+	return r_result;
 }
 
 void GDScript::clear(const bool &p_only_self) {

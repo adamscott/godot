@@ -126,6 +126,7 @@ class GDScript : public Script {
 	RBSet<Object *> instances;
 	bool cleared = false;
 	bool reloading = false;
+	bool unreference_check = false;
 	//exported members
 	String source;
 	String path;
@@ -180,6 +181,8 @@ protected:
 	static void _bind_methods();
 
 public:
+	bool unreference();
+
 	void clear(const bool &p_only_self = false);
 
 	virtual bool is_valid() const override { return valid; }

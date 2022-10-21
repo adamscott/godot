@@ -120,6 +120,9 @@ GDScriptParserRef::~GDScriptParserRef() {
 GDScriptCache *GDScriptCache::singleton = nullptr;
 
 void GDScriptCache::remove_script(const String &p_path) {
+	if (singleton == nullptr)
+		return;
+
 	MutexLock lock(singleton->lock);
 
 	if (singleton->parser_map.has(p_path)) {
