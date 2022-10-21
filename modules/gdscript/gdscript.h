@@ -180,7 +180,7 @@ protected:
 	static void _bind_methods();
 
 public:
-	void clear();
+	void clear(const bool &p_only_self = false);
 
 	virtual bool is_valid() const override { return valid; }
 

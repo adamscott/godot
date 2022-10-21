@@ -1480,12 +1480,19 @@ void GDScript::_init_rpc_methods_properties() {
 	}
 }
 
-void GDScript::clear() {
+void GDScript::clear(const bool &p_only_self) {
 	if (cleared)
 		return;
 	cleared = true;
 
-	RBSet<GDScript *> must_clear_dependencies = get_must_clear_dependencies();
+	if (!p_only_self) {
+		RBSet<GDScript *> must_clear_dependencies = get_must_clear_dependencies();
+		for (GDScript *E : must_clear_dependencies) {
+			E->reference();
+			E->clear();
+			E->unreference();
+		}
+	}
 
 	for (const KeyValue<StringName, GDScriptFunction *> &E : member_functions) {
 		memdelete(E.value);
@@ -1514,25 +1521,10 @@ void GDScript::clear() {
 		_clear_doc();
 	}
 #endif
-
-	do {
-		// must_clear_dependencies.clear();
-		// must_clear_dependencies = get_must_clear_dependencies();
-
-		// Access the first, clear it
-		for (GDScript *E : must_clear_dependencies) {
-			must_clear_dependencies.erase(E);
-			if (E != nullptr) {
-				E->clear();
-				break;
-			}
-		}
-		// Then, if the first clear others, the loop will fetch fresh dependencies
-	} while (must_clear_dependencies.size() > 0);
 }
 
 GDScript::~GDScript() {
-	clear();
+	clear(true);
 
 	{
 		MutexLock lock(GDScriptLanguage::get_singleton()->mutex);
@@ -2595,12 +2587,11 @@ GDScriptLanguage::~GDScriptLanguage() {
 	// Clear dependencies between scripts, to ensure cyclic references are broken (to avoid leaks at exit).
 	SelfList<GDScript> *s = script_list.first();
 	while (s) {
-		GDScript *scr = s->self();
 		// This ensures the current script is not released before we can check what's the next one
 		// in the list (we can't get the next upfront because we don't know if the reference breaking
 		// will cause it -or any other after it, for that matter- to be released so the next one
 		// is not the same as before).
-		scr->reference();
+		Ref<GDScript> scr = s->self();
 
 		for (KeyValue<StringName, GDScriptFunction *> &E : scr->member_functions) {
 			GDScriptFunction *func = E.value;
@@ -2613,12 +2604,14 @@ GDScriptLanguage::~GDScriptLanguage() {
 			E.value.data_type.script_type_ref = Ref<Script>();
 		}
 
-		if (scr->get_cyclic_reference_count() > 0) {
-			scr->clear();
-		}
-
+		scr->clear();
 		s = s->next();
-		scr->unreference();
+	}
+
+	s = script_list.first();
+	while (s) {
+		Ref<GDScript> scr = s->self();
+		s = s->next();
 	}
 
 	singleton = nullptr;

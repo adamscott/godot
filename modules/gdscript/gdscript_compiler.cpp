@@ -2223,6 +2223,8 @@ Error GDScriptCompiler::_parse_class_level(GDScript *p_script, const GDScriptPar
 		}
 	}
 
+	p_script->cleared = true;
+
 #ifdef TOOLS_ENABLED
 	p_script->doc_functions.clear();
 	p_script->doc_variables.clear();
@@ -2249,6 +2251,7 @@ Error GDScriptCompiler::_parse_class_level(GDScript *p_script, const GDScriptPar
 	for (const KeyValue<StringName, GDScriptFunction *> &E : p_script->member_functions) {
 		memdelete(E.value);
 	}
+	p_script->member_functions.clear();
 	if (p_script->implicit_initializer) {
 		memdelete(p_script->implicit_initializer);
 	}
@@ -2262,6 +2265,8 @@ Error GDScriptCompiler::_parse_class_level(GDScript *p_script, const GDScriptPar
 	p_script->initializer = nullptr;
 	p_script->implicit_initializer = nullptr;
 	p_script->implicit_ready = nullptr;
+
+	p_script->cleared = false;
 
 	p_script->tool = parser->is_tool();
 	p_script->name = p_class->identifier ? p_class->identifier->name : "";

@@ -158,8 +158,6 @@ GDScriptFunction::~GDScriptFunction() {
 	}
 	return_type.script_type_ref = Ref<Script>();
 
-	constants.clear();
-
 #ifdef DEBUG_ENABLED
 
 	MutexLock lock(GDScriptLanguage::get_singleton()->mutex);
