@@ -71,7 +71,17 @@ void init_autoloads() {
 			continue;
 		}
 
-		Ref<Resource> res = ResourceLoader::load(info.path);
+		Ref<Resource> res;
+		if (ResourceLoader::get_resource_type(info.path) == "PackedScene") {
+			// Cache the scene reference before loading it (for cyclic references)
+			Ref<PackedScene> scn;
+			scn.instantiate();
+			scn->set_path(info.path);
+			scn->reload_from_file();
+			res = scn;
+		} else {
+			res = ResourceLoader::load(info.path);
+		}
 		ERR_CONTINUE_MSG(res.is_null(), "Can't autoload: " + info.path);
 		Node *n = nullptr;
 		Ref<PackedScene> scn = res;

@@ -400,7 +400,17 @@ void EditorAutoloadSettings::_autoload_text_changed(const String p_name) {
 }
 
 Node *EditorAutoloadSettings::_create_autoload(const String &p_path) {
-	Ref<Resource> res = ResourceLoader::load(p_path);
+	Ref<Resource> res;
+	if (ResourceLoader::get_resource_type(p_path) == "PackedScene") {
+		// Cache the scene reference before loading it (for cyclic references)
+		Ref<PackedScene> scn;
+		scn.instantiate();
+		scn->set_path(p_path);
+		scn->reload_from_file();
+		res = scn;
+	} else {
+		res = ResourceLoader::load(p_path);
+	}
 	ERR_FAIL_COND_V_MSG(res.is_null(), nullptr, "Can't autoload: " + p_path + ".");
 	Node *n = nullptr;
 	Ref<PackedScene> scn = res;
