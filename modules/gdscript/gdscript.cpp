@@ -1301,17 +1301,26 @@ void GDScript::_get_dependencies(RBSet<GDScript *> &p_dependencies, const GDScri
 	}
 	p_dependencies.insert(this);
 
+	RBSet<StringName> member_function_names;
 	for (const KeyValue<StringName, GDScriptFunction *> &E : member_functions) {
-		if (E.value == nullptr) {
+		member_function_names.insert(E.key);
+	}
+	for (const StringName &E : member_function_names) {
+		if (!member_functions.has(E)) {
 			continue;
 		}
-		for (const Variant &V : E.value->constants) {
+		GDScriptFunction *func = member_functions[E];
+		if (func == nullptr) {
+			continue;
+		}
+		for (const Variant &V : func->constants) {
 			GDScript *scr = _get_gdscript_from_variant(V);
 			if (scr != nullptr && scr != p_except) {
 				scr->_get_dependencies(p_dependencies, p_except);
 			}
 		}
 	}
+	member_function_names.clear();
 
 	if (implicit_initializer) {
 		for (const Variant &V : implicit_initializer->constants) {
