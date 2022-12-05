@@ -328,38 +328,44 @@ Error GDScriptAnalyzer::resolve_inheritance(GDScriptParser::ClassNode *p_class, 
 			} else {
 				// Look for other classes in script.
 				GDScriptParser::ClassNode *look_class = p_class;
-				bool found = false;
-				while (look_class != nullptr) {
-					if (look_class->identifier && look_class->identifier->name == name) {
-						if (!look_class->get_datatype().is_set()) {
-							Error err = resolve_inheritance(look_class, false);
-							if (err) {
-								return err;
-							}
-						}
-						base = look_class->get_datatype();
-						found = true;
-						break;
-					}
-					if (look_class->members_indices.has(name) && look_class->get_member(name).type == GDScriptParser::ClassNode::Member::CLASS) {
-						GDScriptParser::ClassNode::Member member = look_class->get_member(name);
-						if (!member.m_class->get_datatype().is_set()) {
-							Error err = resolve_inheritance(member.m_class, false);
-							if (err) {
-								return err;
-							}
-						}
-						base = member.m_class->get_datatype();
-						found = true;
-						break;
-					}
-					look_class = look_class->outer;
+
+				if (look_class->identifier != nullptr) {
+					reduce_identifier_from_base(look_class->identifier, &base);
+					base = look_class->identifier->get_datatype();
 				}
 
-				if (!found) {
-					push_error(vformat(R"(Could not find base class "%s".)", name), p_class);
-					return ERR_PARSE_ERROR;
-				}
+				// bool found = false;
+				// while (look_class != nullptr) {
+				// 	if (look_class->identifier && look_class->identifier->name == name) {
+				// 		if (!look_class->get_datatype().is_set()) {
+				// 			Error err = resolve_inheritance(look_class, false);
+				// 			if (err) {
+				// 				return err;
+				// 			}
+				// 		}
+				// 		base = look_class->get_datatype();
+				// 		found = true;
+				// 		break;
+				// 	}
+				// 	if (look_class->members_indices.has(name) && look_class->get_member(name).type == GDScriptParser::ClassNode::Member::CLASS) {
+				// 		GDScriptParser::ClassNode::Member member = look_class->get_member(name);
+				// 		if (!member.m_class->get_datatype().is_set()) {
+				// 			Error err = resolve_inheritance(member.m_class, false);
+				// 			if (err) {
+				// 				return err;
+				// 			}
+				// 		}
+				// 		base = member.m_class->get_datatype();
+				// 		found = true;
+				// 		break;
+				// 	}
+				// 	look_class = look_class->outer;
+				// }
+
+				// if (!found) {
+				// 	push_error(vformat(R"(Could not find base class "%s".)", name), p_class);
+				// 	return ERR_PARSE_ERROR;
+				// }
 			}
 		}
 
@@ -518,59 +524,65 @@ GDScriptParser::DataType GDScriptAnalyzer::resolve_datatype(GDScriptParser::Type
 	} else {
 		// Classes in current scope.
 		GDScriptParser::ClassNode *script_class = parser->current_class;
-		bool found = false;
-		while (!found && script_class != nullptr) {
-			if (script_class->identifier && script_class->identifier->name == first) {
-				result = script_class->get_datatype();
-				found = true;
-				break;
-			}
-			if (script_class->members_indices.has(first)) {
-				GDScriptParser::ClassNode::Member member = script_class->members[script_class->members_indices[first]];
-				switch (member.type) {
-					case GDScriptParser::ClassNode::Member::CLASS:
-						result = member.m_class->get_datatype();
-						found = true;
-						break;
-					case GDScriptParser::ClassNode::Member::ENUM:
-						result = member.m_enum->get_datatype();
-						found = true;
-						break;
-					case GDScriptParser::ClassNode::Member::CONSTANT:
-						if (member.constant->get_datatype().is_meta_type) {
-							result = member.constant->get_datatype();
-							result.is_meta_type = false;
-							found = true;
-							break;
-						} else if (Ref<Script>(member.constant->initializer->reduced_value).is_valid()) {
-							Ref<GDScript> gdscript = member.constant->initializer->reduced_value;
-							if (gdscript.is_valid()) {
-								Ref<GDScriptParserRef> ref = get_parser_for(gdscript->get_path());
-								if (ref->raise_status(GDScriptParserRef::INTERFACE_SOLVED) != OK) {
-									push_error(vformat(R"(Could not parse script from "%s".)", gdscript->get_path()), p_type);
-									return GDScriptParser::DataType();
-								}
-								result = ref->get_parser()->head->get_datatype();
-								result.is_meta_type = false;
-							} else {
-								Ref<Script> script = member.constant->initializer->reduced_value;
-								result.kind = GDScriptParser::DataType::SCRIPT;
-								result.builtin_type = Variant::OBJECT;
-								result.script_type = script;
-								result.script_path = script->get_path();
-								result.native_type = script->get_instance_base_type();
-								result.is_meta_type = false;
-							}
-							break;
-						}
-						[[fallthrough]];
-					default:
-						push_error(vformat(R"("%s" is a %s but does not contain a type.)", first, member.get_type_name()), p_type);
-						return GDScriptParser::DataType();
-				}
-			}
-			script_class = script_class->outer;
+		if (script_class->identifier != nullptr) {
+			GDScriptParser::DataType base = script_class->base_type;
+			reduce_identifier_from_base(script_class->identifier, &base);
+			result = script_class->identifier->get_datatype();
 		}
+
+		// bool found = false;
+		// while (!found && script_class != nullptr) {
+		// 	if (script_class->identifier && script_class->identifier->name == first) {
+		// 		result = script_class->get_datatype();
+		// 		found = true;
+		// 		break;
+		// 	}
+		// 	if (script_class->members_indices.has(first)) {
+		// 		GDScriptParser::ClassNode::Member member = script_class->members[script_class->members_indices[first]];
+		// 		switch (member.type) {
+		// 			case GDScriptParser::ClassNode::Member::CLASS:
+		// 				result = member.m_class->get_datatype();
+		// 				found = true;
+		// 				break;
+		// 			case GDScriptParser::ClassNode::Member::ENUM:
+		// 				result = member.m_enum->get_datatype();
+		// 				found = true;
+		// 				break;
+		// 			case GDScriptParser::ClassNode::Member::CONSTANT:
+		// 				if (member.constant->get_datatype().is_meta_type) {
+		// 					result = member.constant->get_datatype();
+		// 					result.is_meta_type = false;
+		// 					found = true;
+		// 					break;
+		// 				} else if (Ref<Script>(member.constant->initializer->reduced_value).is_valid()) {
+		// 					Ref<GDScript> gdscript = member.constant->initializer->reduced_value;
+		// 					if (gdscript.is_valid()) {
+		// 						Ref<GDScriptParserRef> ref = get_parser_for(gdscript->get_path());
+		// 						if (ref->raise_status(GDScriptParserRef::INTERFACE_SOLVED) != OK) {
+		// 							push_error(vformat(R"(Could not parse script from "%s".)", gdscript->get_path()), p_type);
+		// 							return GDScriptParser::DataType();
+		// 						}
+		// 						result = ref->get_parser()->head->get_datatype();
+		// 						result.is_meta_type = false;
+		// 					} else {
+		// 						Ref<Script> script = member.constant->initializer->reduced_value;
+		// 						result.kind = GDScriptParser::DataType::SCRIPT;
+		// 						result.builtin_type = Variant::OBJECT;
+		// 						result.script_type = script;
+		// 						result.script_path = script->get_path();
+		// 						result.native_type = script->get_instance_base_type();
+		// 						result.is_meta_type = false;
+		// 					}
+		// 					break;
+		// 				}
+		// 				[[fallthrough]];
+		// 			default:
+		// 				push_error(vformat(R"("%s" is a %s but does not contain a type.)", first, member.get_type_name()), p_type);
+		// 				return GDScriptParser::DataType();
+		// 		}
+		// 	}
+		// 	script_class = script_class->outer;
+		// }
 	}
 	if (!result.is_set()) {
 		push_error(vformat(R"("%s" was not found in the current scope.)", first), p_type);
