@@ -685,7 +685,7 @@ struct VariantUtilityFunctions {
 
 	// Utility
 
-	static inline Variant weakref(const Variant &obj, Callable::CallError &r_error) {
+	static inline Ref<WeakRef> weakref(const Variant &obj, Callable::CallError &r_error) {
 		if (obj.get_type() == Variant::OBJECT) {
 			r_error.error = Callable::CallError::CALL_OK;
 			if (obj.is_ref_counted()) {
@@ -711,7 +711,8 @@ struct VariantUtilityFunctions {
 			r_error.error = Callable::CallError::CALL_ERROR_INVALID_ARGUMENT;
 			r_error.argument = 0;
 			r_error.expected = Variant::OBJECT;
-			return Variant();
+			Ref<WeakRef> wref = memnew(WeakRef);
+			return wref;
 		}
 	}
 
