@@ -32,6 +32,7 @@
 #define SCRIPT_LANGUAGE_H
 
 #include "core/doc_data.h"
+#include "core/error/error_list.h"
 #include "core/io/resource.h"
 #include "core/templates/pair.h"
 #include "core/templates/rb_map.h"
@@ -304,6 +305,7 @@ public:
 	virtual String make_function(const String &p_class, const String &p_name, const PackedStringArray &p_args) const = 0;
 	virtual Error open_in_external_editor(const Ref<Script> &p_script, int p_line, int p_col) { return ERR_UNAVAILABLE; }
 	virtual bool overrides_external_editor() { return false; }
+	virtual Error rename(const String &p_new_name, const String &p_path, int p_line, int p_col) { return ERR_UNAVAILABLE; }
 
 	/* Keep enum in Sync with:                               */
 	/* /scene/gui/code_edit.h - CodeEdit::CodeCompletionKind */

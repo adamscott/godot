@@ -39,12 +39,15 @@
 #include "core/io/file_access.h"
 #include "core/io/file_access_encrypted.h"
 #include "core/os/os.h"
+#include "core/variant/dictionary.h"
 #include "gdscript_analyzer.h"
 #include "gdscript_cache.h"
 #include "gdscript_compiler.h"
 #include "gdscript_parser.h"
 #include "gdscript_rpc_callable.h"
 #include "gdscript_warning.h"
+#include "modules/gdscript/language_server/gdscript_language_protocol.h"
+#include "modules/gdscript/language_server/gdscript_language_server.h"
 
 #ifdef TESTS_ENABLED
 #include "tests/gdscript_test_runner.h"
@@ -2539,6 +2542,24 @@ String GDScriptLanguage::get_global_class_name(const String &p_path, String *r_b
 		}
 	}
 	return c->identifier != nullptr ? String(c->identifier->name) : String();
+}
+
+Error GDScriptLanguage::rename(const String &p_new_name, const String &p_path, int p_line, int p_col) {
+	Dictionary text_document = Dictionary();
+	text_document["uri"] = p_path;
+
+	Dictionary position = Dictionary();
+	position["line"] = p_line;
+	position["character"] = p_col;
+
+	Dictionary params = Dictionary();
+	params["textDocument"] = text_document;
+	params["position"] = position;
+	params["newName"] = p_new_name;
+
+	GDScriptLanguageProtocol::get_singleton()->get_text_document()->rename(params);
+
+	return OK;
 }
 
 GDScriptLanguage::GDScriptLanguage() {

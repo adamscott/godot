@@ -500,6 +500,7 @@ public:
 	virtual void add_global_constant(const StringName &p_variable, const Variant &p_value) override;
 	virtual void add_named_global_constant(const StringName &p_name, const Variant &p_value) override;
 	virtual void remove_named_global_constant(const StringName &p_name) override;
+	virtual Error rename(const String &p_new_name, const String &p_path, int p_line, int p_col) override;
 
 	/* DEBUGGER FUNCTIONS */
 
