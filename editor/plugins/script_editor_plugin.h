@@ -312,6 +312,8 @@ class ScriptEditor : public PanelContainer {
 
 	WindowWrapper *window_wrapper = nullptr;
 
+	Timer *headless_update_scripts_timer = nullptr;
+
 	enum {
 		SCRIPT_EDITOR_FUNC_MAX = 32,
 	};
@@ -417,6 +419,7 @@ class ScriptEditor : public PanelContainer {
 	void _file_removed(const String &p_file);
 	void _autosave_scripts();
 	void _update_autosave_timer();
+	void _update_headless_update_scripts_timer();
 
 	void _update_members_overview_visibility();
 	void _update_members_overview();
@@ -464,7 +467,7 @@ class ScriptEditor : public PanelContainer {
 	void _go_to_tab(int p_idx);
 	void _update_history_pos(int p_new_pos);
 	void _update_script_colors();
-	void _update_modified_scripts_for_external_editor(Ref<Script> p_for_script = Ref<Script>());
+	void _update_external_modified_scripts(Ref<Script> p_for_script = Ref<Script>());
 
 	void _script_changed();
 	int file_dialog_option;
@@ -489,6 +492,9 @@ class ScriptEditor : public PanelContainer {
 	void _close_builtin_scripts_from_scene(const String &p_scene);
 
 	static ScriptEditor *script_editor;
+
+	void _test_for_updated_scripts(Ref<Resource> p_for_script = Ref<Resource>());
+	void _headless_test_for_updated_scripts();
 
 protected:
 	void _notification(int p_what);

@@ -684,7 +684,7 @@ static Node *_find_node_for_script(Node *p_base, Node *p_current, const Ref<Scri
 	return nullptr;
 }
 
-static void _find_changed_scripts_for_external_editor(Node *p_base, Node *p_current, HashSet<Ref<Script>> &r_scripts) {
+static void _find_external_changed_scripts(Node *p_base, Node *p_current, HashSet<Ref<Script>> &r_scripts) {
 	if (p_current->get_owner() != p_base && p_base != p_current) {
 		return;
 	}
@@ -695,12 +695,12 @@ static void _find_changed_scripts_for_external_editor(Node *p_base, Node *p_curr
 	}
 
 	for (int i = 0; i < p_current->get_child_count(); i++) {
-		_find_changed_scripts_for_external_editor(p_base, p_current->get_child(i), r_scripts);
+		_find_external_changed_scripts(p_base, p_current->get_child(i), r_scripts);
 	}
 }
 
-void ScriptEditor::_update_modified_scripts_for_external_editor(Ref<Script> p_for_script) {
-	if (!bool(EDITOR_GET("text_editor/external/use_external_editor"))) {
+void ScriptEditor::_update_external_modified_scripts(Ref<Script> p_for_script) {
+	if (!bool(EDITOR_GET("text_editor/behavior/files/auto_reload_scripts_on_external_change"))) {
 		return;
 	}
 
@@ -710,9 +710,10 @@ void ScriptEditor::_update_modified_scripts_for_external_editor(Ref<Script> p_fo
 
 	Node *base = get_tree()->get_edited_scene_root();
 	if (base) {
-		_find_changed_scripts_for_external_editor(base, base, scripts);
+		_find_external_changed_scripts(base, base, scripts);
 	}
 
+	bool scripts_updated = false;
 	for (const Ref<Script> &E : scripts) {
 		Ref<Script> scr = E;
 
@@ -728,6 +729,8 @@ void ScriptEditor::_update_modified_scripts_for_external_editor(Ref<Script> p_fo
 		uint64_t date = FileAccess::get_modified_time(scr->get_path());
 
 		if (last_date != date) {
+			scripts_updated = true;
+
 			Ref<Script> rel_scr = ResourceLoader::load(scr->get_path(), scr->get_class(), ResourceFormatLoader::CACHE_MODE_IGNORE);
 			ERR_CONTINUE(!rel_scr.is_valid());
 			scr->set_source_code(rel_scr->get_source_code());
@@ -736,6 +739,10 @@ void ScriptEditor::_update_modified_scripts_for_external_editor(Ref<Script> p_fo
 
 			_trigger_live_script_reload();
 		}
+	}
+
+	if (scripts_updated) {
+		EditorDebuggerNode::get_singleton()->reload_scripts();
 	}
 }
 

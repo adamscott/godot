@@ -37,6 +37,7 @@
 #include "core/io/resource_loader.h"
 #include "core/os/keyboard.h"
 #include "core/os/os.h"
+#include "core/variant/callable.h"
 #include "core/version.h"
 #include "editor/debugger/editor_debugger_node.h"
 #include "editor/debugger/script_editor_debugger.h"
@@ -1059,6 +1060,7 @@ bool ScriptEditor::_test_script_times_on_disk(Ref<Resource> p_for_script) {
 	if (need_reload) {
 		if (!need_ask) {
 			script_editor->reload_scripts();
+			EditorDebuggerNode::get_singleton()->reload_scripts();
 			need_reload = false;
 		} else {
 			disk_changed->call_deferred(SNAME("popup_centered_ratio"), 0.3);
@@ -1647,8 +1649,7 @@ void ScriptEditor::_notification(int p_what) {
 		} break;
 
 		case NOTIFICATION_APPLICATION_FOCUS_IN: {
-			_test_script_times_on_disk();
-			_update_modified_scripts_for_external_editor();
+			_test_for_updated_scripts();
 		} break;
 
 		case CanvasItem::NOTIFICATION_VISIBILITY_CHANGED: {
@@ -1692,8 +1693,17 @@ void ScriptEditor::_close_builtin_scripts_from_scene(const String &p_scene) {
 	}
 }
 
+void ScriptEditor::_test_for_updated_scripts(Ref<Resource> p_for_script) {
+	_test_script_times_on_disk(p_for_script);
+	_update_external_modified_scripts(p_for_script);
+}
+
+void ScriptEditor::_headless_test_for_updated_scripts() {
+	_test_for_updated_scripts();
+}
+
 void ScriptEditor::edited_scene_changed() {
-	_update_modified_scripts_for_external_editor();
+	_update_external_modified_scripts();
 }
 
 void ScriptEditor::notify_script_close(const Ref<Script> &p_script) {
@@ -2423,8 +2433,7 @@ bool ScriptEditor::edit(const Ref<Resource> &p_resource, int p_line, int p_col, 
 
 	//test for modification, maybe the script was not edited but was loaded
 
-	_test_script_times_on_disk(p_resource);
-	_update_modified_scripts_for_external_editor(p_resource);
+	_test_for_updated_scripts(p_resource);
 
 	if (p_line > 0) {
 		se->goto_line(p_line - 1);
@@ -2725,6 +2734,7 @@ void ScriptEditor::_editor_settings_changed() {
 	_update_help_overview_visibility();
 
 	_update_autosave_timer();
+	_update_headless_update_scripts_timer();
 
 	if (current_theme.is_empty()) {
 		current_theme = EDITOR_GET("text_editor/theme/color_theme");
@@ -2818,6 +2828,20 @@ void ScriptEditor::_update_autosave_timer() {
 		autosave_timer->start();
 	} else {
 		autosave_timer->stop();
+	}
+}
+
+void ScriptEditor::_update_headless_update_scripts_timer() {
+	if (headless_update_scripts_timer == nullptr || !headless_update_scripts_timer->is_inside_tree()) {
+		return;
+	}
+
+	float headless_update_scripts_time = EDITOR_GET("text_editor/behavior/files/headless_update_scripts_interval_secs");
+	if (headless_update_scripts_time > 0) {
+		headless_update_scripts_timer->set_wait_time(headless_update_scripts_time);
+		headless_update_scripts_timer->start();
+	} else {
+		headless_update_scripts_timer->stop();
 	}
 }
 
@@ -3728,8 +3752,7 @@ void ScriptEditor::_start_find_in_files(bool with_replace) {
 }
 
 void ScriptEditor::_on_find_in_files_modified_files(PackedStringArray paths) {
-	_test_script_times_on_disk();
-	_update_modified_scripts_for_external_editor();
+	_test_for_updated_scripts();
 }
 
 void ScriptEditor::_window_changed(bool p_visible) {
@@ -4078,6 +4101,15 @@ ScriptEditor::ScriptEditor(WindowWrapper *p_wrapper) {
 	autosave_timer->connect(SceneStringNames::get_singleton()->tree_entered, callable_mp(this, &ScriptEditor::_update_autosave_timer));
 	autosave_timer->connect("timeout", callable_mp(this, &ScriptEditor::_autosave_scripts));
 	add_child(autosave_timer);
+
+	// Only set `headless_update_scripts_timer` if the editor runs headless
+	if (!DisplayServer::get_singleton()->window_can_draw()) {
+		headless_update_scripts_timer = memnew(Timer);
+		headless_update_scripts_timer->set_one_shot(false);
+		headless_update_scripts_timer->connect(SceneStringNames::get_singleton()->tree_entered, callable_mp(this, &ScriptEditor::_update_headless_update_scripts_timer));
+		headless_update_scripts_timer->connect("timeout", callable_mp(this, &ScriptEditor::_headless_test_for_updated_scripts));
+		add_child(headless_update_scripts_timer);
+	}
 
 	grab_focus_block = false;
 

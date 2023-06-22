@@ -792,6 +792,9 @@
 		<member name="text_editor/behavior/files/convert_indent_on_save" type="bool" setter="" getter="">
 			If [code]true[/code], converts indentation to match the script editor's indentation settings when saving a script. See also [member text_editor/behavior/indent/type].
 		</member>
+		<member name="text_editor/behavior/files/headless_update_scripts_interval_secs" type="int" setter="" getter="">
+			If set to a value greater than [code]0[/code], when the editor runs in headless mode, automatically tests the project script files following the specified interval (in seconds). If the files have been updated, they will be reloaded follwing [member text_editor/behavior/files/auto_reload_scripts_on_external_change].
+		</member>
 		<member name="text_editor/behavior/files/restore_scripts_on_load" type="bool" setter="" getter="">
 			If [code]true[/code], reopens scripts that were opened in the last session when the editor is reopened on a given project.
 		</member>
