@@ -2606,6 +2606,7 @@ bool Main::start() {
 	String _export_preset;
 	bool export_debug = false;
 	bool export_pack_only = false;
+	List<String> editor_open;
 #ifdef MODULE_GDSCRIPT_ENABLED
 	String gdscript_docs_path;
 #endif
@@ -2669,6 +2670,8 @@ bool Main::start() {
 					doc_tool_path = ".";
 					parsed_pair = false;
 				}
+			} else if (args[i] == "--editor-open") {
+				editor_open.push_back(args[i + 1]);
 #ifdef MODULE_GDSCRIPT_ENABLED
 			} else if (args[i] == "--gdscript-docs") {
 				gdscript_docs_path = args[i + 1];
@@ -3194,6 +3197,15 @@ bool Main::start() {
 				if (!debug_server_uri.is_empty()) {
 					EditorDebuggerNode::get_singleton()->start(debug_server_uri);
 					EditorDebuggerNode::get_singleton()->set_keep_open(true);
+				}
+				if (editor_open.size() > 0) {
+					for (String target : editor_open) {
+						print_line(vformat("loading \"%s\"", target));
+						Error err = editor_node->load_resource(target);
+						if (err != OK) {
+							ERR_PRINT(vformat("Failed to open \"%s\"", target));
+						}
+					}
 				}
 			}
 #endif
