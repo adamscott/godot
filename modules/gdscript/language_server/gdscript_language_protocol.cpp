@@ -238,8 +238,7 @@ void GDScriptLanguageProtocol::initialized(const Variant &p_params) {
 }
 
 void GDScriptLanguageProtocol::poll() {
-#ifdef WEB_ENABLED
-#else
+#ifndef WEB_ENABLED
 	if (server->is_connection_available()) {
 		on_client_connected();
 	}
@@ -277,6 +276,9 @@ void GDScriptLanguageProtocol::poll() {
 
 Error GDScriptLanguageProtocol::start(int p_port, const IPAddress &p_bind_ip) {
 #ifdef WEB_ENABLED
+	// JS LSP interface (js/libs/library_godot_lsp.js)
+	godot_js_lsp_cb(&_on_lsp_jsonrpc, ProjectSettings::get_singleton()->globalize_path("res://").utf8().get_data());
+
 	return OK;
 #else
 	return server->listen(p_port, p_bind_ip);
@@ -285,6 +287,7 @@ Error GDScriptLanguageProtocol::start(int p_port, const IPAddress &p_bind_ip) {
 
 void GDScriptLanguageProtocol::stop() {
 #ifdef WEB_ENABLED
+	godot_js_lsp_stop(ProjectSettings::get_singleton()->globalize_path("res://").utf8().get_data());
 #else
 	for (const KeyValue<int, Ref<LSPeer>> &E : clients) {
 		Ref<LSPeer> peer = clients.get(E.key);
@@ -355,10 +358,7 @@ void GDScriptLanguageProtocol::_on_lsp_jsonrpc(const char *p_jsonrpc) {
 #endif
 
 GDScriptLanguageProtocol::GDScriptLanguageProtocol() {
-#ifdef WEB_ENABLED
-	// JS LSP interface (js/libs/library_godot_lsp.js)
-	godot_js_lsp_cb(&_on_lsp_jsonrpc, ProjectSettings::get_singleton()->globalize_path("res://").utf8().get_data());
-#else
+#ifndef WEB_ENABLED
 	server.instantiate();
 #endif
 

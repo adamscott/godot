@@ -72,9 +72,16 @@ const GodotLSP = {
 		},
 	},
 
-	godot_js_lsp_cb__sig: 'vi',
+	godot_js_lsp_cb__sig: 'vii',
 	godot_js_lsp_cb: function (p_callback, p_project_path) {
 		GodotLSP.init(GodotRuntime.get_func(p_callback), UTF8ToString(p_project_path));
+	},
+
+	godot_js_lsp_stop__sig: 'vi',
+	godot_js_lsp_stop: function (p_project_path) {
+		if (GodotLSP.callbacks[UTF8ToString(p_project_path)] != null) {
+			delete GodotLSP.callbacks[UTF8ToString(p_project_path)];
+		}
 	},
 }
 autoAddDeps(GodotLSP, '$GodotLSP');
