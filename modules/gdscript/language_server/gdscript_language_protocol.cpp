@@ -31,11 +31,16 @@
 #include "gdscript_language_protocol.h"
 
 #include "core/config/project_settings.h"
+#include "core/string/print_string.h"
 #include "editor/doc_tools.h"
 #include "editor/editor_help.h"
 #include "editor/editor_log.h"
 #include "editor/editor_node.h"
 #include "editor/editor_settings.h"
+
+#ifdef WEB_ENABLED
+#include "godot_js.h"
+#endif
 
 GDScriptLanguageProtocol *GDScriptLanguageProtocol::singleton = nullptr;
 
@@ -124,6 +129,8 @@ Error GDScriptLanguageProtocol::LSPeer::send_data() {
 }
 
 Error GDScriptLanguageProtocol::on_client_connected() {
+#ifdef WEB_ENABLED
+#else
 	Ref<StreamPeerTCP> tcp_peer = server->take_connection();
 	ERR_FAIL_COND_V_MSG(clients.size() >= LSP_MAX_CLIENTS, FAILED, "Max client limits reached");
 	Ref<LSPeer> peer = memnew(LSPeer);
@@ -131,6 +138,7 @@ Error GDScriptLanguageProtocol::on_client_connected() {
 	clients.insert(next_client_id, peer);
 	next_client_id++;
 	EditorNode::get_log()->add_message("[LSP] Connection Taken", EditorLog::MSG_TYPE_EDITOR);
+#endif
 	return OK;
 }
 
@@ -230,6 +238,8 @@ void GDScriptLanguageProtocol::initialized(const Variant &p_params) {
 }
 
 void GDScriptLanguageProtocol::poll() {
+#ifdef WEB_ENABLED
+#else
 	if (server->is_connection_available()) {
 		on_client_connected();
 	}
@@ -262,19 +272,27 @@ void GDScriptLanguageProtocol::poll() {
 		}
 		++E;
 	}
+#endif
 }
 
 Error GDScriptLanguageProtocol::start(int p_port, const IPAddress &p_bind_ip) {
+#ifdef WEB_ENABLED
+	return OK;
+#else
 	return server->listen(p_port, p_bind_ip);
+#endif
 }
 
 void GDScriptLanguageProtocol::stop() {
+#ifdef WEB_ENABLED
+#else
 	for (const KeyValue<int, Ref<LSPeer>> &E : clients) {
 		Ref<LSPeer> peer = clients.get(E.key);
 		peer->connection->disconnect_from_host();
 	}
 
 	server->stop();
+#endif
 }
 
 void GDScriptLanguageProtocol::notify_client(const String &p_method, const Variant &p_params, int p_client_id) {
@@ -328,8 +346,22 @@ bool GDScriptLanguageProtocol::is_goto_native_symbols_enabled() const {
 	return bool(_EDITOR_GET("network/language_server/show_native_symbols_in_editor"));
 }
 
+#ifdef WEB_ENABLED
+void GDScriptLanguageProtocol::_on_lsp_jsonrpc(const char *p_jsonrpc) {
+	String json_rpc = p_jsonrpc;
+
+	print_line(vformat("received info from JS land! %s", json_rpc));
+}
+#endif
+
 GDScriptLanguageProtocol::GDScriptLanguageProtocol() {
+#ifdef WEB_ENABLED
+	// JS LSP interface (js/libs/library_godot_lsp.js)
+	godot_js_lsp_cb(&_on_lsp_jsonrpc, ProjectSettings::get_singleton()->globalize_path("res://").utf8().get_data());
+#else
 	server.instantiate();
+#endif
+
 	singleton = this;
 	workspace.instantiate();
 	text_document.instantiate();

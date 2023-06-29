@@ -76,7 +76,10 @@ private:
 	static GDScriptLanguageProtocol *singleton;
 
 	HashMap<int, Ref<LSPeer>> clients;
+#ifndef WEB_ENABLED
 	Ref<TCPServer> server;
+#endif
+
 	int latest_client_id = 0;
 	int next_client_id = 0;
 
@@ -90,6 +93,10 @@ private:
 
 	String process_message(const String &p_text);
 	String format_output(const String &p_text);
+
+#ifdef WEB_ENABLED
+	static void _on_lsp_jsonrpc(const char *p_jsonrpc);
+#endif
 
 	bool _initialized = false;
 
