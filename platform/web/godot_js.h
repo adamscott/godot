@@ -126,6 +126,9 @@ extern void godot_js_display_vk_cb(void (*p_input)(const char *p_text, int p_cur
 extern void godot_js_display_vk_show(const char *p_text, int p_type, int p_start, int p_end);
 extern void godot_js_display_vk_hide();
 
+// LSP
+extern void godot_js_lsp_cb(void (*p_callback)(const char *p_jsonrpc), const char *p_project_path);
+
 #ifdef __cplusplus
 }
 #endif
