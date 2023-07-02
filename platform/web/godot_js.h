@@ -127,9 +127,8 @@ extern void godot_js_display_vk_show(const char *p_text, int p_type, int p_start
 extern void godot_js_display_vk_hide();
 
 // Messaging
-extern void godot_js_messaging_cb(void (*p_callback)(const char *p_json));
-// extern void godot_js_messaging_stop(const char *p_project_path);
-// extern void godot_js_messaging_post(const char *p_project_path, const char *p_client_id, const char *p_jsonrpc);
+extern void godot_js_messaging_cb(void (*p_callback)(const char *p_server_tag, const char *p_json), const char *p_server_tag);
+extern void godot_js_messaging_stop(const char *p_server_tag);
 
 #ifdef __cplusplus
 }
