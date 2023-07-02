@@ -238,6 +238,13 @@ const Engine = (function () {
 					this.rtenv['request_quit']();
 				}
 			},
+
+			requestMessageProxy: function (serverTag) {
+				if (this.rtenv == null) {
+					throw new Error('Engine must be inited before requesting message proxy');
+				}
+				this.rtenv['requestMessageProxy'](serverTag);
+			}
 		};
 
 		Engine.prototype = proto;
@@ -248,6 +255,7 @@ const Engine = (function () {
 		Engine.prototype['startGame'] = Engine.prototype.startGame;
 		Engine.prototype['copyToFS'] = Engine.prototype.copyToFS;
 		Engine.prototype['requestQuit'] = Engine.prototype.requestQuit;
+		Engine.prototype['requestMessageProxy'] = Engine.prototype.requestMessageProxy;
 		// Also expose static methods as instance methods
 		Engine.prototype['load'] = Engine.load;
 		Engine.prototype['unload'] = Engine.unload;

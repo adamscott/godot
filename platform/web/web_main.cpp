@@ -28,6 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
+#include "core/io/web_message_server.h"
 #include "display_server_web.h"
 #include "godot_js.h"
 #include "os_web.h"
@@ -46,6 +47,7 @@ static uint64_t target_ticks = 0;
 
 static bool main_started = false;
 static bool shutdown_complete = false;
+static WebMessageServerManager *web_message_server_manager = nullptr;
 
 void exit_callback() {
 	if (!shutdown_complete) {
@@ -56,8 +58,13 @@ void exit_callback() {
 		main_started = false;
 	}
 	int exit_code = OS_Web::get_singleton()->get_exit_code();
+
+	memdelete(web_message_server_manager);
+	web_message_server_manager = nullptr;
+
 	memdelete(os);
 	os = nullptr;
+
 	emscripten_force_exit(exit_code); // Exit runtime.
 }
 
@@ -125,6 +132,9 @@ extern EMSCRIPTEN_KEEPALIVE int godot_web_main(int argc, char *argv[]) {
 
 	// Ease up compatibility.
 	ResourceLoader::set_abort_on_missing_resources(false);
+
+	// Setup web
+	web_message_server_manager = memnew(WebMessageServerManager);
 
 	Main::start();
 	os->get_main_loop()->initialize();

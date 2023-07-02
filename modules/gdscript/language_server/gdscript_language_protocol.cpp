@@ -246,11 +246,11 @@ void GDScriptLanguageProtocol::initialized(const Variant &p_params) {
 }
 
 void GDScriptLanguageProtocol::poll() {
-#ifndef WEB_ENABLED
 	if (server->is_connection_available()) {
 		on_client_connected();
 	}
-
+#ifdef WEB_ENABLED
+#else
 	HashMap<int, Ref<LSPeer>>::Iterator E = clients.begin();
 	while (E != clients.end()) {
 		Ref<LSPeer> peer = E->value;
@@ -356,6 +356,10 @@ bool GDScriptLanguageProtocol::is_goto_native_symbols_enabled() const {
 
 GDScriptLanguageProtocol::GDScriptLanguageProtocol() {
 	server.instantiate();
+
+#ifdef WEB_ENABLED
+	server->set_server_tag("lsp");
+#endif
 
 	singleton = this;
 	workspace.instantiate();
