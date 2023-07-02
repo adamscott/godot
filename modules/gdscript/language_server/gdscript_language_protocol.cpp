@@ -45,6 +45,9 @@
 GDScriptLanguageProtocol *GDScriptLanguageProtocol::singleton = nullptr;
 
 Error GDScriptLanguageProtocol::LSPeer::handle_data() {
+#ifdef WEB_ENABLED
+
+#else
 	int read = 0;
 	// Read headers
 	if (!has_header) {
@@ -105,10 +108,14 @@ Error GDScriptLanguageProtocol::LSPeer::handle_data() {
 			res_queue.push_back(output.utf8());
 		}
 	}
+#endif
 	return OK;
 }
 
 Error GDScriptLanguageProtocol::LSPeer::send_data() {
+#ifdef WEB_ENABLED
+
+#else
 	int sent = 0;
 	if (!res_queue.is_empty()) {
 		CharString c_res = res_queue[0];
@@ -125,6 +132,7 @@ Error GDScriptLanguageProtocol::LSPeer::send_data() {
 			res_queue.remove_at(0);
 		}
 	}
+#endif
 	return OK;
 }
 
@@ -276,10 +284,7 @@ void GDScriptLanguageProtocol::poll() {
 
 Error GDScriptLanguageProtocol::start(int p_port, const IPAddress &p_bind_ip) {
 #ifdef WEB_ENABLED
-	// JS LSP interface (js/libs/library_godot_lsp.js)
-	godot_js_lsp_cb(&_on_lsp_jsonrpc, ProjectSettings::get_singleton()->globalize_path("res://").utf8().get_data());
-
-	return OK;
+	return server->install();
 #else
 	return server->listen(p_port, p_bind_ip);
 #endif
@@ -287,15 +292,15 @@ Error GDScriptLanguageProtocol::start(int p_port, const IPAddress &p_bind_ip) {
 
 void GDScriptLanguageProtocol::stop() {
 #ifdef WEB_ENABLED
-	godot_js_lsp_stop(ProjectSettings::get_singleton()->globalize_path("res://").utf8().get_data());
+	// godot_js_lsp_stop(ProjectSettings::get_singleton()->globalize_path("res://").utf8().get_data());
 #else
 	for (const KeyValue<int, Ref<LSPeer>> &E : clients) {
 		Ref<LSPeer> peer = clients.get(E.key);
 		peer->connection->disconnect_from_host();
 	}
+#endif
 
 	server->stop();
-#endif
 }
 
 void GDScriptLanguageProtocol::notify_client(const String &p_method, const Variant &p_params, int p_client_id) {
@@ -349,18 +354,8 @@ bool GDScriptLanguageProtocol::is_goto_native_symbols_enabled() const {
 	return bool(_EDITOR_GET("network/language_server/show_native_symbols_in_editor"));
 }
 
-#ifdef WEB_ENABLED
-void GDScriptLanguageProtocol::_on_lsp_jsonrpc(const char *p_jsonrpc) {
-	String json_rpc = p_jsonrpc;
-
-	print_line(vformat("received info from JS land! %s", json_rpc));
-}
-#endif
-
 GDScriptLanguageProtocol::GDScriptLanguageProtocol() {
-#ifndef WEB_ENABLED
 	server.instantiate();
-#endif
 
 	singleton = this;
 	workspace.instantiate();

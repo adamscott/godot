@@ -31,13 +31,20 @@
 #ifndef GDSCRIPT_LANGUAGE_PROTOCOL_H
 #define GDSCRIPT_LANGUAGE_PROTOCOL_H
 
+#include "core/io/web_message_peer.h"
+#include "core/string/ustring.h"
 #include "gdscript_text_document.h"
 #include "gdscript_workspace.h"
 #include "godot_lsp.h"
 
+#ifdef WEB_ENABLED
+#include "core/io/web_message_peer.h"
+#include "core/io/web_message_server.h"
+#else
 #include "core/io/stream_peer.h"
 #include "core/io/stream_peer_tcp.h"
 #include "core/io/tcp_server.h"
+#endif
 
 #include "modules/modules_enabled.gen.h" // For jsonrpc.
 #ifdef MODULE_JSONRPC_ENABLED
@@ -54,6 +61,10 @@ class GDScriptLanguageProtocol : public JSONRPC {
 
 private:
 	struct LSPeer : RefCounted {
+#ifdef WEB_ENABLED
+		Ref<WebMessagePeer> connection;
+		Vector<CharString> req_queue;
+#else
 		Ref<StreamPeerTCP> connection;
 
 		uint8_t req_buf[LSP_MAX_BUFFER_SIZE];
@@ -61,6 +72,7 @@ private:
 		bool has_header = false;
 		bool has_content = false;
 		int content_length = 0;
+#endif
 		Vector<CharString> res_queue;
 		int res_sent = 0;
 
@@ -76,7 +88,9 @@ private:
 	static GDScriptLanguageProtocol *singleton;
 
 	HashMap<int, Ref<LSPeer>> clients;
-#ifndef WEB_ENABLED
+#ifdef WEB_ENABLED
+	Ref<WebMessageServer> server;
+#else
 	Ref<TCPServer> server;
 #endif
 
@@ -93,10 +107,6 @@ private:
 
 	String process_message(const String &p_text);
 	String format_output(const String &p_text);
-
-#ifdef WEB_ENABLED
-	static void _on_lsp_jsonrpc(const char *p_jsonrpc);
-#endif
 
 	bool _initialized = false;
 
