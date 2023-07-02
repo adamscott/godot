@@ -128,9 +128,10 @@ extern void godot_js_display_vk_cb(void (*p_input)(const char *p_text, int p_cur
 extern void godot_js_display_vk_show(const char *p_text, int p_type, int p_start, int p_end);
 extern void godot_js_display_vk_hide();
 
-// LSP
-extern void godot_js_lsp_cb(void (*p_callback)(const char *p_jsonrpc), const char *p_project_path);
-extern void godot_js_lsp_stop(const char *p_project_path);
+// Messaging
+extern void godot_js_messaging_cb(void (*p_callback)(const char *p_json));
+// extern void godot_js_messaging_stop(const char *p_project_path);
+// extern void godot_js_messaging_post(const char *p_project_path, const char *p_client_id, const char *p_jsonrpc);
 
 #ifdef __cplusplus
 }
