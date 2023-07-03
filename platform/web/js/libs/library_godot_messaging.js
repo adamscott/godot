@@ -43,15 +43,21 @@ class MessageProxy extends EventTarget {
 	}
 
 	/**
+	 * @typedef {object} MessageProxySendOptions
+	 * @property {string} [type]
+	 * 
 	 * Send data to the server
-	 * @param {object} data 
+	 * @param {object} data
+	 * @param {MessageProxySendOptions} [options]
 	 */
-	send(data) {
+	send(data, options = {}) {
 		if (!this.ready) {
 			return;
 		}
 
-		GodotMessaging.send_data_to_server(this.serverTag, this.clientId, data);
+		const { type = "data" } = options;
+
+		GodotMessaging.send_data_to_server(this.serverTag, this.clientId, data, { type });
 	}
 }
 
@@ -70,7 +76,16 @@ const GodotMessaging = {
 	 * @param {MessageProxy} proxy 
 	 */
 	register_proxy: function (proxy) {
-		GodotMessaging.send_register_request_to_server(proxy.serverTag, proxy.clientId);
+		GodotMessaging.send_data_to_server(proxy.serverTag, proxy.clientId, {}, { type: "register" });
+	},
+
+	/**
+	 * 
+	 * @param {MessageProxy} proxy 
+	 */
+	ready_proxy: function (proxy) {
+		proxy.ready = true;
+		proxy.dispatchEvent(new CustomEvent("ready"));
 	},
 
 	/**
@@ -103,6 +118,8 @@ const GodotMessaging = {
 	 * @returns 
 	 */
 	init: function (callback, serverTag) {
+		console.log("server init", serverTag);
+
 		GodotMessaging._servers[serverTag] = true;
 		if (GodotMessaging._callback == null) {
 			// The callback is the same for each server instance
@@ -132,14 +149,26 @@ const GodotMessaging = {
 		}
 	},
 
-	send_data_to_server: function (serverTag, clientId, type = "data", data) {
+	/**
+	 * @typedef {object} SendDataToServerOptions
+	 * @property {string} [type]
+	 *
+	 * Sends data to the server
+	 * @param {string} serverTag 
+	 * @param {number} clientId 
+	 * @param {any} data 
+	 * @param {SendDataToServerOptions} [options] 
+	 */
+	send_data_to_server: function (serverTag, clientId, data, options = {}) {
+		const { type = "data" } = options;
+
 		if (!serverTag in GodotMessaging._servers) {
 			throw new Error(`Cannot call server "${serverTag}", server not registered`);
 		}
 
 		const message = JSON.stringify({
-			serverTag,
-			clientId,
+			"server_tag": serverTag,
+			"client_id": clientId,
 			type,
 			data
 		});
@@ -148,7 +177,19 @@ const GodotMessaging = {
 		GodotRuntime.free(jsonStr);
 	},
 
-	send_data_to_client: function (serverTag, clientId, type = "data", data) {
+	/**
+	 * @typedef {object} SendDataToClientOptions
+	 * @property {string} [type]
+	 * 
+	 * Sends data to the client
+	 * @param {string} serverTag 
+	 * @param {number} clientId 
+	 * @param {any} data 
+	 * @param {SendDataToClientOptions} [options] 
+	 */
+	send_data_to_client: function (serverTag, clientId, data, options = {}) {
+		const { type = "data" } = options;
+
 		if (!serverTag in GodotMessaging._servers) {
 			throw new Error(`Cannot send data from server "${serverTag}", server not registered`);
 		}
@@ -160,7 +201,7 @@ const GodotMessaging = {
 				if (GodotMessaging._proxies[serverTag] != null) {
 					for (const proxy of GodotMessaging._proxies[serverTag]) {
 						if (proxy.clientId === clientId) {
-							proxy.dispatchEvent(new CustomEvent("ready"));
+							GodotMessaging.ready_proxy(proxy);
 							break;
 						}
 					}
@@ -172,30 +213,16 @@ const GodotMessaging = {
 				if (GodotMessaging._proxies[serverTag] != null) {
 					for (const proxy of GodotMessaging._proxies[serverTag]) {
 						if (proxy.clientId === clientId) {
-							proxy.dispatchEvent(new CustomEvent("message", data));
+							proxy.dispatchEvent(new CustomEvent("message", {
+								detail: data
+							}));
 							break;
 						}
 					}
 				}
 			}
 		}
- 	},
-
-	send_register_request_to_server: function (serverTag, clientId) {
-		if (!serverTag in GodotMessaging._servers) {
-			throw new Error(`Cannot call server "${serverTag}", server not registered`);
-		}
-
-		const message = JSON.stringify({
-			type: "register",
-			client_id: clientId
-		});
-		const serverTagStr = GodotRuntime.allocString(serverTag);
-		const jsonStr = GodotRuntime.allocString(message);
-		GodotMessaging._callback(serverTagStr, jsonStr);
-		GodotRuntime.free(serverTagStr);
-		GodotRuntime.free(jsonStr);
-	}
+ 	}
 };
 
 /**
@@ -213,7 +240,7 @@ const _GodotMessaging = {
 
 	godot_js_messaging_send_data_to_client__sig: 'viiii',
 	godot_js_messaging_send_data_to_client: function (p_server_tag, p_client_id, p_type, p_json) {
-		GodotMessaging.send_data_to_client(UTF8ToString(p_server_tag), p_client_id, UTF8ToString(p_type), UTF8ToString(p_json));
+		GodotMessaging.send_data_to_client(UTF8ToString(p_server_tag), p_client_id, UTF8ToString(p_json), { type: UTF8ToString(p_type) });
 	},
 
 	godot_js_messaging_stop__sig: 'vi',
