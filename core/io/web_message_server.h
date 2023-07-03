@@ -1,8 +1,10 @@
 #ifndef WEB_MESSAGE_SERVER_H
 #define WEB_MESSAGE_SERVER_H
 
+#include "core/io/web_message_peer.h"
 #include "core/object/ref_counted.h"
 #include "core/templates/self_list.h"
+#include "core/variant/variant.h"
 
 class WebMessageServer : public RefCounted {
 	GDCLASS(WebMessageServer, RefCounted);
@@ -15,6 +17,7 @@ private:
 	SelfList<WebMessageServer> _server_list;
 
 	Vector<int> _available_clients;
+	Vector<Ref<WebMessagePeer>> _peers;
 
 	int _get_next_server_id() {
 		int id = _next_server_id;
@@ -22,7 +25,7 @@ private:
 		return id;
 	}
 
-	static void _on_messaging_callback(const char *p_server_tag, const char *p_json);
+	static void _on_messaging_callback(const char *p_json);
 
 	Error on_client_connected();
 	void on_callback(Dictionary p_data);
@@ -32,8 +35,11 @@ public:
 	void stop();
 
 	bool is_connection_available();
+	Ref<WebMessagePeer> take_connection();
 
-	void set_server_tag(const String p_server_tag) { _server_tag = p_server_tag; }
+	void send(const int p_client_id, const String p_type, Variant p_data);
+
+	void set_server_tag(const String p_server_tag);
 	String get_server_tag() { return _server_tag; }
 
 	WebMessageServer();

@@ -63,7 +63,6 @@ private:
 	struct LSPeer : RefCounted {
 #ifdef WEB_ENABLED
 		Ref<WebMessagePeer> connection;
-		Vector<CharString> req_queue;
 #else
 		Ref<StreamPeerTCP> connection;
 
@@ -72,9 +71,10 @@ private:
 		bool has_header = false;
 		bool has_content = false;
 		int content_length = 0;
-#endif
 		Vector<CharString> res_queue;
 		int res_sent = 0;
+#endif
+		Vector<String> res_queue;
 
 		Error handle_data();
 		Error send_data();
@@ -88,10 +88,10 @@ private:
 	static GDScriptLanguageProtocol *singleton;
 
 	HashMap<int, Ref<LSPeer>> clients;
-#ifdef WEB_ENABLED
-	Ref<WebMessageServer> server;
-#else
+#ifndef WEB_ENABLED
 	Ref<TCPServer> server;
+#else
+	Ref<WebMessageServer> server;
 #endif
 
 	int latest_client_id = 0;
