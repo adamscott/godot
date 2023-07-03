@@ -3,20 +3,24 @@
 #include "core/error/error_macros.h"
 #include "core/io/json.h"
 #include "core/io/web_message_peer.h"
+#include "core/string/print_string.h"
 #include "core/variant/dictionary.h"
 #include "godot_js.h"
 
 void WebMessageServer::_on_messaging_callback(const char *p_json) {
+	print_line(vformat("_on_messaging_callback: p_json = '%s'", p_json));
+
 	Dictionary dict = JSON::parse_string(p_json);
 
 	String server_tag = dict["server_tag"];
 	int client_id = dict["client_id"];
 	String type = dict["type"];
+
 	if (type == "register") {
 		SelfList<WebMessageServer> *s = WebMessageServerManager::get_singleton()->_server_list.first();
 		while (s) {
 			WebMessageServer *server = s->self();
-			if (server->_server_tag == String(server_tag)) {
+			if (server->_server_tag == server_tag) {
 				server->_available_clients.append(client_id);
 
 				break;
@@ -28,10 +32,15 @@ void WebMessageServer::_on_messaging_callback(const char *p_json) {
 	}
 
 	if (type == "data") {
+		print_line(vformat("type is data"));
+
 		SelfList<WebMessageServer> *s = WebMessageServerManager::get_singleton()->_server_list.first();
 		while (s) {
 			WebMessageServer *server = s->self();
-			if (server->_server_tag == String(server_tag)) {
+
+			print_line(vformat("looping through servers: %s, %s", server->_server_tag, server_tag));
+			if (server->_server_tag == server_tag) {
+				print_line(vformat("in data server_tag"));
 				for (Ref<WebMessagePeer> peer : server->_peers) {
 					if (peer->get_client_id() == client_id) {
 						peer->handle(dict["data"]);
@@ -83,6 +92,7 @@ Ref<WebMessagePeer> WebMessageServer::take_connection() {
 
 	_peers.append(peer);
 
+	print_line(vformat("send 'ready' to client %s", available_client));
 	send(available_client, "ready", Dictionary());
 
 	return peer;
