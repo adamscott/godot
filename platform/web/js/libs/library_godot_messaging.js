@@ -31,15 +31,15 @@
 class MessageProxy extends EventTarget {
 	/**
 	 * Constructor
-	 * @param {string} server_tag
-	 * @param {number} client_id
+	 * @param {string} serverTag
+	 * @param {number} clientId
 	 */
-	constructor(server_tag, client_id) {
+	constructor(serverTag, clientId) {
 		super();
 
 		this.ready = false;
-		this.server_tag = server_tag;
-		this.client_id = client_id;
+		this.serverTag = serverTag;
+		this.clientId = clientId;
 	}
 
 	/**
@@ -51,48 +51,47 @@ class MessageProxy extends EventTarget {
 			return;
 		}
 
-		GodotMessaging.call(this.server_tag, this.client_id, data);
-	}
-
-	/**
-	 * 
-	 * @param {boolean} dispatch_event 
-	 */
-	_ready(dispatch_event) {
-		this.ready = true;
-
-		GodotMessaging.register(this.server_tag, this.client_id);
-
-		if (dispatch_event) {
-			this.dispatchEvent(new CustomEvent("ready", {}));
-		}
+		GodotMessaging.send_data_to_server(this.serverTag, this.clientId, data);
 	}
 }
 
 const GodotMessaging = {
-	server_callbacks: {},
+	_servers: {},
+	_callback: null,
 	
 	_nextClientId: 0,
 
 	/** @type {MessageProxy[]} */
-	_proxies: [],
+	_proxies: {},
 
 	_messageProxyClass: MessageProxy,
 
 	/**
-	 * 
-	 * @param {string} server_tag
+	 * @param {MessageProxy} proxy 
 	 */
-	request_message_proxy: function(server_tag) {
+	register_proxy: function (proxy) {
+		GodotMessaging.send_register_request_to_server(proxy.serverTag, proxy.clientId);
+	},
+
+	/**
+	 * 
+	 * @param {string} serverTag
+	 */
+	request_message_proxy: function(serverTag) {
 		const clientId = GodotMessaging._nextClientId;
 		GodotMessaging._nextClientId += 1;
 
 		/** @type {MessageProxy} */
-		const proxy = new GodotMessaging._messageProxyClass(server_tag, clientId);
-		GodotMessaging._proxies.push(proxy);
+		const proxy = new GodotMessaging._messageProxyClass(serverTag, clientId);
+		
+		if (GodotMessaging._proxies[serverTag] == null) {
+			GodotMessaging._proxies[serverTag] = [proxy]
+		} else {
+			GodotMessaging._proxies[serverTag].push(proxy);
+		}
 
-		if (GodotMessaging.server_callbacks[server_tag] != null) {
-			proxy._ready(false);
+		if (serverTag in GodotMessaging._servers) {
+			GodotMessaging.register_proxy(proxy, { dispatchEvent: false });
 		}
 
 		return proxy;
@@ -103,80 +102,99 @@ const GodotMessaging = {
 	 * @param {Function} callback 
 	 * @returns 
 	 */
-	init: function (callback, server_tag) {
-		GodotMessaging.server_callbacks[server_tag] = callback;
-		for (const proxy of GodotMessaging._proxies) {
-			if (proxy.server_tag === server_tag) {
-				proxy._ready(true);
+	init: function (callback, serverTag) {
+		GodotMessaging._servers[serverTag] = true;
+		if (GodotMessaging._callback == null) {
+			// The callback is the same for each server instance
+			GodotMessaging._callback = callback;
+		}
+
+		if (GodotMessaging._proxies[serverTag] != null) {
+			for (const proxy of GodotMessaging._proxies[serverTag]) {
+				GodotMessaging.register_proxy(proxy);
 			}
 		}
-		
-		// const message_callback = function (evt) {
-		// 	console.log("received message", evt, `(keys: ${Object.keys(GodotMessaging.callbacks)})`);
-		// 	if (evt.origin !== window.location.origin || evt.data == null) {
-		// 		console.log(`evt.origin (${evt.origin}) !== window.location.origin (${window.location.origin}) || evt.data == null`);
-		// 		return;
-		// 	}
-
-		// 	const { type, jsonrpc, project_path } = evt.data || {};
-
-		// 	if (type !== "godot_lsp" || typeof jsonrpc !== "string" || typeof project_path !== "string") {
-		// 		console.log(`type (${type}) !== "godot_messaging" || jsonrpc/project_path !== "string"`);
-		// 		return;
-		// 	}
-
-		// 	if (GodotMessaging.callbacks[project_path] == null) {
-		// 		console.log(`callback is null for "${project_path}"`);
-		// 		return;
-		// 	}
-
-		// 	const jsonrpc_str = GodotRuntime.allocString(jsonrpc); // This is important, because you can't pass JS strings directly into C++ code
-		// 	GodotMessaging.callbacks[project_path](jsonrpc_str);
-		// 	GodotRuntime.free(jsonrpc_str); // This is important to avoid memory leaks after the allocated string has been used by the C++ code
-		// };
-
-		// GodotEventListeners.add(window, 'message', message_callback, false);
 	},
 
 	/**
 	 * 
-	 * @param {string} server_tag 
+	 * @param {string} serverTag 
 	 */
-	stop: function (server_tag) {
-		if (GodotMessaging.server_callbacks[server_tag] != null) {
-			delete GodotMessaging.server_callbacks[server_tag];
+	stop: function (serverTag) {
+		if (serverTag in GodotMessaging._servers) {
+			if (GodotMessaging._proxies[serverTag] != null) {
+				for (const proxy of GodotMessaging._proxies[serverTag]) {
+					proxy.dispatchEvent(new CustomEvent("stop"));
+				}
+				delete GodotMessaging._proxies[serverTag];
+			}
+			GodotMessaging._servers = GodotMessaging._servers.filter((server) => server !== serverTag);
 		}
 	},
 
-	call: function (server_tag, client_id, data) {
-		if (GodotMessaging.server_callbacks[server_tag] == null) {
-			throw new Error(`Cannot call server "${server_tag}", server not registered`);
+	send_data_to_server: function (serverTag, clientId, type = "data", data) {
+		if (!serverTag in GodotMessaging._servers) {
+			throw new Error(`Cannot call server "${serverTag}", server not registered`);
 		}
 
 		const message = JSON.stringify({
-			type: "call",
-			client_id,
+			serverTag,
+			clientId,
+			type,
 			data
 		});
-		const json_str = GodotRuntime.allocString(message);
-		GodotMessaging.server_callbacks[server_tag](json_str);
-		GodotRuntime.free(json_str);
+		const jsonStr = GodotRuntime.allocString(message);
+		GodotMessaging._callback(jsonStr);
+		GodotRuntime.free(jsonStr);
 	},
 
-	register: function (server_tag, client_id) {
-		if (GodotMessaging.server_callbacks[server_tag] == null) {
-			throw new Error(`Cannot call server "${server_tag}", server not registered`);
+	send_data_to_client: function (serverTag, clientId, type = "data", data) {
+		if (!serverTag in GodotMessaging._servers) {
+			throw new Error(`Cannot send data from server "${serverTag}", server not registered`);
+		}
+
+		switch (type) {
+			case "ready": {
+				GodotMessaging._servers[serverTag].ready = true;
+
+				if (GodotMessaging._proxies[serverTag] != null) {
+					for (const proxy of GodotMessaging._proxies[serverTag]) {
+						if (proxy.clientId === clientId) {
+							proxy.dispatchEvent(new CustomEvent("ready"));
+							break;
+						}
+					}
+				}
+			} break;
+
+			case "data":
+			default: {
+				if (GodotMessaging._proxies[serverTag] != null) {
+					for (const proxy of GodotMessaging._proxies[serverTag]) {
+						if (proxy.clientId === clientId) {
+							proxy.dispatchEvent(new CustomEvent("message", data));
+							break;
+						}
+					}
+				}
+			}
+		}
+ 	},
+
+	send_register_request_to_server: function (serverTag, clientId) {
+		if (!serverTag in GodotMessaging._servers) {
+			throw new Error(`Cannot call server "${serverTag}", server not registered`);
 		}
 
 		const message = JSON.stringify({
 			type: "register",
-			client_id
+			client_id: clientId
 		});
-		const server_tag_str = GodotRuntime.allocString(server_tag);
-		const json_str = GodotRuntime.allocString(message);
-		GodotMessaging.server_callbacks[server_tag](server_tag_str, json_str);
-		GodotRuntime.free(server_tag_str);
-		GodotRuntime.free(json_str);
+		const serverTagStr = GodotRuntime.allocString(serverTag);
+		const jsonStr = GodotRuntime.allocString(message);
+		GodotMessaging._callback(serverTagStr, jsonStr);
+		GodotRuntime.free(serverTagStr);
+		GodotRuntime.free(jsonStr);
 	}
 };
 
@@ -191,6 +209,11 @@ const _GodotMessaging = {
 	godot_js_messaging_cb__sig: 'vii',
 	godot_js_messaging_cb: function (p_callback, p_server_tag) {
 		GodotMessaging.init(GodotRuntime.get_func(p_callback), UTF8ToString(p_server_tag));
+	},
+
+	godot_js_messaging_send_data_to_client__sig: 'viiii',
+	godot_js_messaging_send_data_to_client: function (p_server_tag, p_client_id, p_type, p_json) {
+		GodotMessaging.send_data_to_client(UTF8ToString(p_server_tag), p_client_id, UTF8ToString(p_type), UTF8ToString(p_json));
 	},
 
 	godot_js_messaging_stop__sig: 'vi',

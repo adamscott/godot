@@ -31,6 +31,8 @@
 #include "gdscript_language_protocol.h"
 
 #include "core/config/project_settings.h"
+#include "core/io/web_message_peer.h"
+#include "core/io/web_message_server.h"
 #include "core/string/print_string.h"
 #include "editor/doc_tools.h"
 #include "editor/editor_help.h"
@@ -45,9 +47,7 @@
 GDScriptLanguageProtocol *GDScriptLanguageProtocol::singleton = nullptr;
 
 Error GDScriptLanguageProtocol::LSPeer::handle_data() {
-#ifdef WEB_ENABLED
-
-#else
+#ifndef WEB_ENABLED
 	int read = 0;
 	// Read headers
 	if (!has_header) {
@@ -108,14 +108,27 @@ Error GDScriptLanguageProtocol::LSPeer::handle_data() {
 			res_queue.push_back(output.utf8());
 		}
 	}
+#else
+	while (connection->has_data()) {
+		Variant data = connection->get_data();
+		if (data.get_type() != Variant::Type::STRING) {
+			return FAILED;
+		}
+
+		String msg = data;
+
+		// Response
+		String output = GDScriptLanguageProtocol::get_singleton()->process_message(msg);
+		if (!output.is_empty()) {
+			res_queue.push_back(output);
+		}
+	}
 #endif
 	return OK;
 }
 
 Error GDScriptLanguageProtocol::LSPeer::send_data() {
-#ifdef WEB_ENABLED
-
-#else
+#ifndef WEB_ENABLED
 	int sent = 0;
 	if (!res_queue.is_empty()) {
 		CharString c_res = res_queue[0];
@@ -132,21 +145,31 @@ Error GDScriptLanguageProtocol::LSPeer::send_data() {
 			res_queue.remove_at(0);
 		}
 	}
+#else
+	if (!res_queue.is_empty()) {
+		String response = res_queue[0];
+		connection->send(response);
+		res_queue.remove_at(0);
+	}
 #endif
 	return OK;
 }
 
 Error GDScriptLanguageProtocol::on_client_connected() {
-#ifdef WEB_ENABLED
-#else
+#ifndef WEB_ENABLED
 	Ref<StreamPeerTCP> tcp_peer = server->take_connection();
 	ERR_FAIL_COND_V_MSG(clients.size() >= LSP_MAX_CLIENTS, FAILED, "Max client limits reached");
 	Ref<LSPeer> peer = memnew(LSPeer);
 	peer->connection = tcp_peer;
+#else
+	Ref<WebMessagePeer> web_peer = server->take_connection();
+	Ref<LSPeer> peer = memnew(LSPeer);
+	peer->connection = web_peer;
+#endif
+
 	clients.insert(next_client_id, peer);
 	next_client_id++;
 	EditorNode::get_log()->add_message("[LSP] Connection Taken", EditorLog::MSG_TYPE_EDITOR);
-#endif
 	return OK;
 }
 
@@ -215,7 +238,11 @@ Dictionary GDScriptLanguageProtocol::initialize(const Dictionary &p_params) {
 		if (peer != nullptr) {
 			String msg = Variant(request).to_json_string();
 			msg = format_output(msg);
+#ifndef WEB_ENABLED
 			(*peer)->res_queue.push_back(msg.utf8());
+#else
+			(*peer)->res_queue.push_back(msg);
+#endif
 		}
 	}
 
@@ -249,11 +276,11 @@ void GDScriptLanguageProtocol::poll() {
 	if (server->is_connection_available()) {
 		on_client_connected();
 	}
-#ifdef WEB_ENABLED
-#else
 	HashMap<int, Ref<LSPeer>>::Iterator E = clients.begin();
 	while (E != clients.end()) {
 		Ref<LSPeer> peer = E->value;
+
+#ifndef WEB_ENABLED
 		peer->connection->poll();
 		StreamPeerTCP::Status status = peer->connection->get_status();
 		if (status == StreamPeerTCP::STATUS_NONE || status == StreamPeerTCP::STATUS_ERROR) {
@@ -277,27 +304,34 @@ void GDScriptLanguageProtocol::poll() {
 				continue;
 			}
 		}
+#else
+		if (peer->connection->has_data()) {
+			latest_client_id = E->key;
+			peer->handle_data();
+		}
+		peer->send_data();
+#endif
+
 		++E;
 	}
-#endif
 }
 
 Error GDScriptLanguageProtocol::start(int p_port, const IPAddress &p_bind_ip) {
-#ifdef WEB_ENABLED
-	return server->install();
-#else
+#ifndef WEB_ENABLED
 	return server->listen(p_port, p_bind_ip);
+#else
+	return server->install();
 #endif
 }
 
 void GDScriptLanguageProtocol::stop() {
-#ifdef WEB_ENABLED
-	// godot_js_lsp_stop(ProjectSettings::get_singleton()->globalize_path("res://").utf8().get_data());
-#else
+#ifndef WEB_ENABLED
 	for (const KeyValue<int, Ref<LSPeer>> &E : clients) {
 		Ref<LSPeer> peer = clients.get(E.key);
 		peer->connection->disconnect_from_host();
 	}
+#else
+	// godot_js_lsp_stop(ProjectSettings::get_singleton()->globalize_path("res://").utf8().get_data());
 #endif
 
 	server->stop();
@@ -321,7 +355,11 @@ void GDScriptLanguageProtocol::notify_client(const String &p_method, const Varia
 	Dictionary message = make_notification(p_method, p_params);
 	String msg = Variant(message).to_json_string();
 	msg = format_output(msg);
+#ifndef WEB_ENABLED
 	peer->res_queue.push_back(msg.utf8());
+#else
+	peer->res_queue.push_back(msg);
+#endif
 }
 
 void GDScriptLanguageProtocol::request_client(const String &p_method, const Variant &p_params, int p_client_id) {
@@ -343,7 +381,11 @@ void GDScriptLanguageProtocol::request_client(const String &p_method, const Vari
 	next_server_id++;
 	String msg = Variant(message).to_json_string();
 	msg = format_output(msg);
+#ifndef WEB_ENABLED
 	peer->res_queue.push_back(msg.utf8());
+#else
+	peer->res_queue.push_back(msg);
+#endif
 }
 
 bool GDScriptLanguageProtocol::is_smart_resolve_enabled() const {
