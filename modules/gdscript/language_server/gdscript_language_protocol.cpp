@@ -117,8 +117,6 @@ Error GDScriptLanguageProtocol::LSPeer::handle_data() {
 
 		String msg = data;
 
-		print_line(vformat("connection->get_data(): %s", msg));
-
 		// Response
 		String output = GDScriptLanguageProtocol::get_singleton()->process_message(msg);
 		if (!output.is_empty()) {

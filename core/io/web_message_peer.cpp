@@ -11,8 +11,6 @@ Variant WebMessagePeer::get_data() {
 	}
 
 	Variant data_to_return = data.get(0);
-	print_line(vformat("get_data called: %s", data_to_return));
-
 	data.remove_at(0);
 	return data_to_return;
 }
