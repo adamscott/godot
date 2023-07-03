@@ -190,6 +190,7 @@ String GDScriptLanguageProtocol::process_message(const String &p_text) {
 }
 
 String GDScriptLanguageProtocol::format_output(const String &p_text) {
+#ifndef WEB_ENABLED
 	String header = "Content-Length: ";
 	CharString charstr = p_text.utf8();
 	size_t len = charstr.length();
@@ -197,6 +198,9 @@ String GDScriptLanguageProtocol::format_output(const String &p_text) {
 	header += "\r\n\r\n";
 
 	return header + p_text;
+#else
+	return p_text;
+#endif
 }
 
 void GDScriptLanguageProtocol::_bind_methods() {
