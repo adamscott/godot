@@ -211,7 +211,7 @@ const GodotMessaging = {
 				if (GodotMessaging._proxies[serverTag] != null) {
 					for (const proxy of GodotMessaging._proxies[serverTag]) {
 						if (proxy.clientId === clientId) {
-							proxy.dispatchEvent(new CustomEvent("message", {
+							proxy.dispatchEvent(new CustomEvent("data", {
 								detail: data
 							}));
 							break;
