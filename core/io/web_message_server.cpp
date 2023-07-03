@@ -8,8 +8,6 @@
 #include "godot_js.h"
 
 void WebMessageServer::_on_messaging_callback(const char *p_json) {
-	print_line(vformat("_on_messaging_callback: p_json = '%s'", p_json));
-
 	Dictionary dict = JSON::parse_string(p_json);
 
 	String server_tag = dict["server_tag"];
@@ -32,23 +30,16 @@ void WebMessageServer::_on_messaging_callback(const char *p_json) {
 	}
 
 	if (type == "data") {
-		print_line(vformat("type is data"));
-
 		SelfList<WebMessageServer> *s = WebMessageServerManager::get_singleton()->_server_list.first();
 		while (s) {
 			WebMessageServer *server = s->self();
-
-			print_line(vformat("looping through servers: %s, %s", server->_server_tag, server_tag));
 			if (server->_server_tag == server_tag) {
-				print_line(vformat("in data server_tag"));
 				for (Ref<WebMessagePeer> peer : server->_peers) {
 					if (peer->get_client_id() == client_id) {
 						peer->handle(dict["data"]);
-
 						break;
 					}
 				}
-
 				break;
 			}
 
@@ -56,10 +47,6 @@ void WebMessageServer::_on_messaging_callback(const char *p_json) {
 		}
 		return;
 	}
-}
-
-void WebMessageServer::on_callback(Dictionary p_data) {
-	print_line(vformat("(%s) callback: %s", _server_tag, p_data));
 }
 
 Error WebMessageServer::install() {
@@ -83,8 +70,6 @@ Ref<WebMessagePeer> WebMessageServer::take_connection() {
 		return peer;
 	}
 
-	print_line(vformat("WebMessageServer::take_connection()"));
-
 	int available_client = _available_clients.get(0);
 	_available_clients.remove_at(0);
 	peer->client_id = available_client;
@@ -92,7 +77,6 @@ Ref<WebMessagePeer> WebMessageServer::take_connection() {
 
 	_peers.append(peer);
 
-	print_line(vformat("send 'ready' to client %s", available_client));
 	send(available_client, "ready", Dictionary());
 
 	return peer;

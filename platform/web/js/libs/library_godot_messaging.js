@@ -118,8 +118,6 @@ const GodotMessaging = {
 	 * @returns 
 	 */
 	init: function (callback, serverTag) {
-		console.log("server init", serverTag);
-
 		GodotMessaging._servers[serverTag] = true;
 		if (GodotMessaging._callback == null) {
 			// The callback is the same for each server instance
