@@ -28,7 +28,6 @@ private:
 	static void _on_messaging_callback(const char *p_json);
 
 	Error on_client_connected();
-	void on_callback(Dictionary p_data);
 
 public:
 	Error install();
