@@ -5,9 +5,13 @@
 #include "core/io/web_message_peer.h"
 #include "core/string/print_string.h"
 #include "core/variant/dictionary.h"
+
+#ifdef WEB_ENABLED
 #include "godot_js.h"
+#endif
 
 void WebMessageServer::_on_messaging_callback(const char *p_json) {
+#ifdef WEB_ENABLED
 	Dictionary dict = JSON::parse_string(p_json);
 
 	String server_tag = dict["server_tag"];
@@ -47,17 +51,22 @@ void WebMessageServer::_on_messaging_callback(const char *p_json) {
 		}
 		return;
 	}
+#endif
 }
 
 Error WebMessageServer::install() {
+#ifdef WEB_ENABLED
 	godot_js_messaging_cb(&WebMessageServer::_on_messaging_callback, _server_tag.utf8().get_data());
+#endif
 	return OK;
 }
 
 void WebMessageServer::stop() {
+#ifdef WEB_ENABLED
 	for (Ref<WebMessagePeer> peer : _peers) {
 		peer->close();
 	}
+#endif
 }
 
 bool WebMessageServer::is_connection_available() {
@@ -66,6 +75,8 @@ bool WebMessageServer::is_connection_available() {
 
 Ref<WebMessagePeer> WebMessageServer::take_connection() {
 	Ref<WebMessagePeer> peer;
+
+#ifdef WEB_ENABLED
 	if (!is_connection_available()) {
 		return peer;
 	}
@@ -78,13 +89,16 @@ Ref<WebMessagePeer> WebMessageServer::take_connection() {
 	_peers.append(peer);
 
 	send(available_client, "ready", Dictionary());
+#endif
 
 	return peer;
 }
 
 void WebMessageServer::send(const int p_client_id, const String p_type, Variant p_data) {
+#ifdef WEB_ENABLED
 	String json = JSON::stringify(p_data);
 	godot_js_messaging_send_data_to_client(_server_tag.utf8().get_data(), p_client_id, p_type.utf8().get_data(), json.utf8().get_data());
+#endif
 }
 
 void WebMessageServer::set_server_tag(const String p_server_tag) {
