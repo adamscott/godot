@@ -63,6 +63,7 @@ private:
 	struct LSPeer : RefCounted {
 #ifdef WEB_ENABLED
 		Ref<WebMessagePeer> connection;
+		Vector<String> res_queue;
 #else
 		Ref<StreamPeerTCP> connection;
 
@@ -74,8 +75,6 @@ private:
 		Vector<CharString> res_queue;
 		int res_sent = 0;
 #endif
-		Vector<String> res_queue;
-
 		Error handle_data();
 		Error send_data();
 	};
