@@ -17,7 +17,6 @@ protected:
 
 public:
 	int get_client_id() { return client_id; }
-	Ref<WebMessageServer> get_server() { return server; }
 
 	bool has_data() { return !data.is_empty(); }
 	Variant get_data();
