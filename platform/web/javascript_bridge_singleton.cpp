@@ -72,7 +72,8 @@ private:
 	WASM_EXPORT static void _free_lock(void **p_lock, int p_type);
 	WASM_EXPORT static Variant _js2variant(int p_type, godot_js_wrapper_ex *p_val);
 	WASM_EXPORT static void *_alloc_variants(int p_size);
-	WASM_EXPORT static void _callback(void *p_ref, int p_arg_id, int p_argc);
+	WASM_EXPORT static void callback(void *p_ref, int p_arg_id, int p_argc);
+	WASM_EXPORT static void _callback(const JavaScriptObjectImpl *obj, int p_args_id, int p_argc);
 
 protected:
 	bool _set(const StringName &p_name, const Variant &p_value) override;
@@ -245,9 +246,21 @@ Variant JavaScriptObjectImpl::callp(const StringName &p_method, const Variant **
 	return _js2variant(type, &exchange);
 }
 
-void JavaScriptObjectImpl::_callback(void *p_ref, int p_args_id, int p_argc) {
+void JavaScriptObjectImpl::callback(void *p_ref, int p_args_id, int p_argc) {
 	const JavaScriptObjectImpl *obj = (JavaScriptObjectImpl *)p_ref;
 	ERR_FAIL_COND_MSG(obj->_callable.is_null(), "JavaScript callback failed.");
+
+#ifdef PROXY_TO_PTHREAD_ENABLED
+	if (!Thread::is_main_thread()) {
+		callable_mp_static(JavaScriptObjectImpl::_callback).bind(obj, p_args_id, p_argc).call_deferred();
+		return;
+	}
+#endif
+
+	_callback(obj, p_args_id, p_argc);
+}
+
+void JavaScriptObjectImpl::_callback(const JavaScriptObjectImpl *obj, int p_args_id, int p_argc) {
 	Vector<const Variant *> argp;
 	Array arg_arr;
 	for (int i = 0; i < p_argc; i++) {
@@ -276,7 +289,7 @@ void JavaScriptObjectImpl::_callback(void *p_ref, int p_args_id, int p_argc) {
 Ref<JavaScriptObject> JavaScriptBridge::create_callback(const Callable &p_callable) {
 	Ref<JavaScriptObjectImpl> out = memnew(JavaScriptObjectImpl);
 	out->_callable = p_callable;
-	out->_js_id = godot_js_wrapper_create_cb(out.ptr(), JavaScriptObjectImpl::_callback);
+	out->_js_id = godot_js_wrapper_create_cb(out.ptr(), JavaScriptObjectImpl::callback);
 	return out;
 }
 
