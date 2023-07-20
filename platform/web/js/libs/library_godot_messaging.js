@@ -231,19 +231,22 @@ const _GodotMessaging = {
 	$GodotMessaging__postset: 'Module["requestMessageProxy"] = GodotMessaging.request_message_proxy',
 	$GodotMessaging: GodotMessaging,
 
+	godot_js_messaging_cb__proxy: 'sync',
 	godot_js_messaging_cb__sig: 'vii',
 	godot_js_messaging_cb: function (p_callback, p_server_tag) {
-		GodotMessaging.init(GodotRuntime.get_func(p_callback), UTF8ToString(p_server_tag));
+		GodotMessaging.init(GodotRuntime.get_func(p_callback), GodotRuntime.parseString(p_server_tag));
 	},
 
+	godot_js_messaging_send_data_to_client__proxy: 'sync',
 	godot_js_messaging_send_data_to_client__sig: 'viiii',
 	godot_js_messaging_send_data_to_client: function (p_server_tag, p_client_id, p_type, p_json) {
-		GodotMessaging.send_data_to_client(UTF8ToString(p_server_tag), p_client_id, UTF8ToString(p_json), { type: UTF8ToString(p_type) });
+		GodotMessaging.send_data_to_client(GodotRuntime.parseString(p_server_tag), p_client_id, GodotRuntime.parseString(p_json), { type: GodotRuntime.parseString(p_type) });
 	},
 
+	godot_js_messaging_stop__proxy: 'sync',
 	godot_js_messaging_stop__sig: 'vi',
 	godot_js_messaging_stop: function (p_server_tag) {
-		GodotMessaging.stop(UTF8ToString(p_server_tag));
+		GodotMessaging.stop(GodotRuntime.parseString(p_server_tag));
 	}
 }
 
