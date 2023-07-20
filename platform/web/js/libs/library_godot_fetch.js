@@ -223,6 +223,16 @@ const GodotFetch = {
 		return p_buf_size - to_read;
 	},
 
+	godot_js_fetch_body_length_get__proxy: 'sync',
+	godot_js_fetch_body_length_get__sig: 'ii',
+	godot_js_fetch_body_length_get: function (p_id) {
+		const obj = IDHandler.get(p_id);
+		if (!obj || !obj.response) {
+			return -1;
+		}
+		return obj.bodySize;
+	},
+
 	godot_js_fetch_is_chunked__proxy: 'sync',
 	godot_js_fetch_is_chunked__sig: 'ii',
 	godot_js_fetch_is_chunked: function (p_id) {
