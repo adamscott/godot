@@ -56,6 +56,11 @@ class OS_Web : public OS_Unix {
 	WASM_EXPORT static void fs_sync_callback();
 	WASM_EXPORT static void update_pwa_state_callback();
 
+	static int low_processor_usage_mode_get_callback();
+	static void low_processor_usage_mode_set_callback(int p_enabled);
+	static int low_processor_usage_mode_sleep_usec_get_callback();
+	static void low_processor_usage_mode_sleep_usec_set_callback(int p_sleep_usec);
+
 protected:
 	void initialize() override;
 
