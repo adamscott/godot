@@ -204,7 +204,7 @@ int GDScriptTestRunner::run_tests() {
 #ifndef DEBUG_ENABLED
 		expected = strip_warnings(expected);
 #endif
-		INFO(test.get_source_file());
+		INFO(vformat("%s:%s:%s", test.get_source_file(), result.start_line + 1, result.start_column + 1));
 		if (!result.passed) {
 			INFO(expected);
 			failed++;
@@ -491,7 +491,8 @@ GDScriptTest::TestResult GDScriptTest::execute_test_code(bool p_is_generating) {
 
 	// Test parsing.
 	GDScriptParser parser;
-	err = parser.parse(script->get_source_code(), source_file, false);
+	String source_code = script->get_source_code();
+	err = parser.parse(source_code, source_file, false);
 	if (err != OK) {
 		enable_stdout();
 		result.status = GDTEST_PARSER_ERROR;
@@ -500,7 +501,28 @@ GDScriptTest::TestResult GDScriptTest::execute_test_code(bool p_is_generating) {
 		const List<GDScriptParser::ParserError> &errors = parser.get_errors();
 		if (!errors.is_empty()) {
 			// Only the first error since the following might be cascading.
-			result.output += errors[0].message + "\n"; // TODO: line, column?
+			result.output += errors[0].message + "\n";
+
+			Vector<String> lines = source_code.split("\n");
+			int error_line = errors[0].line - 1;
+			int error_column = errors[0].column - 1;
+
+			if (error_line < lines.size()) {
+				String line = lines[error_line];
+				int i = 0;
+				while (i < error_column) {
+					if (i >= line.length()) {
+						break;
+					}
+					if (line[i] == '\t') {
+						error_column -= 3;
+					}
+					i++;
+				}
+			}
+
+			result.start_line = error_line;
+			result.start_column = error_column;
 		}
 		if (!p_is_generating) {
 			result.passed = check_output(result.output);
@@ -519,7 +541,9 @@ GDScriptTest::TestResult GDScriptTest::execute_test_code(bool p_is_generating) {
 		const List<GDScriptParser::ParserError> &errors = parser.get_errors();
 		if (!errors.is_empty()) {
 			// Only the first error since the following might be cascading.
-			result.output += errors[0].message + "\n"; // TODO: line, column?
+			result.output += errors[0].message + "\n";
+			result.start_line = errors[0].line;
+			result.start_column = errors[0].column;
 		}
 		if (!p_is_generating) {
 			result.passed = check_output(result.output);

@@ -59,6 +59,8 @@ public:
 	struct TestResult {
 		TestStatus status;
 		String output;
+		int start_line = 0;
+		int start_column = 0;
 		bool passed;
 	};
 
