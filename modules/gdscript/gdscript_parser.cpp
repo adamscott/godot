@@ -454,15 +454,19 @@ bool GDScriptParser::is_statement_end_token() const {
 	return check(GDScriptTokenizer::Token::NEWLINE) || check(GDScriptTokenizer::Token::SEMICOLON) || check(GDScriptTokenizer::Token::TK_EOF);
 }
 
+bool GDScriptParser::is_statement_comment_token() const {
+	return check(GDScriptTokenizer::Token::COMMENT);
+}
+
 bool GDScriptParser::is_statement_end() const {
-	return lambda_ended || in_lambda || is_statement_end_token();
+	return lambda_ended || in_lambda || is_statement_comment_token() || is_statement_end_token();
 }
 
 void GDScriptParser::end_statement(const String &p_context) {
 	bool found = false;
 	while (is_statement_end() && !is_at_end()) {
 		// Remove sequential newlines/semicolons.
-		if (is_statement_end_token()) {
+		if (is_statement_end_token() || is_statement_comment_token()) {
 			// Only consume if this is an actual token.
 			advance();
 		} else if (lambda_ended) {
@@ -861,6 +865,14 @@ void GDScriptParser::parse_class_body(bool p_is_multiline) {
 			case GDScriptTokenizer::Token::DEDENT:
 				class_end = true;
 				break;
+			case GDScriptTokenizer::Token::COMMENT:
+				advance();
+				if (is_statement_end_token()) {
+					advance();
+				} else {
+					push_error("Expected an end token after comment string.");
+				}
+				break;
 			case GDScriptTokenizer::Token::LITERAL:
 				if (current.literal.get_type() == Variant::STRING) {
 					// Allow strings in class body as multiline comments.
@@ -1123,6 +1135,12 @@ void GDScriptParser::parse_property_getter(VariableNode *p_variable) {
 		case VariableNode::PROP_NONE:
 			break; // Unreachable.
 	}
+}
+
+GDScriptParser::ExpressionNode *GDScriptParser::parse_comment(GDScriptParser::ExpressionNode *p_previous_operand, bool p_can_assign) {
+	CommentNode *comment = alloc_node<CommentNode>();
+
+	return comment;
 }
 
 GDScriptParser::ConstantNode *GDScriptParser::parse_constant(bool p_is_static) {
@@ -3640,6 +3658,7 @@ GDScriptParser::ParseRule *GDScriptParser::get_rule(GDScriptTokenizer::Token::Ty
 		{ nullptr,                                          nullptr,                                        PREC_NONE }, // ANNOTATION,
 		{ &GDScriptParser::parse_identifier,             	nullptr,                                        PREC_NONE }, // IDENTIFIER,
 		{ &GDScriptParser::parse_literal,                	nullptr,                                        PREC_NONE }, // LITERAL,
+		{ &GDScriptParser::parse_comment,                   nullptr,                                        PREC_NONE }, // COMMENT,
 		// Comparison
 		{ nullptr,                                          &GDScriptParser::parse_binary_operator,      	PREC_COMPARISON }, // LESS,
 		{ nullptr,                                          &GDScriptParser::parse_binary_operator,      	PREC_COMPARISON }, // LESS_EQUAL,

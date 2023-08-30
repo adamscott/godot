@@ -70,6 +70,7 @@ public:
 	struct CallNode;
 	struct CastNode;
 	struct ClassNode;
+	struct CommentNode;
 	struct ConstantNode;
 	struct ContinueNode;
 	struct DictionaryNode;
@@ -315,6 +316,7 @@ public:
 			UNARY_OPERATOR,
 			VARIABLE,
 			WHILE,
+			COMMENT
 		};
 
 		Type type = NONE;
@@ -776,6 +778,14 @@ public:
 
 		ClassNode() {
 			type = CLASS;
+		}
+	};
+
+	struct CommentNode : public ExpressionNode {
+		String content;
+
+		CommentNode() {
+			type = COMMENT;
 		}
 	};
 
@@ -1428,6 +1438,7 @@ private:
 	bool is_at_end() const;
 	bool is_statement_end_token() const;
 	bool is_statement_end() const;
+	bool is_statement_comment_token() const;
 	void end_statement(const String &p_context);
 	void synchronize();
 	void push_multiline(bool p_state);
@@ -1484,6 +1495,7 @@ private:
 	ExpressionNode *parse_precedence(Precedence p_precedence, bool p_can_assign, bool p_stop_on_assign = false);
 	ExpressionNode *parse_literal(ExpressionNode *p_previous_operand, bool p_can_assign);
 	LiteralNode *parse_literal();
+	ExpressionNode *parse_comment(GDScriptParser::ExpressionNode *p_previous_operand, bool p_can_assign);
 	ExpressionNode *parse_self(ExpressionNode *p_previous_operand, bool p_can_assign);
 	ExpressionNode *parse_identifier(ExpressionNode *p_previous_operand, bool p_can_assign);
 	IdentifierNode *parse_identifier();

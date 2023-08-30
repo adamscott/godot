@@ -47,6 +47,7 @@ static const char *token_names[] = {
 	"Annotation", // ANNOTATION
 	"Identifier", // IDENTIFIER,
 	"Literal", // LITERAL,
+	"Comment", // COMMENT
 	// Comparison
 	"<", // LESS,
 	"<=", // LESS_EQUAL,
@@ -210,6 +211,7 @@ bool GDScriptTokenizer::Token::is_node_name() const {
 		case BREAKPOINT:
 		case CLASS_NAME:
 		case CLASS:
+		case COMMENT:
 		case CONST:
 		case CONST_PI:
 		case CONST_INF:
@@ -479,6 +481,16 @@ GDScriptTokenizer::Token GDScriptTokenizer::annotation() {
 	Token annotation = make_token(Token::ANNOTATION);
 	annotation.literal = StringName(annotation.source);
 	return annotation;
+}
+
+GDScriptTokenizer::Token GDScriptTokenizer::comment() {
+	while (_peek() != '\n' && !_is_at_end()) {
+		// Consume all the comment
+		_advance();
+	}
+	Token comment = make_token(Token::COMMENT);
+	comment.literal = comment.source;
+	return comment;
 }
 
 #define KEYWORDS(KEYWORD_GROUP, KEYWORD)     \
@@ -1121,7 +1133,7 @@ void GDScriptTokenizer::check_indent() {
 		char32_t current_indent_char = _peek();
 		int indent_count = 0;
 
-		if (current_indent_char != ' ' && current_indent_char != '\t' && current_indent_char != '\r' && current_indent_char != '\n' && current_indent_char != '#') {
+		if (current_indent_char != ' ' && current_indent_char != '\t' && current_indent_char != '\r' && current_indent_char != '\n') {
 			// First character of the line is not whitespace, so we clear all indentation levels.
 			// Unless we are in a continuation or in multiline mode (inside expression).
 			if (line_continuation || multiline_mode) {
@@ -1181,30 +1193,6 @@ void GDScriptTokenizer::check_indent() {
 			newline(false);
 			continue;
 		}
-		if (_peek() == '#') {
-			// Comment. Advance to the next line.
-#ifdef TOOLS_ENABLED
-			String comment;
-			while (_peek() != '\n' && !_is_at_end()) {
-				comment += _advance();
-			}
-			comments[line] = CommentData(comment, true);
-#else
-			while (_peek() != '\n' && !_is_at_end()) {
-				_advance();
-			}
-#endif // TOOLS_ENABLED
-			if (_is_at_end()) {
-				// Reached the end with an empty line, so just dedent as much as needed.
-				pending_indents -= indent_level();
-				indent_stack.clear();
-				return;
-			}
-			_advance(); // Consume '\n'.
-			newline(false);
-			continue;
-		}
-
 		if (mixed && !line_continuation && !multiline_mode) {
 			Token error = make_error("Mixed use of tabs and spaces for indentation.");
 			error.start_line = line;
@@ -1318,26 +1306,6 @@ void GDScriptTokenizer::_skip_whitespace() {
 				newline(!is_bol); // Don't create new line token if line is empty.
 				check_indent();
 				break;
-			case '#': {
-				// Comment.
-#ifdef TOOLS_ENABLED
-				String comment;
-				while (_peek() != '\n' && !_is_at_end()) {
-					comment += _advance();
-				}
-				comments[line] = CommentData(comment, is_bol);
-#else
-				while (_peek() != '\n' && !_is_at_end()) {
-					_advance();
-				}
-#endif // TOOLS_ENABLED
-				if (_is_at_end()) {
-					return;
-				}
-				_advance(); // Consume '\n'
-				newline(!is_bol);
-				check_indent();
-			} break;
 			default:
 				return;
 		}
@@ -1421,6 +1389,10 @@ GDScriptTokenizer::Token GDScriptTokenizer::scan() {
 	}
 
 	switch (c) {
+		// Comments.
+		case '#':
+			return comment();
+
 		// String literals.
 		case '"':
 		case '\'':

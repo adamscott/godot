@@ -53,6 +53,7 @@ public:
 			ANNOTATION,
 			IDENTIFIER,
 			LITERAL,
+			COMMENT,
 			// Comparison
 			LESS,
 			LESS_EQUAL,
@@ -264,6 +265,7 @@ private:
 	Token potential_identifier();
 	Token string();
 	Token annotation();
+	Token comment();
 
 public:
 	Token scan();

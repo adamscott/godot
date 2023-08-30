@@ -1410,6 +1410,10 @@ void GDScriptAnalyzer::resolve_class_body(GDScriptParser::ClassNode *p_class, bo
 	}
 }
 
+void GDScriptAnalyzer::resolve_comment(GDScriptParser::CommentNode *p_comment) {
+	ERR_FAIL_COND_MSG(p_comment == nullptr, "Trying to resolve type of a null node.");
+}
+
 void GDScriptAnalyzer::resolve_node(GDScriptParser::Node *p_node, bool p_is_root) {
 	ERR_FAIL_COND_MSG(p_node == nullptr, "Trying to resolve type of a null node.");
 
@@ -1421,6 +1425,9 @@ void GDScriptAnalyzer::resolve_node(GDScriptParser::Node *p_node, bool p_is_root
 				resolve_class_interface(static_cast<GDScriptParser::ClassNode *>(p_node), true);
 				resolve_class_body(static_cast<GDScriptParser::ClassNode *>(p_node), true);
 			}
+			break;
+		case GDScriptParser::Node::COMMENT:
+			resolve_comment(static_cast<GDScriptParser::CommentNode *>(p_node));
 			break;
 		case GDScriptParser::Node::CONSTANT:
 			resolve_constant(static_cast<GDScriptParser::ConstantNode *>(p_node), true);
@@ -2421,6 +2428,7 @@ void GDScriptAnalyzer::reduce_expression(GDScriptParser::ExpressionNode *p_expre
 		case GDScriptParser::Node::BREAK:
 		case GDScriptParser::Node::BREAKPOINT:
 		case GDScriptParser::Node::CLASS:
+		case GDScriptParser::Node::COMMENT:
 		case GDScriptParser::Node::CONSTANT:
 		case GDScriptParser::Node::CONTINUE:
 		case GDScriptParser::Node::ENUM:
