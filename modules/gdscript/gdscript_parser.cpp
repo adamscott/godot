@@ -2769,9 +2769,19 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_dictionary(ExpressionNode 
 
 	bool decided_style = false;
 	if (!check(GDScriptTokenizer::Token::BRACE_CLOSE)) {
+		bool matched_comma;
 		do {
+			matched_comma = false;
+
 			if (check(GDScriptTokenizer::Token::BRACE_CLOSE)) {
 				// Allow for trailing comma.
+				break;
+			}
+
+			if (match(GDScriptTokenizer::Token::COMMENT)) {
+				if (!is_at_end()) {
+					continue;
+				}
 				break;
 			}
 
@@ -2847,7 +2857,13 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_dictionary(ExpressionNode 
 			if (key != nullptr && value != nullptr) {
 				dictionary->elements.push_back({ key, value });
 			}
-		} while (match(GDScriptTokenizer::Token::COMMA) && !is_at_end());
+
+			matched_comma = match(GDScriptTokenizer::Token::COMMA);
+
+			if (check(GDScriptTokenizer::Token::COMMENT)) {
+				advance();
+			}
+		} while (matched_comma && !is_at_end());
 	}
 	pop_multiline();
 	consume(GDScriptTokenizer::Token::BRACE_CLOSE, R"(Expected closing "}" after dictionary elements.)");
