@@ -1576,6 +1576,7 @@ public:
 		void print_call(CallNode *p_call);
 		void print_cast(CastNode *p_cast);
 		void print_class(ClassNode *p_class);
+		void print_comment(CommentNode *p_comment);
 		void print_constant(ConstantNode *p_constant);
 		void print_dictionary(DictionaryNode *p_dictionary);
 		void print_expression(ExpressionNode *p_expression);

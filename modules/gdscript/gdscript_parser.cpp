@@ -495,6 +495,13 @@ void GDScriptParser::parse_program() {
 	bool can_have_class_or_extends = true;
 
 	while (!check(GDScriptTokenizer::Token::TK_EOF)) {
+		if (match(GDScriptTokenizer::Token::COMMENT)) {
+			if (!match(GDScriptTokenizer::Token::NEWLINE)) {
+				push_error("Expected newline after comment.");
+			}
+			continue;
+		}
+
 		if (match(GDScriptTokenizer::Token::ANNOTATION)) {
 			AnnotationNode *annotation = parse_annotation(AnnotationInfo::SCRIPT | AnnotationInfo::STANDALONE | AnnotationInfo::CLASS_LEVEL);
 			if (annotation != nullptr) {
@@ -528,6 +535,12 @@ void GDScriptParser::parse_program() {
 	while (can_have_class_or_extends) {
 		// Order here doesn't matter, but there should be only one of each at most.
 		switch (current.type) {
+			case GDScriptTokenizer::Token::COMMENT:
+				advance();
+				if (!match(GDScriptTokenizer::Token::NEWLINE)) {
+					push_error("Expected newline after comment.");
+				}
+				break;
 			case GDScriptTokenizer::Token::CLASS_NAME:
 				advance();
 				if (head->identifier != nullptr) {
@@ -1276,9 +1289,15 @@ GDScriptParser::EnumNode *GDScriptParser::parse_enum(bool p_is_static) {
 	GDScriptLanguage::get_singleton()->get_public_functions(&gdscript_funcs);
 #endif
 
+	bool matched_comma;
 	do {
+		matched_comma = false;
 		if (check(GDScriptTokenizer::Token::BRACE_CLOSE)) {
 			break; // Allow trailing comma.
+		}
+		if (match(GDScriptTokenizer::Token::COMMENT)) {
+			matched_comma = true;
+			continue;
 		}
 		if (consume(GDScriptTokenizer::Token::IDENTIFIER, R"(Expected identifier for enum key.)")) {
 			EnumNode::Value item;
@@ -1328,7 +1347,13 @@ GDScriptParser::EnumNode *GDScriptParser::parse_enum(bool p_is_static) {
 				current_class->add_member(item);
 			}
 		}
-	} while (match(GDScriptTokenizer::Token::COMMA));
+
+		matched_comma = match(GDScriptTokenizer::Token::COMMA);
+
+		if (check(GDScriptTokenizer::Token::COMMENT)) {
+			advance();
+		}
+	} while (matched_comma);
 
 	pop_multiline();
 	consume(GDScriptTokenizer::Token::BRACE_CLOSE, R"(Expected closing "}" for enum.)");
@@ -2779,10 +2804,8 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_dictionary(ExpressionNode 
 			}
 
 			if (match(GDScriptTokenizer::Token::COMMENT)) {
-				if (!is_at_end()) {
-					continue;
-				}
-				break;
+				matched_comma = true;
+				continue;
 			}
 
 			// Key.
@@ -4759,6 +4782,11 @@ void GDScriptParser::TreePrinter::print_class(ClassNode *p_class) {
 	decrease_indent();
 }
 
+void GDScriptParser::TreePrinter::print_comment(CommentNode *p_comment) {
+	push_text(vformat("# %s", p_comment->content));
+	push_line();
+}
+
 void GDScriptParser::TreePrinter::print_constant(ConstantNode *p_constant) {
 	push_text("Constant ");
 	print_identifier(p_constant->identifier);
@@ -5131,6 +5159,9 @@ void GDScriptParser::TreePrinter::print_statement(Node *p_statement) {
 			break;
 		case Node::VARIABLE:
 			print_variable(static_cast<VariableNode *>(p_statement));
+			break;
+		case Node::COMMENT:
+			print_comment(static_cast<CommentNode *>(p_statement));
 			break;
 		case Node::CONSTANT:
 			print_constant(static_cast<ConstantNode *>(p_statement));
