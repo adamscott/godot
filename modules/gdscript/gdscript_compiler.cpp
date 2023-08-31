@@ -688,6 +688,10 @@ GDScriptCodeGenerator::Address GDScriptCompiler::_parse_expression(CodeGen &code
 			}
 			return result;
 		} break;
+		case GDScriptParser::Node::COMMENT: {
+			// Do nothing.
+			return GDScriptCodeGenerator::Address();
+		} break;
 		case GDScriptParser::Node::GET_NODE: {
 			const GDScriptParser::GetNodeNode *get_node = static_cast<const GDScriptParser::GetNodeNode *>(p_expression);
 

@@ -1407,11 +1407,20 @@ GDScriptParser::EnumNode *GDScriptParser::parse_enum(bool p_is_static) {
 void GDScriptParser::parse_function_signature(FunctionNode *p_function, SuiteNode *p_body, const String &p_type) {
 	if (!check(GDScriptTokenizer::Token::PARENTHESIS_CLOSE) && !is_at_end()) {
 		bool default_used = false;
+		bool matched_comma = false;
 		do {
+			matched_comma = false;
+
 			if (check(GDScriptTokenizer::Token::PARENTHESIS_CLOSE)) {
 				// Allow for trailing comma.
 				break;
 			}
+
+			if (match(GDScriptTokenizer::Token::COMMENT)) {
+				matched_comma = true;
+				continue;
+			}
+
 			ParameterNode *parameter = parse_parameter();
 			if (parameter == nullptr) {
 				break;
@@ -1431,7 +1440,12 @@ void GDScriptParser::parse_function_signature(FunctionNode *p_function, SuiteNod
 				p_function->parameters.push_back(parameter);
 				p_body->add_local(parameter, current_function);
 			}
-		} while (match(GDScriptTokenizer::Token::COMMA));
+
+			matched_comma = match(GDScriptTokenizer::Token::COMMA);
+			if (check(GDScriptTokenizer::Token::COMMENT)) {
+				advance();
+			}
+		} while (matched_comma);
 	}
 
 	pop_multiline();
@@ -1457,6 +1471,10 @@ void GDScriptParser::parse_function_signature(FunctionNode *p_function, SuiteNod
 
 	// TODO: Improve token consumption so it synchronizes to a statement boundary. This way we can get into the function body with unrecognized tokens.
 	consume(GDScriptTokenizer::Token::COLON, vformat(R"(Expected ":" after %s declaration.)", p_type));
+
+	if (check(GDScriptTokenizer::Token::COMMENT)) {
+		advance();
+	}
 }
 
 GDScriptParser::FunctionNode *GDScriptParser::parse_function(bool p_is_static) {
@@ -1783,6 +1801,7 @@ GDScriptParser::Node *GDScriptParser::parse_statement() {
 			if (expression != nullptr) {
 				switch (expression->type) {
 					case Node::CALL:
+					case Node::COMMENT:
 					case Node::ASSIGNMENT:
 					case Node::AWAIT:
 					case Node::TERNARY_OPERATOR:
@@ -3052,11 +3071,17 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_call(ExpressionNode *p_pre
 	}
 	push_completion_call(call);
 	int argument_index = 0;
+	bool matched_comma = false;
 	do {
+		matched_comma = false;
 		make_completion_context(ct, call, argument_index++, true);
 		if (check(GDScriptTokenizer::Token::PARENTHESIS_CLOSE)) {
 			// Allow for trailing comma.
 			break;
+		}
+		if (match(GDScriptTokenizer::Token::COMMENT)) {
+			matched_comma = true;
+			continue;
 		}
 		bool use_identifier_completion = current.cursor_place == GDScriptTokenizer::CURSOR_END || current.cursor_place == GDScriptTokenizer::CURSOR_MIDDLE;
 		ExpressionNode *argument = parse_expression(false);
@@ -3070,7 +3095,12 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_call(ExpressionNode *p_pre
 			}
 		}
 		ct = COMPLETION_CALL_ARGUMENTS;
-	} while (match(GDScriptTokenizer::Token::COMMA));
+
+		matched_comma = match(GDScriptTokenizer::Token::COMMA);
+		if (check(GDScriptTokenizer::Token::COMMENT)) {
+			advance();
+		}
+	} while (matched_comma);
 	pop_completion_call();
 
 	pop_multiline();
@@ -3091,6 +3121,11 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_get_node(ExpressionNode *p
 			push_error(vformat(R"(Expected node path as string or identifier after "%s".)", previous.get_name()));
 			return nullptr;
 		}
+	}
+
+	if (check(GDScriptTokenizer::Token::COMMENT)) {
+		push_error(vformat(R"(Expected node path as string or identifier after "%s".)", previous.get_name()));
+		return nullptr;
 	}
 
 	GetNodeNode *get_node = alloc_node<GetNodeNode>();
