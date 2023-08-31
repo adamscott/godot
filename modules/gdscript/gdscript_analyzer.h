@@ -68,7 +68,6 @@ class GDScriptAnalyzer {
 	void resolve_class_interface(GDScriptParser::ClassNode *p_class, bool p_recursive);
 	void resolve_class_body(GDScriptParser::ClassNode *p_class, const GDScriptParser::Node *p_source = nullptr);
 	void resolve_class_body(GDScriptParser::ClassNode *p_class, bool p_recursive);
-	void resolve_comment(GDScriptParser::CommentNode *p_comment);
 	void resolve_function_signature(GDScriptParser::FunctionNode *p_function, const GDScriptParser::Node *p_source = nullptr, bool p_is_lambda = false);
 	void resolve_function_body(GDScriptParser::FunctionNode *p_function, bool p_is_lambda = false);
 	void resolve_node(GDScriptParser::Node *p_node, bool p_is_root = true);
@@ -94,6 +93,7 @@ class GDScriptAnalyzer {
 	void reduce_binary_op(GDScriptParser::BinaryOpNode *p_binary_op);
 	void reduce_call(GDScriptParser::CallNode *p_call, bool p_is_await = false, bool p_is_root = false);
 	void reduce_cast(GDScriptParser::CastNode *p_cast);
+	void reduce_comment(GDScriptParser::CommentNode *p_comment);
 	void reduce_dictionary(GDScriptParser::DictionaryNode *p_dictionary);
 	void reduce_get_node(GDScriptParser::GetNodeNode *p_get_node);
 	void reduce_identifier(GDScriptParser::IdentifierNode *p_identifier, bool can_be_builtin = false);

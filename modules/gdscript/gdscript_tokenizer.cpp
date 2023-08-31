@@ -489,7 +489,7 @@ GDScriptTokenizer::Token GDScriptTokenizer::comment() {
 		_advance();
 	}
 	Token comment = make_token(Token::COMMENT);
-	comment.literal = comment.source;
+	comment.literal = comment.source.trim_prefix("#");
 	return comment;
 }
 

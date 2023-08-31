@@ -1151,8 +1151,14 @@ void GDScriptParser::parse_property_getter(VariableNode *p_variable) {
 }
 
 GDScriptParser::ExpressionNode *GDScriptParser::parse_comment(GDScriptParser::ExpressionNode *p_previous_operand, bool p_can_assign) {
-	CommentNode *comment = alloc_node<CommentNode>();
+	if (previous.type != GDScriptTokenizer::Token::COMMENT) {
+		push_error("Parser bug: parsing comment node without comment token.");
+		ERR_FAIL_V_MSG(nullptr, "Parser bug: parsing comment node without comment token.");
+	}
 
+	CommentNode *comment = alloc_node<CommentNode>();
+	comment->text = previous.literal;
+	complete_extents(comment);
 	return comment;
 }
 
@@ -4718,6 +4724,10 @@ void GDScriptParser::TreePrinter::print_cast(CastNode *p_cast) {
 	print_type(p_cast->cast_type);
 }
 
+void GDScriptParser::TreePrinter::print_comment(CommentNode *p_comment) {
+	push_text(vformat("# %s", p_comment->text));
+}
+
 void GDScriptParser::TreePrinter::print_class(ClassNode *p_class) {
 	push_text("Class ");
 	if (p_class->identifier == nullptr) {
@@ -4782,11 +4792,6 @@ void GDScriptParser::TreePrinter::print_class(ClassNode *p_class) {
 	decrease_indent();
 }
 
-void GDScriptParser::TreePrinter::print_comment(CommentNode *p_comment) {
-	push_text(vformat("# %s", p_comment->content));
-	push_line();
-}
-
 void GDScriptParser::TreePrinter::print_constant(ConstantNode *p_constant) {
 	push_text("Constant ");
 	print_identifier(p_constant->identifier);
@@ -4844,6 +4849,9 @@ void GDScriptParser::TreePrinter::print_expression(ExpressionNode *p_expression)
 			break;
 		case Node::CAST:
 			print_cast(static_cast<CastNode *>(p_expression));
+			break;
+		case Node::COMMENT:
+			print_comment(static_cast<CommentNode *>(p_expression));
 			break;
 		case Node::DICTIONARY:
 			print_dictionary(static_cast<DictionaryNode *>(p_expression));
@@ -5159,9 +5167,6 @@ void GDScriptParser::TreePrinter::print_statement(Node *p_statement) {
 			break;
 		case Node::VARIABLE:
 			print_variable(static_cast<VariableNode *>(p_statement));
-			break;
-		case Node::COMMENT:
-			print_comment(static_cast<CommentNode *>(p_statement));
 			break;
 		case Node::CONSTANT:
 			print_constant(static_cast<ConstantNode *>(p_statement));

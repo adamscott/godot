@@ -782,7 +782,7 @@ public:
 	};
 
 	struct CommentNode : public ExpressionNode {
-		String content;
+		String text;
 
 		CommentNode() {
 			type = COMMENT;

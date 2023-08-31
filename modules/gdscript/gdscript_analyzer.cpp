@@ -1410,10 +1410,6 @@ void GDScriptAnalyzer::resolve_class_body(GDScriptParser::ClassNode *p_class, bo
 	}
 }
 
-void GDScriptAnalyzer::resolve_comment(GDScriptParser::CommentNode *p_comment) {
-	ERR_FAIL_COND_MSG(p_comment == nullptr, "Trying to resolve type of a null node.");
-}
-
 void GDScriptAnalyzer::resolve_node(GDScriptParser::Node *p_node, bool p_is_root) {
 	ERR_FAIL_COND_MSG(p_node == nullptr, "Trying to resolve type of a null node.");
 
@@ -1425,9 +1421,6 @@ void GDScriptAnalyzer::resolve_node(GDScriptParser::Node *p_node, bool p_is_root
 				resolve_class_interface(static_cast<GDScriptParser::ClassNode *>(p_node), true);
 				resolve_class_body(static_cast<GDScriptParser::ClassNode *>(p_node), true);
 			}
-			break;
-		case GDScriptParser::Node::COMMENT:
-			resolve_comment(static_cast<GDScriptParser::CommentNode *>(p_node));
 			break;
 		case GDScriptParser::Node::CONSTANT:
 			resolve_constant(static_cast<GDScriptParser::ConstantNode *>(p_node), true);
@@ -1478,6 +1471,7 @@ void GDScriptAnalyzer::resolve_node(GDScriptParser::Node *p_node, bool p_is_root
 		case GDScriptParser::Node::BINARY_OPERATOR:
 		case GDScriptParser::Node::CALL:
 		case GDScriptParser::Node::CAST:
+		case GDScriptParser::Node::COMMENT:
 		case GDScriptParser::Node::DICTIONARY:
 		case GDScriptParser::Node::GET_NODE:
 		case GDScriptParser::Node::IDENTIFIER:
@@ -2388,6 +2382,9 @@ void GDScriptAnalyzer::reduce_expression(GDScriptParser::ExpressionNode *p_expre
 		case GDScriptParser::Node::CAST:
 			reduce_cast(static_cast<GDScriptParser::CastNode *>(p_expression));
 			break;
+		case GDScriptParser::Node::COMMENT:
+			reduce_comment(static_cast<GDScriptParser::CommentNode *>(p_expression));
+			break;
 		case GDScriptParser::Node::DICTIONARY:
 			reduce_dictionary(static_cast<GDScriptParser::DictionaryNode *>(p_expression));
 			break;
@@ -2428,7 +2425,6 @@ void GDScriptAnalyzer::reduce_expression(GDScriptParser::ExpressionNode *p_expre
 		case GDScriptParser::Node::BREAK:
 		case GDScriptParser::Node::BREAKPOINT:
 		case GDScriptParser::Node::CLASS:
-		case GDScriptParser::Node::COMMENT:
 		case GDScriptParser::Node::CONSTANT:
 		case GDScriptParser::Node::CONTINUE:
 		case GDScriptParser::Node::ENUM:
@@ -3358,6 +3354,9 @@ void GDScriptAnalyzer::reduce_cast(GDScriptParser::CastNode *p_cast) {
 			}
 		}
 	}
+}
+
+void GDScriptAnalyzer::reduce_comment(GDScriptParser::CommentNode *p_comment) {
 }
 
 void GDScriptAnalyzer::reduce_dictionary(GDScriptParser::DictionaryNode *p_dictionary) {
