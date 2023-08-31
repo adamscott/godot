@@ -943,15 +943,7 @@ void ScriptEditor::_resave_scripts(const String &p_str) {
 			continue; //internal script, who cares
 		}
 
-		if (trim_trailing_whitespace_on_save) {
-			se->trim_trailing_whitespace();
-		}
-
-		se->insert_final_newline();
-
-		if (convert_indent_on_save) {
-			se->convert_indent();
-		}
+		ScriptEditor::_format_code(se);
 
 		Ref<TextFile> text_file = scr;
 		if (text_file != nullptr) {
@@ -1007,6 +999,23 @@ void ScriptEditor::_scene_saved_callback(const String &p_path) {
 		if (scr.is_valid() && scr->is_tool()) {
 			scr->reload(true);
 		}
+	}
+}
+
+void ScriptEditor::_format_code(ScriptEditorBase *p_script_editor) {
+	if (format_on_save) {
+		p_script_editor->format_code();
+		return;
+	}
+
+	if (trim_trailing_whitespace_on_save) {
+		p_script_editor->trim_trailing_whitespace();
+	}
+
+	p_script_editor->insert_final_newline();
+
+	if (convert_indent_on_save) {
+		p_script_editor->convert_indent();
 	}
 }
 
