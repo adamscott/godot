@@ -1193,6 +1193,9 @@ void GDScriptTokenizer::check_indent() {
 			newline(false);
 			continue;
 		}
+		if (_peek() == '#') {
+			return;
+		}
 		if (mixed && !line_continuation && !multiline_mode) {
 			Token error = make_error("Mixed use of tabs and spaces for indentation.");
 			error.start_line = line;

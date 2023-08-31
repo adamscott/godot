@@ -675,10 +675,16 @@ GDScriptParser::ClassNode *GDScriptParser::parse_class(bool p_is_static) {
 
 	bool multiline = match(GDScriptTokenizer::Token::NEWLINE);
 
-	if (multiline && !consume(GDScriptTokenizer::Token::INDENT, R"(Expected indented block after class declaration.)")) {
-		current_class = previous_class;
-		complete_extents(n_class);
-		return n_class;
+	if (multiline) {
+		while (check(GDScriptTokenizer::Token::COMMENT)) {
+			advance();
+			consume(GDScriptTokenizer::Token::NEWLINE, R"(Expected newline after comment.)");
+		}
+		if (!consume(GDScriptTokenizer::Token::INDENT, R"(Expected indented block after class declaration.)")) {
+			current_class = previous_class;
+			complete_extents(n_class);
+			return n_class;
+		}
 	}
 
 	if (match(GDScriptTokenizer::Token::EXTENDS)) {
@@ -985,6 +991,10 @@ GDScriptParser::VariableNode *GDScriptParser::parse_variable(bool p_is_static, b
 
 GDScriptParser::VariableNode *GDScriptParser::parse_property(VariableNode *p_variable, bool p_need_indent) {
 	if (p_need_indent) {
+		while (check(GDScriptTokenizer::Token::COMMENT)) {
+			advance();
+			consume(GDScriptTokenizer::Token::NEWLINE, R"(Expected newline after comment.)");
+		}
 		if (!consume(GDScriptTokenizer::Token::INDENT, R"(Expected indented block for property after ":".)")) {
 			complete_extents(p_variable);
 			return nullptr;
@@ -1615,6 +1625,10 @@ GDScriptParser::SuiteNode *GDScriptParser::parse_suite(const String &p_context, 
 	}
 
 	if (multiline) {
+		while (check(GDScriptTokenizer::Token::COMMENT)) {
+			advance();
+			consume(GDScriptTokenizer::Token::NEWLINE, R"(Expected newline after comment.)");
+		}
 		if (!consume(GDScriptTokenizer::Token::INDENT, vformat(R"(Expected indented block after %s.)", p_context))) {
 			current_suite = suite->parent_block;
 			complete_extents(suite);
