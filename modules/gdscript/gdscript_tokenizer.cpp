@@ -47,7 +47,7 @@ static const char *token_names[] = {
 	"Annotation", // ANNOTATION
 	"Identifier", // IDENTIFIER,
 	"Literal", // LITERAL,
-	"Comment", // COMMENT
+	"Comment", // COMMENT,
 	// Comparison
 	"<", // LESS,
 	"<=", // LESS_EQUAL,
@@ -1305,10 +1305,7 @@ void GDScriptTokenizer::_skip_whitespace() {
 				}
 				break;
 			case '\n':
-				_advance();
-				newline(!is_bol); // Don't create new line token if line is empty.
-				check_indent();
-				break;
+				return;
 			default:
 				return;
 		}
@@ -1392,6 +1389,11 @@ GDScriptTokenizer::Token GDScriptTokenizer::scan() {
 	}
 
 	switch (c) {
+		// Newlines.
+		case '\n':
+			newline(true);
+			return last_newline;
+
 		// Comments.
 		case '#':
 			return comment();

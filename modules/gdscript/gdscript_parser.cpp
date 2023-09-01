@@ -438,7 +438,7 @@ void GDScriptParser::push_multiline(bool p_state) {
 	tokenizer.set_multiline_mode(p_state);
 	if (p_state) {
 		// Consume potential whitespace tokens already waiting in line.
-		while (current.type == GDScriptTokenizer::Token::NEWLINE || current.type == GDScriptTokenizer::Token::INDENT || current.type == GDScriptTokenizer::Token::DEDENT) {
+		while (current.type == GDScriptTokenizer::Token::NEWLINE || current.type == GDScriptTokenizer::Token::INDENT || current.type == GDScriptTokenizer::Token::DEDENT || current.type == GDScriptTokenizer::Token::COMMENT) {
 			current = tokenizer.scan(); // Don't call advance() here, as we don't want to change the previous token.
 		}
 	}
@@ -488,6 +488,32 @@ void GDScriptParser::end_statement(const String &p_context) {
 	}
 }
 
+void GDScriptParser::skip_pseudo_whitespace_tokens() {
+	while (true) {
+		if (check(GDScriptTokenizer::Token::COMMENT)) {
+			advance();
+			if (!is_at_end()) {
+				consume(GDScriptTokenizer::Token::NEWLINE, R"(Expected newline after comment.)");
+			}
+			continue;
+		}
+
+		if (check(GDScriptTokenizer::Token::NEWLINE)) {
+			advance();
+			continue;
+		}
+
+		if (multiline_stack.back()->get()) {
+			if (check(GDScriptTokenizer::Token::INDENT) || check(GDScriptTokenizer::Token::DEDENT)) {
+				advance();
+				continue;
+			}
+		}
+
+		break;
+	}
+}
+
 void GDScriptParser::parse_program() {
 	head = alloc_node<ClassNode>();
 	head->fqcn = script_path;
@@ -495,12 +521,7 @@ void GDScriptParser::parse_program() {
 	bool can_have_class_or_extends = true;
 
 	while (!check(GDScriptTokenizer::Token::TK_EOF)) {
-		if (match(GDScriptTokenizer::Token::COMMENT)) {
-			if (!match(GDScriptTokenizer::Token::NEWLINE)) {
-				push_error("Expected newline after comment.");
-			}
-			continue;
-		}
+		skip_pseudo_whitespace_tokens();
 
 		if (match(GDScriptTokenizer::Token::ANNOTATION)) {
 			AnnotationNode *annotation = parse_annotation(AnnotationInfo::SCRIPT | AnnotationInfo::STANDALONE | AnnotationInfo::CLASS_LEVEL);
@@ -676,10 +697,7 @@ GDScriptParser::ClassNode *GDScriptParser::parse_class(bool p_is_static) {
 	bool multiline = match(GDScriptTokenizer::Token::NEWLINE);
 
 	if (multiline) {
-		while (check(GDScriptTokenizer::Token::COMMENT)) {
-			advance();
-			consume(GDScriptTokenizer::Token::NEWLINE, R"(Expected newline after comment.)");
-		}
+		skip_pseudo_whitespace_tokens();
 		if (!consume(GDScriptTokenizer::Token::INDENT, R"(Expected indented block after class declaration.)")) {
 			current_class = previous_class;
 			complete_extents(n_class);
@@ -892,6 +910,9 @@ void GDScriptParser::parse_class_body(bool p_is_multiline) {
 					push_error("Expected an end token after comment string.");
 				}
 				break;
+			case GDScriptTokenizer::Token::NEWLINE:
+				advance();
+				break;
 			case GDScriptTokenizer::Token::LITERAL:
 				if (current.literal.get_type() == Variant::STRING) {
 					// Allow strings in class body as multiline comments.
@@ -991,10 +1012,7 @@ GDScriptParser::VariableNode *GDScriptParser::parse_variable(bool p_is_static, b
 
 GDScriptParser::VariableNode *GDScriptParser::parse_property(VariableNode *p_variable, bool p_need_indent) {
 	if (p_need_indent) {
-		while (check(GDScriptTokenizer::Token::COMMENT)) {
-			advance();
-			consume(GDScriptTokenizer::Token::NEWLINE, R"(Expected newline after comment.)");
-		}
+		skip_pseudo_whitespace_tokens();
 		if (!consume(GDScriptTokenizer::Token::INDENT, R"(Expected indented block for property after ":".)")) {
 			complete_extents(p_variable);
 			return nullptr;
@@ -1213,7 +1231,7 @@ GDScriptParser::ConstantNode *GDScriptParser::parse_constant(bool p_is_static) {
 }
 
 GDScriptParser::ParameterNode *GDScriptParser::parse_parameter() {
-	if (!consume(GDScriptTokenizer::Token::IDENTIFIER, R"(Expected parameter name.)")) {
+	if (!consume(GDScriptTokenizer::Token::IDENTIFIER, R"(Expected parameter name)")) {
 		return nullptr;
 	}
 
@@ -1253,10 +1271,18 @@ GDScriptParser::SignalNode *GDScriptParser::parse_signal(bool p_is_static) {
 	if (check(GDScriptTokenizer::Token::PARENTHESIS_OPEN)) {
 		push_multiline(true);
 		advance();
+		bool matched_comma;
 		do {
+			matched_comma = false;
+
 			if (check(GDScriptTokenizer::Token::PARENTHESIS_CLOSE)) {
 				// Allow for trailing comma.
 				break;
+			}
+
+			if (match(GDScriptTokenizer::Token::COMMENT) || match(GDScriptTokenizer::Token::NEWLINE)) {
+				matched_comma = true;
+				continue;
 			}
 
 			ParameterNode *parameter = parse_parameter();
@@ -1273,7 +1299,10 @@ GDScriptParser::SignalNode *GDScriptParser::parse_signal(bool p_is_static) {
 				signal->parameters_indices[parameter->identifier->name] = signal->parameters.size();
 				signal->parameters.push_back(parameter);
 			}
-		} while (match(GDScriptTokenizer::Token::COMMA) && !is_at_end());
+
+			matched_comma = match(GDScriptTokenizer::Token::COMMA);
+			skip_pseudo_whitespace_tokens();
+		} while (matched_comma && !is_at_end());
 
 		pop_multiline();
 		consume(GDScriptTokenizer::Token::PARENTHESIS_CLOSE, R"*(Expected closing ")" after signal parameters.)*");
@@ -1311,7 +1340,7 @@ GDScriptParser::EnumNode *GDScriptParser::parse_enum(bool p_is_static) {
 		if (check(GDScriptTokenizer::Token::BRACE_CLOSE)) {
 			break; // Allow trailing comma.
 		}
-		if (match(GDScriptTokenizer::Token::COMMENT)) {
+		if (match(GDScriptTokenizer::Token::COMMENT) || match(GDScriptTokenizer::Token::NEWLINE)) {
 			matched_comma = true;
 			continue;
 		}
@@ -1365,10 +1394,7 @@ GDScriptParser::EnumNode *GDScriptParser::parse_enum(bool p_is_static) {
 		}
 
 		matched_comma = match(GDScriptTokenizer::Token::COMMA);
-
-		if (check(GDScriptTokenizer::Token::COMMENT)) {
-			advance();
-		}
+		skip_pseudo_whitespace_tokens();
 	} while (matched_comma);
 
 	pop_multiline();
@@ -1551,10 +1577,18 @@ GDScriptParser::AnnotationNode *GDScriptParser::parse_annotation(uint32_t p_vali
 		push_completion_call(annotation);
 		make_completion_context(COMPLETION_ANNOTATION_ARGUMENTS, annotation, 0, true);
 		int argument_index = 0;
+		bool matched_comma;
 		do {
+			matched_comma = false;
+
 			if (check(GDScriptTokenizer::Token::PARENTHESIS_CLOSE)) {
 				// Allow for trailing comma.
 				break;
+			}
+
+			if (match(GDScriptTokenizer::Token::COMMENT) || match(GDScriptTokenizer::Token::NEWLINE)) {
+				matched_comma = true;
+				continue;
 			}
 
 			make_completion_context(COMPLETION_ANNOTATION_ARGUMENTS, annotation, argument_index, true);
@@ -1566,7 +1600,10 @@ GDScriptParser::AnnotationNode *GDScriptParser::parse_annotation(uint32_t p_vali
 				continue;
 			}
 			annotation->arguments.push_back(argument);
-		} while (match(GDScriptTokenizer::Token::COMMA) && !is_at_end());
+
+			matched_comma = match(GDScriptTokenizer::Token::COMMA);
+			skip_pseudo_whitespace_tokens();
+		} while (matched_comma && !is_at_end());
 
 		pop_multiline();
 		consume(GDScriptTokenizer::Token::PARENTHESIS_CLOSE, R"*(Expected ")" after annotation arguments.)*");
@@ -1625,10 +1662,7 @@ GDScriptParser::SuiteNode *GDScriptParser::parse_suite(const String &p_context, 
 	}
 
 	if (multiline) {
-		while (check(GDScriptTokenizer::Token::COMMENT)) {
-			advance();
-			consume(GDScriptTokenizer::Token::NEWLINE, R"(Expected newline after comment.)");
-		}
+		skip_pseudo_whitespace_tokens();
 		if (!consume(GDScriptTokenizer::Token::INDENT, vformat(R"(Expected indented block after %s.)", p_context))) {
 			current_suite = suite->parent_block;
 			complete_extents(suite);
@@ -1792,6 +1826,9 @@ GDScriptParser::Node *GDScriptParser::parse_statement() {
 			}
 			break;
 		}
+		case GDScriptTokenizer::Token::NEWLINE:
+			advance();
+			break;
 		default: {
 			// Expression statement.
 			ExpressionNode *expression = parse_expression(true); // Allow assignment here.
@@ -1876,6 +1913,8 @@ GDScriptParser::AssertNode *GDScriptParser::parse_assert() {
 	push_multiline(true);
 	consume(GDScriptTokenizer::Token::PARENTHESIS_OPEN, R"(Expected "(" after "assert".)");
 
+	skip_pseudo_whitespace_tokens();
+
 	assert->condition = parse_expression(false);
 	if (assert->condition == nullptr) {
 		push_error("Expected expression to assert.");
@@ -1883,6 +1922,8 @@ GDScriptParser::AssertNode *GDScriptParser::parse_assert() {
 		complete_extents(assert);
 		return nullptr;
 	}
+
+	skip_pseudo_whitespace_tokens();
 
 	if (match(GDScriptTokenizer::Token::COMMA) && !check(GDScriptTokenizer::Token::PARENTHESIS_CLOSE)) {
 		assert->message = parse_expression(false);
@@ -1896,6 +1937,9 @@ GDScriptParser::AssertNode *GDScriptParser::parse_assert() {
 	}
 
 	pop_multiline();
+
+	skip_pseudo_whitespace_tokens();
+
 	consume(GDScriptTokenizer::Token::PARENTHESIS_CLOSE, R"*(Expected ")" after assert expression.)*");
 
 	complete_extents(assert);
@@ -2037,6 +2081,8 @@ GDScriptParser::MatchNode *GDScriptParser::parse_match() {
 
 	consume(GDScriptTokenizer::Token::COLON, R"(Expected ":" after "match" expression.)");
 	consume(GDScriptTokenizer::Token::NEWLINE, R"(Expected a newline after "match" statement.)");
+
+	skip_pseudo_whitespace_tokens();
 
 	if (!consume(GDScriptTokenizer::Token::INDENT, R"(Expected an indented block after "match" statement.)")) {
 		complete_extents(match);
@@ -2807,10 +2853,18 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_array(ExpressionNode *p_pr
 	ArrayNode *array = alloc_node<ArrayNode>();
 
 	if (!check(GDScriptTokenizer::Token::BRACKET_CLOSE)) {
+		bool matched_comma;
 		do {
+			matched_comma = false;
+
 			if (check(GDScriptTokenizer::Token::BRACKET_CLOSE)) {
 				// Allow for trailing comma.
 				break;
+			}
+
+			if (match(GDScriptTokenizer::Token::COMMENT) || match(GDScriptTokenizer::Token::NEWLINE)) {
+				matched_comma = true;
+				continue;
 			}
 
 			ExpressionNode *element = parse_expression(false);
@@ -2819,7 +2873,10 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_array(ExpressionNode *p_pr
 			} else {
 				array->elements.push_back(element);
 			}
-		} while (match(GDScriptTokenizer::Token::COMMA) && !is_at_end());
+
+			matched_comma = match(GDScriptTokenizer::Token::COMMA);
+			skip_pseudo_whitespace_tokens();
+		} while (matched_comma && !is_at_end());
 	}
 	pop_multiline();
 	consume(GDScriptTokenizer::Token::BRACKET_CLOSE, R"(Expected closing "]" after array elements.)");
@@ -2842,7 +2899,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_dictionary(ExpressionNode 
 				break;
 			}
 
-			if (match(GDScriptTokenizer::Token::COMMENT)) {
+			if (match(GDScriptTokenizer::Token::COMMENT) || match(GDScriptTokenizer::Token::NEWLINE)) {
 				matched_comma = true;
 				continue;
 			}
@@ -2921,10 +2978,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_dictionary(ExpressionNode 
 			}
 
 			matched_comma = match(GDScriptTokenizer::Token::COMMA);
-
-			if (check(GDScriptTokenizer::Token::COMMENT)) {
-				advance();
-			}
+			skip_pseudo_whitespace_tokens();
 		} while (matched_comma && !is_at_end());
 	}
 	pop_multiline();
@@ -2936,12 +2990,14 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_dictionary(ExpressionNode 
 
 GDScriptParser::ExpressionNode *GDScriptParser::parse_grouping(ExpressionNode *p_previous_operand, bool p_can_assign) {
 	ExpressionNode *grouped = parse_expression(false);
+
 	pop_multiline();
 	if (grouped == nullptr) {
 		push_error(R"(Expected grouping expression.)");
-	} else {
-		consume(GDScriptTokenizer::Token::PARENTHESIS_CLOSE, R"*(Expected closing ")" after grouping expression.)*");
+		return nullptr;
 	}
+
+	consume(GDScriptTokenizer::Token::PARENTHESIS_CLOSE, R"*(Expected closing ")" after grouping expression.)*");
 	return grouped;
 }
 
@@ -3093,7 +3149,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_call(ExpressionNode *p_pre
 			// Allow for trailing comma.
 			break;
 		}
-		if (match(GDScriptTokenizer::Token::COMMENT)) {
+		if (match(GDScriptTokenizer::Token::COMMENT) || match(GDScriptTokenizer::Token::NEWLINE)) {
 			matched_comma = true;
 			continue;
 		}
@@ -3111,9 +3167,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_call(ExpressionNode *p_pre
 		ct = COMPLETION_CALL_ARGUMENTS;
 
 		matched_comma = match(GDScriptTokenizer::Token::COMMA);
-		if (check(GDScriptTokenizer::Token::COMMENT)) {
-			advance();
-		}
+		skip_pseudo_whitespace_tokens();
 	} while (matched_comma);
 	pop_completion_call();
 

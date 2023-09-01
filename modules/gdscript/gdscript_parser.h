@@ -1444,6 +1444,8 @@ private:
 	void push_multiline(bool p_state);
 	void pop_multiline();
 
+	void skip_pseudo_whitespace_tokens();
+
 	// Main blocks.
 	void parse_program();
 	ClassNode *parse_class(bool p_is_static);
