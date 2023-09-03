@@ -2474,12 +2474,13 @@ GDScriptParser::IdentifierNode *GDScriptParser::parse_identifier() {
 }
 
 GDScriptParser::ExpressionNode *GDScriptParser::parse_identifier(ExpressionNode *p_previous_operand, bool p_can_assign) {
-	if (!get_previous_token().token.is_identifier()) {
+	Token previous_token = get_previous_non_whitespace_token();
+	if (!previous_token.token.is_identifier()) {
 		ERR_FAIL_V_MSG(nullptr, "Parser bug: parsing identifier node without identifier token.");
 	}
 	IdentifierNode *identifier = alloc_node<IdentifierNode>();
 	complete_extents(identifier);
-	identifier->name = get_previous_token().token.get_identifier();
+	identifier->name = previous_token.token.get_identifier();
 	identifier->suite = current_suite;
 
 	if (current_suite != nullptr && current_suite->has_local(identifier->name)) {
