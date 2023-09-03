@@ -490,6 +490,7 @@ void GDScriptParser::skip_pseudo_whitespace_tokens() {
 		if (multiline_mode) {
 			if (check(GDScriptTokenizer::Token::INDENT) || check(GDScriptTokenizer::Token::DEDENT)) {
 				advance();
+				continue;
 			}
 		}
 
@@ -1344,10 +1345,7 @@ GDScriptParser::SignalNode *GDScriptParser::parse_signal(bool p_is_static) {
 				break;
 			}
 
-			if (match(GDScriptTokenizer::Token::COMMENT) || match(GDScriptTokenizer::Token::NEWLINE)) {
-				matched_comma = true;
-				continue;
-			}
+			skip_pseudo_whitespace_tokens();
 
 			ParameterNode *parameter = parse_parameter();
 			if (parameter == nullptr) {
@@ -1404,10 +1402,9 @@ GDScriptParser::EnumNode *GDScriptParser::parse_enum(bool p_is_static) {
 		if (check(GDScriptTokenizer::Token::BRACE_CLOSE)) {
 			break; // Allow trailing comma.
 		}
-		if (match(GDScriptTokenizer::Token::COMMENT) || match(GDScriptTokenizer::Token::NEWLINE)) {
-			matched_comma = true;
-			continue;
-		}
+
+		skip_pseudo_whitespace_tokens();
+
 		if (consume(GDScriptTokenizer::Token::IDENTIFIER, R"(Expected identifier for enum key.)")) {
 			EnumNode::Value item;
 			GDScriptParser::IdentifierNode *identifier = parse_identifier();
@@ -1516,10 +1513,7 @@ void GDScriptParser::parse_function_signature(FunctionNode *p_function, SuiteNod
 				break;
 			}
 
-			if (match(GDScriptTokenizer::Token::COMMENT)) {
-				matched_comma = true;
-				continue;
-			}
+			skip_pseudo_whitespace_tokens();
 
 			ParameterNode *parameter = parse_parameter();
 			if (parameter == nullptr) {
@@ -1650,10 +1644,7 @@ GDScriptParser::AnnotationNode *GDScriptParser::parse_annotation(uint32_t p_vali
 				break;
 			}
 
-			if (match(GDScriptTokenizer::Token::COMMENT) || match(GDScriptTokenizer::Token::NEWLINE)) {
-				matched_comma = true;
-				continue;
-			}
+			skip_pseudo_whitespace_tokens();
 
 			make_completion_context(COMPLETION_ANNOTATION_ARGUMENTS, annotation, argument_index, true);
 			set_last_completion_call_arg(argument_index++);
@@ -2932,10 +2923,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_array(ExpressionNode *p_pr
 				break;
 			}
 
-			if (match(GDScriptTokenizer::Token::COMMENT) || match(GDScriptTokenizer::Token::NEWLINE)) {
-				matched_comma = true;
-				continue;
-			}
+			skip_pseudo_whitespace_tokens();
 
 			ExpressionNode *element = parse_expression(false);
 			if (element == nullptr) {
@@ -2969,10 +2957,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_dictionary(ExpressionNode 
 				break;
 			}
 
-			if (match(GDScriptTokenizer::Token::COMMENT) || match(GDScriptTokenizer::Token::NEWLINE)) {
-				matched_comma = true;
-				continue;
-			}
+			skip_pseudo_whitespace_tokens();
 
 			// Key.
 			ExpressionNode *key = parse_expression(false, true); // Stop on "=" so we can check for Lua table style.
@@ -3221,10 +3206,9 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_call(ExpressionNode *p_pre
 			// Allow for trailing comma.
 			break;
 		}
-		if (match(GDScriptTokenizer::Token::COMMENT) || match(GDScriptTokenizer::Token::NEWLINE)) {
-			matched_comma = true;
-			continue;
-		}
+
+		skip_pseudo_whitespace_tokens();
+
 		bool use_identifier_completion = get_current_token().token.cursor_place == GDScriptTokenizer::CURSOR_END || get_current_token().token.cursor_place == GDScriptTokenizer::CURSOR_MIDDLE;
 		ExpressionNode *argument = parse_expression(false);
 		if (argument == nullptr) {
