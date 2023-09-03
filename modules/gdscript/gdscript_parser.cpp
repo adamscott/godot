@@ -1016,7 +1016,7 @@ GDScriptParser::VariableNode *GDScriptParser::parse_variable(bool p_is_static, b
 	variable->is_static = p_is_static;
 
 	if (match(GDScriptTokenizer::Token::COLON)) {
-		if (check(GDScriptTokenizer::Token::NEWLINE)) {
+		if (check(GDScriptTokenizer::Token::NEWLINE) || check(GDScriptTokenizer::Token::COMMENT)) {
 			if (p_allow_property) {
 				advance();
 				return parse_property(variable, true);
