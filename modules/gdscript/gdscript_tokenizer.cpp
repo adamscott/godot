@@ -280,6 +280,7 @@ void GDScriptTokenizer::set_multiline_mode(bool p_state) {
 
 void GDScriptTokenizer::push_expression_indented_block() {
 	indent_stack_stack.push_back(indent_stack);
+	indent_stack = List<int>();
 }
 
 void GDScriptTokenizer::pop_expression_indented_block() {

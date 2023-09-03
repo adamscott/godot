@@ -437,12 +437,14 @@ void GDScriptParser::synchronize() {
 
 void GDScriptParser::push_multiline(bool p_state) {
 	multiline_stack.push_back(p_state);
+	tokenizer.set_multiline_mode(p_state);
 	skip_pseudo_whitespace_tokens();
 }
 
 void GDScriptParser::pop_multiline() {
 	ERR_FAIL_COND_MSG(multiline_stack.size() == 0, "Parser bug: trying to pop from multiline stack without available value.");
 	multiline_stack.pop_back();
+	tokenizer.set_multiline_mode(multiline_stack.size() > 0 && multiline_stack.back()->get());
 }
 
 bool GDScriptParser::is_statement_end_token() const {
@@ -483,28 +485,41 @@ void GDScriptParser::end_statement(const String &p_context) {
 	}
 }
 
-void GDScriptParser::skip_pseudo_whitespace_tokens() {
+void GDScriptParser::skip_pseudo_whitespace_tokens(int p_flag) {
 	bool multiline_mode = false;
 	while (true) {
 		multiline_mode = multiline_stack.size() > 0 && multiline_stack.back()->get();
 		if (multiline_mode) {
-			if (check(GDScriptTokenizer::Token::INDENT) || check(GDScriptTokenizer::Token::DEDENT)) {
+			if ((p_flag & SKIP_PSEUDO_WHITESPACE_INDENT) == SKIP_PSEUDO_WHITESPACE_INDENT) {
+				if (check(GDScriptTokenizer::Token::INDENT)) {
+					advance();
+					continue;
+				}
+			}
+
+			if ((p_flag & SKIP_PSEUDO_WHITESPACE_DEDENT) == SKIP_PSEUDO_WHITESPACE_DEDENT) {
+				if (check(GDScriptTokenizer::Token::DEDENT)) {
+					advance();
+					continue;
+				}
+			}
+		}
+
+		if ((p_flag & SKIP_PSEUDO_WHITESPACE_COMMENT) == SKIP_PSEUDO_WHITESPACE_COMMENT) {
+			if (check(GDScriptTokenizer::Token::COMMENT)) {
 				advance();
+				if (!is_at_end()) {
+					consume(GDScriptTokenizer::Token::NEWLINE, R"(Expected newline after comment.)");
+				}
 				continue;
 			}
 		}
 
-		if (check(GDScriptTokenizer::Token::COMMENT)) {
-			advance();
-			if (!is_at_end()) {
-				consume(GDScriptTokenizer::Token::NEWLINE, R"(Expected newline after comment.)");
+		if ((p_flag & SKIP_PSEUDO_WHITESPACE_NEWLINE) == SKIP_PSEUDO_WHITESPACE_NEWLINE) {
+			if (check(GDScriptTokenizer::Token::NEWLINE)) {
+				advance();
+				continue;
 			}
-			continue;
-		}
-
-		if (check(GDScriptTokenizer::Token::NEWLINE)) {
-			advance();
-			continue;
 		}
 
 		return;
@@ -2933,11 +2948,12 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_array(ExpressionNode *p_pr
 			}
 
 			matched_comma = match(GDScriptTokenizer::Token::COMMA);
+
 			skip_pseudo_whitespace_tokens();
 		} while (matched_comma && !is_at_end());
 	}
-	pop_multiline();
 	consume(GDScriptTokenizer::Token::BRACKET_CLOSE, R"(Expected closing "]" after array elements.)");
+	pop_multiline();
 	complete_extents(array);
 
 	return array;
@@ -2947,6 +2963,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_dictionary(ExpressionNode 
 	DictionaryNode *dictionary = alloc_node<DictionaryNode>();
 
 	bool decided_style = false;
+	push_multiline(true);
 	if (!check(GDScriptTokenizer::Token::BRACE_CLOSE)) {
 		bool matched_comma;
 		do {
@@ -3036,8 +3053,9 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_dictionary(ExpressionNode 
 			skip_pseudo_whitespace_tokens();
 		} while (matched_comma && !is_at_end());
 	}
-	pop_multiline();
 	consume(GDScriptTokenizer::Token::BRACE_CLOSE, R"(Expected closing "}" after dictionary elements.)");
+	pop_multiline();
+	pop_multiline();
 	complete_extents(dictionary);
 
 	return dictionary;
@@ -3045,15 +3063,19 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_dictionary(ExpressionNode 
 
 GDScriptParser::ExpressionNode *GDScriptParser::parse_grouping(ExpressionNode *p_previous_operand, bool p_can_assign) {
 	skip_pseudo_whitespace_tokens();
+
+	push_multiline(true);
 	ExpressionNode *grouped = parse_expression(false);
 
-	pop_multiline();
 	if (grouped == nullptr) {
 		push_error(R"(Expected grouping expression.)");
 		return nullptr;
 	}
 
+	skip_pseudo_whitespace_tokens();
 	consume(GDScriptTokenizer::Token::PARENTHESIS_CLOSE, R"*(Expected closing ")" after grouping expression.)*");
+	pop_multiline();
+	pop_multiline();
 	return grouped;
 }
 
@@ -3430,6 +3452,9 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_lambda(ExpressionNode *p_p
 	complete_extents(lambda);
 
 	pop_multiline();
+	if (multiline_context) {
+		tokenizer.pop_expression_indented_block();
+	}
 
 	current_function = previous_function;
 	current_lambda = previous_lambda;

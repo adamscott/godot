@@ -1401,6 +1401,13 @@ private:
 	};
 	static ParseRule *get_rule(GDScriptTokenizer::Token::Type p_token_type);
 
+	enum SkipPseudoWhitespace {
+		SKIP_PSEUDO_WHITESPACE_NEWLINE = 1 << 0,
+		SKIP_PSEUDO_WHITESPACE_COMMENT = 1 << 1,
+		SKIP_PSEUDO_WHITESPACE_INDENT = 1 << 2,
+		SKIP_PSEUDO_WHITESPACE_DEDENT = 1 << 3
+	};
+
 	List<Node *> nodes_in_progress;
 	void complete_extents(Node *p_node);
 	void update_extents(Node *p_node);
@@ -1448,7 +1455,7 @@ private:
 	void push_multiline(bool p_state);
 	void pop_multiline();
 
-	void skip_pseudo_whitespace_tokens();
+	void skip_pseudo_whitespace_tokens(int p_flag = SkipPseudoWhitespace::SKIP_PSEUDO_WHITESPACE_INDENT | SkipPseudoWhitespace::SKIP_PSEUDO_WHITESPACE_DEDENT | SkipPseudoWhitespace::SKIP_PSEUDO_WHITESPACE_COMMENT | SkipPseudoWhitespace::SKIP_PSEUDO_WHITESPACE_NEWLINE);
 
 	Token get_current_token() const;
 	Token get_previous_token() const;
