@@ -484,7 +484,7 @@ GDScriptTokenizer::Token GDScriptTokenizer::annotation() {
 }
 
 GDScriptTokenizer::Token GDScriptTokenizer::comment() {
-	while (_peek() != '\n' && !_is_at_end()) {
+	while (!(_peek() == '\n' || _is_at_end())) {
 		// Consume all the comment
 		_advance();
 	}
@@ -656,7 +656,7 @@ GDScriptTokenizer::Token GDScriptTokenizer::potential_identifier() {
 
 void GDScriptTokenizer::newline(bool p_make_token) {
 	// Don't overwrite previous newline, nor create if we want a line continuation.
-	if (p_make_token && !pending_newline && !line_continuation) {
+	if (p_make_token && !line_continuation) {
 		Token newline(Token::NEWLINE);
 		newline.start_line = line;
 		newline.end_line = line;
@@ -664,7 +664,6 @@ void GDScriptTokenizer::newline(bool p_make_token) {
 		newline.end_column = column;
 		newline.leftmost_column = newline.start_column;
 		newline.rightmost_column = newline.end_column;
-		pending_newline = true;
 		last_token = newline;
 		last_newline = newline;
 	}
@@ -1133,7 +1132,7 @@ void GDScriptTokenizer::check_indent() {
 		char32_t current_indent_char = _peek();
 		int indent_count = 0;
 
-		if (current_indent_char != ' ' && current_indent_char != '\t' && current_indent_char != '\r' && current_indent_char != '\n') {
+		if (current_indent_char != ' ' && current_indent_char != '\t' && current_indent_char != '\r') {
 			// First character of the line is not whitespace, so we clear all indentation levels.
 			// Unless we are in a continuation or in multiline mode (inside expression).
 			if (line_continuation || multiline_mode) {
@@ -1153,7 +1152,6 @@ void GDScriptTokenizer::check_indent() {
 		if (_peek() == '\n') {
 			// Empty line, keep going.
 			_advance();
-			newline(false);
 			continue;
 		}
 
@@ -1318,14 +1316,6 @@ GDScriptTokenizer::Token GDScriptTokenizer::scan() {
 	}
 
 	_skip_whitespace();
-
-	if (pending_newline) {
-		pending_newline = false;
-		if (!multiline_mode) {
-			// Don't return newline tokens on multiline mode.
-			return last_newline;
-		}
-	}
 
 	// Check for potential errors after skipping whitespace().
 	if (has_error()) {

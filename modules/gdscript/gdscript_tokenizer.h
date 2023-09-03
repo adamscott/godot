@@ -217,7 +217,6 @@ private:
 	bool line_continuation = false; // Whether this line is a continuation of the previous, like when using '\'.
 	bool multiline_mode = false;
 	List<Token> error_stack;
-	bool pending_newline = false;
 	Token last_token;
 	Token last_newline;
 	int pending_indents = 0;
