@@ -1193,6 +1193,7 @@ void GDScriptTokenizer::check_indent() {
 			return;
 		}
 		if (_peek() == '#') {
+			// We don't want a comment to mess with the indentation
 			return;
 		}
 		if (mixed && !line_continuation && !multiline_mode) {
