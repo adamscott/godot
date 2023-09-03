@@ -436,12 +436,7 @@ void GDScriptParser::synchronize() {
 void GDScriptParser::push_multiline(bool p_state) {
 	multiline_stack.push_back(p_state);
 	tokenizer.set_multiline_mode(p_state);
-	if (p_state) {
-		// Consume potential whitespace tokens already waiting in line.
-		while (current.type == GDScriptTokenizer::Token::NEWLINE || current.type == GDScriptTokenizer::Token::INDENT || current.type == GDScriptTokenizer::Token::DEDENT || current.type == GDScriptTokenizer::Token::COMMENT) {
-			current = tokenizer.scan(); // Don't call advance() here, as we don't want to change the previous token.
-		}
-	}
+	skip_pseudo_whitespace_tokens();
 }
 
 void GDScriptParser::pop_multiline() {
@@ -490,6 +485,24 @@ void GDScriptParser::end_statement(const String &p_context) {
 
 void GDScriptParser::skip_pseudo_whitespace_tokens() {
 	while (true) {
+		bool multiline_context = multiline_stack.size() > 0 && multiline_stack.back()->get();
+		if (multiline_context) {
+			switch (current.type) {
+				case GDScriptTokenizer::Token::INDENT:
+				case GDScriptTokenizer::Token::DEDENT:
+				case GDScriptTokenizer::Token::NEWLINE:
+				case GDScriptTokenizer::Token::COMMENT: {
+					// Don't call advance() here, as we don't want to change the previous token.
+					current = tokenizer.scan();
+					continue;
+				} break;
+				default: {
+					// Do nothing.
+				}
+			}
+			return;
+		}
+
 		if (check(GDScriptTokenizer::Token::COMMENT)) {
 			advance();
 			if (!is_at_end()) {
@@ -503,14 +516,7 @@ void GDScriptParser::skip_pseudo_whitespace_tokens() {
 			continue;
 		}
 
-		if (multiline_stack.back()->get()) {
-			if (check(GDScriptTokenizer::Token::INDENT) || check(GDScriptTokenizer::Token::DEDENT)) {
-				advance();
-				continue;
-			}
-		}
-
-		break;
+		return;
 	}
 }
 
@@ -1924,8 +1930,10 @@ GDScriptParser::AssertNode *GDScriptParser::parse_assert() {
 	}
 
 	skip_pseudo_whitespace_tokens();
+	bool matched_comma = match(GDScriptTokenizer::Token::COMMA);
+	skip_pseudo_whitespace_tokens();
 
-	if (match(GDScriptTokenizer::Token::COMMA) && !check(GDScriptTokenizer::Token::PARENTHESIS_CLOSE)) {
+	if (matched_comma && !check(GDScriptTokenizer::Token::PARENTHESIS_CLOSE)) {
 		assert->message = parse_expression(false);
 		if (assert->message == nullptr) {
 			push_error(R"(Expected error message for assert after ",".)");
@@ -2372,6 +2380,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_precedence(Precedence p_pr
 	}
 
 	advance(); // Only consume the token if there's a valid rule.
+	skip_pseudo_whitespace_tokens();
 
 	ExpressionNode *previous_operand = (this->*prefix_rule)(nullptr, p_can_assign);
 
@@ -2390,6 +2399,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_precedence(Precedence p_pr
 				break; // Nothing to do.
 		}
 		token = advance();
+		skip_pseudo_whitespace_tokens();
 		ParseFunction infix_rule = get_rule(token.type)->infix;
 		previous_operand = (this->*infix_rule)(previous_operand, p_can_assign);
 	}
@@ -2989,6 +2999,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_dictionary(ExpressionNode 
 }
 
 GDScriptParser::ExpressionNode *GDScriptParser::parse_grouping(ExpressionNode *p_previous_operand, bool p_can_assign) {
+	skip_pseudo_whitespace_tokens();
 	ExpressionNode *grouped = parse_expression(false);
 
 	pop_multiline();
