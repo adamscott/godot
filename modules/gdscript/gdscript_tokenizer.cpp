@@ -274,6 +274,10 @@ void GDScriptTokenizer::set_cursor_position(int p_line, int p_column) {
 	cursor_column = p_column;
 }
 
+void GDScriptTokenizer::set_multiline_mode(bool p_state) {
+	multiline_mode = p_state;
+}
+
 void GDScriptTokenizer::push_expression_indented_block() {
 	indent_stack_stack.push_back(indent_stack);
 }
@@ -1131,7 +1135,7 @@ void GDScriptTokenizer::check_indent() {
 		if (current_indent_char != ' ' && current_indent_char != '\t' && current_indent_char != '\r' && current_indent_char != '\n') {
 			// First character of the line is not whitespace, so we clear all indentation levels.
 			// Unless we are in a continuation or in multiline mode (inside expression).
-			if (line_continuation) {
+			if (line_continuation || multiline_mode) {
 				return;
 			}
 			pending_indents -= indent_level();
@@ -1192,7 +1196,7 @@ void GDScriptTokenizer::check_indent() {
 			// We don't want a comment to mess with the indentation
 			return;
 		}
-		if (mixed && !line_continuation) {
+		if (mixed && !line_continuation && !multiline_mode) {
 			Token error = make_error("Mixed use of tabs and spaces for indentation.");
 			error.start_line = line;
 			error.start_column = 1;
@@ -1201,7 +1205,7 @@ void GDScriptTokenizer::check_indent() {
 			push_error(error);
 		}
 
-		if (line_continuation) {
+		if (line_continuation || multiline_mode) {
 			// We cleared up all the whitespace at the beginning of the line.
 			// But if this is a continuation or multiline mode and we don't want any indentation change.
 			return;
