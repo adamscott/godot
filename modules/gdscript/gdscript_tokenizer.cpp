@@ -279,13 +279,20 @@ void GDScriptTokenizer::set_multiline_mode(bool p_state) {
 }
 
 void GDScriptTokenizer::push_expression_indented_block() {
+	int start_indent = 0;
+	if (indent_stack.indent_stack.size() > 0) {
+		start_indent = indent_stack.indent_stack.back()->get();
+	}
 	indent_stack_stack.push_back(indent_stack);
-	indent_stack = List<int>();
+	indent_stack = IndentStack();
+	indent_stack.start_indent = start_indent;
 }
 
 void GDScriptTokenizer::pop_expression_indented_block() {
 	ERR_FAIL_COND(indent_stack_stack.size() == 0);
-	indent_stack = indent_stack_stack.back()->get();
+	IndentStack about_to_be_popped_back_indent_stack = indent_stack_stack.back()->get();
+	indent_stack = about_to_be_popped_back_indent_stack;
+	about_to_be_popped_back_indent_stack.indent_stack.clear();
 	indent_stack_stack.pop_back();
 }
 
@@ -1125,7 +1132,7 @@ void GDScriptTokenizer::check_indent() {
 	if (_is_at_end()) {
 		// Send dedents for every indent level.
 		pending_indents -= indent_level();
-		indent_stack.clear();
+		indent_stack.indent_stack.clear();
 		return;
 	}
 
@@ -1140,7 +1147,7 @@ void GDScriptTokenizer::check_indent() {
 				return;
 			}
 			pending_indents -= indent_level();
-			indent_stack.clear();
+			indent_stack.indent_stack.clear();
 			return;
 		}
 
@@ -1176,7 +1183,7 @@ void GDScriptTokenizer::check_indent() {
 		if (_is_at_end()) {
 			// Reached the end with an empty line, so just dedent as much as needed.
 			pending_indents -= indent_level();
-			indent_stack.clear();
+			indent_stack.indent_stack.clear();
 			return;
 		}
 
@@ -1231,7 +1238,7 @@ void GDScriptTokenizer::check_indent() {
 		// Check if indent or dedent.
 		int previous_indent = 0;
 		if (indent_level() > 0) {
-			previous_indent = indent_stack.back()->get();
+			previous_indent = indent_stack.indent_stack.back()->get();
 		}
 		if (indent_count == previous_indent) {
 			// No change in indentation.
@@ -1239,7 +1246,7 @@ void GDScriptTokenizer::check_indent() {
 		}
 		if (indent_count > previous_indent) {
 			// Indentation increased.
-			indent_stack.push_back(indent_count);
+			indent_stack.indent_stack.push_back(indent_count);
 			pending_indents++;
 		} else {
 			// Indentation decreased (dedent).
@@ -1247,11 +1254,11 @@ void GDScriptTokenizer::check_indent() {
 				push_error("Tokenizer bug: trying to dedent without previous indent.");
 				return;
 			}
-			while (indent_level() > 0 && indent_stack.back()->get() > indent_count) {
-				indent_stack.pop_back();
+			while (indent_level() > 0 && indent_stack.indent_stack.back()->get() > indent_count) {
+				indent_stack.indent_stack.pop_back();
 				pending_indents--;
 			}
-			if ((indent_level() > 0 && indent_stack.back()->get() != indent_count) || (indent_level() == 0 && indent_count != 0)) {
+			if ((indent_level() > 0 && indent_stack.indent_stack.back()->get() != indent_count) || (indent_level() == 0 && indent_count != indent_stack.start_indent)) {
 				// Mismatched indentation alignment.
 				Token error = make_error("Unindent doesn't match the previous indentation level.");
 				error.start_line = line;
@@ -1261,7 +1268,7 @@ void GDScriptTokenizer::check_indent() {
 				error.rightmost_column = column + 1;
 				push_error(error);
 				// Still, we'll be lenient and keep going, so keep this level in the stack.
-				indent_stack.push_back(indent_count);
+				indent_stack.indent_stack.push_back(indent_count);
 			}
 		}
 		break; // Get out of the loop in any case.

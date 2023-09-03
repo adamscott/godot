@@ -214,18 +214,24 @@ private:
 	int leftmost_column = 0, rightmost_column = 0;
 
 	// Info cache.
+	struct IndentStack {
+		List<int> indent_stack;
+		int start_indent = 0;
+	};
+
 	bool line_continuation = false; // Whether this line is a continuation of the previous, like when using '\'.
 	bool multiline_mode = false;
 	List<Token> error_stack;
 	Token last_token;
 	Token last_newline;
 	int pending_indents = 0;
-	List<int> indent_stack;
-	List<List<int>> indent_stack_stack; // For lambdas, which require manipulating the indentation point.
+	IndentStack indent_stack;
+	List<IndentStack> indent_stack_stack; // For lambdas, which require manipulating the indentation point.
 	List<char32_t> paren_stack;
 	char32_t indent_char = '\0';
 	int position = 0;
 	int length = 0;
+
 #ifdef DEBUG_ENABLED
 	Vector<String> keyword_list;
 #endif // DEBUG_ENABLED
@@ -236,7 +242,7 @@ private:
 
 	_FORCE_INLINE_ bool _is_at_end() { return position >= length; }
 	_FORCE_INLINE_ char32_t _peek(int p_offset = 0) { return position + p_offset >= 0 && position + p_offset < length ? _current[p_offset] : '\0'; }
-	int indent_level() const { return indent_stack.size(); }
+	int indent_level() const { return indent_stack.indent_stack.size(); }
 	bool has_error() const { return !error_stack.is_empty(); }
 	Token pop_error();
 	char32_t _advance();
