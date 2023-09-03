@@ -315,10 +315,8 @@ Error GDScriptParser::parse(const String &p_source_code, const String &p_script_
 	set_current_token(tokenizer.scan());
 	// Avoid error or newline as the first token.
 	// The latter can mess with the parser when opening files filled exclusively with comments and newlines.
-	while (get_current_token().token.type == GDScriptTokenizer::Token::ERROR || get_current_token().token.type == GDScriptTokenizer::Token::NEWLINE) {
-		if (get_current_token().token.type == GDScriptTokenizer::Token::ERROR) {
-			push_error(get_current_token().token.literal);
-		}
+	while (get_current_token().token.type == GDScriptTokenizer::Token::ERROR) {
+		push_error(get_current_token().token.literal);
 		remove_current_token();
 		set_current_token(tokenizer.scan());
 	}
@@ -526,14 +524,20 @@ GDScriptParser::Token GDScriptParser::get_previous_token() const {
 }
 
 GDScriptParser::Token GDScriptParser::get_previous_non_whitespace_token() const {
-	if (tokens.size() < 2) {
-		Token token;
-		token.multiline_mode = false;
-		token.token = GDScriptTokenizer::Token::EMPTY;
-		return token;
+	Token previous_token = get_previous_token();
+	if (previous_token.token.type == GDScriptTokenizer::Token::Type::EMPTY) {
+		return previous_token;
 	}
 
-	const List<GDScriptParser::Token>::Element *el = tokens.back();
+	bool is_newline_comment = previous_token.token.type == GDScriptTokenizer::Token::Type::NEWLINE || previous_token.token.type == GDScriptTokenizer::Token::Type::COMMENT;
+	bool is_indent_dedent = previous_token.token.type == GDScriptTokenizer::Token::Type::INDENT || previous_token.token.type == GDScriptTokenizer::Token::Type::DEDENT;
+
+	if (!is_newline_comment && !(previous_token.multiline_mode && is_indent_dedent)) {
+		return previous_token;
+	}
+
+	// Not the current token, neither the previous comment as we just checked.
+	const List<GDScriptParser::Token>::Element *el = tokens.back()->prev()->prev();
 	while (el != nullptr) {
 		Token token = el->get();
 		switch (token.token.type) {
@@ -566,7 +570,7 @@ GDScriptParser::Token GDScriptParser::get_previous_non_whitespace_token() const 
 
 void GDScriptParser::set_current_token(GDScriptTokenizer::Token p_token) {
 	bool multiline_mode = multiline_stack.size() > 0 && multiline_stack.back()->get();
-	tokens.push_back({ .multiline_mode = multiline_mode, .token = tokenizer.scan() });
+	tokens.push_back({ .multiline_mode = multiline_mode, .token = p_token });
 }
 
 void GDScriptParser::remove_current_token() {
@@ -2523,14 +2527,15 @@ GDScriptParser::LiteralNode *GDScriptParser::parse_literal() {
 GDScriptParser::ExpressionNode *GDScriptParser::parse_literal(ExpressionNode *p_previous_operand, bool p_can_assign) {
 	skip_pseudo_whitespace_tokens();
 
-	if (get_previous_token().token.type != GDScriptTokenizer::Token::LITERAL) {
+	GDScriptTokenizer::Token previous_non_whitespace_token = get_previous_non_whitespace_token().token;
+	if (previous_non_whitespace_token.type != GDScriptTokenizer::Token::LITERAL) {
 		push_error("Parser bug: parsing literal node without literal token.");
 		ERR_FAIL_V_MSG(nullptr, "Parser bug: parsing literal node without literal token.");
 	}
 
 	LiteralNode *literal = alloc_node<LiteralNode>();
 	complete_extents(literal);
-	literal->value = get_previous_token().token.literal;
+	literal->value = previous_non_whitespace_token.literal;
 	return literal;
 }
 
