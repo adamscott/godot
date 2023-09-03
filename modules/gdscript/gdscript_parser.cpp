@@ -364,11 +364,13 @@ GDScriptTokenizer::Token GDScriptParser::advance() {
 			passed_cursor = true;
 		}
 	}
-	set_current_token(tokenizer.scan());
-	while (get_current_token().token.type == GDScriptTokenizer::Token::ERROR) {
-		push_error(get_current_token().token.literal);
+	GDScriptTokenizer::Token current = tokenizer.scan();
+	set_current_token(current);
+	while (current.type == GDScriptTokenizer::Token::ERROR) {
+		push_error(current.literal);
 		remove_current_token();
-		set_current_token(tokenizer.scan());
+		current = tokenizer.scan();
+		set_current_token(current);
 	}
 	for (Node *n : nodes_in_progress) {
 		update_extents(n);
@@ -435,14 +437,12 @@ void GDScriptParser::synchronize() {
 
 void GDScriptParser::push_multiline(bool p_state) {
 	multiline_stack.push_back(p_state);
-	tokenizer.set_multiline_mode(p_state);
 	skip_pseudo_whitespace_tokens();
 }
 
 void GDScriptParser::pop_multiline() {
 	ERR_FAIL_COND_MSG(multiline_stack.size() == 0, "Parser bug: trying to pop from multiline stack without available value.");
 	multiline_stack.pop_back();
-	tokenizer.set_multiline_mode(multiline_stack.size() > 0 ? multiline_stack.back()->get() : false);
 }
 
 bool GDScriptParser::is_statement_end_token() const {
@@ -484,7 +484,15 @@ void GDScriptParser::end_statement(const String &p_context) {
 }
 
 void GDScriptParser::skip_pseudo_whitespace_tokens() {
+	bool multiline_mode = false;
 	while (true) {
+		multiline_mode = multiline_stack.size() > 0 && multiline_stack.back()->get();
+		if (multiline_mode) {
+			if (check(GDScriptTokenizer::Token::INDENT) || check(GDScriptTokenizer::Token::DEDENT)) {
+				advance();
+			}
+		}
+
 		if (check(GDScriptTokenizer::Token::COMMENT)) {
 			advance();
 			if (!is_at_end()) {
@@ -2416,6 +2424,8 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_precedence(Precedence p_pr
 	// Completion can appear whenever an expression is expected.
 	make_completion_context(COMPLETION_IDENTIFIER, nullptr);
 
+	skip_pseudo_whitespace_tokens();
+
 	GDScriptTokenizer::Token token = get_current_token().token;
 	GDScriptTokenizer::Token::Type token_type = token.type;
 	if (token.is_identifier()) {
@@ -3434,8 +3444,6 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_lambda(ExpressionNode *p_p
 	function->body = parse_suite("lambda declaration", body, true);
 	complete_extents(function);
 	complete_extents(lambda);
-
-	skip_pseudo_whitespace_tokens();
 
 	pop_multiline();
 
