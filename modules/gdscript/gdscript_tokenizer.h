@@ -274,7 +274,6 @@ public:
 	int get_cursor_line() const;
 	int get_cursor_column() const;
 	void set_cursor_position(int p_line, int p_column);
-	void set_multiline_mode(bool p_state);
 	bool is_past_cursor() const;
 	static String get_token_name(Token::Type p_token_type);
 	void push_expression_indented_block(); // For lambdas, or blocks inside expressions.
