@@ -1132,7 +1132,7 @@ void GDScriptTokenizer::check_indent() {
 		char32_t current_indent_char = _peek();
 		int indent_count = 0;
 
-		if (current_indent_char != ' ' && current_indent_char != '\t' && current_indent_char != '\r') {
+		if (current_indent_char != ' ' && current_indent_char != '\t' && current_indent_char != '\r' && current_indent_char != '\n') {
 			// First character of the line is not whitespace, so we clear all indentation levels.
 			// Unless we are in a continuation or in multiline mode (inside expression).
 			if (line_continuation || multiline_mode) {
@@ -1149,11 +1149,11 @@ void GDScriptTokenizer::check_indent() {
 				push_error("Stray carriage return character in source code.");
 			}
 		}
-		if (_peek() == '\n') {
-			// Empty line, keep going.
-			_advance();
-			continue;
-		}
+		// if (_peek() == '\n') {
+		// 	// Empty line, keep going.
+		// 	_advance();
+		// 	return;
+		// }
 
 		// Check indent level.
 		bool mixed = false;
@@ -1186,10 +1186,11 @@ void GDScriptTokenizer::check_indent() {
 			}
 		}
 		if (_peek() == '\n') {
-			// Empty line, keep going.
-			_advance();
-			newline(false);
-			continue;
+			if (line_continuation) {
+				_advance();
+				continue;
+			}
+			return;
 		}
 		if (_peek() == '#') {
 			return;
