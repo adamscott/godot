@@ -141,6 +141,7 @@ void GDScriptParser::clear() {
 	errors.clear();
 	multiline_stack.clear();
 	nodes_in_progress.clear();
+	tokens.clear();
 }
 
 void GDScriptParser::push_error(const String &p_message, const Node *p_origin) {
@@ -149,7 +150,7 @@ void GDScriptParser::push_error(const String &p_message, const Node *p_origin) {
 	panic_mode = true;
 	// TODO: Improve positional information.
 	if (p_origin == nullptr) {
-		errors.push_back({ p_message, current.start_line, current.start_column });
+		errors.push_back({ p_message, get_current_token().token.start_line, get_current_token().token.start_column });
 	} else {
 		errors.push_back({ p_message, p_origin->start_line, p_origin->leftmost_column });
 	}
@@ -206,7 +207,7 @@ void GDScriptParser::make_completion_context(CompletionType p_type, Node *p_node
 	if (!for_completion || (!p_force && completion_context.type != COMPLETION_NONE)) {
 		return;
 	}
-	if (previous.cursor_place != GDScriptTokenizer::CURSOR_MIDDLE && previous.cursor_place != GDScriptTokenizer::CURSOR_END && current.cursor_place == GDScriptTokenizer::CURSOR_NONE) {
+	if (get_previous_token().token.cursor_place != GDScriptTokenizer::CURSOR_MIDDLE && get_previous_token().token.cursor_place != GDScriptTokenizer::CURSOR_END && get_current_token().token.cursor_place == GDScriptTokenizer::CURSOR_NONE) {
 		return;
 	}
 	CompletionContext context;
@@ -224,7 +225,7 @@ void GDScriptParser::make_completion_context(CompletionType p_type, Variant::Typ
 	if (!for_completion || (!p_force && completion_context.type != COMPLETION_NONE)) {
 		return;
 	}
-	if (previous.cursor_place != GDScriptTokenizer::CURSOR_MIDDLE && previous.cursor_place != GDScriptTokenizer::CURSOR_END && current.cursor_place == GDScriptTokenizer::CURSOR_NONE) {
+	if (get_previous_token().token.cursor_place != GDScriptTokenizer::CURSOR_MIDDLE && get_previous_token().token.cursor_place != GDScriptTokenizer::CURSOR_END && get_current_token().token.cursor_place == GDScriptTokenizer::CURSOR_NONE) {
 		return;
 	}
 	CompletionContext context;
@@ -245,7 +246,7 @@ void GDScriptParser::push_completion_call(Node *p_call) {
 	call.call = p_call;
 	call.argument = 0;
 	completion_call_stack.push_back(call);
-	if (previous.cursor_place == GDScriptTokenizer::CURSOR_MIDDLE || previous.cursor_place == GDScriptTokenizer::CURSOR_END || current.cursor_place == GDScriptTokenizer::CURSOR_BEGINNING) {
+	if (get_previous_token().token.cursor_place == GDScriptTokenizer::CURSOR_MIDDLE || get_previous_token().token.cursor_place == GDScriptTokenizer::CURSOR_END || get_current_token().token.cursor_place == GDScriptTokenizer::CURSOR_BEGINNING) {
 		completion_call = call;
 	}
 }
@@ -311,19 +312,20 @@ Error GDScriptParser::parse(const String &p_source_code, const String &p_script_
 	tokenizer.set_source_code(source);
 	tokenizer.set_cursor_position(cursor_line, cursor_column);
 	script_path = p_script_path;
-	current = tokenizer.scan();
+	set_current_token(tokenizer.scan());
 	// Avoid error or newline as the first token.
 	// The latter can mess with the parser when opening files filled exclusively with comments and newlines.
-	while (current.type == GDScriptTokenizer::Token::ERROR || current.type == GDScriptTokenizer::Token::NEWLINE) {
-		if (current.type == GDScriptTokenizer::Token::ERROR) {
-			push_error(current.literal);
+	while (get_current_token().token.type == GDScriptTokenizer::Token::ERROR || get_current_token().token.type == GDScriptTokenizer::Token::NEWLINE) {
+		if (get_current_token().token.type == GDScriptTokenizer::Token::ERROR) {
+			push_error(get_current_token().token.literal);
 		}
-		current = tokenizer.scan();
+		remove_current_token();
+		set_current_token(tokenizer.scan());
 	}
 
 #ifdef DEBUG_ENABLED
 	// Warn about parsing an empty script file:
-	if (current.type == GDScriptTokenizer::Token::TK_EOF) {
+	if (get_current_token().token.type == GDScriptTokenizer::Token::TK_EOF) {
 		// Create a dummy Node for the warning, pointing to the very beginning of the file
 		Node *nd = alloc_node<PassNode>();
 		nd->start_line = 1;
@@ -355,8 +357,8 @@ Error GDScriptParser::parse(const String &p_source_code, const String &p_script_
 GDScriptTokenizer::Token GDScriptParser::advance() {
 	lambda_ended = false; // Empty marker since we're past the end in any case.
 
-	if (current.type == GDScriptTokenizer::Token::TK_EOF) {
-		ERR_FAIL_COND_V_MSG(current.type == GDScriptTokenizer::Token::TK_EOF, current, "GDScript parser bug: Trying to advance past the end of stream.");
+	if (get_current_token().token.type == GDScriptTokenizer::Token::TK_EOF) {
+		ERR_FAIL_COND_V_MSG(get_current_token().token.type == GDScriptTokenizer::Token::TK_EOF, get_current_token().token, "GDScript parser bug: Trying to advance past the end of stream.");
 	}
 	if (for_completion && !completion_call_stack.is_empty()) {
 		if (completion_call.call == nullptr && tokenizer.is_past_cursor()) {
@@ -364,16 +366,16 @@ GDScriptTokenizer::Token GDScriptParser::advance() {
 			passed_cursor = true;
 		}
 	}
-	previous = current;
-	current = tokenizer.scan();
-	while (current.type == GDScriptTokenizer::Token::ERROR) {
-		push_error(current.literal);
-		current = tokenizer.scan();
+	set_current_token(tokenizer.scan());
+	while (get_current_token().token.type == GDScriptTokenizer::Token::ERROR) {
+		push_error(get_current_token().token.literal);
+		remove_current_token();
+		set_current_token(tokenizer.scan());
 	}
 	for (Node *n : nodes_in_progress) {
 		update_extents(n);
 	}
-	return previous;
+	return get_previous_token().token;
 }
 
 bool GDScriptParser::match(GDScriptTokenizer::Token::Type p_token_type) {
@@ -386,9 +388,9 @@ bool GDScriptParser::match(GDScriptTokenizer::Token::Type p_token_type) {
 
 bool GDScriptParser::check(GDScriptTokenizer::Token::Type p_token_type) const {
 	if (p_token_type == GDScriptTokenizer::Token::IDENTIFIER) {
-		return current.is_identifier();
+		return get_current_token().token.is_identifier();
 	}
-	return current.type == p_token_type;
+	return get_current_token().token.type == p_token_type;
 }
 
 bool GDScriptParser::consume(GDScriptTokenizer::Token::Type p_token_type, const String &p_error_message) {
@@ -406,11 +408,11 @@ bool GDScriptParser::is_at_end() const {
 void GDScriptParser::synchronize() {
 	panic_mode = false;
 	while (!is_at_end()) {
-		if (previous.type == GDScriptTokenizer::Token::NEWLINE || previous.type == GDScriptTokenizer::Token::SEMICOLON) {
+		if (get_previous_token().token.type == GDScriptTokenizer::Token::NEWLINE || get_previous_token().token.type == GDScriptTokenizer::Token::SEMICOLON) {
 			return;
 		}
 
-		switch (current.type) {
+		switch (get_current_token().token.type) {
 			case GDScriptTokenizer::Token::CLASS:
 			case GDScriptTokenizer::Token::FUNC:
 			case GDScriptTokenizer::Token::STATIC:
@@ -479,30 +481,12 @@ void GDScriptParser::end_statement(const String &p_context) {
 		found = true;
 	}
 	if (!found && !is_at_end()) {
-		push_error(vformat(R"(Expected end of statement after %s, found "%s" instead.)", p_context, current.get_name()));
+		push_error(vformat(R"(Expected end of statement after %s, found "%s" instead.)", p_context, get_current_token().token.get_name()));
 	}
 }
 
 void GDScriptParser::skip_pseudo_whitespace_tokens() {
 	while (true) {
-		bool multiline_context = multiline_stack.size() > 0 && multiline_stack.back()->get();
-		if (multiline_context) {
-			switch (current.type) {
-				case GDScriptTokenizer::Token::INDENT:
-				case GDScriptTokenizer::Token::DEDENT:
-				case GDScriptTokenizer::Token::NEWLINE:
-				case GDScriptTokenizer::Token::COMMENT: {
-					// Don't call advance() here, as we don't want to change the previous token.
-					current = tokenizer.scan();
-					continue;
-				} break;
-				default: {
-					// Do nothing.
-				}
-			}
-			return;
-		}
-
 		if (check(GDScriptTokenizer::Token::COMMENT)) {
 			advance();
 			if (!is_at_end()) {
@@ -518,6 +502,75 @@ void GDScriptParser::skip_pseudo_whitespace_tokens() {
 
 		return;
 	}
+}
+
+GDScriptParser::Token GDScriptParser::get_current_token() const {
+	if (tokens.size() < 1) {
+		Token token;
+		token.multiline_mode = false;
+		token.token = GDScriptTokenizer::Token::EMPTY;
+		return token;
+	}
+	return tokens.back()->get();
+}
+
+GDScriptParser::Token GDScriptParser::get_previous_token() const {
+	if (tokens.size() < 2) {
+		Token token;
+		token.multiline_mode = false;
+		token.token = GDScriptTokenizer::Token::EMPTY;
+		return token;
+	}
+
+	return tokens.back()->prev()->get();
+}
+
+GDScriptParser::Token GDScriptParser::get_previous_non_whitespace_token() const {
+	if (tokens.size() < 2) {
+		Token token;
+		token.multiline_mode = false;
+		token.token = GDScriptTokenizer::Token::EMPTY;
+		return token;
+	}
+
+	const List<GDScriptParser::Token>::Element *el = tokens.back();
+	while (el != nullptr) {
+		Token token = el->get();
+		switch (token.token.type) {
+			case GDScriptTokenizer::Token::Type::NEWLINE:
+			case GDScriptTokenizer::Token::Type::COMMENT: {
+				// Do nothing
+			} break;
+			case GDScriptTokenizer::Token::Type::INDENT:
+			case GDScriptTokenizer::Token::Type::DEDENT: {
+				if (token.multiline_mode) {
+					// Do nothing
+					break;
+				}
+				[[fallthrough]];
+			}
+			default: {
+				return token;
+			}
+		}
+
+		el = el->prev();
+	}
+
+	// No token found
+	Token token;
+	token.multiline_mode = false;
+	token.token = GDScriptTokenizer::Token::EMPTY;
+	return token;
+}
+
+void GDScriptParser::set_current_token(GDScriptTokenizer::Token p_token) {
+	bool multiline_mode = multiline_stack.size() > 0 && multiline_stack.back()->get();
+	tokens.push_back({ .multiline_mode = multiline_mode, .token = tokenizer.scan() });
+}
+
+void GDScriptParser::remove_current_token() {
+	tokens.pop_back();
 }
 
 void GDScriptParser::parse_program() {
@@ -548,7 +601,7 @@ void GDScriptParser::parse_program() {
 					break;
 				}
 			}
-		} else if (check(GDScriptTokenizer::Token::LITERAL) && current.literal.get_type() == Variant::STRING) {
+		} else if (check(GDScriptTokenizer::Token::LITERAL) && get_current_token().token.literal.get_type() == Variant::STRING) {
 			// Allow strings in class body as multiline comments.
 			advance();
 			if (!match(GDScriptTokenizer::Token::NEWLINE)) {
@@ -560,14 +613,9 @@ void GDScriptParser::parse_program() {
 	}
 
 	while (can_have_class_or_extends) {
+		skip_pseudo_whitespace_tokens();
 		// Order here doesn't matter, but there should be only one of each at most.
-		switch (current.type) {
-			case GDScriptTokenizer::Token::COMMENT:
-				advance();
-				if (!match(GDScriptTokenizer::Token::NEWLINE)) {
-					push_error("Expected newline after comment.");
-				}
-				break;
+		switch (get_current_token().token.type) {
 			case GDScriptTokenizer::Token::CLASS_NAME:
 				advance();
 				if (head->identifier != nullptr) {
@@ -586,7 +634,7 @@ void GDScriptParser::parse_program() {
 				}
 				break;
 			case GDScriptTokenizer::Token::LITERAL:
-				if (current.literal.get_type() == Variant::STRING) {
+				if (get_current_token().token.literal.get_type() == Variant::STRING) {
 					// Allow strings in class body as multiline comments.
 					advance();
 					if (!match(GDScriptTokenizer::Token::NEWLINE)) {
@@ -703,7 +751,6 @@ GDScriptParser::ClassNode *GDScriptParser::parse_class(bool p_is_static) {
 	bool multiline = match(GDScriptTokenizer::Token::NEWLINE);
 
 	if (multiline) {
-		skip_pseudo_whitespace_tokens();
 		if (!consume(GDScriptTokenizer::Token::INDENT, R"(Expected indented block after class declaration.)")) {
 			current_class = previous_class;
 			complete_extents(n_class);
@@ -751,10 +798,10 @@ void GDScriptParser::parse_extends() {
 	int chain_index = 0;
 
 	if (match(GDScriptTokenizer::Token::LITERAL)) {
-		if (previous.literal.get_type() != Variant::STRING) {
-			push_error(vformat(R"(Only strings or identifiers can be used after "extends", found "%s" instead.)", Variant::get_type_name(previous.literal.get_type())));
+		if (get_previous_token().token.literal.get_type() != Variant::STRING) {
+			push_error(vformat(R"(Only strings or identifiers can be used after "extends", found "%s" instead.)", Variant::get_type_name(get_previous_token().token.literal.get_type())));
 		}
-		current_class->extends_path = previous.literal;
+		current_class->extends_path = get_previous_token().token.literal;
 
 		if (!match(GDScriptTokenizer::Token::PERIOD)) {
 			return;
@@ -782,7 +829,7 @@ void GDScriptParser::parse_class_member(T *(GDScriptParser::*p_parse_function)(b
 	advance();
 
 #ifdef TOOLS_ENABLED
-	int doc_comment_line = previous.start_line - 1;
+	int doc_comment_line = get_previous_token().token.start_line - 1;
 #endif // TOOLS_ENABLED
 
 	// Consume annotations.
@@ -817,11 +864,11 @@ void GDScriptParser::parse_class_member(T *(GDScriptParser::*p_parse_function)(b
 	class_doc_line = MIN(class_doc_line, doc_comment_line - 1);
 
 	// Check whether current line has a doc comment
-	if (has_comment(previous.start_line, true)) {
+	if (has_comment(get_previous_token().token.start_line, true)) {
 		if constexpr (std::is_same_v<T, ClassNode>) {
-			member->doc_data = parse_class_doc_comment(previous.start_line, true, true);
+			member->doc_data = parse_class_doc_comment(get_previous_token().token.start_line, true, true);
 		} else {
-			member->doc_data = parse_doc_comment(previous.start_line, true);
+			member->doc_data = parse_doc_comment(get_previous_token().token.start_line, true);
 		}
 	} else if (has_comment(doc_comment_line, true)) {
 		if constexpr (std::is_same_v<T, ClassNode>) {
@@ -849,7 +896,7 @@ void GDScriptParser::parse_class_body(bool p_is_multiline) {
 	bool class_end = false;
 	bool next_is_static = false;
 	while (!class_end && !is_at_end()) {
-		GDScriptTokenizer::Token token = current;
+		GDScriptTokenizer::Token token = get_current_token().token;
 		switch (token.type) {
 			case GDScriptTokenizer::Token::VAR:
 				parse_class_member(&GDScriptParser::parse_variable, AnnotationInfo::VARIABLE, "variable", next_is_static);
@@ -886,7 +933,7 @@ void GDScriptParser::parse_class_body(bool p_is_multiline) {
 				AnnotationNode *annotation = parse_annotation(AnnotationInfo::STANDALONE | AnnotationInfo::CLASS_LEVEL);
 				if (annotation != nullptr) {
 					if (annotation->applies_to(AnnotationInfo::STANDALONE)) {
-						if (previous.type != GDScriptTokenizer::Token::NEWLINE) {
+						if (get_previous_token().token.type != GDScriptTokenizer::Token::NEWLINE) {
 							push_error(R"(Expected newline after a standalone annotation.)");
 						}
 						if (annotation->name == SNAME("@export_category") || annotation->name == SNAME("@export_group") || annotation->name == SNAME("@export_subgroup")) {
@@ -920,7 +967,7 @@ void GDScriptParser::parse_class_body(bool p_is_multiline) {
 				advance();
 				break;
 			case GDScriptTokenizer::Token::LITERAL:
-				if (current.literal.get_type() == Variant::STRING) {
+				if (get_current_token().token.literal.get_type() == Variant::STRING) {
 					// Allow strings in class body as multiline comments.
 					advance();
 					if (!match(GDScriptTokenizer::Token::NEWLINE)) {
@@ -932,7 +979,7 @@ void GDScriptParser::parse_class_body(bool p_is_multiline) {
 			default:
 				// Display a completion with identifiers.
 				make_completion_context(COMPLETION_IDENTIFIER, nullptr);
-				push_error(vformat(R"(Unexpected "%s" in class body.)", current.get_name()));
+				push_error(vformat(R"(Unexpected "%s" in class body.)", get_current_token().token.get_name()));
 				advance();
 				break;
 		}
@@ -982,7 +1029,7 @@ GDScriptParser::VariableNode *GDScriptParser::parse_variable(bool p_is_static, b
 				make_completion_context(COMPLETION_PROPERTY_DECLARATION_OR_TYPE, variable);
 				if (check(GDScriptTokenizer::Token::IDENTIFIER)) {
 					// Check if get or set.
-					if (current.get_identifier() == "get" || current.get_identifier() == "set") {
+					if (get_current_token().token.get_identifier() == "get" || get_current_token().token.get_identifier() == "set") {
 						return parse_property(variable, false);
 					}
 				}
@@ -1113,7 +1160,7 @@ void GDScriptParser::parse_property_setter(VariableNode *p_variable) {
 
 			ParameterNode *parameter = alloc_node<ParameterNode>();
 			if (consume(GDScriptTokenizer::Token::IDENTIFIER, R"(Expected parameter name after "(".)")) {
-				reset_extents(parameter, previous);
+				reset_extents(parameter, get_previous_token().token);
 				p_variable->setter_parameter = parse_identifier();
 				parameter->identifier = p_variable->setter_parameter;
 				function->parameters_indices[parameter->identifier->name] = 0;
@@ -1185,13 +1232,13 @@ void GDScriptParser::parse_property_getter(VariableNode *p_variable) {
 }
 
 GDScriptParser::ExpressionNode *GDScriptParser::parse_comment(GDScriptParser::ExpressionNode *p_previous_operand, bool p_can_assign) {
-	if (previous.type != GDScriptTokenizer::Token::COMMENT) {
+	if (get_previous_token().token.type != GDScriptTokenizer::Token::COMMENT) {
 		push_error("Parser bug: parsing comment node without comment token.");
 		ERR_FAIL_V_MSG(nullptr, "Parser bug: parsing comment node without comment token.");
 	}
 
 	CommentNode *comment = alloc_node<CommentNode>();
-	comment->text = previous.literal;
+	comment->text = get_previous_token().token.literal;
 	complete_extents(comment);
 	return comment;
 }
@@ -1369,9 +1416,9 @@ GDScriptParser::EnumNode *GDScriptParser::parse_enum(bool p_is_static) {
 #endif
 			item.identifier = identifier;
 			item.parent_enum = enum_node;
-			item.line = previous.start_line;
-			item.leftmost_column = previous.leftmost_column;
-			item.rightmost_column = previous.rightmost_column;
+			item.line = get_previous_token().token.start_line;
+			item.leftmost_column = get_previous_token().token.leftmost_column;
+			item.rightmost_column = get_previous_token().token.rightmost_column;
 
 			if (elements.has(item.identifier->name)) {
 				push_error(vformat(R"(Name "%s" was already in this enum (at line %d).)", item.identifier->name, elements[item.identifier->name]), item.identifier);
@@ -1422,7 +1469,7 @@ GDScriptParser::EnumNode *GDScriptParser::parse_enum(bool p_is_static) {
 
 		if (i == enum_node->values.size() - 1) {
 			// If close bracket is same line as last value.
-			if (doc_comment_line == previous.start_line) {
+			if (doc_comment_line == get_previous_token().token.start_line) {
 				break;
 			}
 		} else {
@@ -1554,7 +1601,7 @@ GDScriptParser::FunctionNode *GDScriptParser::parse_function(bool p_is_static) {
 GDScriptParser::AnnotationNode *GDScriptParser::parse_annotation(uint32_t p_valid_targets) {
 	AnnotationNode *annotation = alloc_node<AnnotationNode>();
 
-	annotation->name = previous.literal;
+	annotation->name = get_previous_token().token.literal;
 
 	make_completion_context(COMPLETION_ANNOTATION, annotation);
 
@@ -1675,12 +1722,12 @@ GDScriptParser::SuiteNode *GDScriptParser::parse_suite(const String &p_context, 
 			return suite;
 		}
 	}
-	reset_extents(suite, current);
+	reset_extents(suite, get_current_token().token);
 
 	int error_count = 0;
 
 	do {
-		if (is_at_end() || (!multiline && previous.type == GDScriptTokenizer::Token::SEMICOLON && check(GDScriptTokenizer::Token::NEWLINE))) {
+		if (is_at_end() || (!multiline && get_previous_token().token.type == GDScriptTokenizer::Token::SEMICOLON && check(GDScriptTokenizer::Token::NEWLINE))) {
 			break;
 		}
 		Node *statement = parse_statement();
@@ -1723,7 +1770,7 @@ GDScriptParser::SuiteNode *GDScriptParser::parse_suite(const String &p_context, 
 				break;
 		}
 
-	} while ((multiline || previous.type == GDScriptTokenizer::Token::SEMICOLON) && !check(GDScriptTokenizer::Token::DEDENT) && !lambda_ended && !is_at_end());
+	} while ((multiline || get_previous_token().token.type == GDScriptTokenizer::Token::SEMICOLON) && !check(GDScriptTokenizer::Token::DEDENT) && !lambda_ended && !is_at_end());
 
 	complete_extents(suite);
 
@@ -1734,7 +1781,7 @@ GDScriptParser::SuiteNode *GDScriptParser::parse_suite(const String &p_context, 
 		} else {
 			match(GDScriptTokenizer::Token::DEDENT);
 		}
-	} else if (previous.type == GDScriptTokenizer::Token::SEMICOLON) {
+	} else if (get_previous_token().token.type == GDScriptTokenizer::Token::SEMICOLON) {
 		consume(GDScriptTokenizer::Token::NEWLINE, vformat(R"(Expected newline after ";" at the end of %s.)", p_context));
 	}
 
@@ -1753,7 +1800,7 @@ GDScriptParser::Node *GDScriptParser::parse_statement() {
 
 	bool is_annotation = false;
 
-	switch (current.type) {
+	switch (get_current_token().token.type) {
 		case GDScriptTokenizer::Token::PASS:
 			advance();
 			result = alloc_node<PassNode>();
@@ -1846,7 +1893,7 @@ GDScriptParser::Node *GDScriptParser::parse_statement() {
 					has_ended_lambda = true;
 				} else {
 					advance();
-					push_error(vformat(R"(Expected statement, found "%s" instead.)", previous.get_name()));
+					push_error(vformat(R"(Expected statement, found "%s" instead.)", get_previous_token().token.get_name()));
 				}
 			} else {
 				end_statement("expression");
@@ -2130,7 +2177,7 @@ GDScriptParser::MatchNode *GDScriptParser::parse_match() {
 
 GDScriptParser::MatchBranchNode *GDScriptParser::parse_match_branch() {
 	MatchBranchNode *branch = alloc_node<MatchBranchNode>();
-	reset_extents(branch, current);
+	reset_extents(branch, get_current_token().token);
 
 	bool has_bind = false;
 
@@ -2179,9 +2226,9 @@ GDScriptParser::MatchBranchNode *GDScriptParser::parse_match_branch() {
 
 GDScriptParser::PatternNode *GDScriptParser::parse_match_pattern(PatternNode *p_root_pattern) {
 	PatternNode *pattern = alloc_node<PatternNode>();
-	reset_extents(pattern, current);
+	reset_extents(pattern, get_current_token().token);
 
-	switch (current.type) {
+	switch (get_current_token().token.type) {
 		case GDScriptTokenizer::Token::VAR: {
 			// Bind.
 			advance();
@@ -2353,7 +2400,7 @@ GDScriptParser::WhileNode *GDScriptParser::parse_while() {
 GDScriptParser::ExpressionNode *GDScriptParser::parse_precedence(Precedence p_precedence, bool p_can_assign, bool p_stop_on_assign) {
 	// Switch multiline mode on for grouping tokens.
 	// Do this early to avoid the tokenizer generating whitespace tokens.
-	switch (current.type) {
+	switch (get_current_token().token.type) {
 		case GDScriptTokenizer::Token::PARENTHESIS_OPEN:
 		case GDScriptTokenizer::Token::BRACE_OPEN:
 		case GDScriptTokenizer::Token::BRACKET_OPEN:
@@ -2366,7 +2413,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_precedence(Precedence p_pr
 	// Completion can appear whenever an expression is expected.
 	make_completion_context(COMPLETION_IDENTIFIER, nullptr);
 
-	GDScriptTokenizer::Token token = current;
+	GDScriptTokenizer::Token token = get_current_token().token;
 	GDScriptTokenizer::Token::Type token_type = token.type;
 	if (token.is_identifier()) {
 		// Allow keywords that can be treated as identifiers.
@@ -2384,12 +2431,12 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_precedence(Precedence p_pr
 
 	ExpressionNode *previous_operand = (this->*prefix_rule)(nullptr, p_can_assign);
 
-	while (p_precedence <= get_rule(current.type)->precedence) {
-		if (previous_operand == nullptr || (p_stop_on_assign && current.type == GDScriptTokenizer::Token::EQUAL) || lambda_ended) {
+	while (p_precedence <= get_rule(get_current_token().token.type)->precedence) {
+		if (previous_operand == nullptr || (p_stop_on_assign && get_current_token().token.type == GDScriptTokenizer::Token::EQUAL) || lambda_ended) {
 			return previous_operand;
 		}
 		// Also switch multiline mode on here for infix operators.
-		switch (current.type) {
+		switch (get_current_token().token.type) {
 			// case GDScriptTokenizer::Token::BRACE_OPEN: // Not an infix operator.
 			case GDScriptTokenizer::Token::PARENTHESIS_OPEN:
 			case GDScriptTokenizer::Token::BRACKET_OPEN:
@@ -2423,12 +2470,12 @@ GDScriptParser::IdentifierNode *GDScriptParser::parse_identifier() {
 }
 
 GDScriptParser::ExpressionNode *GDScriptParser::parse_identifier(ExpressionNode *p_previous_operand, bool p_can_assign) {
-	if (!previous.is_identifier()) {
+	if (!get_previous_token().token.is_identifier()) {
 		ERR_FAIL_V_MSG(nullptr, "Parser bug: parsing identifier node without identifier token.");
 	}
 	IdentifierNode *identifier = alloc_node<IdentifierNode>();
 	complete_extents(identifier);
-	identifier->name = previous.get_identifier();
+	identifier->name = get_previous_token().token.get_identifier();
 	identifier->suite = current_suite;
 
 	if (current_suite != nullptr && current_suite->has_local(identifier->name)) {
@@ -2474,14 +2521,16 @@ GDScriptParser::LiteralNode *GDScriptParser::parse_literal() {
 }
 
 GDScriptParser::ExpressionNode *GDScriptParser::parse_literal(ExpressionNode *p_previous_operand, bool p_can_assign) {
-	if (previous.type != GDScriptTokenizer::Token::LITERAL) {
+	skip_pseudo_whitespace_tokens();
+
+	if (get_previous_token().token.type != GDScriptTokenizer::Token::LITERAL) {
 		push_error("Parser bug: parsing literal node without literal token.");
 		ERR_FAIL_V_MSG(nullptr, "Parser bug: parsing literal node without literal token.");
 	}
 
 	LiteralNode *literal = alloc_node<LiteralNode>();
 	complete_extents(literal);
-	literal->value = previous.literal;
+	literal->value = get_previous_token().token.literal;
 	return literal;
 }
 
@@ -2496,7 +2545,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_self(ExpressionNode *p_pre
 }
 
 GDScriptParser::ExpressionNode *GDScriptParser::parse_builtin_constant(ExpressionNode *p_previous_operand, bool p_can_assign) {
-	GDScriptTokenizer::Token::Type op_type = previous.type;
+	GDScriptTokenizer::Token::Type op_type = get_previous_token().token.type;
 	LiteralNode *constant = alloc_node<LiteralNode>();
 	complete_extents(constant);
 
@@ -2521,7 +2570,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_builtin_constant(Expressio
 }
 
 GDScriptParser::ExpressionNode *GDScriptParser::parse_unary_operator(ExpressionNode *p_previous_operand, bool p_can_assign) {
-	GDScriptTokenizer::Token::Type op_type = previous.type;
+	GDScriptTokenizer::Token::Type op_type = get_previous_token().token.type;
 	UnaryOpNode *operation = alloc_node<UnaryOpNode>();
 
 	switch (op_type) {
@@ -2582,7 +2631,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_binary_not_in_operator(Exp
 }
 
 GDScriptParser::ExpressionNode *GDScriptParser::parse_binary_operator(ExpressionNode *p_previous_operand, bool p_can_assign) {
-	GDScriptTokenizer::Token op = previous;
+	GDScriptTokenizer::Token op = get_previous_token().token;
 	BinaryOpNode *operation = alloc_node<BinaryOpNode>();
 	reset_extents(operation, p_previous_operand);
 	update_extents(operation);
@@ -2768,7 +2817,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_assignment(ExpressionNode 
 #ifdef DEBUG_ENABLED
 	bool has_operator = true;
 #endif
-	switch (previous.type) {
+	switch (get_previous_token().token.type) {
 		case GDScriptTokenizer::Token::EQUAL:
 			assignment->operation = AssignmentNode::OP_NONE;
 			assignment->variant_op = Variant::OP_MAX;
@@ -2922,7 +2971,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_dictionary(ExpressionNode 
 			}
 
 			if (!decided_style) {
-				switch (current.type) {
+				switch (get_current_token().token.type) {
 					case GDScriptTokenizer::Token::COLON:
 						dictionary->style = DictionaryNode::PYTHON_DICT;
 						break;
@@ -3034,7 +3083,8 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_attribute(ExpressionNode *
 
 	attribute->base = p_previous_operand;
 
-	if (current.is_node_name()) {
+	if (get_current_token().token.is_node_name()) {
+		GDScriptTokenizer::Token current = get_current_token().token;
 		current.type = GDScriptTokenizer::Token::IDENTIFIER;
 	}
 	if (!consume(GDScriptTokenizer::Token::IDENTIFIER, R"(Expected identifier after "." for attribute access.)")) {
@@ -3091,7 +3141,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_call(ExpressionNode *p_pre
 	CallNode *call = alloc_node<CallNode>();
 	reset_extents(call, p_previous_operand);
 
-	if (previous.type == GDScriptTokenizer::Token::SUPER) {
+	if (get_previous_token().token.type == GDScriptTokenizer::Token::SUPER) {
 		// Super call.
 		call->is_super = true;
 		push_multiline(true);
@@ -3164,7 +3214,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_call(ExpressionNode *p_pre
 			matched_comma = true;
 			continue;
 		}
-		bool use_identifier_completion = current.cursor_place == GDScriptTokenizer::CURSOR_END || current.cursor_place == GDScriptTokenizer::CURSOR_MIDDLE;
+		bool use_identifier_completion = get_current_token().token.cursor_place == GDScriptTokenizer::CURSOR_END || get_current_token().token.cursor_place == GDScriptTokenizer::CURSOR_MIDDLE;
 		ExpressionNode *argument = parse_expression(false);
 		if (argument == nullptr) {
 			push_error(R"(Expected expression as the function argument.)");
@@ -3190,20 +3240,20 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_call(ExpressionNode *p_pre
 }
 
 GDScriptParser::ExpressionNode *GDScriptParser::parse_get_node(ExpressionNode *p_previous_operand, bool p_can_assign) {
-	if (!current.is_node_name() && !check(GDScriptTokenizer::Token::LITERAL) && !check(GDScriptTokenizer::Token::SLASH) && !check(GDScriptTokenizer::Token::PERCENT)) {
-		push_error(vformat(R"(Expected node path as string or identifier after "%s".)", previous.get_name()));
+	if (!get_current_token().token.is_node_name() && !check(GDScriptTokenizer::Token::LITERAL) && !check(GDScriptTokenizer::Token::SLASH) && !check(GDScriptTokenizer::Token::PERCENT)) {
+		push_error(vformat(R"(Expected node path as string or identifier after "%s".)", get_previous_token().token.get_name()));
 		return nullptr;
 	}
 
 	if (check(GDScriptTokenizer::Token::LITERAL)) {
-		if (current.literal.get_type() != Variant::STRING) {
-			push_error(vformat(R"(Expected node path as string or identifier after "%s".)", previous.get_name()));
+		if (get_current_token().token.literal.get_type() != Variant::STRING) {
+			push_error(vformat(R"(Expected node path as string or identifier after "%s".)", get_previous_token().token.get_name()));
 			return nullptr;
 		}
 	}
 
 	if (check(GDScriptTokenizer::Token::COMMENT)) {
-		push_error(vformat(R"(Expected node path as string or identifier after "%s".)", previous.get_name()));
+		push_error(vformat(R"(Expected node path as string or identifier after "%s".)", get_previous_token().token.get_name()));
 		return nullptr;
 	}
 
@@ -3218,7 +3268,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_get_node(ExpressionNode *p
 		PATH_STATE_NODE_NAME,
 	} path_state = PATH_STATE_START;
 
-	if (previous.type == GDScriptTokenizer::Token::DOLLAR) {
+	if (get_previous_token().token.type == GDScriptTokenizer::Token::DOLLAR) {
 		// Detect initial slash, which will be handled in the loop if it matches.
 		match(GDScriptTokenizer::Token::SLASH);
 	} else {
@@ -3228,7 +3278,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_get_node(ExpressionNode *p
 	int context_argument = 0;
 
 	do {
-		if (previous.type == GDScriptTokenizer::Token::PERCENT) {
+		if (get_previous_token().token.type == GDScriptTokenizer::Token::PERCENT) {
 			if (path_state != PATH_STATE_START && path_state != PATH_STATE_SLASH) {
 				push_error(R"("%" is only valid in the beginning of a node name (either after "$" or after "/"))");
 				complete_extents(get_node);
@@ -3237,7 +3287,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_get_node(ExpressionNode *p
 			get_node->full_path += "%";
 
 			path_state = PATH_STATE_PERCENT;
-		} else if (previous.type == GDScriptTokenizer::Token::SLASH) {
+		} else if (get_previous_token().token.type == GDScriptTokenizer::Token::SLASH) {
 			if (path_state != PATH_STATE_START && path_state != PATH_STATE_NODE_NAME) {
 				push_error(R"("/" is only valid at the beginning of the path or after a node name.)");
 				complete_extents(get_node);
@@ -3252,7 +3302,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_get_node(ExpressionNode *p
 		make_completion_context(COMPLETION_GET_NODE, get_node, context_argument++);
 
 		if (match(GDScriptTokenizer::Token::LITERAL)) {
-			if (previous.literal.get_type() != Variant::STRING) {
+			if (get_previous_token().token.literal.get_type() != Variant::STRING) {
 				String previous_token;
 				switch (path_state) {
 					case PATH_STATE_START:
@@ -3272,12 +3322,12 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_get_node(ExpressionNode *p
 				return nullptr;
 			}
 
-			get_node->full_path += previous.literal.operator String();
+			get_node->full_path += get_previous_token().token.literal.operator String();
 
 			path_state = PATH_STATE_NODE_NAME;
-		} else if (current.is_node_name()) {
+		} else if (get_current_token().token.is_node_name()) {
 			advance();
-			String identifier = previous.get_identifier();
+			String identifier = get_previous_token().token.get_identifier();
 #ifdef DEBUG_ENABLED
 			// Check spoofing.
 			if (TS->has_feature(TextServer::FEATURE_UNICODE_SECURITY) && TS->spoof_check(identifier)) {
@@ -3288,7 +3338,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_get_node(ExpressionNode *p
 
 			path_state = PATH_STATE_NODE_NAME;
 		} else if (!check(GDScriptTokenizer::Token::SLASH) && !check(GDScriptTokenizer::Token::PERCENT)) {
-			push_error(vformat(R"(Unexpected "%s" in node path.)", current.get_name()));
+			push_error(vformat(R"(Unexpected "%s" in node path.)", get_current_token().token.get_name()));
 			complete_extents(get_node);
 			return nullptr;
 		}
@@ -3384,15 +3434,9 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_lambda(ExpressionNode *p_p
 	complete_extents(function);
 	complete_extents(lambda);
 
-	pop_multiline();
+	skip_pseudo_whitespace_tokens();
 
-	if (multiline_context) {
-		// If we're in multiline mode, we want to skip the spurious DEDENT and NEWLINE tokens.
-		while (check(GDScriptTokenizer::Token::DEDENT) || check(GDScriptTokenizer::Token::INDENT) || check(GDScriptTokenizer::Token::NEWLINE)) {
-			current = tokenizer.scan(); // Not advance() since we don't want to change the previous token.
-		}
-		tokenizer.pop_expression_indented_block();
-	}
+	pop_multiline();
 
 	current_function = previous_function;
 	current_lambda = previous_lambda;
@@ -3429,7 +3473,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_yield(ExpressionNode *p_pr
 
 GDScriptParser::ExpressionNode *GDScriptParser::parse_invalid_token(ExpressionNode *p_previous_operand, bool p_can_assign) {
 	// Just for better error messages.
-	GDScriptTokenizer::Token::Type invalid = previous.type;
+	GDScriptTokenizer::Token::Type invalid = get_previous_token().token.type;
 
 	switch (invalid) {
 		case GDScriptTokenizer::Token::QUESTION_MARK:
@@ -4581,10 +4625,10 @@ void GDScriptParser::complete_extents(Node *p_node) {
 }
 
 void GDScriptParser::update_extents(Node *p_node) {
-	p_node->end_line = previous.end_line;
-	p_node->end_column = previous.end_column;
-	p_node->leftmost_column = MIN(p_node->leftmost_column, previous.leftmost_column);
-	p_node->rightmost_column = MAX(p_node->rightmost_column, previous.rightmost_column);
+	p_node->end_line = get_previous_token().token.end_line;
+	p_node->end_column = get_previous_token().token.end_column;
+	p_node->leftmost_column = MIN(p_node->leftmost_column, get_previous_token().token.leftmost_column);
+	p_node->rightmost_column = MAX(p_node->rightmost_column, get_previous_token().token.rightmost_column);
 }
 
 void GDScriptParser::reset_extents(Node *p_node, GDScriptTokenizer::Token p_token) {

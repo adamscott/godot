@@ -1303,6 +1303,11 @@ public:
 		int argument = -1;
 	};
 
+	struct Token {
+		bool multiline_mode;
+		GDScriptTokenizer::Token token;
+	};
+
 private:
 	friend class GDScriptAnalyzer;
 
@@ -1326,8 +1331,7 @@ private:
 #endif
 
 	GDScriptTokenizer tokenizer;
-	GDScriptTokenizer::Token previous;
-	GDScriptTokenizer::Token current;
+	List<Token> tokens;
 
 	ClassNode *current_class = nullptr;
 	FunctionNode *current_function = nullptr;
@@ -1410,7 +1414,7 @@ private:
 		node->next = list;
 		list = node;
 
-		reset_extents(node, previous);
+		reset_extents(node, get_previous_token().token);
 		nodes_in_progress.push_back(node);
 
 		return node;
@@ -1445,6 +1449,12 @@ private:
 	void pop_multiline();
 
 	void skip_pseudo_whitespace_tokens();
+
+	Token get_current_token() const;
+	Token get_previous_token() const;
+	Token get_previous_non_whitespace_token() const;
+	void set_current_token(GDScriptTokenizer::Token p_token);
+	void remove_current_token();
 
 	// Main blocks.
 	void parse_program();
@@ -1551,7 +1561,7 @@ public:
 #ifdef DEBUG_ENABLED
 	const List<GDScriptWarning> &get_warnings() const { return warnings; }
 	const HashSet<int> &get_unsafe_lines() const { return unsafe_lines; }
-	int get_last_line_number() const { return current.end_line; }
+	int get_last_line_number() const { return get_current_token().token.end_line; }
 #endif
 
 	GDScriptParser();
