@@ -1069,7 +1069,6 @@ GDScriptParser::VariableNode *GDScriptParser::parse_variable(bool p_is_static, b
 
 GDScriptParser::VariableNode *GDScriptParser::parse_property(VariableNode *p_variable, bool p_need_indent) {
 	if (p_need_indent) {
-		skip_pseudo_whitespace_tokens();
 		if (!consume(GDScriptTokenizer::Token::INDENT, R"(Expected indented block for property after ":".)")) {
 			complete_extents(p_variable);
 			return nullptr;
@@ -2431,7 +2430,6 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_precedence(Precedence p_pr
 	}
 
 	advance(); // Only consume the token if there's a valid rule.
-	skip_pseudo_whitespace_tokens();
 
 	ExpressionNode *previous_operand = (this->*prefix_rule)(nullptr, p_can_assign);
 
@@ -2450,7 +2448,6 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_precedence(Precedence p_pr
 				break; // Nothing to do.
 		}
 		token = advance();
-		skip_pseudo_whitespace_tokens();
 		ParseFunction infix_rule = get_rule(token.type)->infix;
 		previous_operand = (this->*infix_rule)(previous_operand, p_can_assign);
 	}
@@ -2526,8 +2523,6 @@ GDScriptParser::LiteralNode *GDScriptParser::parse_literal() {
 }
 
 GDScriptParser::ExpressionNode *GDScriptParser::parse_literal(ExpressionNode *p_previous_operand, bool p_can_assign) {
-	skip_pseudo_whitespace_tokens();
-
 	GDScriptTokenizer::Token previous_non_whitespace_token = get_previous_non_whitespace_token().token;
 	if (previous_non_whitespace_token.type != GDScriptTokenizer::Token::LITERAL) {
 		push_error("Parser bug: parsing literal node without literal token.");
