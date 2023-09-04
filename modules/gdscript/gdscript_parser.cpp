@@ -2447,6 +2447,11 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_precedence(Precedence p_pr
 
 	advance(); // Only consume the token if there's a valid rule.
 
+	bool multiline_context = multiline_stack.size() > 0 && multiline_stack.back()->get();
+	if (multiline_context) {
+		skip_pseudo_whitespace_tokens();
+	}
+
 	ExpressionNode *previous_operand = (this->*prefix_rule)(nullptr, p_can_assign);
 
 	while (p_precedence <= get_rule(get_current_token().token.type)->precedence) {
@@ -2463,6 +2468,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_precedence(Precedence p_pr
 			default:
 				break; // Nothing to do.
 		}
+		skip_pseudo_whitespace_tokens();
 		token = advance();
 		ParseFunction infix_rule = get_rule(token.type)->infix;
 		previous_operand = (this->*infix_rule)(previous_operand, p_can_assign);
