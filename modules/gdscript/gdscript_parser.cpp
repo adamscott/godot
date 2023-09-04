@@ -3110,6 +3110,8 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_attribute(ExpressionNode *
 	if (get_current_token().token.is_node_name()) {
 		GDScriptTokenizer::Token current = get_current_token().token;
 		current.type = GDScriptTokenizer::Token::IDENTIFIER;
+		remove_current_token();
+		set_current_token(current);
 	}
 	if (!consume(GDScriptTokenizer::Token::IDENTIFIER, R"(Expected identifier after "." for attribute access.)")) {
 		complete_extents(attribute);
