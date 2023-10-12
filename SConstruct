@@ -58,9 +58,6 @@ import gles3_builders
 import scu_builders
 from platform_methods import architectures, architecture_aliases, generate_export_icons
 
-if ARGUMENTS.get("target", "editor") == "editor":
-    _helper_module("editor.editor_builders", "editor/editor_builders.py")
-    _helper_module("editor.template_builders", "editor/template_builders.py")
 
 # Scan possible build platforms
 
@@ -98,30 +95,51 @@ for x in sorted(glob.glob("platform/*")):
     if os.path.exists(x + "/api/api.cpp"):
         platform_apis.append(platform_name)
     if detect.can_build():
-        x = x.replace("platform/", "")  # rest of world
-        x = x.replace("platform\\", "")  # win32
-        platform_list += [x]
-        platform_opts[x] = detect.get_opts()
-        platform_flags[x] = detect.get_flags()
+        platform_list += [platform_name]
+        platform_opts[platform_name] = detect.get_opts()
+        platform_flags[platform_name] = detect.get_flags()
     sys.path.remove(tmppath)
     sys.modules.pop("detect")
 
-custom_tools = ["default"]
+# Environment initialization options.
+customs = ["custom.py"]
 
-platform_arg = ARGUMENTS.get("platform", ARGUMENTS.get("p", False))
+profile = ARGUMENTS.get("profile", "")
+if profile:
+    if os.path.isfile(profile):
+        customs.append(profile)
+    elif os.path.isfile(profile + ".py"):
+        customs.append(profile + ".py")
 
-if platform_arg == "android":
-    custom_tools = ["clang", "clang++", "as", "ar", "link"]
-elif platform_arg == "web":
-    # Use generic POSIX build toolchain for Emscripten.
-    custom_tools = ["cc", "c++", "ar", "link", "textfile", "zip"]
-elif os.name == "nt" and methods.get_cmdline_bool("use_mingw", False):
-    custom_tools = ["mingw"]
+# Defaults.
+defaults = {
+    "target": {"default": "editor", "converter": lambda v: v},
+    "custom_tools": {"default": ["default"], "converter": lambda v: v.split(",")},
+}
 
-# We let SCons build its default ENV as it includes OS-specific things which we don't
-# want to have to pull in manually.
-# Then we prepend PATH to make it take precedence, while preserving SCons' own entries.
-env_base = Environment(tools=custom_tools)
+if os.name == "nt":
+    defaults["use_mingw"] = {"default": False, "converter": BoolVariable("", "", False)[4]}
+
+# We'll parse these as strings first, so we can tell if they've been set explicitely.
+base_opts = Variables(customs, ARGUMENTS)
+base_opts.Add(("platform", "p"), "Target platform (%s)" % ("|".join(platform_list),), "")
+base_opts.Add(EnumVariable("target", "Compilation target", "", ("", "editor", "template_release", "template_debug")))
+base_opts.Add("custom_tools", "Scons Environment toolset override", "")
+
+if os.name == "nt":
+    base_opts.Add(BoolVariable("use_mingw", "Use the Mingw compiler, even if MSVC is installed.", False)),
+
+# We let SCons build a default environment so we can read environment-specific options
+# from user and platform locations.
+# We will then reinitialize the environment with the correct information.
+env_base = Environment(tools="")
+base_opts.Update(env_base)
+
+# Convert the string values set by the user into our expected types.
+for option in defaults:
+    if env_base[option]:
+        env_base[option] = defaults[option]["converter"](env_base[option])
+
 env_base.PrependENVPath("PATH", os.getenv("PATH"))
 env_base.PrependENVPath("PKG_CONFIG_PATH", os.getenv("PKG_CONFIG_PATH"))
 if "TERM" in os.environ:  # Used for colored output.
@@ -154,17 +172,117 @@ env_base["x86_libtheora_opt_vc"] = False
 # avoid issues when building with different versions of python out of the same directory
 env_base.SConsignFile(File("#.sconsign{0}.dblite".format(pickle.HIGHEST_PROTOCOL)).abspath)
 
+# Copy custom environment variables if set.
+if "import_env_vars" in env_base:
+    for env_var in str(env_base["import_env_vars"]).split(","):
+        if env_var in os.environ:
+            env_base["ENV"][env_var] = os.environ[env_var]
+
+# Platform selection.
+
+selected_platform = ""
+
+if env_base["platform"] != "":
+    selected_platform = env_base["platform"]
+elif env_base["p"] != "":
+    selected_platform = env_base["p"]
+else:
+    # Missing `platform` argument, try to detect platform automatically
+    if (
+        sys.platform.startswith("linux")
+        or sys.platform.startswith("dragonfly")
+        or sys.platform.startswith("freebsd")
+        or sys.platform.startswith("netbsd")
+        or sys.platform.startswith("openbsd")
+    ):
+        selected_platform = "linuxbsd"
+    elif sys.platform == "darwin":
+        selected_platform = "macos"
+    elif sys.platform == "win32":
+        selected_platform = "windows"
+    else:
+        print("Could not detect platform automatically. Supported platforms:")
+        for x in platform_list:
+            print("\t" + x)
+        print("\nPlease run SCons again and select a valid platform: platform=<string>")
+
+    if selected_platform != "":
+        print("Automatically detected platform: " + selected_platform)
+
+if selected_platform == "osx":
+    # Deprecated alias kept for compatibility.
+    print('Platform "osx" has been renamed to "macos" in Godot 4. Building for platform "macos".')
+    selected_platform = "macos"
+
+if selected_platform == "iphone":
+    # Deprecated alias kept for compatibility.
+    print('Platform "iphone" has been renamed to "ios" in Godot 4. Building for platform "ios".')
+    selected_platform = "ios"
+
+if selected_platform in ["linux", "bsd", "x11"]:
+    if selected_platform == "x11":
+        # Deprecated alias kept for compatibility.
+        print('Platform "x11" has been renamed to "linuxbsd" in Godot 4. Building for platform "linuxbsd".')
+    # Alias for convenience.
+    selected_platform = "linuxbsd"
+
+if selected_platform == "javascript":
+    # Deprecated alias kept for compatibility.
+    print('Platform "javascript" has been renamed to "web" in Godot 4. Building for platform "web".')
+    selected_platform = "web"
+
+# Make sure to update this to the found, valid platform as it's used through the buildsystem as the reference.
+# It should always be re-set after calling `opts.Update()` otherwise it uses the original input value.
+env_base["platform"] = selected_platform
+
+if selected_platform not in platform_list:
+    if selected_platform == "list":
+        print("The following platforms are available:\n")
+    else:
+        print('Invalid target platform "' + selected_platform + '".')
+        print("The following platforms were detected:\n")
+
+    for x in platform_list:
+        print("\t" + x)
+
+    print("\nPlease run SCons again and select a valid platform: platform=<string>")
+
+    if selected_platform == "list":
+        # Exit early to suppress the rest of the built-in SCons messages
+        Exit()
+    else:
+        Exit(255)
+
+
+# Platform specific flags.
+if selected_platform in platform_flags:
+    platform_dict = dict(platform_flags[selected_platform])
+    for option in base_opts.options:
+        # Use the platform flag value if it's not set in the environment already (i.e. the user hasn't overridden it).
+        if not env_base[option.key] and option.key in platform_dict:
+            env_base[option.key] = platform_dict[option.key]
+
+# Check for the use_mingw flag, but only replace custom_tools if they haven't been overridden yet.
+if os.name == "nt" and env_base["use_mingw"] and not env_base["custom_tools"]:
+    env_base["custom_tools"] = ["mingw"]
+
+# Set the default values if there's no overrides.
+for option in defaults:
+    if not env_base[option]:
+        env_base[option] = defaults[option]["default"]
+
+selected_target = env_base["target"]
+
+# Determine the Scons toolset.
+custom_tools = env_base["custom_tools"]
+
+if selected_target == "editor":
+    _helper_module("editor.editor_builders", "editor/editor_builders.py")
+    _helper_module("editor.template_builders", "editor/template_builders.py")
+
+# Prepare the real environment options list, now that we know what platform and toolset we're going to use.
+
 # Build options
-
-customs = ["custom.py"]
-
-profile = ARGUMENTS.get("profile", "")
-if profile:
-    if os.path.isfile(profile):
-        customs.append(profile)
-    elif os.path.isfile(profile + ".py"):
-        customs.append(profile + ".py")
-
 opts = Variables(customs, ARGUMENTS)
 
 # Target build options
@@ -270,81 +388,70 @@ opts.Add("cxxflags", "Custom flags for the C++ compiler")
 opts.Add("cflags", "Custom flags for the C compiler")
 opts.Add("linkflags", "Custom flags for the linker")
 
-# Update the environment to have all above options defined
-# in following code (especially platform and custom_modules).
-opts.Update(env_base)
+print(
+    'Initializing SCons environment for "'
+    + selected_platform
+    + '" with the following tools: "'
+    + " ".join(custom_tools)
+    + '".'
+)
 
-# Copy custom environment variables if set.
-if env_base["import_env_vars"]:
-    for env_var in str(env_base["import_env_vars"]).split(","):
-        if env_var in os.environ:
-            env_base["ENV"][env_var] = os.environ[env_var]
-
-# Platform selection: validate input, and add options.
-
-selected_platform = ""
-
-if env_base["platform"] != "":
-    selected_platform = env_base["platform"]
-elif env_base["p"] != "":
-    selected_platform = env_base["p"]
-else:
-    # Missing `platform` argument, try to detect platform automatically
-    if (
-        sys.platform.startswith("linux")
-        or sys.platform.startswith("dragonfly")
-        or sys.platform.startswith("freebsd")
-        or sys.platform.startswith("netbsd")
-        or sys.platform.startswith("openbsd")
-    ):
-        selected_platform = "linuxbsd"
-    elif sys.platform == "darwin":
-        selected_platform = "macos"
-    elif sys.platform == "win32":
-        selected_platform = "windows"
-    else:
-        print("Could not detect platform automatically. Supported platforms:")
-        for x in platform_list:
-            print("\t" + x)
-        print("\nPlease run SCons again and select a valid platform: platform=<string>")
-
-    if selected_platform != "":
-        print("Automatically detected platform: " + selected_platform)
-
-if selected_platform == "osx":
-    # Deprecated alias kept for compatibility.
-    print('Platform "osx" has been renamed to "macos" in Godot 4. Building for platform "macos".')
-    selected_platform = "macos"
-
-if selected_platform == "iphone":
-    # Deprecated alias kept for compatibility.
-    print('Platform "iphone" has been renamed to "ios" in Godot 4. Building for platform "ios".')
-    selected_platform = "ios"
-
-if selected_platform in ["linux", "bsd", "x11"]:
-    if selected_platform == "x11":
-        # Deprecated alias kept for compatibility.
-        print('Platform "x11" has been renamed to "linuxbsd" in Godot 4. Building for platform "linuxbsd".')
-    # Alias for convenience.
-    selected_platform = "linuxbsd"
-
-if selected_platform == "javascript":
-    # Deprecated alias kept for compatibility.
-    print('Platform "javascript" has been renamed to "web" in Godot 4. Building for platform "web".')
-    selected_platform = "web"
-
-# Make sure to update this to the found, valid platform as it's used through the buildsystem as the reference.
-# It should always be re-set after calling `opts.Update()` otherwise it uses the original input value.
-env_base["platform"] = selected_platform
+# We let SCons build its default ENV as it includes OS-specific things which we don't
+# want to have to pull in manually.
+# This lets us read the environment, command line, user and platform options and flags.
+# Then we prepend PATH to make it take precedence, while preserving SCons' own entries.
+env_base = Environment(tools=custom_tools)
 
 # Add platform-specific options.
 if selected_platform in platform_opts:
     for opt in platform_opts[selected_platform]:
         opts.Add(opt)
 
-# Update the environment to take platform-specific options into account.
+# Update the environment with all general and platform-specific options.
 opts.Update(env_base)
-env_base["platform"] = selected_platform  # Must always be re-set after calling opts.Update().
+
+# Make sure to update this to the found, valid platform as it's used through the buildsystem as the reference.
+# It should always be re-set after calling `opts.Update()` otherwise it uses the original input value.
+env_base["platform"] = selected_platform
+
+# Make sure the target we've already parsed is set in this environment.
+# The logic for merging platform flags into this environment happens later, and until then, we need
+# to make sure this one is set properly
+env_base["target"] = selected_target
+
+# Now we're ready to set our PATHs
+env_base.PrependENVPath("PATH", os.getenv("PATH"))
+env_base.PrependENVPath("PKG_CONFIG_PATH", os.getenv("PKG_CONFIG_PATH"))
+if "TERM" in os.environ:  # Used for colored output.
+    env_base["ENV"]["TERM"] = os.environ["TERM"]
+
+env_base.disabled_modules = []
+env_base.module_version_string = ""
+env_base.msvc = False
+
+env_base.__class__.disable_module = methods.disable_module
+
+env_base.__class__.add_module_version_string = methods.add_module_version_string
+
+env_base.__class__.add_source_files = methods.add_source_files
+env_base.__class__.use_windows_spawn_fix = methods.use_windows_spawn_fix
+
+env_base.__class__.add_shared_library = methods.add_shared_library
+env_base.__class__.add_library = methods.add_library
+env_base.__class__.add_program = methods.add_program
+env_base.__class__.CommandNoCache = methods.CommandNoCache
+env_base.__class__.Run = methods.Run
+env_base.__class__.disable_warnings = methods.disable_warnings
+env_base.__class__.force_optimization_on_debug = methods.force_optimization_on_debug
+env_base.__class__.module_add_dependencies = methods.module_add_dependencies
+env_base.__class__.module_check_dependencies = methods.module_check_dependencies
+
+env_base["x86_libtheora_opt_gcc"] = False
+env_base["x86_libtheora_opt_vc"] = False
+
+# avoid issues when building with different versions of python out of the same directory
+env_base.SConsignFile(".sconsign{0}.dblite".format(pickle.HIGHEST_PROTOCOL))
+
 
 # Detect modules.
 modules_detected = OrderedDict()
@@ -406,6 +513,8 @@ methods.write_modules(modules_detected)
 # Update the environment again after all the module options are added.
 opts.Update(env_base)
 env_base["platform"] = selected_platform  # Must always be re-set after calling opts.Update().
+env_base["target"] = selected_target  # Make sure this is set until the Platform specific flags section below.
+
 Help(opts.GenerateHelpText(env_base))
 
 # add default include paths
@@ -1003,24 +1112,6 @@ if selected_platform in platform_list:
         for header in headers:
             if conf.CheckCHeader(header):
                 env.AppendUnique(CPPDEFINES=[headers[header]])
-
-elif selected_platform != "":
-    if selected_platform == "list":
-        print("The following platforms are available:\n")
-    else:
-        print('Invalid target platform "' + selected_platform + '".')
-        print("The following platforms were detected:\n")
-
-    for x in platform_list:
-        print("\t" + x)
-
-    print("\nPlease run SCons again and select a valid platform: platform=<string>")
-
-    if selected_platform == "list":
-        # Exit early to suppress the rest of the built-in SCons messages
-        Exit()
-    else:
-        Exit(255)
 
 # The following only makes sense when the 'env' is defined, and assumes it is.
 if "env" in locals():

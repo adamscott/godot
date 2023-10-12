@@ -78,6 +78,8 @@ def get_flags():
         # 100 KiB over -Os, which does not justify the negative impact on
         # run-time performance.
         ("optimize", "size"),
+        # Use generic POSIX build toolchain for Emscripten.
+        ("custom_tools", ["cc", "c++", "ar", "link", "textfile", "zip"]),
     ]
 
 

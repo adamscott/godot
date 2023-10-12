@@ -249,10 +249,14 @@ def get_doc_path():
 def get_flags():
     arch = detect_build_env_arch() or detect_arch()
 
+    mingw = [
+        ("custom_tools", ["mingw"])
+    ] if methods.get_cmdline_bool("use_mingw", False) else []
+
     return [
         ("arch", arch),
         ("supported", ["mono"]),
-    ]
+    ] + mingw
 
 
 def build_res_file(target, source, env: "SConsEnvironment"):

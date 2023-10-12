@@ -70,6 +70,7 @@ def get_flags():
         ("arch", "arm64"),  # Default for convenience.
         ("target", "template_debug"),
         ("supported", ["mono"]),
+        ("custom_tools", ["clang", "clang++", "as", "ar", "link"]),
     ]
 
 
