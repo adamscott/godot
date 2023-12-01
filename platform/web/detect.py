@@ -8,6 +8,7 @@ from emscripten_helpers import (
     add_js_pre,
     add_js_externs,
     create_template_zip,
+    get_template_zip_path,
 )
 from methods import get_compiler_version
 from SCons.Util import WhereIs
@@ -158,6 +159,9 @@ def configure(env: "Environment"):
     # Add method that joins/compiles our Engine files.
     env.AddMethod(create_engine_file, "CreateEngineFile")
 
+    # Add method for getting the final zip path
+    env.AddMethod(get_template_zip_path, "GetTemplateZipPath")
+
     # Add method for creating the final zip file
     env.AddMethod(create_template_zip, "CreateTemplateZip")
 
@@ -208,13 +212,17 @@ def configure(env: "Environment"):
     if env["javascript_eval"]:
         env.Append(CPPDEFINES=["JAVASCRIPT_EVAL_ENABLED"])
 
-    # Thread support (via SharedArrayBuffer).
-    env.Append(CPPDEFINES=["PTHREAD_NO_RENAME"])
-    env.Append(CCFLAGS=["-s", "USE_PTHREADS=1"])
-    env.Append(LINKFLAGS=["-s", "USE_PTHREADS=1"])
-    env.Append(LINKFLAGS=["-s", "DEFAULT_PTHREAD_STACK_SIZE=2MB"])
-    env.Append(LINKFLAGS=["-s", "PTHREAD_POOL_SIZE=8"])
-    env.Append(LINKFLAGS=["-s", "WASM_MEM_MAX=2048MB"])
+    if env["use_threads"]:
+        # Thread support (via SharedArrayBuffer).
+        env.Append(CPPDEFINES=["PTHREAD_NO_RENAME"])
+        env.Append(CCFLAGS=["-s", "USE_PTHREADS=1"])
+        env.Append(LINKFLAGS=["-s", "USE_PTHREADS=1"])
+        env.Append(LINKFLAGS=["-s", "DEFAULT_PTHREAD_STACK_SIZE=2MB"])
+        env.Append(LINKFLAGS=["-s", "PTHREAD_POOL_SIZE=8"])
+        env.Append(LINKFLAGS=["-s", "WASM_MEM_MAX=2048MB"])
+    elif env["proxy_to_pthread"]:
+        print('"use_threads=no" support requires "proxy_to_pthread=no", disabling proxy to pthread.')
+        env["proxy_to_pthread"] = False
 
     if env["lto"] != "none":
         # Workaround https://github.com/emscripten-core/emscripten/issues/19781.
@@ -223,7 +231,7 @@ def configure(env: "Environment"):
 
     if env["dlink_enabled"]:
         if env["proxy_to_pthread"]:
-            print("GDExtension support requires proxy_to_pthread=no, disabling")
+            print("GDExtension support requires proxy_to_pthread=no, disabling proxy to pthread.")
             env["proxy_to_pthread"] = False
 
         if cc_semver < (3, 1, 14):
