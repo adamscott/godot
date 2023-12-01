@@ -170,12 +170,34 @@ opts = Variables(customs, ARGUMENTS)
 # Target build options
 opts.Add("platform", "Target platform (%s)" % ("|".join(platform_list),), "")
 opts.Add("p", "Platform (alias for 'platform')", "")
-opts.Add(EnumVariable("target", "Compilation target", "editor", ("editor", "template_release", "template_debug")))
-opts.Add(EnumVariable("arch", "CPU architecture", "auto", ["auto"] + architectures, architecture_aliases))
-opts.Add(BoolVariable("dev_build", "Developer build with dev-only debugging code (DEV_ENABLED)", False))
 opts.Add(
     EnumVariable(
-        "optimize", "Optimization level", "speed_trace", ("none", "custom", "debug", "speed", "speed_trace", "size")
+        "target",
+        "Compilation target",
+        "editor",
+        ("editor", "template_release", "template_debug"),
+    )
+)
+opts.Add(
+    EnumVariable(
+        "arch",
+        "CPU architecture",
+        "auto",
+        ["auto"] + architectures,
+        architecture_aliases,
+    )
+)
+opts.Add(
+    BoolVariable(
+        "dev_build", "Developer build with dev-only debugging code (DEV_ENABLED)", False
+    )
+)
+opts.Add(
+    EnumVariable(
+        "optimize",
+        "Optimization level",
+        "speed_trace",
+        ("none", "custom", "debug", "speed", "speed_trace", "size"),
     )
 )
 opts.Add(BoolVariable("debug_symbols", "Build with debugging symbols", False))
@@ -185,50 +207,139 @@ opts.Add(BoolVariable("production", "Set defaults to build Godot for use in prod
 opts.Add(BoolVariable("generate_apk", "Generate an APK/AAB after building Android library by calling Gradle", False))
 
 # Components
-opts.Add(BoolVariable("deprecated", "Enable compatibility code for deprecated and removed features", True))
-opts.Add(EnumVariable("precision", "Set the floating-point precision level", "single", ("single", "double")))
+opts.Add(
+    BoolVariable(
+        "deprecated",
+        "Enable compatibility code for deprecated and removed features",
+        True,
+    )
+)
+opts.Add(
+    EnumVariable(
+        "precision",
+        "Set the floating-point precision level",
+        "single",
+        ("single", "double"),
+    )
+)
 opts.Add(BoolVariable("minizip", "Enable ZIP archive support using minizip", True))
-opts.Add(BoolVariable("brotli", "Enable Brotli for decompresson and WOFF2 fonts support", True))
+opts.Add(
+    BoolVariable(
+        "brotli", "Enable Brotli for decompresson and WOFF2 fonts support", True
+    )
+)
 opts.Add(BoolVariable("xaudio2", "Enable the XAudio2 audio driver", False))
 opts.Add(BoolVariable("vulkan", "Enable the vulkan rendering driver", True))
 opts.Add(BoolVariable("opengl3", "Enable the OpenGL/GLES3 rendering driver", True))
 opts.Add(BoolVariable("d3d12", "Enable the Direct3D 12 rendering driver (Windows only)", False))
 opts.Add(BoolVariable("openxr", "Enable the OpenXR driver", True))
-opts.Add(BoolVariable("use_volk", "Use the volk library to load the Vulkan loader dynamically", True))
-opts.Add(BoolVariable("disable_exceptions", "Force disabling exception handling code", True))
-opts.Add("custom_modules", "A list of comma-separated directory paths containing custom modules to build.", "")
-opts.Add(BoolVariable("custom_modules_recursive", "Detect custom modules recursively for each specified path.", True))
+opts.Add(
+    BoolVariable(
+        "use_volk", "Use the volk library to load the Vulkan loader dynamically", True
+    )
+)
+opts.Add(
+    BoolVariable("disable_exceptions", "Force disabling exception handling code", True)
+)
+opts.Add(
+    "custom_modules",
+    "A list of comma-separated directory paths containing custom modules to build.",
+    "",
+)
+opts.Add(
+    BoolVariable(
+        "custom_modules_recursive",
+        "Detect custom modules recursively for each specified path.",
+        True,
+    )
+)
 
 # Advanced options
-opts.Add(BoolVariable("dev_mode", "Alias for dev options: verbose=yes warnings=extra werror=yes tests=yes", False))
+opts.Add(
+    BoolVariable(
+        "dev_mode",
+        "Alias for dev options: verbose=yes warnings=extra werror=yes tests=yes",
+        False,
+    )
+)
 opts.Add(BoolVariable("tests", "Build the unit tests", False))
-opts.Add(BoolVariable("fast_unsafe", "Enable unsafe options for faster rebuilds", False))
-opts.Add(BoolVariable("compiledb", "Generate compilation DB (`compile_commands.json`) for external tools", False))
+opts.Add(
+    BoolVariable("fast_unsafe", "Enable unsafe options for faster rebuilds", False)
+)
+opts.Add(
+    BoolVariable(
+        "compiledb",
+        "Generate compilation DB (`compile_commands.json`) for external tools",
+        False,
+    )
+)
 opts.Add(BoolVariable("verbose", "Enable verbose output for the compilation", False))
 opts.Add(BoolVariable("progress", "Show a progress indicator during compilation", True))
-opts.Add(EnumVariable("warnings", "Level of compilation warnings", "all", ("extra", "all", "moderate", "no")))
+opts.Add(
+    EnumVariable(
+        "warnings",
+        "Level of compilation warnings",
+        "all",
+        ("extra", "all", "moderate", "no"),
+    )
+)
 opts.Add(BoolVariable("werror", "Treat compiler warnings as errors", False))
-opts.Add("extra_suffix", "Custom extra suffix added to the base filename of all generated binary files", "")
-opts.Add("object_prefix", "Custom prefix added to the base filename of all generated object files", "")
+opts.Add(
+    "extra_suffix",
+    "Custom extra suffix added to the base filename of all generated binary files",
+    "",
+)
+opts.Add(
+    "object_prefix",
+    "Custom prefix added to the base filename of all generated object files",
+    "",
+)
 opts.Add(BoolVariable("vsproj", "Generate a Visual Studio solution", False))
 opts.Add("vsproj_name", "Name of the Visual Studio solution", "godot")
 opts.Add(BoolVariable("disable_3d", "Disable 3D nodes for a smaller executable", False))
-opts.Add(BoolVariable("disable_advanced_gui", "Disable advanced GUI nodes and behaviors", False))
+opts.Add(
+    BoolVariable(
+        "disable_advanced_gui", "Disable advanced GUI nodes and behaviors", False
+    )
+)
 opts.Add("build_profile", "Path to a file containing a feature build profile", "")
-opts.Add(BoolVariable("modules_enabled_by_default", "If no, disable all modules except ones explicitly enabled", True))
-opts.Add(BoolVariable("no_editor_splash", "Don't use the custom splash screen for the editor", True))
+opts.Add(
+    BoolVariable(
+        "modules_enabled_by_default",
+        "If no, disable all modules except ones explicitly enabled",
+        True,
+    )
+)
+opts.Add(
+    BoolVariable(
+        "no_editor_splash", "Don't use the custom splash screen for the editor", True
+    )
+)
 opts.Add(
     "system_certs_path",
     "Use this path as TLS certificates default for editor and Linux/BSD export templates (for package maintainers)",
     "",
 )
-opts.Add(BoolVariable("use_precise_math_checks", "Math checks use very precise epsilon (debug option)", False))
+opts.Add(
+    BoolVariable(
+        "use_precise_math_checks",
+        "Math checks use very precise epsilon (debug option)",
+        False,
+    )
+)
 opts.Add(BoolVariable("scu_build", "Use single compilation unit build", False))
-opts.Add("scu_limit", "Max includes per SCU file when using scu_build (determines RAM use)", "0")
+opts.Add(
+    "scu_limit",
+    "Max includes per SCU file when using scu_build (determines RAM use)",
+    "0",
+)
+opts.Add(BoolVariable("use_threads", "Use threads", True))
 
 # Thirdparty libraries
 opts.Add(BoolVariable("builtin_brotli", "Use the built-in Brotli library", True))
-opts.Add(BoolVariable("builtin_certs", "Use the built-in SSL certificates bundles", True))
+opts.Add(
+    BoolVariable("builtin_certs", "Use the built-in SSL certificates bundles", True)
+)
 opts.Add(BoolVariable("builtin_clipper2", "Use the built-in Clipper2 library", True))
 opts.Add(BoolVariable("builtin_embree", "Use the built-in Embree library", True))
 opts.Add(BoolVariable("builtin_enet", "Use the built-in ENet library", True))
@@ -248,8 +359,18 @@ opts.Add(BoolVariable("builtin_mbedtls", "Use the built-in mbedTLS library", Tru
 opts.Add(BoolVariable("builtin_miniupnpc", "Use the built-in miniupnpc library", True))
 opts.Add(BoolVariable("builtin_openxr", "Use the built-in OpenXR library", True))
 opts.Add(BoolVariable("builtin_pcre2", "Use the built-in PCRE2 library", True))
-opts.Add(BoolVariable("builtin_pcre2_with_jit", "Use JIT compiler for the built-in PCRE2 library", True))
-opts.Add(BoolVariable("builtin_recastnavigation", "Use the built-in Recast navigation library", True))
+opts.Add(
+    BoolVariable(
+        "builtin_pcre2_with_jit",
+        "Use JIT compiler for the built-in PCRE2 library",
+        True,
+    )
+)
+opts.Add(
+    BoolVariable(
+        "builtin_recastnavigation", "Use the built-in Recast navigation library", True
+    )
+)
 opts.Add(BoolVariable("builtin_rvo2_2d", "Use the built-in RVO2 2D library", True))
 opts.Add(BoolVariable("builtin_rvo2_3d", "Use the built-in RVO2 3D library", True))
 opts.Add(BoolVariable("builtin_squish", "Use the built-in squish library", True))
@@ -304,21 +425,27 @@ else:
 if selected_platform in ["macos", "osx"]:
     if selected_platform == "osx":
         # Deprecated alias kept for compatibility.
-        print('Platform "osx" has been renamed to "macos" in Godot 4. Building for platform "macos".')
+        print(
+            'Platform "osx" has been renamed to "macos" in Godot 4. Building for platform "macos".'
+        )
     # Alias for convenience.
     selected_platform = "macos"
 
 if selected_platform in ["ios", "iphone"]:
     if selected_platform == "iphone":
         # Deprecated alias kept for compatibility.
-        print('Platform "iphone" has been renamed to "ios" in Godot 4. Building for platform "ios".')
+        print(
+            'Platform "iphone" has been renamed to "ios" in Godot 4. Building for platform "ios".'
+        )
     # Alias for convenience.
     selected_platform = "ios"
 
 if selected_platform in ["linux", "bsd", "x11"]:
     if selected_platform == "x11":
         # Deprecated alias kept for compatibility.
-        print('Platform "x11" has been renamed to "linuxbsd" in Godot 4. Building for platform "linuxbsd".')
+        print(
+            'Platform "x11" has been renamed to "linuxbsd" in Godot 4. Building for platform "linuxbsd".'
+        )
     # Alias for convenience.
     selected_platform = "linuxbsd"
 
@@ -333,7 +460,9 @@ if selected_platform in platform_opts:
 
 # Update the environment to take platform-specific options into account.
 opts.Update(env_base)
-env_base["platform"] = selected_platform  # Must always be re-set after calling opts.Update().
+env_base[
+    "platform"
+] = selected_platform  # Must always be re-set after calling opts.Update().
 
 # Detect modules.
 modules_detected = OrderedDict()
@@ -378,12 +507,20 @@ for name, path in modules_detected.items():
     else:
         enabled = False
 
-    opts.Add(BoolVariable("module_" + name + "_enabled", "Enable module '%s'" % (name,), enabled))
+    opts.Add(
+        BoolVariable(
+            "module_" + name + "_enabled", "Enable module '%s'" % (name,), enabled
+        )
+    )
 
     # Add module-specific options.
     try:
         for opt in config.get_opts(selected_platform):
-            opts.Add(opt)
+            key, *_ = opt
+            if key in opts.keys():
+                opts.Update()
+            else:
+                opts.Add(opt)
     except AttributeError:
         pass
 
@@ -394,7 +531,9 @@ methods.write_modules(modules_detected)
 
 # Update the environment again after all the module options are added.
 opts.Update(env_base)
-env_base["platform"] = selected_platform  # Must always be re-set after calling opts.Update().
+env_base[
+    "platform"
+] = selected_platform  # Must always be re-set after calling opts.Update().
 Help(opts.GenerateHelpText(env_base))
 
 # add default include paths
@@ -424,7 +563,9 @@ else:  # Release
     opt_level = "speed"
 
 env_base["optimize"] = ARGUMENTS.get("optimize", opt_level)
-env_base["debug_symbols"] = methods.get_cmdline_bool("debug_symbols", env_base.dev_build)
+env_base["debug_symbols"] = methods.get_cmdline_bool(
+    "debug_symbols", env_base.dev_build
+)
 
 if env_base.editor_build:
     env_base.Append(CPPDEFINES=["TOOLS_ENABLED"])
@@ -484,7 +625,9 @@ if selected_platform in platform_list:
     if env.GetOption("num_jobs") == altered_num_jobs:
         cpu_count = os.cpu_count()
         if cpu_count is None:
-            print("Couldn't auto-detect CPU count to configure build parallelism. Specify it with the -j argument.")
+            print(
+                "Couldn't auto-detect CPU count to configure build parallelism. Specify it with the -j argument."
+            )
         else:
             safer_cpu_count = cpu_count if cpu_count <= 4 else cpu_count - 1
             print(
@@ -538,7 +681,9 @@ if selected_platform in platform_list:
     # These can sometimes override default options.
     flag_list = platform_flags[selected_platform]
     for f in flag_list:
-        if not (f[0] in ARGUMENTS) or ARGUMENTS[f[0]] == "auto":  # Allow command line to override platform flags
+        if (
+            not (f[0] in ARGUMENTS) or ARGUMENTS[f[0]] == "auto"
+        ):  # Allow command line to override platform flags
             env[f[0]] = f[1]
 
     # 'dev_mode' and 'production' are aliases to set default options if they haven't been
@@ -569,13 +714,20 @@ if selected_platform in platform_list:
 
         methods.set_scu_folders(scu_builders.generate_scu_files(max_includes_per_scu))
 
+    if env["use_threads"]:
+        env.Append(CPPDEFINES=["USE_THREADS"])
+
     # Must happen after the flags' definition, as configure is when most flags
     # are actually handled to change compile options, etc.
     detect.configure(env)
 
-    print(f'Building for platform "{selected_platform}", architecture "{env["arch"]}", target "{env["target"]}".')
+    print(
+        f'Building for platform "{selected_platform}", architecture "{env["arch"]}", target "{env["target"]}".'
+    )
     if env.dev_build:
-        print("NOTE: Developer build, with debug optimization level and debug symbols (unless overridden).")
+        print(
+            "NOTE: Developer build, with debug optimization level and debug symbols (unless overridden)."
+        )
 
     # Set optimize and debug_symbols flags.
     # "custom" means do nothing and let users set their own optimization flags.
@@ -771,16 +923,24 @@ if selected_platform in platform_list:
                 # Regression in GCC 9/10, spams so much in our variadic templates
                 # that we need to outright disable it.
                 common_warnings += ["-Wno-type-limits"]
-            if cc_version_major >= 12:  # False positives in our error macros, see GH-58747.
+            if (
+                cc_version_major >= 12
+            ):  # False positives in our error macros, see GH-58747.
                 common_warnings += ["-Wno-return-type"]
         elif methods.using_clang(env) or methods.using_emcc(env):
-            common_warnings += ["-Wshadow-field-in-constructor", "-Wshadow-uncaptured-local"]
+            common_warnings += [
+                "-Wshadow-field-in-constructor",
+                "-Wshadow-uncaptured-local",
+            ]
             # We often implement `operator<` for structs of pointers as a requirement
             # for putting them in `Set` or `Map`. We don't mind about unreliable ordering.
             common_warnings += ["-Wno-ordered-compare-function-pointers"]
 
         if env["warnings"] == "extra":
-            env.Append(CCFLAGS=["-Wall", "-Wextra", "-Wwrite-strings", "-Wno-unused-parameter"] + common_warnings)
+            env.Append(
+                CCFLAGS=["-Wall", "-Wextra", "-Wwrite-strings", "-Wno-unused-parameter"]
+                + common_warnings
+            )
             env.Append(CXXFLAGS=["-Wctor-dtor-privacy", "-Wnon-virtual-dtor"])
             if methods.using_gcc(env):
                 env.Append(
@@ -797,7 +957,9 @@ if selected_platform in platform_list:
                 #    env.Append(CXXFLAGS=["-Wnoexcept"])
                 if cc_version_major >= 9:
                     env.Append(CCFLAGS=["-Wattribute-alias=2"])
-                if cc_version_major >= 11:  # Broke on MethodBind templates before GCC 11.
+                if (
+                    cc_version_major >= 11
+                ):  # Broke on MethodBind templates before GCC 11.
                     env.Append(CCFLAGS=["-Wlogical-op"])
             elif methods.using_clang(env) or methods.using_emcc(env):
                 env.Append(CCFLAGS=["-Wimplicit-fallthrough"])
@@ -881,7 +1043,9 @@ if selected_platform in platform_list:
 
     methods.generate_version_header(env.module_version_string)
 
-    env["PROGSUFFIX_WRAP"] = suffix + env.module_version_string + ".console" + env["PROGSUFFIX"]
+    env["PROGSUFFIX_WRAP"] = (
+        suffix + env.module_version_string + ".console" + env["PROGSUFFIX"]
+    )
     env["PROGSUFFIX"] = suffix + env.module_version_string + env["PROGSUFFIX"]
     env["OBJSUFFIX"] = suffix + env["OBJSUFFIX"]
     # (SH)LIBSUFFIX will be used for our own built libraries
@@ -902,7 +1066,9 @@ if selected_platform in platform_list:
 
     if env["disable_3d"]:
         if env.editor_build:
-            print("Build option 'disable_3d=yes' cannot be used for editor builds, only for export template builds.")
+            print(
+                "Build option 'disable_3d=yes' cannot be used for editor builds, only for export template builds."
+            )
             Exit(255)
         else:
             env.Append(CPPDEFINES=["_3D_DISABLED"])
@@ -925,17 +1091,24 @@ if selected_platform in platform_list:
 
     GLSL_BUILDERS = {
         "RD_GLSL": env.Builder(
-            action=env.Run(glsl_builders.build_rd_headers, 'Building RD_GLSL header: "$TARGET"'),
+            action=env.Run(
+                glsl_builders.build_rd_headers, 'Building RD_GLSL header: "$TARGET"'
+            ),
             suffix="glsl.gen.h",
             src_suffix=".glsl",
         ),
         "GLSL_HEADER": env.Builder(
-            action=env.Run(glsl_builders.build_raw_headers, 'Building GLSL header: "$TARGET"'),
+            action=env.Run(
+                glsl_builders.build_raw_headers, 'Building GLSL header: "$TARGET"'
+            ),
             suffix="glsl.gen.h",
             src_suffix=".glsl",
         ),
         "GLES3_GLSL": env.Builder(
-            action=env.Run(gles3_builders.build_gles3_headers, 'Building GLES3 GLSL header: "$TARGET"'),
+            action=env.Run(
+                gles3_builders.build_gles3_headers,
+                'Building GLES3 GLSL header: "$TARGET"',
+            ),
             suffix="glsl.gen.h",
             src_suffix=".glsl",
         ),
@@ -958,7 +1131,10 @@ if selected_platform in platform_list:
         scons_ver = env._get_major_minor_revision(scons_raw_version)
 
         if scons_ver < (4, 0, 0):
-            print("The `compiledb=yes` option requires SCons 4.0 or later, but your version is %s." % scons_raw_version)
+            print(
+                "The `compiledb=yes` option requires SCons 4.0 or later, but your version is %s."
+                % scons_raw_version
+            )
             Exit(255)
 
         env.Tool("compilation_db")
@@ -985,7 +1161,9 @@ if selected_platform in platform_list:
     # Microsoft Visual Studio Project Generation
     if env["vsproj"]:
         if os.name != "nt":
-            print("Error: The `vsproj` option is only usable on Windows with Visual Studio.")
+            print(
+                "Error: The `vsproj` option is only usable on Windows with Visual Studio."
+            )
             Exit(255)
         env["CPPPATH"] = [Dir(path) for path in env["CPPPATH"]]
         methods.generate_vs_project(env, ARGUMENTS, env["vsproj_name"])
@@ -1029,7 +1207,11 @@ if "env" in locals():
 def print_elapsed_time():
     elapsed_time_sec = round(time.time() - time_at_start, 3)
     time_ms = round((elapsed_time_sec % 1) * 1000)
-    print("[Time elapsed: {}.{:03}]".format(time.strftime("%H:%M:%S", time.gmtime(elapsed_time_sec)), time_ms))
+    print(
+        "[Time elapsed: {}.{:03}]".format(
+            time.strftime("%H:%M:%S", time.gmtime(elapsed_time_sec)), time_ms
+        )
+    )
 
 
 atexit.register(print_elapsed_time)

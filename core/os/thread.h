@@ -39,9 +39,13 @@
 #ifndef THREAD_H
 #define THREAD_H
 
+#ifdef USE_THREADS
 #include "core/templates/safe_refcount.h"
+#endif
+
 #include "core/typedefs.h"
 
+#ifdef USE_THREADS
 #ifdef MINGW_ENABLED
 #define MINGW_STDTHREAD_REDUNDANCY_WARNING
 #include "thirdparty/mingw-std-threads/mingw.thread.h"
@@ -50,6 +54,7 @@
 #include <thread>
 #define THREADING_NAMESPACE std
 #endif
+#endif // USE_THREADS
 
 class String;
 
@@ -86,6 +91,9 @@ public:
 private:
 	friend class Main;
 
+	static PlatformFunctions platform_functions;
+
+#ifdef USE_THREADS
 	ID id = UNASSIGNED_ID;
 	static SafeNumeric<uint64_t> id_counter;
 	static thread_local ID caller_id;
@@ -93,14 +101,17 @@ private:
 
 	static void callback(ID p_caller_id, const Settings &p_settings, Thread::Callback p_callback, void *p_userdata);
 
-	static PlatformFunctions platform_functions;
-
 	static void make_main_thread() { caller_id = MAIN_ID; }
 	static void release_main_thread() { caller_id = UNASSIGNED_ID; }
+#else
+	static void make_main_thread() {}
+	static void release_main_thread() {}
+#endif
 
 public:
 	static void _set_platform_functions(const PlatformFunctions &p_functions);
 
+#ifdef USE_THREADS
 	_FORCE_INLINE_ ID get_id() const { return id; }
 	// get the ID of the caller thread
 	_FORCE_INLINE_ static ID get_caller_id() {
@@ -123,6 +134,23 @@ public:
 
 	Thread();
 	~Thread();
+#else
+	_FORCE_INLINE_ ID get_id() const { return 0; }
+	// get the ID of the caller thread
+	_FORCE_INLINE_ static ID get_caller_id() { return 0; }
+	// get the ID of the main thread
+	_FORCE_INLINE_ static ID get_main_id() { return 0; }
+
+	_FORCE_INLINE_ static bool is_main_thread() { return true; } // Gain a tiny bit of perf here because there is no need to validate caller_id here, because only main thread will be set as 1.
+
+	static Error set_name(const String &p_name) { return ERR_UNAVAILABLE; }
+
+	void start(Thread::Callback p_callback, void *p_user, const Settings &p_settings = Settings()) {
+		p_callback(p_user);
+	}
+	bool is_started() const { return false; }
+	void wait_to_finish() {}
+#endif
 };
 
 #endif // THREAD_H
