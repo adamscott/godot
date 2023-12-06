@@ -263,3 +263,9 @@ def configure(env: "Environment"):
     # This workaround creates a closure that prevents the garbage collector from freeing the WebGL context.
     # We also only use WebGL2, and changing context version is not widely supported anyway.
     env.Append(LINKFLAGS=["-s", "GL_WORKAROUND_SAFARI_GETCONTEXT_BUG=0"])
+
+    # Add debug symbols support
+    if env["debug_symbols"]:
+        env.Append(CCFLAGS=["-gsource-map"])
+        env.Append(LINKFLAGS=["-gsource-map"])
+        env.Append(LINKFLAGS=["-s", "DEMANGLE_SUPPORT=1"])
