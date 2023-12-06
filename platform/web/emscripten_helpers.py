@@ -43,15 +43,16 @@ def create_template_zip(env, js, wasm, worker, side):
     in_files = [
         js,
         wasm,
-        worker,
         "#platform/web/js/libs/audio.worklet.js",
     ]
     out_files = [
         zip_dir.File(binary_name + ".js"),
         zip_dir.File(binary_name + ".wasm"),
-        zip_dir.File(binary_name + ".worker.js"),
         zip_dir.File(binary_name + ".audio.worklet.js"),
     ]
+    if env["use_threads"]:
+        in_files.append(worker)
+        out_files.append(zip_dir.File(binary_name + ".worker.js"))
     # Dynamic linking (extensions) specific.
     if env["dlink_enabled"]:
         in_files.append(side)  # Side wasm (contains the actual Godot code).
@@ -65,11 +66,12 @@ def create_template_zip(env, js, wasm, worker, side):
             "godot.editor.html",
             "offline.html",
             "godot.editor.js",
-            "godot.editor.worker.js",
             "godot.editor.audio.worklet.js",
             "logo.svg",
             "favicon.png",
         ]
+        if env["use_threads"]:
+            cache.append("godot.editor.worker.js")
         opt_cache = ["godot.editor.wasm"]
         subst_dict = {
             "@GODOT_VERSION@": get_build_version(),
