@@ -28,6 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
+#include "core/error/error_list.h"
 #if defined(UNIX_ENABLED)
 
 #include "thread_posix.h"
@@ -40,6 +41,8 @@
 #endif
 
 static Error set_name(const String &p_name) {
+#ifdef USE_THREADS
+
 #ifdef PTHREAD_NO_RENAME
 	return ERR_UNAVAILABLE;
 
@@ -67,6 +70,11 @@ static Error set_name(const String &p_name) {
 	return err == 0 ? OK : ERR_INVALID_PARAMETER;
 
 #endif // PTHREAD_NO_RENAME
+
+#else
+	return ERR_UNAVAILABLE;
+
+#endif // USE_THREADS
 }
 
 void init_thread_posix() {
