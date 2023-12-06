@@ -496,6 +496,10 @@ bool WorkerThreadPool::is_group_task_completed(GroupID p_group) const {
 }
 
 void WorkerThreadPool::wait_for_group_task_completion(GroupID p_group) {
+#ifndef USE_THREADS
+	return;
+#endif
+
 	task_mutex.lock();
 	Group **groupp = groups.getptr(p_group);
 	task_mutex.unlock();
