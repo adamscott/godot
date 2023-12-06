@@ -145,9 +145,7 @@ public:
 
 	static Error set_name(const String &p_name) { return ERR_UNAVAILABLE; }
 
-	void start(Thread::Callback p_callback, void *p_user, const Settings &p_settings = Settings()) {
-		p_callback(p_user);
-	}
+	void start(Thread::Callback p_callback, void *p_user, const Settings &p_settings = Settings()) {}
 	bool is_started() const { return false; }
 	void wait_to_finish() {}
 #endif
