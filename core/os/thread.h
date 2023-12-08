@@ -39,13 +39,10 @@
 #ifndef THREAD_H
 #define THREAD_H
 
-#ifdef USE_THREADS
 #include "core/templates/safe_refcount.h"
-#endif
 
 #include "core/typedefs.h"
 
-#ifdef USE_THREADS
 #ifdef MINGW_ENABLED
 #define MINGW_STDTHREAD_REDUNDANCY_WARNING
 #include "thirdparty/mingw-std-threads/mingw.thread.h"
@@ -54,7 +51,6 @@
 #include <thread>
 #define THREADING_NAMESPACE std
 #endif
-#endif // USE_THREADS
 
 class String;
 
