@@ -107,10 +107,6 @@ def create_template_zip(env, js, wasm, worker, side):
         in_files.append("#misc/dist/html/offline-export.html")
         out_files.append(zip_dir.File("godot.offline.html"))
 
-    if env["debug_symbols"]:
-        in_files.append(f"#{wasm.get_relpath()}.map");
-        out_files.append(zip_dir.File(binary_name + ".wasm.map")),
-
     zip_files = env.InstallAs(out_files, in_files)
     env.Zip(
         "#bin/godot",
