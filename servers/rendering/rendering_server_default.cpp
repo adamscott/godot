@@ -395,6 +395,7 @@ RenderingServerDefault::RenderingServerDefault(bool p_create_thread) :
 		command_queue(p_create_thread) {
 	RenderingServer::init();
 
+#ifdef USE_THREADS
 	create_thread = p_create_thread;
 
 	if (!p_create_thread) {
@@ -404,6 +405,10 @@ RenderingServerDefault::RenderingServerDefault(bool p_create_thread) :
 	}
 
 	RSG::threaded = p_create_thread;
+#else
+	create_thread = false;
+#endif
+
 	RSG::canvas = memnew(RendererCanvasCull);
 	RSG::viewport = memnew(RendererViewport);
 	RendererSceneCull *sr = memnew(RendererSceneCull);

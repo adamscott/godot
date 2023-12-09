@@ -1775,5 +1775,9 @@ GodotPhysicsServer3D::GodotPhysicsServer3D(bool p_using_threads) {
 	godot_singleton = this;
 	GodotBroadPhase3D::create_func = GodotBroadPhase3DBVH::_create;
 
+#ifdef USE_THREADS
 	using_threads = p_using_threads;
+#else
+	using_threads = false;
+#endif
 };
