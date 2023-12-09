@@ -108,8 +108,12 @@ void RaycastOcclusionCull::RaycastHZBuffer::update_camera_rays(const Transform3D
 
 	debug_tex_range = td.z_far;
 
+#ifdef USE_THREADS
 	WorkerThreadPool::GroupID group_task = WorkerThreadPool::get_singleton()->add_template_group_task(this, &RaycastHZBuffer::_camera_rays_threaded, &td, td.thread_count, -1, true, SNAME("RaycastOcclusionCullUpdateCamera"));
 	WorkerThreadPool::get_singleton()->wait_for_group_task_completion(group_task);
+#else
+	_generate_camera_rays(&td, 0, camera_rays_tile_count);
+#endif
 }
 
 void RaycastOcclusionCull::RaycastHZBuffer::_camera_rays_threaded(uint32_t p_thread, const CameraRayThreadData *p_data) {
