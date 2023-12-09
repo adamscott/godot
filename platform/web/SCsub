@@ -95,7 +95,7 @@ engine = [
     "js/engine/engine.js",
 ]
 externs = [env.File("#platform/web/js/engine/engine.externs.js")]
-js_engine = env.CreateEngineFile("#bin/godot${PROGSUFFIX}.engine.js", engine, externs)
+js_engine = env.CreateEngineFile("#bin/godot${PROGSUFFIX}.engine.js", engine, externs, env["use_threads"])
 env.Depends(js_engine, externs)
 
 wrap_list = [

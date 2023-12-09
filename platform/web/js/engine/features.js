@@ -84,11 +84,18 @@ const Features = { // eslint-disable-line no-unused-vars
 		if (!Features.isSecureContext()) {
 			missing.push('Secure Context - Check web server configuration (use HTTPS)');
 		}
-		if (!Features.isCrossOriginIsolated()) {
-			missing.push('Cross Origin Isolation - Check web server configuration (send correct headers)');
-		}
-		if (!Features.isSharedArrayBufferAvailable()) {
-			missing.push('SharedArrayBuffer - Check web server configuration (send correct headers)');
+
+		/**
+		 * `true` means Godot was compiled with USE_THREADS
+		*/
+		// eslint-disable-next-line no-undef
+		if (___GODOT_USE_THREADS) {
+			if (!Features.isCrossOriginIsolated()) {
+				missing.push('Cross Origin Isolation - Check web server configuration (send correct headers)');
+			}
+			if (!Features.isSharedArrayBufferAvailable()) {
+				missing.push('SharedArrayBuffer - Check web server configuration (send correct headers)');
+			}
 		}
 		// Audio is normally optional since we have a dummy fallback.
 		return missing;

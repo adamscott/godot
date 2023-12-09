@@ -31,10 +31,11 @@ def get_build_version():
     return v
 
 
-def create_engine_file(env, target, source, externs):
+def create_engine_file(env, target, source, externs, use_threads):
     if env["use_closure_compiler"]:
         return env.BuildJS(target, source, JSEXTERNS=externs)
-    return env.Textfile(target, [env.File(s) for s in source])
+    subst_dict = {"___GODOT_USE_THREADS": "true" if use_threads else "false"}
+    return env.Substfile(target=target, source=[env.File(s) for s in source], SUBST_DICT=subst_dict)
 
 
 def create_template_zip(env, js, wasm, worker, side):
