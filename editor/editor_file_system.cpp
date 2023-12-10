@@ -2593,6 +2593,10 @@ void EditorFileSystem::remove_import_format_support_query(Ref<EditorFileSystemIm
 }
 
 EditorFileSystem::EditorFileSystem() {
+#ifdef USE_THREADS
+	use_threads = true;
+#endif
+
 	ResourceLoader::import = _resource_import;
 	reimport_on_missing_imported_files = GLOBAL_GET("editor/import/reimport_missing_imported_files");
 	singleton = this;
