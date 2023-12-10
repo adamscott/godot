@@ -335,6 +335,7 @@ void EditorExportPlatformWeb::get_export_options(List<ExportOption> *r_options) 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "custom_template/release", PROPERTY_HINT_GLOBAL_FILE, "*.zip"), ""));
 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "variant/extensions_support"), false)); // Export type.
+	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "variant/compatibility_mode"), false)); // Compatibility (ie. run without COEP/COOP headers).
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "vram_texture_compression/for_desktop"), true)); // S3TC
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "vram_texture_compression/for_mobile"), false)); // ETC or ETC2, depending on renderer
 
@@ -377,25 +378,26 @@ bool EditorExportPlatformWeb::has_valid_export_configuration(const Ref<EditorExp
 	String err;
 	bool valid = false;
 	bool extensions = (bool)p_preset->get("variant/extensions_support");
+	bool compatibility_mode = (bool)p_preset->get("variant/compatibility_mode");
 
 	// Look for export templates (first official, and if defined custom templates).
-	bool dvalid = exists_export_template(_get_template_name(extensions, true), &err);
-	bool rvalid = exists_export_template(_get_template_name(extensions, false), &err);
+	bool debug_standard_valid = exists_export_template(_get_template_name(extensions, compatibility_mode, true), &err);
+	bool release_standard_valid = exists_export_template(_get_template_name(extensions, compatibility_mode, false), &err);
 
 	if (p_preset->get("custom_template/debug") != "") {
-		dvalid = FileAccess::exists(p_preset->get("custom_template/debug"));
-		if (!dvalid) {
+		debug_standard_valid = FileAccess::exists(p_preset->get("custom_template/debug"));
+		if (!debug_standard_valid) {
 			err += TTR("Custom debug template not found.") + "\n";
 		}
 	}
 	if (p_preset->get("custom_template/release") != "") {
-		rvalid = FileAccess::exists(p_preset->get("custom_template/release"));
-		if (!rvalid) {
+		release_standard_valid = FileAccess::exists(p_preset->get("custom_template/release"));
+		if (!release_standard_valid) {
 			err += TTR("Custom release template not found.") + "\n";
 		}
 	}
 
-	valid = dvalid || rvalid;
+	valid = debug_standard_valid || release_standard_valid;
 	r_missing_templates = !valid;
 
 	if (!err.is_empty()) {
@@ -454,7 +456,8 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 	template_path = template_path.strip_edges();
 	if (template_path.is_empty()) {
 		bool extensions = (bool)p_preset->get("variant/extensions_support");
-		template_path = find_export_template(_get_template_name(extensions, p_debug));
+		bool compatibility_mode = (bool)p_preset->get("variant/compatibility_mode");
+		template_path = find_export_template(_get_template_name(extensions, compatibility_mode, p_debug));
 	}
 
 	if (!template_path.is_empty() && !FileAccess::exists(template_path)) {
