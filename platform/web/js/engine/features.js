@@ -85,9 +85,6 @@ const Features = { // eslint-disable-line no-unused-vars
 			missing.push('Secure Context - Check web server configuration (use HTTPS)');
 		}
 
-		/**
-		 * @type {boolean}
-		 */
 		// eslint-disable-next-line no-undef
 		const compiledWithThreads = ___GODOT_USE_THREADS;
 		if (compiledWithThreads) {
