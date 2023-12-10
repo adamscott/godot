@@ -52,12 +52,16 @@ class Semaphore {
 private:
 	mutable THREADING_NAMESPACE::mutex mutex;
 	mutable THREADING_NAMESPACE::condition_variable condition;
+
+#ifdef USE_THREADS
 	mutable uint32_t count = 0; // Initialized as locked.
 #ifdef DEBUG_ENABLED
 	mutable uint32_t awaiters = 0;
 #endif
+#endif
 
 public:
+#ifdef USE_THREADS
 	_ALWAYS_INLINE_ void post() const {
 		std::lock_guard lock(mutex);
 		count++;
@@ -127,6 +131,16 @@ public:
 			new (&condition) THREADING_NAMESPACE::condition_variable();
 		}
 	}
+#endif
+
+#else
+	_ALWAYS_INLINE_ void post() const {}
+	_ALWAYS_INLINE_ void wait() const {}
+	_ALWAYS_INLINE_ bool try_wait() const { return true; }
+
+#ifdef DEBUG_ENABLED
+	~Semaphore() {}
+#endif
 #endif
 };
 
