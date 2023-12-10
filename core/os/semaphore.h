@@ -53,7 +53,7 @@ private:
 	mutable THREADING_NAMESPACE::mutex mutex;
 	mutable THREADING_NAMESPACE::condition_variable condition;
 
-#ifdef USE_THREADS
+#ifdef THREADS_ENABLED
 	mutable uint32_t count = 0; // Initialized as locked.
 #ifdef DEBUG_ENABLED
 	mutable uint32_t awaiters = 0;
@@ -61,7 +61,7 @@ private:
 #endif
 
 public:
-#ifdef USE_THREADS
+#ifdef THREADS_ENABLED
 	_ALWAYS_INLINE_ void post() const {
 		std::lock_guard lock(mutex);
 		count++;

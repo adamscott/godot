@@ -395,7 +395,7 @@ RenderingServerDefault::RenderingServerDefault(bool p_create_thread) :
 		command_queue(p_create_thread) {
 	RenderingServer::init();
 
-#ifdef USE_THREADS
+#ifdef THREADS_ENABLED
 	create_thread = p_create_thread;
 
 	if (!p_create_thread) {

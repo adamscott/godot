@@ -664,9 +664,6 @@ if selected_platform in platform_list:
 
         methods.set_scu_folders(scu_builders.generate_scu_files(max_includes_per_scu))
 
-    if env["use_threads"]:
-        env.Append(CPPDEFINES=["USE_THREADS"])
-
     # Must happen after the flags' definition, as configure is when most flags
     # are actually handled to change compile options, etc.
     detect.configure(env)

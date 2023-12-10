@@ -49,7 +49,7 @@
 // (which is the built-in logic in a semaphore) or you want to provide your
 // own mutex to tie the wait-notify to some other behavior, you need to use this.
 
-#ifdef USE_THREADS
+#ifdef THREADS_ENABLED
 class ConditionVariable {
 	mutable THREADING_NAMESPACE::condition_variable condition;
 

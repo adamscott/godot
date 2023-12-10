@@ -130,7 +130,7 @@ IPAddress IP::resolve_hostname(const String &p_hostname, IP::Type p_type) {
 PackedStringArray IP::resolve_hostname_addresses(const String &p_hostname, Type p_type) {
 	List<IPAddress> res;
 
-#ifdef USE_THREADS
+#ifdef THREADS_ENABLED
 	String key = _IP_ResolverPrivate::get_cache_key(p_hostname, p_type);
 
 	resolver->mutex.lock();

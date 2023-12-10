@@ -2270,7 +2270,7 @@ void EditorFileSystem::reimport_files(const Vector<String> &p_files) {
 
 	reimport_files.sort();
 
-#ifdef USE_THREADS
+#ifdef THREADS_ENABLED
 	bool use_multiple_threads = GLOBAL_GET("editor/import/use_multiple_threads");
 #else
 	bool use_multiple_threads = false;
@@ -2593,7 +2593,7 @@ void EditorFileSystem::remove_import_format_support_query(Ref<EditorFileSystemIm
 }
 
 EditorFileSystem::EditorFileSystem() {
-#ifdef USE_THREADS
+#ifdef THREADS_ENABLED
 	use_threads = true;
 #endif
 

@@ -89,7 +89,7 @@ private:
 
 	static PlatformFunctions platform_functions;
 
-#ifdef USE_THREADS
+#ifdef THREADS_ENABLED
 	ID id = UNASSIGNED_ID;
 	static SafeNumeric<uint64_t> id_counter;
 	static thread_local ID caller_id;
@@ -107,7 +107,7 @@ private:
 public:
 	static void _set_platform_functions(const PlatformFunctions &p_functions);
 
-#ifdef USE_THREADS
+#ifdef THREADS_ENABLED
 	_FORCE_INLINE_ ID get_id() const { return id; }
 	// get the ID of the caller thread
 	_FORCE_INLINE_ static ID get_caller_id() {

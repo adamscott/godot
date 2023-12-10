@@ -186,7 +186,7 @@ Error AudioDriverWeb::input_stop() {
 	return OK;
 }
 
-#ifdef USE_THREADS
+#ifdef THREADS_ENABLED
 /// AudioWorkletNode implementation (threads)
 void AudioDriverWorklet::_audio_thread_func(void *p_data) {
 	AudioDriverWorklet *driver = static_cast<AudioDriverWorklet *>(p_data);

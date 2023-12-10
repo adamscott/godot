@@ -1005,7 +1005,7 @@ public:
 	virtual void finish() override;
 
 	virtual void call_on_render_thread(const Callable &p_callable) override {
-#ifdef USE_THREADS
+#ifdef THREADS_ENABLED
 		if (Thread::get_caller_id() == server_thread) {
 			command_queue.flush_if_pending();
 			_call_on_render_thread(p_callable);

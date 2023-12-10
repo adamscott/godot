@@ -34,13 +34,13 @@ def get_build_version():
 def create_engine_file(env, target, source, externs, use_threads):
     if env["use_closure_compiler"]:
         return env.BuildJS(target, source, JSEXTERNS=externs)
-    subst_dict = {"___GODOT_USE_THREADS": "true" if use_threads else "false"}
+    subst_dict = {"___GODOT_THREADS_ENABLED": "true" if use_threads else "false"}
     return env.Substfile(target=target, source=[env.File(s) for s in source], SUBST_DICT=subst_dict)
 
 
 def create_template_zip(env, js, wasm, worker, side):
     binary_name = "godot.editor" if env.editor_build else "godot"
-    zip_dir = env.Dir("#bin/.web_zip")
+    zip_dir = env.Dir(env.GetTemplateZipPath())
     in_files = [
         js,
         wasm,
@@ -116,6 +116,10 @@ def create_template_zip(env, js, wasm, worker, side):
         ZIPSUFFIX="${PROGSUFFIX}${ZIPSUFFIX}",
         ZIPCOMSTR="Archiving $SOURCES as $TARGET",
     )
+
+
+def get_template_zip_path(env):
+    return "#bin/.web_zip"
 
 
 def add_js_libraries(env, libraries):

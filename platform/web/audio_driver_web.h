@@ -90,7 +90,7 @@ public:
 	AudioDriverWeb() {}
 };
 
-#ifdef USE_THREADS
+#ifdef THREADS_ENABLED
 class AudioDriverWorklet : public AudioDriverWeb {
 private:
 	enum {

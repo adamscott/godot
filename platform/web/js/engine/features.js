@@ -86,7 +86,7 @@ const Features = { // eslint-disable-line no-unused-vars
 		}
 
 		// eslint-disable-next-line no-undef
-		const compiledWithThreads = ___GODOT_USE_THREADS;
+		const compiledWithThreads = ___GODOT_THREADS_ENABLED;
 		if (compiledWithThreads) {
 			if (!Features.isCrossOriginIsolated()) {
 				missing.push('Cross Origin Isolation - Check web server configuration (send correct headers)');

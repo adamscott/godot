@@ -34,7 +34,7 @@
 
 #include <thorvg.h>
 
-#ifdef USE_THREADS
+#ifdef THREADS_ENABLED
 #define TVG_THREADS 1
 #else
 #define TVG_THREADS 0

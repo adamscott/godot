@@ -33,7 +33,7 @@
 
 #include "thread.h"
 
-#ifdef USE_THREADS
+#ifdef THREADS_ENABLED
 #include "core/object/script_language.h"
 #include "core/templates/safe_refcount.h"
 
@@ -48,7 +48,7 @@ void Thread::_set_platform_functions(const PlatformFunctions &p_functions) {
 	platform_functions = p_functions;
 }
 
-#ifdef USE_THREADS
+#ifdef THREADS_ENABLED
 void Thread::callback(ID p_caller_id, const Settings &p_settings, Callback p_callback, void *p_userdata) {
 	Thread::caller_id = p_caller_id;
 	if (platform_functions.set_priority) {

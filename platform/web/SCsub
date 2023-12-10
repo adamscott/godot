@@ -13,7 +13,7 @@ if "serve" in COMMAND_LINE_TARGETS or "run" in COMMAND_LINE_TARGETS:
     except Exception:
         print("GODOT_WEB_TEST_PORT must be a valid integer")
         sys.exit(255)
-    serve(env.Dir("#bin/.web_zip").abspath, port, "run" in COMMAND_LINE_TARGETS)
+    serve(env.Dir(env.GetTemplateZipPath()).abspath, port, "run" in COMMAND_LINE_TARGETS)
     sys.exit(0)
 
 web_files = [

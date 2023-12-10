@@ -55,7 +55,7 @@ class MutexImpl {
 	mutable StdMutexT mutex;
 
 public:
-#ifdef USE_THREADS
+#ifdef THREADS_ENABLED
 	_ALWAYS_INLINE_ void lock() const {
 		mutex.lock();
 	}
@@ -92,7 +92,7 @@ class SafeBinaryMutex {
 	static thread_local uint32_t count;
 
 public:
-#ifdef USE_THREADS
+#ifdef THREADS_ENABLED
 	_ALWAYS_INLINE_ void lock() const {
 		if (++count == 1) {
 			mutex.lock();
@@ -139,7 +139,7 @@ class MutexLock {
 	THREADING_NAMESPACE::unique_lock<typename MutexT::StdMutexType> lock;
 
 public:
-#ifdef USE_THREADS
+#ifdef THREADS_ENABLED
 	_ALWAYS_INLINE_ explicit MutexLock(const MutexT &p_mutex) :
 			lock(p_mutex.mutex){};
 #else
@@ -156,7 +156,7 @@ class MutexLock<SafeBinaryMutex<Tag>> {
 	THREADING_NAMESPACE::unique_lock<THREADING_NAMESPACE::mutex> lock;
 
 public:
-#ifdef USE_THREADS
+#ifdef THREADS_ENABLED
 	_ALWAYS_INLINE_ explicit MutexLock(const SafeBinaryMutex<Tag> &p_mutex) :
 			lock(p_mutex.mutex) {
 		SafeBinaryMutex<Tag>::count++;

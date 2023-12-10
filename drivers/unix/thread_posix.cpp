@@ -41,7 +41,7 @@
 #endif
 
 static Error set_name(const String &p_name) {
-#ifdef USE_THREADS
+#ifdef THREADS_ENABLED
 
 #ifdef PTHREAD_NO_RENAME
 	return ERR_UNAVAILABLE;
@@ -74,7 +74,7 @@ static Error set_name(const String &p_name) {
 #else
 	return ERR_UNAVAILABLE;
 
-#endif // USE_THREADS
+#endif // THREADS_ENABLED
 }
 
 void init_thread_posix() {
