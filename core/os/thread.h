@@ -133,9 +133,9 @@ public:
 #else
 	_FORCE_INLINE_ ID get_id() const { return 0; }
 	// get the ID of the caller thread
-	_FORCE_INLINE_ static ID get_caller_id() { return 0; }
+	_FORCE_INLINE_ static ID get_caller_id() { return MAIN_ID; }
 	// get the ID of the main thread
-	_FORCE_INLINE_ static ID get_main_id() { return 0; }
+	_FORCE_INLINE_ static ID get_main_id() { return MAIN_ID; }
 
 	_FORCE_INLINE_ static bool is_main_thread() { return true; } // Gain a tiny bit of perf here because there is no need to validate caller_id here, because only main thread will be set as 1.
 
