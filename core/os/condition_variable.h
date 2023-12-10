@@ -31,6 +31,9 @@
 #ifndef CONDITION_VARIABLE_H
 #define CONDITION_VARIABLE_H
 
+#include "core/os/mutex.h"
+#include "core/typedefs.h"
+
 #ifdef MINGW_ENABLED
 #define MINGW_STDTHREAD_REDUNDANCY_WARNING
 #include "thirdparty/mingw-std-threads/mingw.condition_variable.h"
@@ -46,6 +49,7 @@
 // (which is the built-in logic in a semaphore) or you want to provide your
 // own mutex to tie the wait-notify to some other behavior, you need to use this.
 
+#ifdef USE_THREADS
 class ConditionVariable {
 	mutable THREADING_NAMESPACE::condition_variable condition;
 
@@ -63,5 +67,14 @@ public:
 		condition.notify_all();
 	}
 };
+#else
+class ConditionVariable {
+public:
+	template <class BinaryMutexT>
+	_ALWAYS_INLINE_ void wait(const MutexLock<BinaryMutexT> &p_lock) const {}
+	_ALWAYS_INLINE_ void notify_one() const {}
+	_ALWAYS_INLINE_ void notify_all() const {}
+};
+#endif
 
 #endif // CONDITION_VARIABLE_H
