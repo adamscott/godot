@@ -2270,7 +2270,11 @@ void EditorFileSystem::reimport_files(const Vector<String> &p_files) {
 
 	reimport_files.sort();
 
+#ifdef USE_THREADS
 	bool use_multiple_threads = GLOBAL_GET("editor/import/use_multiple_threads");
+#else
+	bool use_multiple_threads = false;
+#endif
 
 	int from = 0;
 	for (int i = 0; i < reimport_files.size(); i++) {
