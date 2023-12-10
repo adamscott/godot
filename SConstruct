@@ -1065,6 +1065,9 @@ if selected_platform in platform_list:
         env.Tool("compilation_db")
         env.Alias("compiledb", env.CompilationDatabase())
 
+    if env["use_threads"]:
+        env.Append(CPPDEFINES=["THREADS_ENABLED"])
+
     Export("env")
 
     # Build subdirs, the build order is dependent on link order.

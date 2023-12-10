@@ -215,7 +215,7 @@ def configure(env: "Environment"):
 
     if env["use_threads"]:
         # Thread support (via SharedArrayBuffer).
-        env.Append(CPPDEFINES=["PTHREAD_NO_RENAME", "THREADS_ENABLED"])
+        env.Append(CPPDEFINES=["PTHREAD_NO_RENAME"])
         env.Append(CCFLAGS=["-s", "USE_PTHREADS=1"])
         env.Append(LINKFLAGS=["-s", "USE_PTHREADS=1"])
         env.Append(LINKFLAGS=["-s", "DEFAULT_PTHREAD_STACK_SIZE=2MB"])
