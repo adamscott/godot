@@ -81,15 +81,16 @@ const Features = { // eslint-disable-line no-unused-vars
 		if (!Features.isFetchAvailable()) {
 			missing.push('Fetch - Check web browser version');
 		}
-		if (!Features.isSecureContext()) {
-			missing.push('Secure Context - Check web server configuration (use HTTPS)');
-		}
 
 		/**
-		 * `true` means Godot was compiled with USE_THREADS
-		*/
+		 * @type {boolean}
+		 */
 		// eslint-disable-next-line no-undef
-		if (___GODOT_USE_THREADS) {
+		const compiledWithThreads = ___GODOT_USE_THREADS;
+		if (compiledWithThreads) {
+			if (!Features.isSecureContext()) {
+				missing.push('Secure Context - Check web server configuration (use HTTPS)');
+			}
 			if (!Features.isCrossOriginIsolated()) {
 				missing.push('Cross Origin Isolation - Check web server configuration (send correct headers)');
 			}
