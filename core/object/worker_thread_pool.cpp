@@ -53,9 +53,13 @@ void WorkerThreadPool::_process_task_queue() {
 
 void WorkerThreadPool::_process_task(Task *p_task) {
 	bool low_priority = p_task->low_priority;
+
+#ifdef USE_THREADS
 	int pool_thread_index = -1;
 	Task *prev_low_prio_task = nullptr; // In case this is recursively called.
+#endif
 
+#ifdef USE_THREADS
 	if (!use_native_low_priority_threads) {
 		// Tasks must start with this unset. They are free to set-and-forget otherwise.
 		set_current_thread_safe_for_nodes(false);
@@ -80,6 +84,7 @@ void WorkerThreadPool::_process_task(Task *p_task) {
 		}
 		task_mutex.unlock();
 	}
+#endif
 
 	if (p_task->group) {
 		// Handling a group
@@ -162,6 +167,7 @@ void WorkerThreadPool::_process_task(Task *p_task) {
 	// Task may have been freed by now (all callers notified).
 	p_task = nullptr;
 
+#ifdef USE_THREADS
 	if (!use_native_low_priority_threads) {
 		bool post = false;
 		task_mutex.lock();
@@ -184,6 +190,7 @@ void WorkerThreadPool::_process_task(Task *p_task) {
 			task_available_semaphore.post();
 		}
 	}
+#endif
 }
 
 void WorkerThreadPool::_thread_function(void *p_user) {
