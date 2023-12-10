@@ -1627,7 +1627,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 			WorkerThreadPool::get_singleton()->init(worker_threads, low_priority_use_system_threads, low_property_ratio);
 		}
 #else
-		WorkerThreadPool::get_singleton()->init(1, false, 0);
+		WorkerThreadPool::get_singleton()->init(0, false, 0);
 #endif
 	}
 
@@ -2231,10 +2231,8 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 
 	message_queue = memnew(MessageQueue);
 
-#ifdef USE_THREADS
 	Thread::release_main_thread(); // If setup2() is called from another thread, that one will become main thread, so preventively release this one.
 	set_current_thread_safe_for_nodes(false);
-#endif
 
 	OS::get_singleton()->benchmark_end_measure("Startup", "Core");
 
