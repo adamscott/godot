@@ -45,10 +45,10 @@
 		</member>
 		<member name="progressive_web_app/orientation" type="int" setter="" getter="">
 		</member>
-		<member name="variant/extensions_support" type="bool" setter="" getter="">
-		</member>
 		<member name="variant/compatibility_mode" type="bool" setter="" getter="">
 			If enabled, the exported game will be able to run without COEP/COOP headers, but with the drawbacks of not being able to use threads and having some audio issues.
+		</member>
+		<member name="variant/extensions_support" type="bool" setter="" getter="">
 		</member>
 		<member name="vram_texture_compression/for_desktop" type="bool" setter="" getter="">
 		</member>
