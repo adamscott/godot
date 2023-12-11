@@ -503,10 +503,7 @@ bool WorkerThreadPool::is_group_task_completed(GroupID p_group) const {
 }
 
 void WorkerThreadPool::wait_for_group_task_completion(GroupID p_group) {
-#ifndef THREADS_ENABLED
-	return;
-#endif
-
+#ifdef THREADS_ENABLED
 	task_mutex.lock();
 	Group **groupp = groups.getptr(p_group);
 	task_mutex.unlock();
@@ -544,6 +541,7 @@ void WorkerThreadPool::wait_for_group_task_completion(GroupID p_group) {
 	task_mutex.lock(); // This mutex is needed when Physics 2D and/or 3D is selected to run on a separate thread.
 	groups.erase(p_group);
 	task_mutex.unlock();
+#endif // THREADS_ENABLED
 }
 
 int WorkerThreadPool::get_thread_index() {
