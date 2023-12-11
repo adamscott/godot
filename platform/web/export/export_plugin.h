@@ -56,13 +56,13 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 	Mutex server_lock;
 	Thread server_thread;
 
-	String _get_template_name(bool p_extension, bool p_compatible, bool p_debug) const {
+	String _get_template_name(bool p_extension, bool p_nothreads, bool p_debug) const {
 		String name = "web";
 		if (p_extension) {
 			name += "_dlink";
 		}
-		if (p_compatible) {
-			name += "_compatible";
+		if (p_nothreads) {
+			name += "_nothreads";
 		}
 		if (p_debug) {
 			name += "_debug.zip";

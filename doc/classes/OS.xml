@@ -22,7 +22,7 @@
 		<method name="are_threads_enabled" qualifiers="const">
 			<return type="bool" />
 			<description>
-				Returns true if Godot was built with threading capabilities.
+				Returns whether if Godot was built with threading capabilities.
 			</description>
 		</method>
 		<method name="close_midi_inputs">

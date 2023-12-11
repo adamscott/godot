@@ -31,9 +31,6 @@
 #ifndef CONDITION_VARIABLE_H
 #define CONDITION_VARIABLE_H
 
-#include "core/os/mutex.h"
-#include "core/typedefs.h"
-
 #ifdef MINGW_ENABLED
 #define MINGW_STDTHREAD_REDUNDANCY_WARNING
 #include "thirdparty/mingw-std-threads/mingw.condition_variable.h"
@@ -50,6 +47,7 @@
 // own mutex to tie the wait-notify to some other behavior, you need to use this.
 
 #ifdef THREADS_ENABLED
+
 class ConditionVariable {
 	mutable THREADING_NAMESPACE::condition_variable condition;
 
@@ -67,7 +65,9 @@ public:
 		condition.notify_all();
 	}
 };
-#else
+
+#else // No threads.
+
 class ConditionVariable {
 public:
 	template <class BinaryMutexT>
@@ -75,6 +75,7 @@ public:
 	_ALWAYS_INLINE_ void notify_one() const {}
 	_ALWAYS_INLINE_ void notify_all() const {}
 };
-#endif
+
+#endif // THREADS_ENABLED
 
 #endif // CONDITION_VARIABLE_H

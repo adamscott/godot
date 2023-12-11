@@ -29,10 +29,10 @@
 /**************************************************************************/
 
 #include "audio_driver_web.h"
+#include "godot_audio.h"
 
 #include "core/config/project_settings.h"
 #include "core/error/error_list.h"
-#include "godot_audio.h"
 
 #include <emscripten.h>
 
@@ -187,6 +187,7 @@ Error AudioDriverWeb::input_stop() {
 }
 
 #ifdef THREADS_ENABLED
+
 /// AudioWorkletNode implementation (threads)
 void AudioDriverWorklet::_audio_thread_func(void *p_data) {
 	AudioDriverWorklet *driver = static_cast<AudioDriverWorklet *>(p_data);
@@ -249,7 +250,8 @@ void AudioDriverWorklet::finish_driver() {
 	thread.wait_to_finish();
 }
 
-#else
+#else // No threads.
+
 /// AudioWorkletNode implementation (no threads)
 AudioDriverWorklet *AudioDriverWorklet::singleton = nullptr;
 
@@ -293,4 +295,5 @@ Error AudioDriverScriptProcessor::create(int &p_buffer_samples, int p_channels) 
 void AudioDriverScriptProcessor::start(float *p_out_buf, int p_out_buf_size, float *p_in_buf, int p_in_buf_size) {
 	godot_audio_script_start(p_in_buf, p_in_buf_size, p_out_buf, p_out_buf_size, &_process_callback);
 }
-#endif
+
+#endif // THREADS_ENABLED

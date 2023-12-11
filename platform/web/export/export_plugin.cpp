@@ -381,23 +381,23 @@ bool EditorExportPlatformWeb::has_valid_export_configuration(const Ref<EditorExp
 	bool compatibility_mode = (bool)p_preset->get("variant/compatibility_mode");
 
 	// Look for export templates (first official, and if defined custom templates).
-	bool debug_standard_valid = exists_export_template(_get_template_name(extensions, compatibility_mode, true), &err);
-	bool release_standard_valid = exists_export_template(_get_template_name(extensions, compatibility_mode, false), &err);
+	bool dvalid = exists_export_template(_get_template_name(extensions, compatibility_mode, true), &err);
+	bool rvalid = exists_export_template(_get_template_name(extensions, compatibility_mode, false), &err);
 
 	if (p_preset->get("custom_template/debug") != "") {
-		debug_standard_valid = FileAccess::exists(p_preset->get("custom_template/debug"));
-		if (!debug_standard_valid) {
+		dvalid = FileAccess::exists(p_preset->get("custom_template/debug"));
+		if (!dvalid) {
 			err += TTR("Custom debug template not found.") + "\n";
 		}
 	}
 	if (p_preset->get("custom_template/release") != "") {
-		release_standard_valid = FileAccess::exists(p_preset->get("custom_template/release"));
-		if (!release_standard_valid) {
+		rvalid = FileAccess::exists(p_preset->get("custom_template/release"));
+		if (!rvalid) {
 			err += TTR("Custom release template not found.") + "\n";
 		}
 	}
 
-	valid = debug_standard_valid || release_standard_valid;
+	valid = dvalid || rvalid;
 	r_missing_templates = !valid;
 
 	if (!err.is_empty()) {

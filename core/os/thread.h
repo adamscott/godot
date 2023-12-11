@@ -40,7 +40,6 @@
 #define THREAD_H
 
 #include "core/templates/safe_refcount.h"
-
 #include "core/typedefs.h"
 
 #ifdef MINGW_ENABLED
@@ -53,6 +52,8 @@
 #endif
 
 class String;
+
+#ifdef THREADS_ENABLED
 
 class Thread {
 public:
@@ -89,7 +90,6 @@ private:
 
 	static PlatformFunctions platform_functions;
 
-#ifdef THREADS_ENABLED
 	ID id = UNASSIGNED_ID;
 	static SafeNumeric<uint64_t> id_counter;
 	static thread_local ID caller_id;
@@ -99,15 +99,10 @@ private:
 
 	static void make_main_thread() { caller_id = MAIN_ID; }
 	static void release_main_thread() { caller_id = UNASSIGNED_ID; }
-#else
-	static void make_main_thread() {}
-	static void release_main_thread() {}
-#endif
 
 public:
 	static void _set_platform_functions(const PlatformFunctions &p_functions);
 
-#ifdef THREADS_ENABLED
 	_FORCE_INLINE_ ID get_id() const { return id; }
 	// get the ID of the caller thread
 	_FORCE_INLINE_ static ID get_caller_id() {
@@ -132,7 +127,51 @@ public:
 
 	Thread();
 	~Thread();
-#else
+};
+
+#else // No threads.
+
+class Thread {
+public:
+	typedef void (*Callback)(void *p_userdata);
+
+	typedef uint64_t ID;
+
+	enum : ID {
+		UNASSIGNED_ID = 0,
+		MAIN_ID = 1
+	};
+
+	enum Priority {
+		PRIORITY_LOW,
+		PRIORITY_NORMAL,
+		PRIORITY_HIGH
+	};
+
+	struct Settings {
+		Priority priority;
+		Settings() { priority = PRIORITY_NORMAL; }
+	};
+
+	struct PlatformFunctions {
+		Error (*set_name)(const String &) = nullptr;
+		void (*set_priority)(Thread::Priority) = nullptr;
+		void (*init)() = nullptr;
+		void (*wrapper)(Thread::Callback, void *) = nullptr;
+		void (*term)() = nullptr;
+	};
+
+private:
+	friend class Main;
+
+	static PlatformFunctions platform_functions;
+
+	static void make_main_thread() {}
+	static void release_main_thread() {}
+
+public:
+	static void _set_platform_functions(const PlatformFunctions &p_functions);
+
 	_FORCE_INLINE_ ID get_id() const { return 0; }
 	// get the ID of the caller thread
 	_FORCE_INLINE_ static ID get_caller_id() { return MAIN_ID; }
@@ -148,8 +187,9 @@ public:
 	void start(Thread::Callback p_callback, void *p_user, const Settings &p_settings = Settings()) {}
 	bool is_started() const { return false; }
 	void wait_to_finish() {}
-#endif
 };
+
+#endif // THREADS_ENABLED
 
 #endif // THREAD_H
 

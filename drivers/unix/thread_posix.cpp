@@ -28,11 +28,11 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#include "core/error/error_list.h"
 #if defined(UNIX_ENABLED)
 
 #include "thread_posix.h"
 
+#include "core/error/error_list.h"
 #include "core/os/thread.h"
 #include "core/string/ustring.h"
 

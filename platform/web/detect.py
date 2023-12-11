@@ -222,7 +222,7 @@ def configure(env: "Environment"):
         env.Append(LINKFLAGS=["-s", "PTHREAD_POOL_SIZE=8"])
         env.Append(LINKFLAGS=["-s", "WASM_MEM_MAX=2048MB"])
     elif env["proxy_to_pthread"]:
-        print('"use_threads=no" support requires "proxy_to_pthread=no", disabling')
+        print('"use_threads=no" support requires "proxy_to_pthread=no", disabling proxy to pthread.')
         env["proxy_to_pthread"] = False
 
     if env["lto"] != "none":
@@ -232,7 +232,7 @@ def configure(env: "Environment"):
 
     if env["dlink_enabled"]:
         if env["proxy_to_pthread"]:
-            print("GDExtension support requires proxy_to_pthread=no, disabling")
+            print("GDExtension support requires proxy_to_pthread=no, disabling proxy to pthread.")
             env["proxy_to_pthread"] = False
 
         if cc_semver < (3, 1, 14):
