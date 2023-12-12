@@ -75,7 +75,6 @@ def get_flags():
         # 100 KiB over -Os, which does not justify the negative impact on
         # run-time performance.
         ("optimize", "size"),
-        ("use_threads", False),
     ]
 
 
