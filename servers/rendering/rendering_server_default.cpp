@@ -397,17 +397,16 @@ RenderingServerDefault::RenderingServerDefault(bool p_create_thread) :
 
 #ifdef THREADS_ENABLED
 	create_thread = p_create_thread;
-
-	if (!p_create_thread) {
+	if (!create_thread) {
 		server_thread = Thread::get_caller_id();
 	} else {
 		server_thread = 0;
 	}
-
-	RSG::threaded = p_create_thread;
 #else
 	create_thread = false;
+	server_thread = Thread::get_main_id();
 #endif
+	RSG::threaded = create_thread;
 
 	RSG::canvas = memnew(RendererCanvasCull);
 	RSG::viewport = memnew(RendererViewport);
