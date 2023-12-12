@@ -31,6 +31,8 @@
 #ifndef SEMAPHORE_H
 #define SEMAPHORE_H
 
+#ifdef THREADS_ENABLED
+
 #include "core/error/error_list.h"
 #include "core/typedefs.h"
 #ifdef DEBUG_ENABLED
@@ -48,13 +50,10 @@
 #define THREADING_NAMESPACE std
 #endif
 
-#ifdef THREADS_ENABLED
-
 class Semaphore {
 private:
 	mutable THREADING_NAMESPACE::mutex mutex;
 	mutable THREADING_NAMESPACE::condition_variable condition;
-
 	mutable uint32_t count = 0; // Initialized as locked.
 #ifdef DEBUG_ENABLED
 	mutable uint32_t awaiters = 0;
@@ -136,18 +135,12 @@ public:
 #else // No threads.
 
 class Semaphore {
-private:
-	mutable THREADING_NAMESPACE::mutex mutex;
-	mutable THREADING_NAMESPACE::condition_variable condition;
-
 public:
-	_ALWAYS_INLINE_ void post() const {}
-	_ALWAYS_INLINE_ void wait() const {}
-	_ALWAYS_INLINE_ bool try_wait() const { return true; }
-
-#ifdef DEBUG_ENABLED
-	~Semaphore() {}
-#endif
+	void post() const {}
+	void wait() const {}
+	bool try_wait() const {
+		return true;
+	};
 };
 
 #endif // THREADS_ENABLED
