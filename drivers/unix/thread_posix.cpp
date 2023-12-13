@@ -32,7 +32,6 @@
 
 #include "thread_posix.h"
 
-#include "core/error/error_list.h"
 #include "core/os/thread.h"
 #include "core/string/ustring.h"
 
@@ -41,8 +40,6 @@
 #endif
 
 static Error set_name(const String &p_name) {
-#ifdef THREADS_ENABLED
-
 #ifdef PTHREAD_NO_RENAME
 	return ERR_UNAVAILABLE;
 
@@ -70,11 +67,6 @@ static Error set_name(const String &p_name) {
 	return err == 0 ? OK : ERR_INVALID_PARAMETER;
 
 #endif // PTHREAD_NO_RENAME
-
-#else
-	return ERR_UNAVAILABLE;
-
-#endif // THREADS_ENABLED
 }
 
 void init_thread_posix() {
