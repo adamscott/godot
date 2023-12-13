@@ -183,6 +183,7 @@ opts.Add(BoolVariable("separate_debug_symbols", "Extract debugging symbols to a 
 opts.Add(EnumVariable("lto", "Link-time optimization (production builds)", "none", ("none", "auto", "thin", "full")))
 opts.Add(BoolVariable("production", "Set defaults to build Godot for use in production", False))
 opts.Add(BoolVariable("generate_apk", "Generate an APK/AAB after building Android library by calling Gradle", False))
+opts.Add(BoolVariable("use_threads", "Use threads", True))
 
 # Components
 opts.Add(BoolVariable("deprecated", "Enable compatibility code for deprecated and removed features", True))
@@ -225,7 +226,6 @@ opts.Add(
 opts.Add(BoolVariable("use_precise_math_checks", "Math checks use very precise epsilon (debug option)", False))
 opts.Add(BoolVariable("scu_build", "Use single compilation unit build", False))
 opts.Add("scu_limit", "Max includes per SCU file when using scu_build (determines RAM use)", "0")
-opts.Add(BoolVariable("use_threads", "Use threads", True))
 
 # Thirdparty libraries
 opts.Add(BoolVariable("builtin_brotli", "Use the built-in Brotli library", True))
