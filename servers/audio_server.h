@@ -36,10 +36,12 @@
 #include "core/object/object_id.h"
 #include "core/os/os.h"
 #include "core/templates/hash_map.h"
+#include "core/templates/rid_owner.h"
 #include "core/templates/safe_list.h"
 #include "core/variant/variant.h"
 #include "servers/audio/audio_effect.h"
 #include "servers/audio/audio_filter_sw.h"
+#include "servers/audio/audio_sample_player_map.h"
 
 #include <atomic>
 
@@ -79,9 +81,8 @@ protected:
 #endif
 
 public:
-	virtual void sample_register(Ref<AudioStream> p_sample) = 0;
-	virtual void sample_unregister(Ref<AudioStream> p_sample) = 0;
-	virtual void sample_play(Ref<AudioStream> p_sample);
+	virtual void sample_preload(Ref<AudioStream> p_sample) = 0;
+	virtual void sample_unload(Ref<AudioStream> p_sample) = 0;
 
 	double get_time_since_last_mix(); //useful for video -> audio sync
 	double get_time_to_next_mix();
@@ -183,6 +184,7 @@ public:
 
 private:
 	HashMap<Ref<AudioStream>, uint32_t> samples;
+	mutable RID_Owner<AudioSamplePlayerMap> sample_player_map_owner;
 
 	uint64_t mix_time = 0;
 	int mix_size = 0;
@@ -310,9 +312,22 @@ protected:
 	static void _bind_methods();
 
 public:
-	bool sample_is_registered(Ref<AudioStream> p_sample) const;
-	void sample_register(Ref<AudioStream> p_sample);
-	void sample_unregister(Ref<AudioStream> p_sample);
+	// bool sample_is_registered(Ref<AudioStream> p_sample) const;
+	// void sample_register(Ref<AudioStream> p_sample);
+	// void sample_unregister(Ref<AudioStream> p_sample);
+
+	RID sample_player_create();
+	void sample_player_destroy(RID p_rid);
+	void sample_player_set_sample(RID p_rid, Ref<AudioStream> p_sample);
+	Ref<AudioStream> sample_player_get_sample(RID p_rid) const;
+	void sample_player_set_positional(RID p_rid, bool p_positional);
+	bool sample_player_get_positional(RID p_rid) const;
+	void sample_player_set_pan(RID p_rid, float p_pan);
+	float sample_player_get_pan(RID p_rid) const;
+	void sample_player_set_pan_depth(RID p_rid, float p_pan_depth);
+	float sample_player_get_pan_depth(RID p_rid) const;
+	void sample_player_set_volume_db(RID p_rid, float p_volume_db);
+	float sample_player_get_volume_db(RID p_rid) const;
 
 	_FORCE_INLINE_ int get_channel_count() const {
 		switch (get_speaker_mode()) {

@@ -42,6 +42,7 @@
 #include "scene/resources/audio_stream_wav.h"
 #include "scene/scene_string_names.h"
 #include "servers/audio/audio_driver_dummy.h"
+#include "servers/audio/audio_sample_player_map.h"
 #include "servers/audio/effects/audio_effect_compressor.h"
 
 #include <cstring>
@@ -657,42 +658,138 @@ AudioServer::AudioStreamPlaybackListNode *AudioServer::_find_playback_list_node(
 	return nullptr;
 }
 
-bool AudioServer::sample_is_registered(Ref<AudioStream> p_sample) const {
-	return samples.has(p_sample);
+// bool AudioServer::sample_is_registered(Ref<AudioStream> p_sample) const {
+// 	return samples.has(p_sample);
+// }
+
+// void AudioServer::sample_register(Ref<AudioStream> p_sample) {
+// 	if (AudioDriver::get_singleton() == nullptr || p_sample == nullptr) {
+// 		return;
+// 	}
+
+// 	bool sample_is_new = !samples.has(p_sample);
+
+// 	if (sample_is_new) {
+// 		// First time registered
+// 		samples[p_sample] = 1;
+// 		AudioDriver::get_singleton()->sample_register(p_sample);
+// 		return;
+// 	}
+
+// 	samples[p_sample] += 1;
+// };
+
+// void AudioServer::sample_unregister(Ref<AudioStream> p_sample) {
+// 	if (AudioDriver::get_singleton() == nullptr) {
+// 		return;
+// 	}
+
+// 	if (!samples.has(p_sample)) {
+// 		return;
+// 	}
+
+// 	samples[p_sample] -= 1;
+
+// 	if (samples[p_sample] == 0) {
+// 		samples.erase(p_sample);
+// 		return AudioDriver::get_singleton()->sample_unregister(p_sample);
+// 	}
+// }
+
+RID AudioServer::sample_player_create() {
+	RID rid = sample_player_map_owner.make_rid();
+	AudioSamplePlayerMap *map = sample_player_map_owner.get_or_null(rid);
+	map->set_self(rid);
+	return rid;
 }
 
-void AudioServer::sample_register(Ref<AudioStream> p_sample) {
-	if (AudioDriver::get_singleton() == nullptr || p_sample == nullptr) {
+void AudioServer::sample_player_destroy(RID p_rid) {
+	AudioSamplePlayerMap *map = sample_player_map_owner.get_or_null(p_rid);
+	ERR_FAIL_NULL_MSG(map, vformat("p_rid(%s) is null", p_rid));
+	sample_player_map_owner.free(p_rid);
+}
+
+void AudioServer::sample_player_set_sample(RID p_rid, Ref<AudioStream> p_sample) {
+	AudioSamplePlayerMap *map = sample_player_map_owner.get_or_null(p_rid);
+	ERR_FAIL_NULL_MSG(map, vformat("p_rid(%s) is null", p_rid));
+
+	Ref<AudioStream> current_sample = map->get_sample();
+	if (current_sample == p_sample) {
 		return;
 	}
 
-	bool sample_is_new = !samples.has(p_sample);
-
-	if (sample_is_new) {
-		// First time registered
-		samples[p_sample] = 1;
-		AudioDriver::get_singleton()->sample_register(p_sample);
-		return;
+	if (current_sample != nullptr && samples.has(current_sample)) {
+		samples[current_sample] -= 1;
+		if (samples[current_sample] <= 0) {
+			samples.erase(current_sample);
+			AudioDriver::get_singleton()->sample_unload(current_sample);
+		}
 	}
 
-	samples[p_sample] += 1;
-};
-
-void AudioServer::sample_unregister(Ref<AudioStream> p_sample) {
-	if (AudioDriver::get_singleton() == nullptr) {
-		return;
+	if (p_sample != nullptr) {
+		if (samples.has(p_sample)) {
+			samples[p_sample] += 1;
+		} else {
+			samples[p_sample] = 1;
+			AudioDriver::get_singleton()->sample_preload(p_sample);
+		}
 	}
 
-	if (!samples.has(p_sample)) {
-		return;
-	}
+	map->set_sample(p_sample);
+}
 
-	samples[p_sample] -= 1;
+Ref<AudioStream> AudioServer::sample_player_get_sample(RID p_rid) const {
+	AudioSamplePlayerMap *map = sample_player_map_owner.get_or_null(p_rid);
+	ERR_FAIL_NULL_V_MSG(map, nullptr, vformat("p_rid(%s) is null", p_rid));
+	return map->get_sample();
+}
 
-	if (samples[p_sample] == 0) {
-		samples.erase(p_sample);
-		return AudioDriver::get_singleton()->sample_unregister(p_sample);
-	}
+void AudioServer::sample_player_set_positional(RID p_rid, bool p_positional) {
+	AudioSamplePlayerMap *map = sample_player_map_owner.get_or_null(p_rid);
+	ERR_FAIL_NULL_MSG(map, vformat("p_rid(%s) is null", p_rid));
+	map->set_positional(p_positional);
+}
+
+bool AudioServer::sample_player_get_positional(RID p_rid) const {
+	AudioSamplePlayerMap *map = sample_player_map_owner.get_or_null(p_rid);
+	ERR_FAIL_NULL_V_MSG(map, false, vformat("p_rid(%s) is null", p_rid));
+	return map->get_positional();
+}
+
+void AudioServer::sample_player_set_pan(RID p_rid, float p_pan) {
+	AudioSamplePlayerMap *map = sample_player_map_owner.get_or_null(p_rid);
+	ERR_FAIL_NULL_MSG(map, vformat("p_rid(%s) is null", p_rid));
+	map->set_pan(p_pan);
+}
+
+float AudioServer::sample_player_get_pan(RID p_rid) const {
+	AudioSamplePlayerMap *map = sample_player_map_owner.get_or_null(p_rid);
+	ERR_FAIL_NULL_V_MSG(map, false, vformat("p_rid(%s) is null", p_rid));
+	return map->get_pan();
+}
+
+void AudioServer::sample_player_set_pan_depth(RID p_rid, float p_pan_depth) {
+	AudioSamplePlayerMap *map = sample_player_map_owner.get_or_null(p_rid);
+	ERR_FAIL_NULL_MSG(map, vformat("p_rid(%s) is null", p_rid));
+	map->set_pan_depth(p_pan_depth);
+}
+
+float AudioServer::sample_player_get_pan_depth(RID p_rid) const {
+	AudioSamplePlayerMap *map = sample_player_map_owner.get_or_null(p_rid);
+	ERR_FAIL_NULL_V_MSG(map, false, vformat("p_rid(%s) is null", p_rid));
+	return map->get_pan_depth();
+}
+
+void AudioServer::sample_player_set_volume_db(RID p_rid, float p_volume_db) {
+	AudioSamplePlayerMap *map = sample_player_map_owner.get_or_null(p_rid);
+	ERR_FAIL_NULL_MSG(map, vformat("p_rid(%s) is null", p_rid));
+	map->set_volume_db(p_volume_db);
+}
+
+float AudioServer::sample_player_get_volume_db(RID p_rid) const {
+	AudioSamplePlayerMap *map = sample_player_map_owner.get_or_null(p_rid);
+	ERR_FAIL_NULL_V_MSG(map, false, vformat("p_rid(%s) is null", p_rid));
+	return map->get_volume_db();
 }
 
 bool AudioServer::thread_has_channel_mix_buffer(int p_bus, int p_buffer) const {

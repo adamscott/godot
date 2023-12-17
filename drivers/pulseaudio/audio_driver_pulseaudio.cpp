@@ -587,12 +587,10 @@ void AudioDriverPulseAudio::thread_func(void *p_udata) {
 	}
 }
 
-void AudioDriverPulseAudio::sample_register(Ref<AudioStream> p_sample) {
-	samples.append(p_sample);
+void AudioDriverPulseAudio::sample_preload(Ref<AudioStream> p_sample) {
 }
 
-void AudioDriverPulseAudio::sample_unregister(Ref<AudioStream> p_sample) {
-	samples.erase(p_sample);
+void AudioDriverPulseAudio::sample_unload(Ref<AudioStream> p_sample) {
 }
 
 void AudioDriverPulseAudio::start() {

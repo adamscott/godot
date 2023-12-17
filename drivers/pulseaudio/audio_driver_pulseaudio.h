@@ -98,17 +98,13 @@ class AudioDriverPulseAudio : public AudioDriver {
 
 	static void thread_func(void *p_udata);
 
-	// --
-
-	Vector<Ref<AudioStream>> samples;
-
 public:
 	virtual const char *get_name() const override {
 		return "PulseAudio";
 	};
 
-	virtual void sample_register(Ref<AudioStream> p_sample) override;
-	virtual void sample_unregister(Ref<AudioStream> p_sample) override;
+	virtual void sample_preload(Ref<AudioStream> p_sample) override;
+	virtual void sample_unload(Ref<AudioStream> p_sample) override;
 
 	virtual Error init() override;
 	virtual void start() override;

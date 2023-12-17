@@ -37,7 +37,8 @@
 class AudioSamplePlayer : public Node {
 	GDCLASS(AudioSamplePlayer, Node);
 
-	Ref<AudioStream> sample;
+private:
+	RID rid;
 
 protected:
 	void _notification(int p_what);
@@ -46,6 +47,8 @@ protected:
 public:
 	void set_sample(Ref<AudioStream> p_sample);
 	Ref<AudioStream> get_sample() const;
+	void set_volume_db(float p_volume_db);
+	float get_volume_db() const;
 
 	void play(float p_from_pos = 0.0);
 	void stop();

@@ -64,8 +64,8 @@ public:
 		return "Dummy";
 	};
 
-	virtual void sample_register(Ref<AudioStream> p_sample) override{};
-	virtual void sample_unregister(Ref<AudioStream> p_sample) override{};
+	virtual void sample_preload(Ref<AudioStream> p_sample) override{};
+	virtual void sample_unload(Ref<AudioStream> p_sample) override{};
 
 	virtual Error init() override;
 	virtual void start() override;

@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  audio_driver_alsa.h                                                   */
+/*  audio_sample_map.h                                                    */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,75 +28,37 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef AUDIO_DRIVER_ALSA_H
-#define AUDIO_DRIVER_ALSA_H
+#ifndef AUDIO_SAMPLE_PLAYER_MAP_H
+#define AUDIO_SAMPLE_PLAYER_MAP_H
 
-#ifdef ALSA_ENABLED
+#include "audio_rid.h"
+#include "core/object/ref_counted.h"
 
-#include "core/os/mutex.h"
-#include "core/os/thread.h"
-#include "core/templates/safe_refcount.h"
-#include "servers/audio_server.h"
+class AudioStream;
 
-#ifdef SOWRAP_ENABLED
-#include "asound-so_wrap.h"
-#else
-#include <alsa/asoundlib.h>
-#endif
-
-class AudioDriverALSA : public AudioDriver {
-	Thread thread;
-	Mutex mutex;
-
-	snd_pcm_t *pcm_handle = nullptr;
-
-	String output_device_name = "Default";
-	String new_output_device = "Default";
-
-	Vector<int32_t> samples_in;
-	Vector<int16_t> samples_out;
-
-	Error init_output_device();
-	void finish_output_device();
-
-	static void thread_func(void *p_udata);
-
-	unsigned int mix_rate = 0;
-	SpeakerMode speaker_mode;
-
-	snd_pcm_uframes_t buffer_frames;
-	snd_pcm_uframes_t buffer_size;
-	snd_pcm_uframes_t period_size;
-	int channels = 0;
-
-	SafeFlag active;
-	SafeFlag exit_thread;
+class AudioSamplePlayerMap : public AudioRID {
+private:
+	Ref<AudioStream> sample;
+	bool positional = false;
+	float pan = 0.0f;
+	float pan_depth = 0.0f;
+	float volume_db = 0.0f;
 
 public:
-	virtual const char *get_name() const override {
-		return "ALSA";
-	}
+	void set_sample(Ref<AudioStream> p_sample);
+	Ref<AudioStream> get_sample() const;
 
-	virtual void sample_preload(Ref<AudioStream> p_sample) override{};
-	virtual void sample_unload(Ref<AudioStream> p_sample) override{};
+	void set_positional(bool p_positional) { positional = p_positional; }
+	bool get_positional() { return positional; }
 
-	virtual Error init() override;
-	virtual void start() override;
-	virtual int get_mix_rate() const override;
-	virtual SpeakerMode get_speaker_mode() const override;
+	void set_pan(float p_pan) { pan = p_pan; }
+	float get_pan() const { return pan; }
 
-	virtual void lock() override;
-	virtual void unlock() override;
-	virtual void finish() override;
+	void set_pan_depth(float p_pan_depth) { pan_depth = p_pan_depth; }
+	float get_pan_depth() const { return pan_depth; }
 
-	virtual PackedStringArray get_output_device_list() override;
-	virtual String get_output_device() override;
-	virtual void set_output_device(const String &p_name) override;
-
-	AudioDriverALSA() {}
-	~AudioDriverALSA() {}
+	void set_volume_db(float p_volume_db) { volume_db = p_volume_db; }
+	float get_volume_db() { return volume_db; }
 };
 
-#endif // ALSA_ENABLED
-
-#endif // AUDIO_DRIVER_ALSA_H
+#endif // AUDIO_SAMPLE_PLAYER_MAP_H

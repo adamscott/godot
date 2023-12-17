@@ -29,24 +29,24 @@
 /**************************************************************************/
 
 #include "audio_sample_player.h"
+#include "core/object/object.h"
 #include "servers/audio/audio_stream.h"
 #include "servers/audio_server.h"
 
 void AudioSamplePlayer::set_sample(Ref<AudioStream> p_sample) {
-	if (p_sample != sample) {
-		if (p_sample == nullptr) {
-			AudioServer::get_singleton()->sample_unregister(sample);
-		} else {
-			AudioServer::get_singleton()->sample_register(p_sample);
-		}
-	}
-
-	sample = p_sample;
+	AudioServer::get_singleton()->sample_player_set_sample(rid, p_sample);
 }
 
 Ref<AudioStream> AudioSamplePlayer::get_sample() const {
-	print_line(vformat("AudioSamplePlayer::get_sample() %s", sample));
-	return sample;
+	return AudioServer::get_singleton()->sample_player_get_sample(rid);
+}
+
+void AudioSamplePlayer::set_volume_db(float p_volume_db) {
+	AudioServer::get_singleton()->sample_player_set_volume_db(rid, p_volume_db);
+}
+
+float AudioSamplePlayer::get_volume_db() const {
+	return AudioServer::get_singleton()->sample_player_get_volume_db(rid);
 }
 
 void AudioSamplePlayer::_notification(int p_what) {
@@ -67,12 +67,20 @@ void AudioSamplePlayer::_notification(int p_what) {
 void AudioSamplePlayer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_sample", "sample"), &AudioSamplePlayer::set_sample);
 	ClassDB::bind_method(D_METHOD("get_sample"), &AudioSamplePlayer::get_sample);
+	ClassDB::bind_method(D_METHOD("set_volume_db", "volume_db"), &AudioSamplePlayer::set_volume_db);
+	ClassDB::bind_method(D_METHOD("get_volume_db"), &AudioSamplePlayer::get_volume_db);
 
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "sample", PROPERTY_HINT_RESOURCE_TYPE, "AudioStream"), "set_sample", "get_sample");
+	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "volume_db", PROPERTY_HINT_RANGE, "-80,24,suffix:dB"), "set_volume_db", "get_volume_db");
 }
 
 AudioSamplePlayer::AudioSamplePlayer() {
+	rid = AudioServer::get_singleton()->sample_player_create();
+	AudioServer::get_singleton()->sample_player_set_positional(rid, false);
+	AudioServer::get_singleton()->sample_player_set_pan(rid, 0);
+	AudioServer::get_singleton()->sample_player_set_pan_depth(rid, 0);
 }
 
 AudioSamplePlayer::~AudioSamplePlayer() {
+	AudioServer::get_singleton()->sample_player_destroy(rid);
 }

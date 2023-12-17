@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  audio_driver_alsa.h                                                   */
+/*  audio_sample_map.h                                                    */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,75 +28,12 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef AUDIO_DRIVER_ALSA_H
-#define AUDIO_DRIVER_ALSA_H
+#include "audio_sample_player_map.h"
 
-#ifdef ALSA_ENABLED
+void AudioSamplePlayerMap::set_sample(Ref<AudioStream> p_sample) {
+	sample = p_sample;
+}
 
-#include "core/os/mutex.h"
-#include "core/os/thread.h"
-#include "core/templates/safe_refcount.h"
-#include "servers/audio_server.h"
-
-#ifdef SOWRAP_ENABLED
-#include "asound-so_wrap.h"
-#else
-#include <alsa/asoundlib.h>
-#endif
-
-class AudioDriverALSA : public AudioDriver {
-	Thread thread;
-	Mutex mutex;
-
-	snd_pcm_t *pcm_handle = nullptr;
-
-	String output_device_name = "Default";
-	String new_output_device = "Default";
-
-	Vector<int32_t> samples_in;
-	Vector<int16_t> samples_out;
-
-	Error init_output_device();
-	void finish_output_device();
-
-	static void thread_func(void *p_udata);
-
-	unsigned int mix_rate = 0;
-	SpeakerMode speaker_mode;
-
-	snd_pcm_uframes_t buffer_frames;
-	snd_pcm_uframes_t buffer_size;
-	snd_pcm_uframes_t period_size;
-	int channels = 0;
-
-	SafeFlag active;
-	SafeFlag exit_thread;
-
-public:
-	virtual const char *get_name() const override {
-		return "ALSA";
-	}
-
-	virtual void sample_preload(Ref<AudioStream> p_sample) override{};
-	virtual void sample_unload(Ref<AudioStream> p_sample) override{};
-
-	virtual Error init() override;
-	virtual void start() override;
-	virtual int get_mix_rate() const override;
-	virtual SpeakerMode get_speaker_mode() const override;
-
-	virtual void lock() override;
-	virtual void unlock() override;
-	virtual void finish() override;
-
-	virtual PackedStringArray get_output_device_list() override;
-	virtual String get_output_device() override;
-	virtual void set_output_device(const String &p_name) override;
-
-	AudioDriverALSA() {}
-	~AudioDriverALSA() {}
-};
-
-#endif // ALSA_ENABLED
-
-#endif // AUDIO_DRIVER_ALSA_H
+Ref<AudioStream> AudioSamplePlayerMap::get_sample() const {
+	return sample;
+}
