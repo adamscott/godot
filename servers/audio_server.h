@@ -61,9 +61,10 @@ class AudioDriver {
 	uint64_t prof_time = 0;
 #endif
 
-	mutable RID_Owner<AudioSampleVoiceMap> sample_voice_map_owner;
-
 protected:
+	mutable RID_Owner<AudioSampleVoiceMap> sample_voice_map_owner;
+	Vector<AudioFrame> _get_volume_vector(float p_volume_db = 0.0f);
+
 	Vector<int32_t> input_buffer;
 	unsigned int input_position = 0;
 	unsigned int input_size = 0;

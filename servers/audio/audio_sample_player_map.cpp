@@ -30,10 +30,10 @@
 
 #include "audio_sample_player_map.h"
 
-void AudioSamplePlayerMap::set_sample(Ref<AudioStream> p_sample) {
+void AudioSamplePlayerMap::set_sample(AudioStream *p_sample) {
 	sample = p_sample;
 }
 
-Ref<AudioStream> AudioSamplePlayerMap::get_sample() const {
+AudioStream *AudioSamplePlayerMap::get_sample() const {
 	return sample;
 }

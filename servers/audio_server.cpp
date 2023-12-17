@@ -109,6 +109,45 @@ void AudioDriver::sample_voice_set_from_pos(RID p_rid, float p_from_pos) {
 	map->set_from_pos(p_from_pos);
 }
 
+Vector<AudioFrame> AudioDriver::_get_volume_vector(float p_volume_db) {
+	Vector<AudioFrame> volume_vector;
+	// We need at most four stereo pairs (for 7.1 systems).
+	volume_vector.resize(4);
+
+	// Initialize the volume vector to zero.
+	for (AudioFrame &channel_volume_db : volume_vector) {
+		channel_volume_db = AudioFrame(0, 0);
+	}
+
+	float volume_linear = Math::db_to_linear(p_volume_db);
+
+	volume_vector.write[0] = AudioFrame(volume_linear, volume_linear);
+
+	// Set the volume vector up according to the speaker mode and mix target.
+	// TODO do we need to scale the volume down when we output to more channels?
+	// if (AudioServer::get_singleton()->get_speaker_mode() == AudioServer::SPEAKER_MODE_STEREO) {
+	// 	volume_vector.write[0] = AudioFrame(volume_linear, volume_linear);
+	// } else {
+	// 	switch (mix_target) {
+	// 		case MIX_TARGET_STEREO: {
+	// 			volume_vector.write[0] = AudioFrame(volume_linear, volume_linear);
+	// 		} break;
+	// 		case MIX_TARGET_SURROUND: {
+	// 			// TODO Make sure this is right.
+	// 			volume_vector.write[0] = AudioFrame(volume_linear, volume_linear);
+	// 			volume_vector.write[1] = AudioFrame(volume_linear, /* LFE= */ 1.0f);
+	// 			volume_vector.write[2] = AudioFrame(volume_linear, volume_linear);
+	// 			volume_vector.write[3] = AudioFrame(volume_linear, volume_linear);
+	// 		} break;
+	// 		case MIX_TARGET_CENTER: {
+	// 			// TODO Make sure this is right.
+	// 			volume_vector.write[1] = AudioFrame(volume_linear, /* LFE= */ 1.0f);
+	// 		} break;
+	// 	}
+	// }
+	return volume_vector;
+}
+
 void AudioDriver::update_mix_time(int p_frames) {
 	_last_mix_frames = p_frames;
 	if (OS::get_singleton()) {
@@ -695,44 +734,6 @@ AudioServer::AudioStreamPlaybackListNode *AudioServer::_find_playback_list_node(
 	return nullptr;
 }
 
-// bool AudioServer::sample_is_registered(Ref<AudioStream> p_sample) const {
-// 	return samples.has(p_sample);
-// }
-
-// void AudioServer::sample_register(Ref<AudioStream> p_sample) {
-// 	if (AudioDriver::get_singleton() == nullptr || p_sample == nullptr) {
-// 		return;
-// 	}
-
-// 	bool sample_is_new = !samples.has(p_sample);
-
-// 	if (sample_is_new) {
-// 		// First time registered
-// 		samples[p_sample] = 1;
-// 		AudioDriver::get_singleton()->sample_register(p_sample);
-// 		return;
-// 	}
-
-// 	samples[p_sample] += 1;
-// };
-
-// void AudioServer::sample_unregister(Ref<AudioStream> p_sample) {
-// 	if (AudioDriver::get_singleton() == nullptr) {
-// 		return;
-// 	}
-
-// 	if (!samples.has(p_sample)) {
-// 		return;
-// 	}
-
-// 	samples[p_sample] -= 1;
-
-// 	if (samples[p_sample] == 0) {
-// 		samples.erase(p_sample);
-// 		return AudioDriver::get_singleton()->sample_unregister(p_sample);
-// 	}
-// }
-
 RID AudioServer::sample_player_allocate() {
 	return sample_player_map_owner.allocate_rid();
 }
@@ -744,6 +745,11 @@ void AudioServer::sample_player_initialize(RID p_rid) {
 void AudioServer::sample_player_free(RID p_rid) {
 	AudioSamplePlayerMap *map = sample_player_map_owner.get_or_null(p_rid);
 	ERR_FAIL_NULL_MSG(map, vformat("p_rid(%s) is null", p_rid));
+
+	if (voices.has(p_rid)) {
+		AudioDriver::get_singleton()->sample_voice_free(voices[p_rid]);
+	}
+
 	sample_player_map_owner.free(p_rid);
 }
 
@@ -773,7 +779,7 @@ void AudioServer::sample_player_set_sample(RID p_rid, Ref<AudioStream> p_sample)
 		}
 	}
 
-	map->set_sample(p_sample);
+	map->set_sample(p_sample.ptr());
 }
 
 Ref<AudioStream> AudioServer::sample_player_get_sample(RID p_rid) const {
@@ -837,7 +843,11 @@ void AudioServer::sample_player_play(RID p_player_rid, float p_from_pos) {
 
 	RID voice_rid = AudioDriver::get_singleton()->sample_voice_allocate();
 	AudioDriver::get_singleton()->sample_voice_initialize(voice_rid);
+
+	voices[p_player_rid] = voice_rid;
+
 	AudioDriver::get_singleton()->sample_voice_set_from_pos(voice_rid, p_from_pos);
+	AudioDriver::get_singleton()->sample_voice_set_sample(voice_rid, sample_player_get_sample(p_player_rid));
 	AudioDriver::get_singleton()->sample_voice_play(voice_rid);
 }
 
@@ -845,7 +855,8 @@ void AudioServer::sample_player_stop(RID p_player_rid) {
 	if (!voices.has(p_player_rid)) {
 		return;
 	}
-	AudioDriver::get_singleton()->sample_voice_stop(voices.get(p_player_rid));
+	RID voices_rid = voices.get(p_player_rid);
+	AudioDriver::get_singleton()->sample_voice_stop(voices_rid);
 	voices.erase(p_player_rid);
 }
 

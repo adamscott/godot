@@ -35,15 +35,19 @@
 #include "core/object/ref_counted.h"
 
 class AudioStream;
+class AudioStreamPlayback;
 
 class AudioSampleVoiceMap : public AudioRID {
 private:
-	AudioStream *sample;
+	AudioStream *sample = nullptr;
+	AudioStreamPlayback *playback = nullptr;
 	float from_pos = 0.0f;
 
 public:
 	AudioStream *get_sample() const;
 	void set_sample(AudioStream *p_sample);
+	AudioStreamPlayback *get_playback() const;
+	void set_playback(AudioStreamPlayback *p_playback);
 
 	float get_from_pos() const { return from_pos; }
 	void set_from_pos(float p_from_pos) { from_pos = p_from_pos; }

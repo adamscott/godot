@@ -38,15 +38,15 @@ class AudioStream;
 
 class AudioSamplePlayerMap : public AudioRID {
 private:
-	Ref<AudioStream> sample;
+	AudioStream *sample = nullptr;
 	bool positional = false;
 	float pan = 0.0f;
 	float pan_depth = 0.0f;
 	float volume_db = 0.0f;
 
 public:
-	void set_sample(Ref<AudioStream> p_sample);
-	Ref<AudioStream> get_sample() const;
+	void set_sample(AudioStream *p_sample);
+	AudioStream *get_sample() const;
 
 	void set_positional(bool p_positional) { positional = p_positional; }
 	bool get_positional() { return positional; }

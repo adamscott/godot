@@ -37,3 +37,11 @@ void AudioSampleVoiceMap::set_sample(AudioStream *p_sample) {
 AudioStream *AudioSampleVoiceMap::get_sample() const {
 	return sample;
 }
+
+void AudioSampleVoiceMap::set_playback(AudioStreamPlayback *p_playback) {
+	playback = p_playback;
+}
+
+AudioStreamPlayback *AudioSampleVoiceMap::get_playback() const {
+	return playback;
+}

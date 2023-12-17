@@ -29,6 +29,7 @@
 /**************************************************************************/
 
 #include "audio_driver_pulseaudio.h"
+#include "scene/scene_string_names.h"
 #include "servers/audio_server.h"
 
 #ifdef PULSEAUDIO_ENABLED
@@ -588,15 +589,42 @@ void AudioDriverPulseAudio::thread_func(void *p_udata) {
 }
 
 void AudioDriverPulseAudio::sample_preload(Ref<AudioStream> p_sample) {
+	samples.append(p_sample);
 }
 
 void AudioDriverPulseAudio::sample_unload(Ref<AudioStream> p_sample) {
+	samples.erase(p_sample);
 }
 
-void AudioDriverPulseAudio::sample_voice_play(RID p_voice_rid) {
+void AudioDriverPulseAudio::sample_voice_play(RID p_rid) {
+	AudioSampleVoiceMap *map = sample_voice_map_owner.get_or_null(p_rid);
+	ERR_FAIL_NULL_MSG(map, vformat("p_rid(%s) is null", p_rid));
+
+	Ref<AudioStream> sample = map->get_sample();
+	if (sample.is_null()) {
+		return;
+	}
+
+	float from_pos = map->get_from_pos();
+
+	print_line(vformat("Sample Voice Play start playback"));
+	Ref<AudioStreamPlayback> playback = sample->instantiate_playback();
+	map->set_playback(playback.ptr());
+
+	AudioServer::get_singleton()->start_playback_stream(playback, SceneStringNames::get_singleton()->Master, _get_volume_vector(), from_pos);
 }
 
-void AudioDriverPulseAudio::sample_voice_stop(RID p_voice_rid) {
+void AudioDriverPulseAudio::sample_voice_stop(RID p_rid) {
+	AudioSampleVoiceMap *map = sample_voice_map_owner.get_or_null(p_rid);
+	ERR_FAIL_NULL_MSG(map, vformat("p_rid(%s) is null", p_rid));
+
+	Ref<AudioStreamPlayback> playback = map->get_playback();
+	if (playback.is_null()) {
+		return;
+	}
+
+	AudioServer::get_singleton()->stop_playback_stream(playback);
+	sample_voice_map_owner.free(p_rid);
 }
 
 void AudioDriverPulseAudio::start() {

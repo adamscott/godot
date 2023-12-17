@@ -29,6 +29,7 @@
 /**************************************************************************/
 
 #include "audio_sample_player.h"
+#include "core/object/class_db.h"
 #include "core/object/object.h"
 #include "servers/audio/audio_stream.h"
 #include "servers/audio_server.h"
@@ -53,6 +54,9 @@ void AudioSamplePlayer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_sample"), &AudioSamplePlayer::get_sample);
 	ClassDB::bind_method(D_METHOD("set_volume_db", "volume_db"), &AudioSamplePlayer::set_volume_db);
 	ClassDB::bind_method(D_METHOD("get_volume_db"), &AudioSamplePlayer::get_volume_db);
+
+	ClassDB::bind_method(D_METHOD("play", "from_pos"), &AudioSamplePlayer::play, DEFVAL(0.0f));
+	ClassDB::bind_method(D_METHOD("stop"), &AudioSamplePlayer::stop);
 
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "sample", PROPERTY_HINT_RESOURCE_TYPE, "AudioStream"), "set_sample", "get_sample");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "volume_db", PROPERTY_HINT_RANGE, "-80,24,suffix:dB"), "set_volume_db", "get_volume_db");

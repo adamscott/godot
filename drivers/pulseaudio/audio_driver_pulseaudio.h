@@ -98,6 +98,8 @@ class AudioDriverPulseAudio : public AudioDriver {
 
 	static void thread_func(void *p_udata);
 
+	Vector<Ref<AudioStream>> samples;
+
 public:
 	virtual const char *get_name() const override {
 		return "PulseAudio";

@@ -45,8 +45,8 @@ protected:
 	static void _bind_methods();
 
 public:
-	void set_sample(Ref<AudioStream> p_sample);
 	Ref<AudioStream> get_sample() const;
+	void set_sample(Ref<AudioStream> p_sample);
 	void set_volume_db(float p_volume_db);
 	float get_volume_db() const;
 
