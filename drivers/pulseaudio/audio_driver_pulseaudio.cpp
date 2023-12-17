@@ -587,12 +587,12 @@ void AudioDriverPulseAudio::thread_func(void *p_udata) {
 	}
 }
 
-Error AudioDriverPulseAudio::sample_register(Ref<AudioStream> p_sample) {
-	return OK;
+void AudioDriverPulseAudio::sample_register(Ref<AudioStream> p_sample) {
+	samples.append(p_sample);
 }
 
-Error AudioDriverPulseAudio::sample_unregister(ObjectID p_oid) {
-	return OK;
+void AudioDriverPulseAudio::sample_unregister(Ref<AudioStream> p_sample) {
+	samples.erase(p_sample);
 }
 
 void AudioDriverPulseAudio::start() {

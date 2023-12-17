@@ -77,8 +77,8 @@ public:
 		return "ALSA";
 	}
 
-	virtual Error sample_register(Ref<AudioStream> p_sample) override { return OK; };
-	virtual Error sample_unregister(ObjectID p_oid) override { return OK; };
+	virtual void sample_register(Ref<AudioStream> p_sample) override{};
+	virtual void sample_unregister(Ref<AudioStream> p_sample) override{};
 
 	virtual Error init() override;
 	virtual void start() override;

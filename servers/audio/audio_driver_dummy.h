@@ -31,6 +31,7 @@
 #ifndef AUDIO_DRIVER_DUMMY_H
 #define AUDIO_DRIVER_DUMMY_H
 
+#include "servers/audio/audio_stream.h"
 #include "servers/audio_server.h"
 
 #include "core/os/mutex.h"
@@ -63,8 +64,8 @@ public:
 		return "Dummy";
 	};
 
-	virtual Error sample_register(Ref<AudioStream> p_sample) override { return OK; };
-	virtual Error sample_unregister(ObjectID p_oid) override { return OK; };
+	virtual void sample_register(Ref<AudioStream> p_sample) override{};
+	virtual void sample_unregister(Ref<AudioStream> p_sample) override{};
 
 	virtual Error init() override;
 	virtual void start() override;

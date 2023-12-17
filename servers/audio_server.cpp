@@ -658,52 +658,41 @@ AudioServer::AudioStreamPlaybackListNode *AudioServer::_find_playback_list_node(
 }
 
 bool AudioServer::sample_is_registered(Ref<AudioStream> p_sample) const {
-	return sample_is_registered(p_sample->get_instance_id());
+	return samples.has(p_sample);
 }
 
-bool AudioServer::sample_is_registered(ObjectID p_oid) const {
-	return samples.has(p_oid);
-}
-
-Error AudioServer::sample_register(Ref<AudioStream> p_sample) {
+void AudioServer::sample_register(Ref<AudioStream> p_sample) {
 	if (AudioDriver::get_singleton() == nullptr || p_sample == nullptr) {
-		return OK;
+		return;
 	}
 
-	ObjectID sample_oid = p_sample->get_instance_id();
-	bool sample_is_new = !samples.has(sample_oid);
+	bool sample_is_new = !samples.has(p_sample);
 
 	if (sample_is_new) {
 		// First time registered
-		samples[sample_oid] = 1;
-		return AudioDriver::get_singleton()->sample_register(p_sample);
+		samples[p_sample] = 1;
+		AudioDriver::get_singleton()->sample_register(p_sample);
+		return;
 	}
 
-	samples[sample_oid] += 1;
-	return OK;
+	samples[p_sample] += 1;
 };
 
-Error AudioServer::sample_unregister(Ref<AudioStream> p_sample) {
-	return sample_unregister(p_sample->get_instance_id());
-}
-
-Error AudioServer::sample_unregister(ObjectID p_oid) {
+void AudioServer::sample_unregister(Ref<AudioStream> p_sample) {
 	if (AudioDriver::get_singleton() == nullptr) {
-		return OK;
+		return;
 	}
 
-	if (!samples.has(p_oid)) {
-		return OK;
+	if (!samples.has(p_sample)) {
+		return;
 	}
 
-	samples[p_oid] -= 1;
+	samples[p_sample] -= 1;
 
-	if (samples[p_oid] == 0) {
-		samples.erase(p_oid);
-		return AudioDriver::get_singleton()->sample_unregister(p_oid);
+	if (samples[p_sample] == 0) {
+		samples.erase(p_sample);
+		return AudioDriver::get_singleton()->sample_unregister(p_sample);
 	}
-
-	return OK;
 }
 
 bool AudioServer::thread_has_channel_mix_buffer(int p_bus, int p_buffer) const {

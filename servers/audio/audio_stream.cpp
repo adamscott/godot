@@ -261,16 +261,6 @@ void AudioStream::_bind_methods() {
 	GDVIRTUAL_BIND(_get_beat_count)
 }
 
-AudioStream::~AudioStream() {
-	if (AudioServer::get_singleton() == nullptr) {
-		return;
-	}
-
-	if (AudioServer::get_singleton()->sample_is_registered(get_instance_id())) {
-		AudioServer::get_singleton()->sample_unregister(get_instance_id());
-	}
-}
-
 ////////////////////////////////
 
 Ref<AudioStreamPlayback> AudioStreamMicrophone::instantiate_playback() {

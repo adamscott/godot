@@ -79,8 +79,9 @@ protected:
 #endif
 
 public:
-	virtual Error sample_register(Ref<AudioStream> p_sample) = 0;
-	virtual Error sample_unregister(ObjectID p_oid) = 0;
+	virtual void sample_register(Ref<AudioStream> p_sample) = 0;
+	virtual void sample_unregister(Ref<AudioStream> p_sample) = 0;
+	virtual void sample_play(Ref<AudioStream> p_sample);
 
 	double get_time_since_last_mix(); //useful for video -> audio sync
 	double get_time_to_next_mix();
@@ -181,7 +182,7 @@ public:
 	typedef void (*AudioCallback)(void *p_userdata);
 
 private:
-	HashMap<ObjectID, uint32_t> samples;
+	HashMap<Ref<AudioStream>, uint32_t> samples;
 
 	uint64_t mix_time = 0;
 	int mix_size = 0;
@@ -310,10 +311,8 @@ protected:
 
 public:
 	bool sample_is_registered(Ref<AudioStream> p_sample) const;
-	bool sample_is_registered(ObjectID p_oid) const;
-	Error sample_register(Ref<AudioStream> p_sample);
-	Error sample_unregister(Ref<AudioStream> p_sample);
-	Error sample_unregister(ObjectID p_oid);
+	void sample_register(Ref<AudioStream> p_sample);
+	void sample_unregister(Ref<AudioStream> p_sample);
 
 	_FORCE_INLINE_ int get_channel_count() const {
 		switch (get_speaker_mode()) {
