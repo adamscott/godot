@@ -79,6 +79,8 @@ public:
 
 	virtual void sample_preload(Ref<AudioStream> p_sample) override{};
 	virtual void sample_unload(Ref<AudioStream> p_sample) override{};
+	virtual void sample_voice_play(RID p_voice_rid) override{};
+	virtual void sample_voice_stop(RID p_voice_rid) override{};
 
 	virtual Error init() override;
 	virtual void start() override;

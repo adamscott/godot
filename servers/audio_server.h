@@ -42,6 +42,7 @@
 #include "servers/audio/audio_effect.h"
 #include "servers/audio/audio_filter_sw.h"
 #include "servers/audio/audio_sample_player_map.h"
+#include "servers/audio/audio_sample_voice_map.h"
 
 #include <atomic>
 
@@ -59,6 +60,8 @@ class AudioDriver {
 	uint64_t prof_ticks = 0;
 	uint64_t prof_time = 0;
 #endif
+
+	mutable RID_Owner<AudioSampleVoiceMap> sample_voice_map_owner;
 
 protected:
 	Vector<int32_t> input_buffer;
@@ -83,6 +86,18 @@ protected:
 public:
 	virtual void sample_preload(Ref<AudioStream> p_sample) = 0;
 	virtual void sample_unload(Ref<AudioStream> p_sample) = 0;
+
+	RID sample_voice_allocate();
+	void sample_voice_initialize(RID p_rid);
+	void sample_voice_free(RID p_rid);
+
+	Ref<AudioStream> sample_voice_get_sample(RID p_rid) const;
+	void sample_voice_set_sample(RID p_rid, Ref<AudioStream> p_sample);
+	float sample_voice_get_from_pos(RID p_rid) const;
+	void sample_voice_set_from_pos(RID p_rid, float p_from_pos);
+
+	virtual void sample_voice_play(RID p_voice_rid) = 0;
+	virtual void sample_voice_stop(RID p_voice_rid) = 0;
 
 	double get_time_since_last_mix(); //useful for video -> audio sync
 	double get_time_to_next_mix();
@@ -184,6 +199,7 @@ public:
 
 private:
 	HashMap<Ref<AudioStream>, uint32_t> samples;
+	HashMap<RID, RID> voices;
 	mutable RID_Owner<AudioSamplePlayerMap> sample_player_map_owner;
 
 	uint64_t mix_time = 0;
@@ -312,12 +328,10 @@ protected:
 	static void _bind_methods();
 
 public:
-	// bool sample_is_registered(Ref<AudioStream> p_sample) const;
-	// void sample_register(Ref<AudioStream> p_sample);
-	// void sample_unregister(Ref<AudioStream> p_sample);
+	RID sample_player_allocate();
+	void sample_player_initialize(RID p_rid);
+	void sample_player_free(RID p_rid);
 
-	RID sample_player_create();
-	void sample_player_destroy(RID p_rid);
 	void sample_player_set_sample(RID p_rid, Ref<AudioStream> p_sample);
 	Ref<AudioStream> sample_player_get_sample(RID p_rid) const;
 	void sample_player_set_positional(RID p_rid, bool p_positional);
@@ -328,6 +342,9 @@ public:
 	float sample_player_get_pan_depth(RID p_rid) const;
 	void sample_player_set_volume_db(RID p_rid, float p_volume_db);
 	float sample_player_get_volume_db(RID p_rid) const;
+
+	void sample_player_play(RID p_rid, float p_from_pos = 0.0f);
+	void sample_player_stop(RID p_rid);
 
 	_FORCE_INLINE_ int get_channel_count() const {
 		switch (get_speaker_mode()) {

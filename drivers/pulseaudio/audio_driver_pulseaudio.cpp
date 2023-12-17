@@ -593,6 +593,12 @@ void AudioDriverPulseAudio::sample_preload(Ref<AudioStream> p_sample) {
 void AudioDriverPulseAudio::sample_unload(Ref<AudioStream> p_sample) {
 }
 
+void AudioDriverPulseAudio::sample_voice_play(RID p_voice_rid) {
+}
+
+void AudioDriverPulseAudio::sample_voice_stop(RID p_voice_rid) {
+}
+
 void AudioDriverPulseAudio::start() {
 	active.set();
 }
