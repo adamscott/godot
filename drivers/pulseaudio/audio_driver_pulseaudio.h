@@ -102,6 +102,9 @@ public:
 		return "PulseAudio";
 	};
 
+	virtual Error sample_register(Ref<AudioStream> p_sample) override;
+	virtual Error sample_unregister(ObjectID p_oid) override;
+
 	virtual Error init() override;
 	virtual void start() override;
 	virtual int get_mix_rate() const override;

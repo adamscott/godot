@@ -63,6 +63,9 @@ public:
 		return "Dummy";
 	};
 
+	virtual Error sample_register(Ref<AudioStream> p_sample) override { return OK; };
+	virtual Error sample_unregister(ObjectID p_oid) override { return OK; };
+
 	virtual Error init() override;
 	virtual void start() override;
 	virtual int get_mix_rate() const override;

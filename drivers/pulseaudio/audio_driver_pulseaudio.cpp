@@ -29,6 +29,7 @@
 /**************************************************************************/
 
 #include "audio_driver_pulseaudio.h"
+#include "servers/audio_server.h"
 
 #ifdef PULSEAUDIO_ENABLED
 
@@ -584,6 +585,14 @@ void AudioDriverPulseAudio::thread_func(void *p_udata) {
 			OS::get_singleton()->delay_usec(1000);
 		}
 	}
+}
+
+Error AudioDriverPulseAudio::sample_register(Ref<AudioStream> p_sample) {
+	return OK;
+}
+
+Error AudioDriverPulseAudio::sample_unregister(ObjectID p_oid) {
+	return OK;
 }
 
 void AudioDriverPulseAudio::start() {

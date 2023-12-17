@@ -72,6 +72,9 @@ protected:
 	virtual void finish_driver() {}
 
 public:
+	virtual Error sample_register(Ref<AudioStream> p_sample) override;
+	virtual Error sample_unregister(ObjectID p_oid) override;
+
 	static bool is_available();
 
 	virtual Error init() final;

@@ -141,6 +141,8 @@ public:
 	uint64_t get_tagged_frame() const;
 	uint32_t get_tagged_frame_count() const;
 	float get_tagged_frame_offset(int p_index) const;
+
+	~AudioStream();
 };
 
 // Microphone

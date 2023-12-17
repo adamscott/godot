@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  audio_driver_alsa.h                                                   */
+/*  audio_sample_player.cpp                                               */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,75 +28,51 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef AUDIO_DRIVER_ALSA_H
-#define AUDIO_DRIVER_ALSA_H
-
-#ifdef ALSA_ENABLED
-
-#include "core/os/mutex.h"
-#include "core/os/thread.h"
-#include "core/templates/safe_refcount.h"
+#include "audio_sample_player.h"
+#include "servers/audio/audio_stream.h"
 #include "servers/audio_server.h"
 
-#ifdef SOWRAP_ENABLED
-#include "asound-so_wrap.h"
-#else
-#include <alsa/asoundlib.h>
-#endif
-
-class AudioDriverALSA : public AudioDriver {
-	Thread thread;
-	Mutex mutex;
-
-	snd_pcm_t *pcm_handle = nullptr;
-
-	String output_device_name = "Default";
-	String new_output_device = "Default";
-
-	Vector<int32_t> samples_in;
-	Vector<int16_t> samples_out;
-
-	Error init_output_device();
-	void finish_output_device();
-
-	static void thread_func(void *p_udata);
-
-	unsigned int mix_rate = 0;
-	SpeakerMode speaker_mode;
-
-	snd_pcm_uframes_t buffer_frames;
-	snd_pcm_uframes_t buffer_size;
-	snd_pcm_uframes_t period_size;
-	int channels = 0;
-
-	SafeFlag active;
-	SafeFlag exit_thread;
-
-public:
-	virtual const char *get_name() const override {
-		return "ALSA";
+void AudioSamplePlayer::set_sample(Ref<AudioStream> p_sample) {
+	if (p_sample != sample) {
+		if (p_sample == nullptr) {
+			AudioServer::get_singleton()->sample_unregister(sample);
+		} else {
+			AudioServer::get_singleton()->sample_register(p_sample);
+		}
 	}
 
-	virtual Error sample_register(Ref<AudioStream> p_sample) override { return OK; };
-	virtual Error sample_unregister(ObjectID p_oid) override { return OK; };
+	sample = p_sample;
+}
 
-	virtual Error init() override;
-	virtual void start() override;
-	virtual int get_mix_rate() const override;
-	virtual SpeakerMode get_speaker_mode() const override;
+Ref<AudioStream> AudioSamplePlayer::get_sample() const {
+	print_line(vformat("AudioSamplePlayer::get_sample() %s", sample));
+	return sample;
+}
 
-	virtual void lock() override;
-	virtual void unlock() override;
-	virtual void finish() override;
+void AudioSamplePlayer::_notification(int p_what) {
+	switch (p_what) {
+		case NOTIFICATION_ENTER_TREE: {
+			print_line(vformat("AudioSamplePlayer::_notification(NOTIFICATION_ENTER_TREE)"));
+		} break;
 
-	virtual PackedStringArray get_output_device_list() override;
-	virtual String get_output_device() override;
-	virtual void set_output_device(const String &p_name) override;
+		case NOTIFICATION_INTERNAL_PROCESS: {
+		} break;
 
-	AudioDriverALSA() {}
-	~AudioDriverALSA() {}
-};
+		case NOTIFICATION_EXIT_TREE: {
+			print_line(vformat("AudioSamplePlayer::_notification(NOTIFICATION_EXIT_TREE)"));
+		} break;
+	}
+}
 
-#endif // ALSA_ENABLED
+void AudioSamplePlayer::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("set_sample", "sample"), &AudioSamplePlayer::set_sample);
+	ClassDB::bind_method(D_METHOD("get_sample"), &AudioSamplePlayer::get_sample);
 
-#endif // AUDIO_DRIVER_ALSA_H
+	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "sample", PROPERTY_HINT_RESOURCE_TYPE, "AudioStream"), "set_sample", "get_sample");
+}
+
+AudioSamplePlayer::AudioSamplePlayer() {
+}
+
+AudioSamplePlayer::~AudioSamplePlayer() {
+}

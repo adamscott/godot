@@ -80,6 +80,7 @@
 #include "scene/animation/animation_tree.h"
 #include "scene/animation/root_motion_view.h"
 #include "scene/animation/tween.h"
+#include "scene/audio/audio_sample_player.h"
 #include "scene/audio/audio_stream_player.h"
 #include "scene/debugger/scene_debugger.h"
 #include "scene/gui/aspect_ratio_container.h"
@@ -934,6 +935,8 @@ void register_scene_types() {
 	GDREGISTER_CLASS(BoneMap);
 
 	OS::get_singleton()->yield(); // may take time to init
+
+	GDREGISTER_CLASS(AudioSamplePlayer);
 
 	GDREGISTER_CLASS(AudioStreamPlayer);
 	GDREGISTER_CLASS(AudioStreamPlayer2D);
