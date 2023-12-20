@@ -165,24 +165,43 @@ String OS_LinuxBSD::get_processor_name() const {
 }
 
 bool OS_LinuxBSD::is_sandboxed() const {
-	// This function is derived from SDL:
-	// https://github.com/libsdl-org/SDL/blob/main/src/core/linux/SDL_sandbox.c#L28-L45
+	return get_sandbox() == SANDBOX_NONE;
+}
 
-	if (access("/.flatpak-info", F_OK) == 0) {
-		return true;
+OS_LinuxBSD::Sandbox OS_LinuxBSD::get_sandbox() const {
+	if (access("/.flatpak-info", F_OK) == 0 || has_environment("FLATPAK_ID")) {
+		return SANDBOX_LINUX_FLATPAK;
 	}
 
 	// For Snap, we check multiple variables because they might be set for
 	// unrelated reasons. This is the same thing WebKitGTK does.
 	if (has_environment("SNAP") && has_environment("SNAP_NAME") && has_environment("SNAP_REVISION")) {
-		return true;
+		return SANDBOX_LINUX_SNAP;
 	}
 
-	if (access("/run/host/container-manager", F_OK) == 0) {
-		return true;
+	if (has_environment("APPIMAGE")) {
+		return SANDBOX_LINUX_APPIMAGE;
 	}
 
-	return false;
+	return SANDBOX_NONE;
+}
+
+Error OS_LinuxBSD::execute(const String &p_path, const List<String> &p_arguments, String *r_pipe, int *r_exitcode, bool read_stderr, Mutex *p_pipe_mutex, bool p_open_console) {
+	Error err = OS_Unix::execute(p_path, p_arguments, r_pipe, r_exitcode, read_stderr, p_pipe_mutex);
+
+	if (err != OK && *r_exitcode == 127 && get_sandbox() == SANDBOX_LINUX_FLATPAK) {
+		// If it failed by "command not found" and on Flatpak, launch the command with `flatpak-spawn --host` preceding it.
+		String path = "flatpak-spawn";
+		List<String> args;
+		args.push_back("--host");
+		args.push_back(p_path);
+		for (String arg : p_arguments) {
+			args.push_back(arg);
+		}
+		return OS_Unix::execute(path, args, r_pipe, r_exitcode, read_stderr, p_pipe_mutex);
+	}
+
+	return err;
 }
 
 void OS_LinuxBSD::finalize() {

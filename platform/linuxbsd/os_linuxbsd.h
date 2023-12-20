@@ -124,6 +124,9 @@ public:
 	virtual String get_processor_name() const override;
 
 	virtual bool is_sandboxed() const override;
+	virtual OS::Sandbox get_sandbox() const override;
+
+	virtual Error execute(const String &p_path, const List<String> &p_arguments, String *r_pipe = nullptr, int *r_exitcode = nullptr, bool read_stderr = false, Mutex *p_pipe_mutex = nullptr, bool p_open_console = false) override;
 
 	virtual void alert(const String &p_alert, const String &p_title = "ALERT!") override;
 

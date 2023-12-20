@@ -523,6 +523,10 @@ bool OS::is_sandboxed() const {
 	return false;
 }
 
+OS::Sandbox OS::get_sandbox() const {
+	return OS::SANDBOX_NONE;
+}
+
 void OS::set_restart_on_exit(bool p_restart, const List<String> &p_restart_arguments) {
 	restart_on_exit = p_restart;
 	restart_commandline = p_restart_arguments;

@@ -295,7 +295,17 @@ public:
 
 	bool has_feature(const String &p_feature);
 
+	enum Sandbox {
+		SANDBOX_NONE,
+		SANDBOX_MACOS,
+		SANDBOX_LINUX_FLATPAK,
+		SANDBOX_LINUX_APPIMAGE,
+		SANDBOX_LINUX_SNAP,
+		SANDBOX_MAX
+	};
+
 	virtual bool is_sandboxed() const;
+	virtual Sandbox get_sandbox() const;
 
 	void set_has_server_feature_callback(HasServerFeatureCallback p_callback);
 

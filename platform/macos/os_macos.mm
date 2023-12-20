@@ -77,7 +77,15 @@ String OS_MacOS::get_processor_name() const {
 }
 
 bool OS_MacOS::is_sandboxed() const {
-	return has_environment("APP_SANDBOX_CONTAINER_ID");
+	return get_sandbox() == SANDBOX_NONE;
+}
+
+OS::Sandbox OS_MacOS::get_sandbox() const {
+	if (has_environment("APP_SANDBOX_CONTAINER_ID")) {
+		return SANDBOX_MACOS;
+	}
+
+	return SANDBOX_NONE;
 }
 
 Vector<String> OS_MacOS::get_granted_permissions() const {
