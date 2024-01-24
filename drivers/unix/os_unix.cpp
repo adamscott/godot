@@ -159,9 +159,11 @@ void OS_Unix::initialize_core() {
 
 	FileAccess::make_default<FileAccessUnix>(FileAccess::ACCESS_RESOURCES);
 	FileAccess::make_default<FileAccessUnix>(FileAccess::ACCESS_USERDATA);
+	FileAccess::make_default<FileAccessUnix>(FileAccess::ACCESS_EDITORDATA);
 	FileAccess::make_default<FileAccessUnix>(FileAccess::ACCESS_FILESYSTEM);
 	DirAccess::make_default<DirAccessUnix>(DirAccess::ACCESS_RESOURCES);
 	DirAccess::make_default<DirAccessUnix>(DirAccess::ACCESS_USERDATA);
+	DirAccess::make_default<DirAccessUnix>(DirAccess::ACCESS_EDITORDATA);
 	DirAccess::make_default<DirAccessUnix>(DirAccess::ACCESS_FILESYSTEM);
 
 	NetSocketPosix::make_default();
@@ -733,11 +735,15 @@ String OS_Unix::get_user_data_dir() const {
 			}
 			return get_data_path().path_join(custom_dir);
 		} else {
-			return get_data_path().path_join(get_godot_dir_name()).path_join("app_userdata").path_join(appname);
+			return get_editor_data_dir().path_join("app_userdata").path_join(appname);
 		}
 	}
 
-	return get_data_path().path_join(get_godot_dir_name()).path_join("app_userdata").path_join("[unnamed project]");
+	return get_editor_data_dir().path_join("app_userdata").path_join("[unnamed project]");
+}
+
+String OS_Unix::get_editor_data_dir() const {
+	return get_data_path().path_join(get_godot_dir_name());
 }
 
 String OS_Unix::get_executable_path() const {

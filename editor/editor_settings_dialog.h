@@ -43,11 +43,10 @@
 class EditorSettingsDialog : public AcceptDialog {
 	GDCLASS(EditorSettingsDialog, AcceptDialog);
 
-	bool updating = false;
-
 	TabContainer *tabs = nullptr;
 	Control *tab_general = nullptr;
 	Control *tab_shortcuts = nullptr;
+	Control *tab_editor_addons = nullptr;
 
 	LineEdit *search_box = nullptr;
 	LineEdit *shortcut_search_box = nullptr;
@@ -70,6 +69,13 @@ class EditorSettingsDialog : public AcceptDialog {
 	String current_edited_identifier;
 	Array current_events;
 	int current_event_index = -1;
+
+	enum EditorAddons {
+		EDITOR_ADDONS_ADDON_EDIT
+	};
+
+	bool editor_addons_updating = false;
+	Tree *editor_addons_plugins_list = nullptr;
 
 	Timer *timer = nullptr;
 
@@ -105,6 +111,11 @@ class EditorSettingsDialog : public AcceptDialog {
 	void _update_shortcuts();
 	void _shortcut_button_pressed(Object *p_item, int p_column, int p_idx, MouseButton p_button = MouseButton::LEFT);
 	void _shortcut_cell_double_clicked();
+
+	void _editor_addons_update_addons();
+	Vector<String> _editor_addons_get_addons(const String &p_dir);
+	void _editor_addons_open_file_manager();
+	void _editor_addons_activity_changed();
 
 	static void _undo_redo_callback(void *p_self, const String &p_name);
 

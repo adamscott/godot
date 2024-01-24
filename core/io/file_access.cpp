@@ -38,7 +38,7 @@
 #include "core/io/marshalls.h"
 #include "core/os/os.h"
 
-FileAccess::CreateFunc FileAccess::create_func[ACCESS_MAX] = { nullptr, nullptr };
+FileAccess::CreateFunc FileAccess::create_func[ACCESS_MAX] = { nullptr, nullptr, nullptr, nullptr };
 
 FileAccess::FileCloseFailNotify FileAccess::close_fail_notify = nullptr;
 
@@ -75,7 +75,8 @@ Ref<FileAccess> FileAccess::create_for_path(const String &p_path) {
 		ret = create(ACCESS_RESOURCES);
 	} else if (p_path.begins_with("user://")) {
 		ret = create(ACCESS_USERDATA);
-
+	} else if (p_path.begins_with("editor://")) {
+		ret = create(ACCESS_EDITORDATA);
 	} else {
 		ret = create(ACCESS_FILESYSTEM);
 	}
@@ -211,6 +212,15 @@ String FileAccess::fix_path(const String &p_path) const {
 		} break;
 		case ACCESS_FILESYSTEM: {
 			return r_path;
+		} break;
+		case ACCESS_EDITORDATA: {
+			if (r_path.begins_with("editor://")) {
+				String data_dir = OS::get_singleton()->get_editor_data_dir();
+				if (!data_dir.is_empty()) {
+					return r_path.replace("editor:/", data_dir);
+				}
+				return r_path.replace("editor://", "");
+			}
 		} break;
 		case ACCESS_MAX:
 			break; // Can't happen, but silences warning

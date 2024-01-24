@@ -32,6 +32,7 @@
 #define FILE_ACCESS_H
 
 #include "core/io/compression.h"
+#include "core/io/dir_access.h"
 #include "core/math/math_defs.h"
 #include "core/object/ref_counted.h"
 #include "core/os/memory.h"
@@ -50,6 +51,7 @@ public:
 		ACCESS_RESOURCES,
 		ACCESS_USERDATA,
 		ACCESS_FILESYSTEM,
+		ACCESS_EDITORDATA,
 		ACCESS_MAX
 	};
 

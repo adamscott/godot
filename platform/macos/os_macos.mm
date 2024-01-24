@@ -111,6 +111,7 @@ void OS_MacOS::initialize_core() {
 
 	DirAccess::make_default<DirAccessMacOS>(DirAccess::ACCESS_RESOURCES);
 	DirAccess::make_default<DirAccessMacOS>(DirAccess::ACCESS_USERDATA);
+	DirAccess::make_default<DirAccessMacOS>(DirAccess::ACCESS_EDITORDATA);
 	DirAccess::make_default<DirAccessMacOS>(DirAccess::ACCESS_FILESYSTEM);
 }
 

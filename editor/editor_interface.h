@@ -83,8 +83,8 @@ public:
 
 	Vector<Ref<Texture2D>> make_mesh_previews(const Vector<Ref<Mesh>> &p_meshes, Vector<Transform3D> *p_transforms, int p_preview_size);
 
-	void set_plugin_enabled(const String &p_plugin, bool p_enabled);
-	bool is_plugin_enabled(const String &p_plugin) const;
+	void set_plugin_enabled(const String &p_plugin, bool p_enabled, bool p_is_editor_plugin = false);
+	bool is_plugin_enabled(const String &p_plugin, bool p_is_editor_plugin = false) const;
 
 	// Editor GUI.
 

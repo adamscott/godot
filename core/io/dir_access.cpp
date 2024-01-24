@@ -212,6 +212,16 @@ String DirAccess::fix_path(String p_path) const {
 			}
 
 		} break;
+		case ACCESS_EDITORDATA: {
+			if (p_path.begins_with("editor://")) {
+				String editor_data_dir = OS::get_singleton()->get_editor_data_dir();
+				if (!editor_data_dir.is_empty()) {
+					return p_path.replace_first("editor:/", editor_data_dir);
+				}
+				return p_path.replace_first("editor://", "");
+			}
+
+		} break;
 		case ACCESS_FILESYSTEM: {
 			return p_path;
 		} break;
@@ -222,7 +232,7 @@ String DirAccess::fix_path(String p_path) const {
 	return p_path;
 }
 
-DirAccess::CreateFunc DirAccess::create_func[ACCESS_MAX] = { nullptr, nullptr, nullptr };
+DirAccess::CreateFunc DirAccess::create_func[ACCESS_MAX] = { nullptr, nullptr, nullptr, nullptr };
 
 Ref<DirAccess> DirAccess::create_for_path(const String &p_path) {
 	Ref<DirAccess> da;
@@ -230,6 +240,8 @@ Ref<DirAccess> DirAccess::create_for_path(const String &p_path) {
 		da = create(ACCESS_RESOURCES);
 	} else if (p_path.begins_with("user://")) {
 		da = create(ACCESS_USERDATA);
+	} else if (p_path.begins_with("editor://")) {
+		da = create(ACCESS_EDITORDATA);
 	} else {
 		da = create(ACCESS_FILESYSTEM);
 	}
@@ -317,6 +329,8 @@ Ref<DirAccess> DirAccess::create(AccessType p_access) {
 			da->change_dir("res://");
 		} else if (p_access == ACCESS_USERDATA) {
 			da->change_dir("user://");
+		} else if (p_access == ACCESS_EDITORDATA) {
+			da->change_dir("editor://");
 		}
 	}
 

@@ -182,7 +182,7 @@ void GDScriptParser::push_warning(const Node *p_source, GDScriptWarning::Code p_
 	if (is_ignoring_warnings) {
 		return;
 	}
-	if (GLOBAL_GET("debug/gdscript/warnings/exclude_addons").booleanize() && script_path.begins_with("res://addons/")) {
+	if (GLOBAL_GET("debug/gdscript/warnings/exclude_addons").booleanize() && (script_path.begins_with("res://addons/") || script_path.begins_with("editor://addons/"))) {
 		return;
 	}
 

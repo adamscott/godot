@@ -204,6 +204,7 @@
 		<method name="is_plugin_enabled" qualifiers="const">
 			<return type="bool" />
 			<param index="0" name="plugin" type="String" />
+			<param index="1" name="is_editor_plugin" type="bool" default="false" />
 			<description>
 				Returns [code]true[/code] if the specified [param plugin] is enabled. The plugin name is the same as its directory name.
 			</description>
@@ -346,6 +347,7 @@
 			<return type="void" />
 			<param index="0" name="plugin" type="String" />
 			<param index="1" name="enabled" type="bool" />
+			<param index="2" name="is_editor_plugin" type="bool" default="false" />
 			<description>
 				Sets the enabled status of a plugin. The plugin name is the same as its directory name.
 			</description>

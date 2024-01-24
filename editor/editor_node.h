@@ -734,8 +734,8 @@ public:
 	void set_distraction_free_mode(bool p_enter);
 	bool is_distraction_free_mode_enabled() const;
 
-	void set_addon_plugin_enabled(const String &p_addon, bool p_enabled, bool p_config_changed = false);
-	bool is_addon_plugin_enabled(const String &p_addon) const;
+	void set_addon_plugin_enabled(const String &p_addon, bool p_enabled, bool p_config_changed = false, bool p_is_editor_plugin = false);
+	bool is_addon_plugin_enabled(const String &p_addon, bool p_is_editor_plugin = false) const;
 
 	void edit_node(Node *p_node);
 	void edit_resource(const Ref<Resource> &p_resource);

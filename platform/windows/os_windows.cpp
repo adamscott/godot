@@ -177,9 +177,11 @@ void OS_Windows::initialize() {
 
 	FileAccess::make_default<FileAccessWindows>(FileAccess::ACCESS_RESOURCES);
 	FileAccess::make_default<FileAccessWindows>(FileAccess::ACCESS_USERDATA);
+	FileAccess::make_default<FileAccessWindows>(FileAccess::ACCESS_EDITORDATA);
 	FileAccess::make_default<FileAccessWindows>(FileAccess::ACCESS_FILESYSTEM);
 	DirAccess::make_default<DirAccessWindows>(DirAccess::ACCESS_RESOURCES);
 	DirAccess::make_default<DirAccessWindows>(DirAccess::ACCESS_USERDATA);
+	DirAccess::make_default<DirAccessWindows>(DirAccess::ACCESS_EDITORDATA);
 	DirAccess::make_default<DirAccessWindows>(DirAccess::ACCESS_FILESYSTEM);
 
 	NetSocketPosix::make_default();
@@ -1618,11 +1620,15 @@ String OS_Windows::get_user_data_dir() const {
 			}
 			return get_data_path().path_join(custom_dir).replace("\\", "/");
 		} else {
-			return get_data_path().path_join(get_godot_dir_name()).path_join("app_userdata").path_join(appname).replace("\\", "/");
+			return get_editor_data_dir().path_join("app_userdata").path_join(appname).replace("\\", "/");
 		}
 	}
 
-	return get_data_path().path_join(get_godot_dir_name()).path_join("app_userdata").path_join("[unnamed project]");
+	return get_editor_data_dir().path_join("app_userdata").path_join("[unnamed project]");
+}
+
+String OS_Windows::get_editor_data_dir() const {
+	return get_data_path().path_join(get_godot_dir_name());
 }
 
 String OS_Windows::get_unique_id() const {

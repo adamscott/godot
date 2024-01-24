@@ -293,6 +293,11 @@ String OS::get_resource_dir() const {
 	return ProjectSettings::get_singleton()->get_resource_path();
 }
 
+// OS specific path for local://
+String OS::get_editor_data_dir() const {
+	return ".";
+}
+
 // Access system-specific dirs like Documents, Downloads, etc.
 String OS::get_system_dir(SystemDir p_dir, bool p_shared_storage) const {
 	return ".";

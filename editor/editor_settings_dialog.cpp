@@ -33,6 +33,7 @@
 #include "core/config/project_settings.h"
 #include "core/input/input_map.h"
 #include "core/os/keyboard.h"
+#include "core/os/memory.h"
 #include "editor/debugger/editor_debugger_node.h"
 #include "editor/editor_file_system.h"
 #include "editor/editor_log.h"
@@ -44,6 +45,8 @@
 #include "editor/event_listener_line_edit.h"
 #include "editor/input_event_configuration_dialog.h"
 #include "editor/themes/editor_scale.h"
+#include "scene/gui/box_container.h"
+#include "scene/gui/control.h"
 #include "scene/gui/margin_container.h"
 
 void EditorSettingsDialog::ok_pressed() {
@@ -142,6 +145,10 @@ void EditorSettingsDialog::_notification(int p_what) {
 
 		case NOTIFICATION_ENTER_TREE: {
 			_update_icons();
+		} break;
+
+		case NOTIFICATION_WM_WINDOW_FOCUS_IN: {
+			_editor_addons_update_addons();
 		} break;
 
 		case EditorSettings::NOTIFICATION_EDITOR_SETTINGS_CHANGED: {
@@ -599,6 +606,137 @@ void EditorSettingsDialog::_shortcut_cell_double_clicked() {
 	}
 }
 
+void EditorSettingsDialog::_editor_addons_update_addons() {
+	editor_addons_plugins_list->clear();
+	editor_addons_updating = true;
+	TreeItem *root = editor_addons_plugins_list->create_item();
+
+	Vector<String> plugins = _editor_addons_get_addons("editor://addons");
+	plugins.sort();
+
+	for (int i = 0; i < plugins.size(); i++) {
+		Ref<ConfigFile> cf;
+		cf.instantiate();
+		const String &path = plugins[i];
+
+		Error err2 = cf->load(path);
+
+		if (err2 != OK) {
+			WARN_PRINT("Can't load plugin config: " + path);
+		} else {
+			bool key_missing = false;
+
+			if (!cf->has_section_key("plugin", "name")) {
+				WARN_PRINT("Plugin config misses \"plugin/name\" key: " + path);
+				key_missing = true;
+			}
+			if (!cf->has_section_key("plugin", "author")) {
+				WARN_PRINT("Plugin config misses \"plugin/author\" key: " + path);
+				key_missing = true;
+			}
+			if (!cf->has_section_key("plugin", "version")) {
+				WARN_PRINT("Plugin config misses \"plugin/version\" key: " + path);
+				key_missing = true;
+			}
+			if (!cf->has_section_key("plugin", "description")) {
+				WARN_PRINT("Plugin config misses \"plugin/description\" key: " + path);
+				key_missing = true;
+			}
+			if (!cf->has_section_key("plugin", "script")) {
+				WARN_PRINT("Plugin config misses \"plugin/script\" key: " + path);
+				key_missing = true;
+			}
+
+			if (!key_missing) {
+				String name = cf->get_value("plugin", "name");
+				String author = cf->get_value("plugin", "author");
+				String version = cf->get_value("plugin", "version");
+				String description = cf->get_value("plugin", "description");
+				String scr = cf->get_value("plugin", "script");
+
+				const PackedInt32Array boundaries = TS->string_get_word_breaks(description, "", 80);
+				String wrapped_description;
+
+				for (int j = 0; j < boundaries.size(); j += 2) {
+					const int start = boundaries[j];
+					const int end = boundaries[j + 1];
+					wrapped_description += "\n" + description.substr(start, end - start + 1).rstrip("\n");
+				}
+
+				TreeItem *item = editor_addons_plugins_list->create_item(root);
+				item->set_text(0, name);
+				item->set_tooltip_text(0, TTR("Name:") + " " + name + "\n" + TTR("Path:") + " " + path + "\n" + TTR("Main Script:") + " " + scr + "\n" + TTR("Description:") + " " + wrapped_description);
+				item->set_metadata(0, path);
+				item->set_text(1, version);
+				item->set_metadata(1, scr);
+				item->set_text(2, author);
+				item->set_metadata(2, description);
+				item->set_cell_mode(3, TreeItem::CELL_MODE_CHECK);
+				item->set_text(3, TTR("Enable"));
+				bool is_active = EditorNode::get_singleton()->is_addon_plugin_enabled(path, true);
+				item->set_checked(3, is_active);
+				item->set_editable(3, true);
+				item->add_button(4, get_editor_theme_icon(SNAME("Edit")), EDITOR_ADDONS_ADDON_EDIT, false, TTR("Edit Addon"));
+			}
+		}
+	}
+
+	editor_addons_updating = false;
+}
+
+Vector<String> EditorSettingsDialog::_editor_addons_get_addons(const String &p_dir) {
+	Ref<DirAccess> da = DirAccess::create(DirAccess::ACCESS_EDITORDATA);
+	Error err = da->change_dir(p_dir);
+	if (err != OK) {
+		return Vector<String>();
+	}
+
+	Vector<String> plugins;
+	da->list_dir_begin();
+	for (String path = da->get_next(); !path.is_empty(); path = da->get_next()) {
+		if (path[0] == '.' || !da->current_is_dir()) {
+			continue;
+		}
+
+		const String full_path = p_dir.path_join(path);
+		const String plugin_config = full_path.path_join("plugin.cfg");
+		if (FileAccess::exists(plugin_config)) {
+			plugins.push_back(plugin_config);
+		} else {
+			plugins.append_array(_editor_addons_get_addons(full_path));
+		}
+	}
+
+	da->list_dir_end();
+	return plugins;
+}
+
+void EditorSettingsDialog::_editor_addons_open_file_manager() {
+	String path = ProjectSettings::get_singleton()->globalize_path("editor://addons/");
+	OS::get_singleton()->shell_show_in_file_manager(path, true);
+}
+
+void EditorSettingsDialog::_editor_addons_activity_changed() {
+	if (editor_addons_updating) {
+		return;
+	}
+
+	TreeItem *ti = editor_addons_plugins_list->get_edited();
+	ERR_FAIL_NULL(ti);
+	bool active = ti->is_checked(3);
+	String name = ti->get_metadata(0);
+
+	EditorNode::get_singleton()->set_addon_plugin_enabled(name, active, true, true);
+
+	bool is_active = EditorNode::get_singleton()->is_addon_plugin_enabled(name, true);
+
+	if (is_active != active) {
+		editor_addons_updating = true;
+		ti->set_checked(3, is_active);
+		editor_addons_updating = false;
+	}
+}
+
 Variant EditorSettingsDialog::get_drag_data_fw(const Point2 &p_point, Control *p_from) {
 	TreeItem *selected = shortcuts->get_selected();
 
@@ -799,6 +937,72 @@ EditorSettingsDialog::EditorSettingsDialog() {
 	shortcut_editor->connect("confirmed", callable_mp(this, &EditorSettingsDialog::_event_config_confirmed));
 	shortcut_editor->set_allowed_input_types(INPUT_KEY);
 	add_child(shortcut_editor);
+
+	// Editor addons tab
+	tab_editor_addons = memnew(VBoxContainer);
+
+	tabs->add_child(tab_editor_addons);
+	tab_editor_addons->set_name(TTR("Addons"));
+
+	{
+		HBoxContainer *top_hbox = memnew(HBoxContainer);
+		Label *label = memnew(Label(TTR("Installed Addons:")));
+		label->set_theme_type_variation("HeaderSmall");
+
+		top_hbox->add_child(label);
+		top_hbox->add_spacer();
+
+		{
+			HBoxContainer *top_hbox_actions = memnew(HBoxContainer);
+
+			Button *open_in_file_manager = memnew(Button(TTR("Open in File Manager")));
+			open_in_file_manager->connect("pressed", callable_mp(this, &EditorSettingsDialog::_editor_addons_open_file_manager));
+
+			Button *create_addon = memnew(Button(TTR("Create New Addon")));
+
+			top_hbox_actions->add_child(open_in_file_manager);
+			top_hbox_actions->add_child(create_addon);
+
+			top_hbox->add_child(top_hbox_actions);
+		}
+
+		tab_editor_addons->add_child(top_hbox);
+	}
+
+	{
+		editor_addons_plugins_list = memnew(Tree);
+		editor_addons_plugins_list->set_v_size_flags(Control::SIZE_EXPAND_FILL);
+		editor_addons_plugins_list->set_columns(5);
+		editor_addons_plugins_list->set_column_titles_visible(true);
+		editor_addons_plugins_list->set_column_title(0, TTR("Name"));
+		editor_addons_plugins_list->set_column_title(1, TTR("Version"));
+		editor_addons_plugins_list->set_column_title(2, TTR("Author"));
+		editor_addons_plugins_list->set_column_title(3, TTR("Status"));
+		editor_addons_plugins_list->set_column_title(4, TTR("Edit"));
+		editor_addons_plugins_list->set_column_expand(0, true);
+		editor_addons_plugins_list->set_column_clip_content(0, true);
+		editor_addons_plugins_list->set_column_expand(1, false);
+		editor_addons_plugins_list->set_column_clip_content(1, true);
+		editor_addons_plugins_list->set_column_expand(2, false);
+		editor_addons_plugins_list->set_column_clip_content(2, true);
+		editor_addons_plugins_list->set_column_expand(3, false);
+		editor_addons_plugins_list->set_column_clip_content(3, true);
+		editor_addons_plugins_list->set_column_expand(4, false);
+		editor_addons_plugins_list->set_column_clip_content(4, true);
+		editor_addons_plugins_list->set_column_custom_minimum_width(1, 100 * EDSCALE);
+		editor_addons_plugins_list->set_column_custom_minimum_width(2, 250 * EDSCALE);
+		editor_addons_plugins_list->set_column_custom_minimum_width(3, 80 * EDSCALE);
+		editor_addons_plugins_list->set_column_custom_minimum_width(4, 40 * EDSCALE);
+		editor_addons_plugins_list->set_hide_root(true);
+		editor_addons_plugins_list->connect("item_edited", callable_mp(this, &EditorSettingsDialog::_editor_addons_activity_changed), CONNECT_DEFERRED);
+
+		VBoxContainer *mc = memnew(VBoxContainer);
+		mc->add_child(editor_addons_plugins_list);
+		mc->set_v_size_flags(Control::SIZE_EXPAND_FILL);
+		mc->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+
+		tab_editor_addons->add_child(mc);
+	}
 
 	set_hide_on_ok(true);
 

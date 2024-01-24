@@ -188,12 +188,12 @@ Vector<Ref<Texture2D>> EditorInterface::make_mesh_previews(const Vector<Ref<Mesh
 	return textures;
 }
 
-void EditorInterface::set_plugin_enabled(const String &p_plugin, bool p_enabled) {
-	EditorNode::get_singleton()->set_addon_plugin_enabled(p_plugin, p_enabled, true);
+void EditorInterface::set_plugin_enabled(const String &p_plugin, bool p_enabled, bool p_is_editor_plugin) {
+	EditorNode::get_singleton()->set_addon_plugin_enabled(p_plugin, p_enabled, true, p_is_editor_plugin);
 }
 
-bool EditorInterface::is_plugin_enabled(const String &p_plugin) const {
-	return EditorNode::get_singleton()->is_addon_plugin_enabled(p_plugin);
+bool EditorInterface::is_plugin_enabled(const String &p_plugin, bool p_is_editor_plugin) const {
+	return EditorNode::get_singleton()->is_addon_plugin_enabled(p_plugin, p_is_editor_plugin);
 }
 
 // Editor GUI.
@@ -430,8 +430,8 @@ void EditorInterface::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("make_mesh_previews", "meshes", "preview_size"), &EditorInterface::_make_mesh_previews);
 
-	ClassDB::bind_method(D_METHOD("set_plugin_enabled", "plugin", "enabled"), &EditorInterface::set_plugin_enabled);
-	ClassDB::bind_method(D_METHOD("is_plugin_enabled", "plugin"), &EditorInterface::is_plugin_enabled);
+	ClassDB::bind_method(D_METHOD("set_plugin_enabled", "plugin", "enabled", "is_editor_plugin"), &EditorInterface::set_plugin_enabled);
+	ClassDB::bind_method(D_METHOD("is_plugin_enabled", "plugin", "is_editor_plugin"), &EditorInterface::is_plugin_enabled);
 
 	// Editor GUI.
 

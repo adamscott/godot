@@ -33,6 +33,7 @@
 #include "core/config/project_settings.h"
 #include "core/crypto/crypto_core.h"
 #include "core/debugger/engine_debugger.h"
+#include "core/error/error_macros.h"
 #include "core/io/file_access_compressed.h"
 #include "core/io/file_access_encrypted.h"
 #include "core/io/marshalls.h"
@@ -258,20 +259,36 @@ String OS::get_executable_path() const {
 }
 
 Error OS::shell_open(String p_uri) {
+	String protocol = "";
 	if (p_uri.begins_with("res://")) {
-		WARN_PRINT("Attempting to open an URL with the \"res://\" protocol. Use `ProjectSettings.globalize_path()` to convert a Godot-specific path to a system path before opening it with `OS.shell_open()`.");
+		protocol = "res";
 	} else if (p_uri.begins_with("user://")) {
-		WARN_PRINT("Attempting to open an URL with the \"user://\" protocol. Use `ProjectSettings.globalize_path()` to convert a Godot-specific path to a system path before opening it with `OS.shell_open()`.");
+		protocol = "user";
+	} else if (p_uri.begins_with("editor://")) {
+		protocol = "editor";
 	}
+
+	if (protocol.length() > 0) {
+		WARN_PRINT(vformat("Attempting to open an URL with the \"%s://\" protocol. Use `ProjectSettings.globalize_path()` to convert a Godot-specific path to a system path before opening it with `OS.shell_open()`.", protocol));
+	}
+
 	return ::OS::get_singleton()->shell_open(p_uri);
 }
 
 Error OS::shell_show_in_file_manager(String p_path, bool p_open_folder) {
+	String protocol = "";
 	if (p_path.begins_with("res://")) {
-		WARN_PRINT("Attempting to explore file path with the \"res://\" protocol. Use `ProjectSettings.globalize_path()` to convert a Godot-specific path to a system path before opening it with `OS.shell_show_in_file_manager()`.");
+		protocol = "res";
 	} else if (p_path.begins_with("user://")) {
-		WARN_PRINT("Attempting to explore file path with the \"user://\" protocol. Use `ProjectSettings.globalize_path()` to convert a Godot-specific path to a system path before opening it with `OS.shell_show_in_file_manager()`.");
+		protocol = "user";
+	} else if (p_path.begins_with("editor://")) {
+		protocol = "editor";
 	}
+
+	if (protocol.length() > 0) {
+		WARN_PRINT(vformat("Attempting to explore file path with the \"%s://\" protocol. Use `ProjectSettings.globalize_path()` to convert a Godot-specific path to a system path before opening it with `OS.shell_show_in_file_manager()`.", protocol));
+	}
+
 	return ::OS::get_singleton()->shell_show_in_file_manager(p_path, p_open_folder);
 }
 

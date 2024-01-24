@@ -266,6 +266,12 @@ String ProjectSettings::globalize_path(const String &p_path) const {
 			return p_path.replace("user:/", data_dir);
 		}
 		return p_path.replace("user://", "");
+	} else if (p_path.begins_with("editor://")) {
+		String editor_data_dir = OS::get_singleton()->get_editor_data_dir();
+		if (!editor_data_dir.is_empty()) {
+			return p_path.replace("editor:/", editor_data_dir);
+		}
+		return p_path.replace("editor://", "");
 	}
 
 	return p_path;
