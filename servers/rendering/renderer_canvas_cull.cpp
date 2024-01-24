@@ -248,12 +248,14 @@ void RendererCanvasCull::_cull_canvas_item(Item *p_canvas_item, const Transform2
 	}
 
 	Transform2D ci_xform = ci->xform;
-	Transform2D xform = p_transform;
+	Transform2D transform = p_transform;
+
 	if (snapping_2d_transforms_to_pixel) {
 		ci_xform.columns[2] = ci_xform.columns[2].round();
-		xform.columns[2] = xform.columns[2].round();
+		transform.columns[2] = transform.columns[2].round();
 	}
-	ci_xform = xform * ci_xform;
+
+	ci_xform = transform * ci_xform;
 
 	Rect2 global_rect = ci_xform.xform(rect);
 	global_rect.position += p_clip_rect.position;
