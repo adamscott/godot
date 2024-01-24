@@ -267,6 +267,10 @@ void AnimatedSprite2D::_notification(int p_what) {
 				ofs -= s / 2;
 			}
 
+			if (get_viewport() && get_viewport()->is_snap_2d_transforms_to_pixel_enabled()) {
+				ofs = ofs.round();
+			}
+
 			Rect2 dst_rect(ofs, s);
 
 			if (hflip) {
