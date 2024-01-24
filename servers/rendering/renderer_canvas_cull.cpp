@@ -250,10 +250,13 @@ void RendererCanvasCull::_cull_canvas_item(Item *p_canvas_item, const Transform2
 	Transform2D ci_xform = ci->xform;
 	Transform2D rounded_ci_xform = ci->xform;
 	Transform2D transform = p_transform;
+	Transform2D rounded_transform = p_transform;
+
 	if (snapping_2d_transforms_to_pixel) {
 		rounded_ci_xform.columns[2] = rounded_ci_xform.columns[2].round();
-		transform.columns[2] = transform.columns[2].round();
+		rounded_transform.columns[2] = rounded_transform.columns[2].round();
 	}
+
 	ci_xform = transform * ci_xform;
 	rounded_ci_xform = transform * rounded_ci_xform;
 
