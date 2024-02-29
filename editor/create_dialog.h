@@ -38,6 +38,64 @@
 #include "scene/gui/line_edit.h"
 #include "scene/gui/tree.h"
 
+class CreateDialogTree;
+
+class CreateDialogSearch : public Object {
+	GDCLASS(CreateDialogSearch, Object);
+
+	CreateDialogTree *_tree;
+
+	String _search_text;
+
+private:
+	void _on_entry_highlighted();
+	void _on_entry_selected();
+
+protected:
+	static void _bind_methods();
+
+public:
+	enum TypeCategory {
+		CPP_TYPE,
+		PATH_TYPE,
+		OTHER_TYPE
+	};
+
+	void update_theme();
+
+	CreateDialogTree *get_tree() {
+		return _tree;
+	}
+
+	void set_search_text(const String &p_search_text);
+	String get_search_text() const { return _search_text; };
+
+	CreateDialogSearch();
+	~CreateDialogSearch();
+};
+
+class CreateDialogTree : public Tree {
+	GDCLASS(CreateDialogTree, Tree);
+
+	String _search_text;
+
+private:
+	void _on_cell_selected();
+	void _on_item_activated();
+
+protected:
+	static void _bind_methods();
+	void _notification(int p_what);
+
+public:
+	void update_theme();
+
+	void set_search_text(const String &p_search_text);
+	String get_search_text() const { return _search_text; };
+
+	CreateDialogTree();
+};
+
 class CreateDialog : public ConfirmationDialog {
 	GDCLASS(CreateDialog, ConfirmationDialog);
 
@@ -46,6 +104,8 @@ class CreateDialog : public ConfirmationDialog {
 		PATH_TYPE,
 		OTHER_TYPE
 	};
+
+	CreateDialogSearch *search = nullptr;
 
 	LineEdit *search_box = nullptr;
 	Tree *search_options = nullptr;

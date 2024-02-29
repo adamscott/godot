@@ -483,12 +483,13 @@ void CreateDialog::_notification(int p_what) {
 
 		case NOTIFICATION_THEME_CHANGED: {
 			const int icon_width = get_theme_constant(SNAME("class_icon_size"), EditorStringName(Editor));
-			search_options->add_theme_constant_override("icon_max_width", icon_width);
 			favorites->add_theme_constant_override("icon_max_width", icon_width);
 			recent->set_fixed_icon_size(Size2(icon_width, icon_width));
 
 			search_box->set_right_icon(get_editor_theme_icon(SNAME("Search")));
 			favorite->set_icon(get_editor_theme_icon(SNAME("Favorites")));
+
+			search->update_theme();
 		} break;
 	}
 }
@@ -822,11 +823,6 @@ CreateDialog::CreateDialog() {
 	search_hb->add_child(favorite);
 	vbc->add_margin_child(TTR("Search:"), search_hb);
 
-	search_options = memnew(Tree);
-	search_options->connect("item_activated", callable_mp(this, &CreateDialog::_confirmed));
-	search_options->connect("cell_selected", callable_mp(this, &CreateDialog::_item_selected));
-	vbc->add_margin_child(TTR("Matches:"), search_options, true);
-
 	help_bit = memnew(EditorHelpBit);
 	help_bit->connect("request_hide", callable_mp(this, &CreateDialog::_hide_requested));
 	vbc->add_margin_child(TTR("Description:"), help_bit);
@@ -834,4 +830,73 @@ CreateDialog::CreateDialog() {
 	register_text_enter(search_box);
 	set_hide_on_ok(false);
 	set_clamp_to_embedder(true);
+
+	search = memnew(CreateDialogSearch);
+	search_options = search->get_tree();
+	vbc->add_margin_child(TTR("Matches:"), search_options, true);
+}
+
+// CreateDialogSearch
+void CreateDialogSearch::update_theme() {
+	callable_mp(_tree, &CreateDialogTree::update_theme).call_deferred();
+}
+
+void CreateDialogSearch::set_search_text(const String &p_search_text) {
+	_search_text = p_search_text;
+	callable_mp(_tree, &CreateDialogTree::set_search_text).bind(_search_text).call_deferred();
+}
+
+void CreateDialogSearch::_on_entry_highlighted() {
+}
+
+void CreateDialogSearch::_on_entry_selected() {
+}
+
+void CreateDialogSearch::_bind_methods() {
+	ADD_SIGNAL(MethodInfo("entry_highlighted"));
+	ADD_SIGNAL(MethodInfo("entry_selected"));
+}
+
+CreateDialogSearch::CreateDialogSearch() {
+	_tree = memnew(CreateDialogTree);
+	_tree->set_process_thread_group(Node::ProcessThreadGroup::PROCESS_THREAD_GROUP_SUB_THREAD);
+	_tree->connect("entry_highlighted", callable_mp(this, &CreateDialogSearch::_on_entry_highlighted));
+	_tree->connect("entry_selected", callable_mp(this, &CreateDialogSearch::_on_entry_selected));
+}
+
+CreateDialogSearch::~CreateDialogSearch() {
+	_tree->queue_free();
+}
+
+// CreateDialogTree
+void CreateDialogTree::update_theme() {
+	const int icon_width = get_theme_constant(SNAME("class_icon_size"), EditorStringName(Editor));
+	add_theme_constant_override("icon_max_width", icon_width);
+}
+
+void CreateDialogTree::set_search_text(const String &p_search_text) {
+	_search_text = p_search_text;
+}
+
+void CreateDialogTree::_on_cell_selected() {
+}
+
+void CreateDialogTree::_on_item_activated() {
+}
+
+void CreateDialogTree::_notification(int p_what) {
+	switch (p_what) {
+		case NOTIFICATION_ENTER_TREE: {
+			connect("cell_selected", callable_mp(this, &CreateDialogTree::_on_cell_selected));
+			connect("item_activated", callable_mp(this, &CreateDialogTree::_on_item_activated));
+		} break;
+	}
+}
+
+void CreateDialogTree::_bind_methods() {
+	ADD_SIGNAL(MethodInfo("entry_highlighted"));
+	ADD_SIGNAL(MethodInfo("entry_selected"));
+}
+
+CreateDialogTree::CreateDialogTree() {
 }
