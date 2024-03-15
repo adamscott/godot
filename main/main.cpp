@@ -1694,6 +1694,14 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 				goto error;
 			}
 #endif // TOOLS_ENABLED && MODULE_GDSCRIPT_ENABLED && !GDSCRIPT_NO_LSP
+#ifdef TOOLS_ENABLED
+		} else if (I->get() == "--scaffold") {
+			cmdline_tool = true;
+			// `--scaffold` implies `--headless` to avoid spawning an unnecessary window.
+			audio_driver = NULL_AUDIO_DRIVER;
+			display_driver = NULL_DISPLAY_DRIVER;
+			main_args.push_back(I->get());
+#endif
 		} else if (I->get() == "--" || I->get() == "++") {
 			adding_user_args = true;
 		} else {
@@ -3159,6 +3167,7 @@ bool Main::start() {
 	String _export_preset;
 	bool export_debug = false;
 	bool export_pack_only = false;
+	bool run_scaffold = false;
 	bool install_android_build_template = false;
 #ifdef MODULE_GDSCRIPT_ENABLED
 	String gdscript_docs_path;
@@ -3255,6 +3264,8 @@ bool Main::start() {
 		// Handle case where no path is given to --doctool.
 		else if (args[i] == "--doctool") {
 			doc_tool_path = ".";
+		} else if (args[i] == "--scaffold") {
+			run_scaffold = true;
 		}
 #endif
 	}
@@ -3352,6 +3363,12 @@ bool Main::start() {
 			DirAccess::remove_file_or_error(EditorHelp::get_cache_full_path());
 		}
 
+		OS::get_singleton()->set_exit_code(EXIT_SUCCESS);
+		return false;
+	}
+
+	// Scaffold
+	if (run_scaffold) {
 		OS::get_singleton()->set_exit_code(EXIT_SUCCESS);
 		return false;
 	}
