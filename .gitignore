@@ -373,3 +373,10 @@ $RECYCLE.BIN/
 *.msp
 *.lnk
 *.generated.props
+
+
+#######
+# CMake
+#######
+build/
+CMakeCache.txt
