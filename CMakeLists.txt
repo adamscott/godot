@@ -8,6 +8,5 @@ project(Godot
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-message("platform: ${CMAKE_SYSTEM_NAME}")
-
 add_subdirectory(platform)
+add_subdirectory(thirdparty)
