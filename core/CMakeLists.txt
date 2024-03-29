@@ -26,6 +26,16 @@ target_link_libraries(godot
 		godot_core
 )
 
+add_subdirectory(config)
 add_subdirectory(crypto)
-add_subdirectory(error)
 add_subdirectory(debugger)
+add_subdirectory(error)
+add_subdirectory(extension)
+add_subdirectory(input)
+add_subdirectory(io)
+add_subdirectory(math)
+add_subdirectory(object)
+add_subdirectory(os)
+add_subdirectory(string)
+add_subdirectory(templates)
+add_subdirectory(variant)

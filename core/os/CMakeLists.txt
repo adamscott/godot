@@ -1,0 +1,13 @@
+target_sources(godot_core
+	PRIVATE
+		keyboard.cpp
+		main_loop.cpp
+		memory.cpp
+		midi_driver.cpp
+		mutex.cpp
+		os.cpp
+		pool_allocator.cpp
+		thread.cpp
+		thread_safe.cpp
+		time.cpp
+)

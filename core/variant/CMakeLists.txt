@@ -1,0 +1,16 @@
+target_sources(godot_core
+	PRIVATE
+		array.cpp
+		callable_bind.cpp
+		callable.cpp
+		dictionary.cpp
+		variant_callable.cpp
+		variant_call.cpp
+		variant_construct.cpp
+		variant.cpp
+		variant_destruct.cpp
+		variant_op.cpp
+		variant_parser.cpp
+		variant_setget.cpp
+		variant_utility.cpp
+)

@@ -1,0 +1,14 @@
+target_sources(godot_core
+	PRIVATE
+		callable_method_pointer.cpp
+		class_db.cpp
+		message_queue.cpp
+		method_bind.cpp
+		object.cpp
+		ref_counted.cpp
+		script_instance.cpp
+		script_language.cpp
+		script_language_extension.cpp
+		undo_redo.cpp
+		worker_thread_pool.cpp
+)
