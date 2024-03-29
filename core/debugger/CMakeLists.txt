@@ -1,0 +1,10 @@
+target_sources(godot_core
+	PUBLIC
+		debugger_marshalls.cpp
+		engine_debugger.cpp
+		engine_profiler.cpp
+		local_debugger.cpp
+		remote_debugger_peer.cpp
+		remote_debugger.cpp
+		script_debugger.cpp
+)
