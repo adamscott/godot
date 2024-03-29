@@ -27,3 +27,5 @@ option(GODOT_BUILTIN_SQUISH "Use the built-in squish library." ON)
 option(GODOT_BUILTIN_XATLAS "Use the built-in xatlas library." ON)
 option(GODOT_BUILTIN_ZLIB "Use the built-in zlib library." ON)
 option(GODOT_BUILTIN_ZSTD "Use the built-in Zstd library." ON)
+
+add_subdirectory(mbedtls)

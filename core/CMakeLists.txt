@@ -26,5 +26,6 @@ target_link_libraries(godot
 		godot_core
 )
 
+add_subdirectory(crypto)
 add_subdirectory(error)
 add_subdirectory(debugger)

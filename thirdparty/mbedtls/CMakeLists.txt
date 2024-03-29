@@ -1,0 +1,122 @@
+if(NOT ${GODOT_BUILTIN_MBEDTLS})
+	find_library(godot_thirdparty_mbedtls mbedtls)
+
+	target_compile_definitions(godot_thirdparty_mbedtls
+		PRIVATE
+			MBEDTLS_CONFIG_FILE="thirdparty/mbedtls/include/godot_module_mbedtls_config.h"
+	)
+
+	return()
+endif()
+
+add_library(godot_thirdparty_mbedtls)
+
+target_compile_definitions(godot_thirdparty_mbedtls
+	PRIVATE
+		MBEDTLS_CONFIG_FILE="thirdparty/mbedtls/include/godot_core_mbedtls_config.h"
+)
+
+target_sources(godot_thirdparty_mbedtls
+	PRIVATE
+		library/aes.c
+		library/aesni.c
+		library/arc4.c
+		library/aria.c
+		library/asn1parse.c
+		library/asn1write.c
+		library/base64.c
+		library/bignum.c
+		library/bignum_internal.h
+		library/blowfish.c
+		library/camellia.c
+		library/ccm.c
+		library/certs.c
+		library/chacha20.c
+		library/chachapoly.c
+		library/check_crypto_config.h
+		library/cipher.c
+		library/cipher_wrap.c
+		library/cmac.c
+		library/common.h
+		library/constant_time.c
+		library/constant_time_internal.h
+		library/constant_time_invasive.h
+		library/ctr_drbg.c
+		library/debug.c
+		library/des.c
+		library/dhm.c
+		library/ecdh.c
+		library/ecdsa.c
+		library/ecjpake.c
+		library/ecp.c
+		library/ecp_curves.c
+		library/ecp_invasive.h
+		library/entropy.c
+		library/entropy_poll.c
+		library/error.c
+		library/gcm.c
+		library/godot_core_mbedtls_platform.c
+		library/havege.c
+		library/hkdf.c
+		library/hmac_drbg.c
+		library/md2.c
+		library/md4.c
+		library/md5.c
+		library/md.c
+		library/memory_buffer_alloc.c
+		library/mps_common.h
+		library/mps_error.h
+		library/mps_reader.c
+		library/mps_reader.h
+		library/mps_trace.c
+		library/mps_trace.h
+		library/net_sockets.c
+		library/nist_kw.c
+		library/oid.c
+		library/padlock.c
+		library/pem.c
+		library/pk.c
+		library/pkcs11.c
+		library/pkcs12.c
+		library/pkcs5.c
+		library/pkparse.c
+		library/pk_wrap.c
+		library/pkwrite.c
+		library/platform.c
+		library/platform_util.c
+		library/poly1305.c
+		library/ripemd160.c
+		library/rsa.c
+		library/rsa_internal.c
+		library/sha1.c
+		library/sha256.c
+		library/sha512.c
+		library/ssl_cache.c
+		library/ssl_ciphersuites.c
+		library/ssl_cli.c
+		library/ssl_cookie.c
+		library/ssl_msg.c
+		library/ssl_srv.c
+		library/ssl_ticket.c
+		library/ssl_tls13_keys.c
+		library/ssl_tls13_keys.h
+		library/ssl_tls.c
+		library/threading.c
+		library/timing.c
+		library/version.c
+		library/version_features.c
+		library/x509.c
+		library/x509_create.c
+		library/x509_crl.c
+		library/x509_crt.c
+		library/x509_csr.c
+		library/x509write_crt.c
+		library/x509write_csr.c
+		library/xtea.c
+)
+
+target_include_directories(godot_thirdparty_mbedtls
+	PRIVATE
+		${CMAKE_CURRENT_LIST_DIR}/include
+		${Godot_SOURCE_DIR}
+)

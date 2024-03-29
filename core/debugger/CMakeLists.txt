@@ -1,5 +1,5 @@
 target_sources(godot_core
-	PUBLIC
+	PRIVATE
 		debugger_marshalls.cpp
 		engine_debugger.cpp
 		engine_profiler.cpp
