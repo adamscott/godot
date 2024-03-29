@@ -1,5 +1,6 @@
 include_guard()
 
+# get_platform_name_from_system_name()
 function(get_platform_name_from_system_name system_name platform_name)
     if(system_name STREQUAL "Android")
         set(platform_name "Android")
@@ -22,6 +23,7 @@ function(get_platform_name_from_system_name system_name platform_name)
     return(PROPAGATE platform_name)
 endfunction()
 
+# get_platform_dir()
 function(get_platform_dir platform_name platform_dir)
 	string(TOLOWER ${platform_name} platform_dir_name)
 	if(IS_DIRECTORY ${Godot_SOURCE_DIR}/platform/${platform_dir_name})
