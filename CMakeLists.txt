@@ -13,7 +13,7 @@ include(Platform)
 add_executable(godot)
 target_include_directories(godot
 	PUBLIC
-		${CMAKE_CURRENT_LIST_DIR}
+		${Godot_SOURCE_DIR}
 )
 
 # Platform name.
