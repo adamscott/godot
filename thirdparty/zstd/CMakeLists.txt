@@ -1,0 +1,42 @@
+if(NOT ${GODOT_BUILTIN_ZSTD})
+	find_library(godot_thirdparty_zstd zstd)
+	return()
+endif()
+
+add_library(godot_thirdparty_zstd)
+
+target_sources(godot_thirdparty_zstd
+	PRIVATE
+		common/debug.c
+		common/entropy_common.c
+		common/error_private.c
+		common/fse_decompress.c
+		common/pool.c
+		common/threading.c
+		common/xxhash.c
+		common/zstd_common.c
+		compress/fse_compress.c
+		compress/hist.c
+		compress/huf_compress.c
+		compress/zstd_compress.c
+		compress/zstd_compress_literals.c
+		compress/zstd_compress_sequences.c
+		compress/zstd_compress_superblock.c
+		compress/zstd_double_fast.c
+		compress/zstd_fast.c
+		compress/zstd_lazy.c
+		compress/zstd_ldm.c
+		compress/zstd_opt.c
+		compress/zstdmt_compress.c
+		decompress/huf_decompress.c
+		decompress/zstd_ddict.c
+		decompress/zstd_decompress.c
+		decompress/zstd_decompress_block.c
+)
+
+target_include_directories(godot_thirdparty_zstd
+	PUBLIC
+		${CMAKE_CURRENT_LIST_DIR}
+	PRIVATE
+		${Godot_SOURCE_DIR}
+)

@@ -18,7 +18,12 @@ target_include_directories(godot_core
 	PUBLIC
 		${Godot_SOURCE_DIR}
 	PRIVATE
-		${CMAKE_CURRENT_BINARY_DIR}
+		${CMAKE_CURRENT_BINARY_DIR}  # platform_config.h
+)
+
+target_link_libraries(godot_core
+	PRIVATE
+		godot_thirdparty_zstd
 )
 
 target_link_libraries(godot

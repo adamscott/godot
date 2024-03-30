@@ -116,7 +116,8 @@ target_sources(godot_thirdparty_mbedtls
 )
 
 target_include_directories(godot_thirdparty_mbedtls
-	PRIVATE
+	PUBLIC
 		${CMAKE_CURRENT_LIST_DIR}/include
+	PRIVATE
 		${Godot_SOURCE_DIR}
 )

@@ -19,6 +19,18 @@ target_include_directories(godot
 		${Godot_SOURCE_DIR}
 )
 
+# Programs.
+find_program(program_git
+	git
+	DOC "Git command."
+	REQUIRED
+)
+find_program(program_patch
+	patch
+	DOC "Patch command."
+	REQUIRED
+)
+
 # Platform name.
 get_platform_name_from_system_name(${CMAKE_SYSTEM_NAME} platform_name)
 set(GODOT_PLATFORM ${platform_name} CACHE STRING "Platform name.")
