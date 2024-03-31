@@ -32,3 +32,13 @@ function(get_platform_dir platform_name platform_dir)
 		message(FATAL_ERROR "Platform not found: \"${platform_name}\"")
 	endif()
 endfunction()
+
+# macro_include_platform_config()
+macro(macro_include_platform_config include_target)
+	get_platform_dir(${GODOT_PLATFORM} platform_dir)
+	configure_file(${platform_dir}/platform_config.h platform_config/platform_config.h COPYONLY)
+	target_include_directories(${include_target}
+		PRIVATE
+			${CMAKE_CURRENT_BINARY_DIR}/platform_config  # platform_config.h
+	)
+endmacro()

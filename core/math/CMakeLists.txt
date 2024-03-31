@@ -1,4 +1,8 @@
-target_sources(godot_core
+include(Platform)
+
+add_library(godot_core_math)
+
+target_sources(godot_core_math
 	PRIVATE
 		aabb.cpp
 		a_star.cpp
@@ -33,4 +37,20 @@ target_sources(godot_core
 		vector3i.cpp
 		vector4.cpp
 		vector4i.cpp
+)
+
+# Include "platform_config.h"
+macro_include_platform_config(godot_core_math)
+
+target_include_directories(godot_core_math
+	PUBLIC
+		${Godot_SOURCE_DIR}
+	PRIVATE
+		godot_thirdparty_clipper
+		godot_thirdparty_polypartition
+)
+
+target_link_libraries(godot_core
+	PRIVATE
+		godot_core_math
 )

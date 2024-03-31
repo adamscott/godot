@@ -1,3 +1,5 @@
+include(Platform)
+
 add_library(godot_core)
 
 target_sources(godot_core
@@ -11,14 +13,11 @@ target_sources(godot_core
 )
 
 # Include "platform_config.h"
-get_platform_dir(${GODOT_PLATFORM} platform_dir)
-configure_file(${platform_dir}/platform_config.h platform_config.h COPYONLY)
+macro_include_platform_config(godot_core)
 
 target_include_directories(godot_core
 	PUBLIC
 		${Godot_SOURCE_DIR}
-	PRIVATE
-		${CMAKE_CURRENT_BINARY_DIR}  # platform_config.h
 )
 
 target_link_libraries(godot_core
