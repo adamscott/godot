@@ -1,6 +1,11 @@
-# https://discourse.cmake.org/t/how-to-target-include-directories-but-for-a-single-header-file/10514/2
-configure_file(platform_config.h platform_config.h COPYONLY)
-target_include_directories(godot
-	PRIVATE
-		${CMAKE_CURRENT_BINARY_DIR}
-)
+option(GODOT_LINUXBSD_USE_ALSA "Use ALSA." ON)
+option(GODOT_LINUXBSD_USE_PULSEAUDIO "Use PulseAudio." ON)
+option(GODOT_LINUXBSD_USE_DBUS "Use D-Bus to handle screensaver and portal desktop settings." ON)
+option(GODOT_LINUXBSD_USE_SPEECHD "Use Speech Dispatcher for Text-to-Speech support." ON)
+option(GODOT_LINUXBSD_USE_FONTCONFIG "Use fontconfig for system fonts support." ON)
+option(GODOT_LINUXBSD_USE_UDEV "Use udev for gamepad connection callbacks." ON)
+option(GODOT_LINUXBSD_USE_EXECINFO "Use libexecinfo on systems where glibc is not available." OFF)
+option(GODOT_LINUXBSD_ENABLE_X11 "Enable X11 display." ON)
+option(GODOT_LINUXBSD_ENABLE_WAYLAND "Enable Wayland display." ON)
+option(GODOT_LINUXBSD_ENABLE_LIBDECOR "Enable libdecor support." ON)
+option(GODOT_LINUXBSD_ENABLE_TOUCH "Enable touch events." ON)

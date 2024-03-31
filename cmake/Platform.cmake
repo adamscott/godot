@@ -36,6 +36,7 @@ endfunction()
 # macro_include_platform_config()
 macro(macro_include_platform_config include_target)
 	get_platform_dir(${GODOT_PLATFORM} platform_dir)
+	# https://discourse.cmake.org/t/how-to-target-include-directories-but-for-a-single-header-file/10514/2
 	configure_file(${platform_dir}/platform_config.h platform_config/platform_config.h COPYONLY)
 	target_include_directories(${include_target}
 		PRIVATE
