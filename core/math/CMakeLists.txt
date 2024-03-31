@@ -45,6 +45,9 @@ macro_include_platform_config(godot_core_math)
 target_include_directories(godot_core_math
 	PUBLIC
 		${Godot_SOURCE_DIR}
+)
+
+target_link_libraries(godot_core_math
 	PRIVATE
 		godot_core_object_gdvirtual
 		godot_thirdparty_clipper
