@@ -30,6 +30,11 @@ find_program(program_patch
 	DOC "Patch command."
 	REQUIRED
 )
+find_program(program_python3
+	python3
+	DOC "Python 3 command."
+	REQUIRED
+)
 
 # Platform name.
 get_platform_name_from_system_name(${CMAKE_SYSTEM_NAME} platform_name)

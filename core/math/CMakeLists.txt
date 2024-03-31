@@ -46,6 +46,7 @@ target_include_directories(godot_core_math
 	PUBLIC
 		${Godot_SOURCE_DIR}
 	PRIVATE
+		godot_core_object_gdvirtual
 		godot_thirdparty_clipper
 		godot_thirdparty_polypartition
 )

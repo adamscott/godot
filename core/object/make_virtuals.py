@@ -203,3 +203,20 @@ def run(target, source, env):
 
     with open(str(target[0]), "w", encoding="utf-8", newline="\n") as f:
         f.write(txt)
+
+
+# If the file is run from the command line.
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(
+                    prog='make_virtuals',
+                    description='Generates virtuals',
+                    # epilog=''
+                    )
+    
+    parser.add_argument("target")
+
+    args = parser.parse_args()
+
+    run([args.target], None, None)
