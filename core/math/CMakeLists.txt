@@ -2,6 +2,8 @@ include(Platform)
 
 add_library(godot_core_math)
 
+macro_target_include_platform_config(godot_core_math)
+
 target_sources(godot_core_math
 	PRIVATE
 		aabb.cpp
@@ -39,8 +41,10 @@ target_sources(godot_core_math
 		vector4i.cpp
 )
 
-# Include "platform_config.h"
-macro_include_platform_config(godot_core_math)
+target_compile_definitions(godot_core_math
+	PUBLIC
+		${GODOT_COMPILE_DEFINITIONS}
+)
 
 target_include_directories(godot_core_math
 	PUBLIC

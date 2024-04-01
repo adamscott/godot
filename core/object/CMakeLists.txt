@@ -2,6 +2,8 @@ include(Platform)
 
 add_library(godot_core_object)
 
+macro_target_include_platform_config(godot_core_object)
+
 # Run `make_virtuals.py`.
 add_custom_command(
 	OUTPUT gdvirtual.gen.inc
@@ -29,12 +31,15 @@ target_sources(godot_core_object
 		worker_thread_pool.cpp
 )
 
+target_compile_definitions(godot_core_object
+	PUBLIC
+		$<BUILD_INTERFACE:${GODOT_COMPILE_DEFINITIONS}>
+)
+
 target_include_directories(godot_core_object
 	PUBLIC
 		${Godot_SOURCE_DIR}
 )
-
-macro_include_platform_config(godot_core_object)
 
 target_link_libraries(godot_core_object
 	PUBLIC

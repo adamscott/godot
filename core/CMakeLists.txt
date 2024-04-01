@@ -13,11 +13,16 @@ target_sources(godot_core
 )
 
 # Include "platform_config.h"
-macro_include_platform_config(godot_core)
+macro_target_include_platform_config(godot_core)
 
 target_include_directories(godot_core
 	PUBLIC
 		${Godot_SOURCE_DIR}
+)
+
+target_compile_definitions(godot_core
+	PUBLIC
+		$<BUILD_INTERFACE:${GODOT_COMPILE_DEFINITIONS}>
 )
 
 target_link_libraries(godot_core

@@ -13,7 +13,7 @@ target_link_directories(godot_thirdparty_clipper
 
 # Polypartition.
 add_library(godot_thirdparty_polypartition)
-macro_include_platform_config(godot_thirdparty_polypartition)
+macro_target_include_platform_config(godot_thirdparty_polypartition)
 
 target_sources(godot_thirdparty_polypartition
 	PUBLIC

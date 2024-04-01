@@ -40,7 +40,11 @@ find_program(program_python3
 get_platform_name_from_system_name(${CMAKE_SYSTEM_NAME} platform_name)
 set(GODOT_PLATFORM ${platform_name} CACHE STRING "Platform name.")
 
+# Compile definitions.
+set(GODOT_COMPILE_DEFINITIONS)
+
 add_subdirectory(thirdparty)
 add_subdirectory(core)
+add_subdirectory(drivers)
 add_subdirectory(platform)
 add_subdirectory(main)
