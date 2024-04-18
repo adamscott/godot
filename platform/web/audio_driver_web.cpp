@@ -33,6 +33,7 @@
 #include "godot_audio.h"
 
 #include "core/config/project_settings.h"
+#include "servers/audio/audio_stream.h"
 
 #include <emscripten.h>
 
@@ -185,6 +186,15 @@ Error AudioDriverWeb::input_stop() {
 	unlock();
 	return OK;
 }
+
+#ifdef SAMPLES_ENABLED
+bool AudioDriverWeb::is_sample_registered(const Ref<AudioStream> &p_sample) const {
+	return godot_audio_is_sample_registered((int64_t)p_sample->get_instance_id());
+}
+
+void AudioDriverWeb::register_sample(const Ref<AudioStream> &p_sample) {
+}
+#endif
 
 #ifdef THREADS_ENABLED
 

@@ -87,6 +87,11 @@ public:
 
 	static void resume();
 
+#ifdef SAMPLES_ENABLED
+	virtual bool is_sample_registered(const Ref<AudioStream> &p_sample) const override;
+	virtual void register_sample(const Ref<AudioStream> &p_sample) override;
+#endif
+
 	AudioDriverWeb() {}
 };
 

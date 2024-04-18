@@ -129,6 +129,13 @@ public:
 	void reset_profiling_time() { prof_time.set(0); }
 #endif
 
+#ifdef SAMPLES_ENABLED
+	virtual bool is_sample_registered(const Ref<AudioStream> &p_sample) const {
+		return false;
+	};
+	virtual void register_sample(const Ref<AudioStream> &p_sample){};
+#endif
+
 	AudioDriver() {}
 	virtual ~AudioDriver() {}
 };
@@ -438,6 +445,10 @@ public:
 
 #ifdef TOOLS_ENABLED
 	virtual void get_argument_options(const StringName &p_function, int p_idx, List<String> *r_options) const override;
+#endif
+
+#ifdef SAMPLES_ENABLED
+	void register_sample(const Ref<AudioStream> &p_sample);
 #endif
 
 	AudioServer();
