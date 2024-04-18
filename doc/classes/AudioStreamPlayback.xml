@@ -79,5 +79,16 @@
 				Overridable method. Called whenever the audio stream is mixed if the playback is active and [method AudioServer.set_enable_tagging_used_audio_streams] has been set to [code]true[/code]. Editor plugins may use this method to "tag" the current position along the audio stream and display it in a preview.
 			</description>
 		</method>
+		<method name="get_sample_playback" qualifiers="const">
+			<return type="AudioSamplePlayback" />
+			<description>
+			</description>
+		</method>
+		<method name="set_sample_playback">
+			<return type="void" />
+			<param index="0" name="playback_sample" type="AudioSamplePlayback" />
+			<description>
+			</description>
+		</method>
 	</methods>
 </class>

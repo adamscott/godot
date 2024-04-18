@@ -183,6 +183,12 @@
 				If [code]true[/code], the bus at index [param bus_idx] is in solo mode.
 			</description>
 		</method>
+		<method name="is_stream_registered_as_sample">
+			<return type="bool" />
+			<param index="0" name="stream" type="AudioStream" />
+			<description>
+			</description>
+		</method>
 		<method name="lock">
 			<return type="void" />
 			<description>
@@ -196,6 +202,12 @@
 			<param index="1" name="to_index" type="int" />
 			<description>
 				Moves the bus from index [param index] to index [param to_index].
+			</description>
+		</method>
+		<method name="register_stream_as_sample">
+			<return type="void" />
+			<param index="0" name="stream" type="AudioStream" />
+			<description>
 			</description>
 		</method>
 		<method name="remove_bus">
@@ -343,6 +355,14 @@
 		</constant>
 		<constant name="SPEAKER_SURROUND_71" value="3" enum="SpeakerMode">
 			A 7.1 channel surround setup was detected.
+		</constant>
+		<constant name="PLAYBACK_TYPE_DEFAULT" value="0" enum="PlaybackType">
+		</constant>
+		<constant name="PLAYBACK_TYPE_STREAM" value="1" enum="PlaybackType">
+		</constant>
+		<constant name="PLAYBACK_TYPE_SAMPLE" value="2" enum="PlaybackType">
+		</constant>
+		<constant name="PLAYBACK_TYPE_MAX" value="3" enum="PlaybackType">
 		</constant>
 	</constants>
 </class>

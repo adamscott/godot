@@ -367,6 +367,10 @@ void AudioServer::_mix_step() {
 			continue;
 		}
 
+		if (playback->stream_playback->get_is_sample()) {
+			continue;
+		}
+
 		bool fading_out = playback->state.load() == AudioStreamPlaybackListNode::FADE_OUT_TO_DELETION || playback->state.load() == AudioStreamPlaybackListNode::FADE_OUT_TO_PAUSE;
 
 		AudioFrame *buf = mix_buffer.ptrw();
@@ -770,6 +774,8 @@ void AudioServer::set_bus_count(int p_count) {
 
 	unlock();
 
+	AudioDriver::get_singleton()->set_sample_bus_count(p_count);
+
 	emit_signal(SNAME("bus_layout_changed"));
 }
 
@@ -784,6 +790,8 @@ void AudioServer::remove_bus(int p_index) {
 	memdelete(buses[p_index]);
 	buses.remove_at(p_index);
 	unlock();
+
+	AudioDriver::get_singleton()->remove_sample_bus(p_index);
 
 	emit_signal(SNAME("bus_layout_changed"));
 }
@@ -839,6 +847,8 @@ void AudioServer::add_bus(int p_at_pos) {
 		buses.insert(p_at_pos, bus);
 	}
 
+	AudioDriver::get_singleton()->add_sample_bus(p_at_pos);
+
 	emit_signal(SNAME("bus_layout_changed"));
 }
 
@@ -862,6 +872,8 @@ void AudioServer::move_bus(int p_bus, int p_to_pos) {
 	} else {
 		buses.insert(p_to_pos - 1, bus);
 	}
+
+	AudioDriver::get_singleton()->move_sample_bus(p_bus, p_to_pos);
 
 	emit_signal(SNAME("bus_layout_changed"));
 }
@@ -934,6 +946,8 @@ void AudioServer::set_bus_volume_db(int p_bus, float p_volume_db) {
 	MARK_EDITED
 
 	buses[p_bus]->volume_db = p_volume_db;
+
+	AudioDriver::get_singleton()->set_sample_bus_volume_db(p_bus, p_volume_db);
 }
 
 float AudioServer::get_bus_volume_db(int p_bus) const {
@@ -952,6 +966,8 @@ void AudioServer::set_bus_send(int p_bus, const StringName &p_send) {
 	MARK_EDITED
 
 	buses[p_bus]->send = p_send;
+
+	AudioDriver::get_singleton()->set_sample_bus_send(p_bus, p_send);
 }
 
 StringName AudioServer::get_bus_send(int p_bus) const {
@@ -965,6 +981,8 @@ void AudioServer::set_bus_solo(int p_bus, bool p_enable) {
 	MARK_EDITED
 
 	buses[p_bus]->solo = p_enable;
+
+	AudioDriver::get_singleton()->set_sample_bus_solo(p_bus, p_enable);
 }
 
 bool AudioServer::is_bus_solo(int p_bus) const {
@@ -979,6 +997,8 @@ void AudioServer::set_bus_mute(int p_bus, bool p_enable) {
 	MARK_EDITED
 
 	buses[p_bus]->mute = p_enable;
+
+	AudioDriver::get_singleton()->set_sample_bus_mute(p_bus, p_enable);
 }
 
 bool AudioServer::is_bus_mute(int p_bus) const {
@@ -1214,6 +1234,16 @@ void AudioServer::set_playback_bus_exclusive(Ref<AudioStreamPlayback> p_playback
 void AudioServer::set_playback_bus_volumes_linear(Ref<AudioStreamPlayback> p_playback, const HashMap<StringName, Vector<AudioFrame>> &p_bus_volumes) {
 	ERR_FAIL_COND(p_bus_volumes.size() > MAX_BUSES_PER_PLAYBACK);
 
+	// Samples.
+	if (p_playback->get_is_sample()) {
+		Ref<AudioSamplePlayback> sample_playback = p_playback->get_sample_playback();
+		if (sample_playback.is_null()) {
+			return;
+		}
+		AudioDriver::get_singleton()->set_sample_playback_bus_volumes_linear(sample_playback, p_bus_volumes);
+		return;
+	}
+
 	AudioStreamPlaybackListNode *playback_node = _find_playback_list_node(p_playback);
 	if (!playback_node) {
 		return;
@@ -1385,6 +1415,7 @@ void AudioServer::init() {
 
 	if (AudioDriver::get_singleton()) {
 		AudioDriver::get_singleton()->start();
+		AudioDriver::get_singleton()->set_sample_bus_count(1);
 	}
 
 #ifdef TOOLS_ENABLED
@@ -1597,6 +1628,9 @@ void AudioServer::set_bus_layout(const Ref<AudioBusLayout> &p_bus_layout) {
 	}
 	buses.resize(p_bus_layout->buses.size());
 	bus_map.clear();
+
+	AudioDriver::get_singleton()->set_sample_bus_count(buses.size());
+
 	for (int i = 0; i < p_bus_layout->buses.size(); i++) {
 		Bus *bus = memnew(Bus);
 		if (i == 0) {
@@ -1604,12 +1638,17 @@ void AudioServer::set_bus_layout(const Ref<AudioBusLayout> &p_bus_layout) {
 		} else {
 			bus->name = p_bus_layout->buses[i].name;
 			bus->send = p_bus_layout->buses[i].send;
+			AudioDriver::get_singleton()->set_sample_bus_send(i, bus->send);
 		}
 
 		bus->solo = p_bus_layout->buses[i].solo;
 		bus->mute = p_bus_layout->buses[i].mute;
 		bus->bypass = p_bus_layout->buses[i].bypass;
 		bus->volume_db = p_bus_layout->buses[i].volume_db;
+
+		AudioDriver::get_singleton()->set_sample_bus_solo(i, bus->solo);
+		AudioDriver::get_singleton()->set_sample_bus_mute(i, bus->mute);
+		AudioDriver::get_singleton()->set_sample_bus_volume_db(i, bus->volume_db);
 
 		for (int j = 0; j < p_bus_layout->buses[i].effects.size(); j++) {
 			Ref<AudioEffect> fx = p_bus_layout->buses[i].effects[j].effect;
@@ -1638,6 +1677,8 @@ void AudioServer::set_bus_layout(const Ref<AudioBusLayout> &p_bus_layout) {
 	set_edited(false);
 #endif
 	unlock();
+
+	// Samples bus sync.
 }
 
 Ref<AudioBusLayout> AudioServer::generate_bus_layout() const {
@@ -1704,6 +1745,82 @@ void AudioServer::get_argument_options(const StringName &p_function, int p_idx, 
 	Object::get_argument_options(p_function, p_idx, r_options);
 }
 #endif
+
+AudioServer::PlaybackType AudioServer::get_default_playback_type() const {
+	int playback_type = GLOBAL_GET("audio/general/default_playback_type");
+	ERR_FAIL_COND_V_MSG(
+			playback_type < 0 || playback_type >= PlaybackType::PLAYBACK_TYPE_MAX,
+			PlaybackType::PLAYBACK_TYPE_STREAM,
+			vformat(R"(Project settings value (%s) for "audio/general/default_playback_type" is not supported)", playback_type));
+
+	switch (playback_type) {
+		case 1: {
+			return PlaybackType::PLAYBACK_TYPE_SAMPLE;
+		} break;
+
+		case 0:
+		default: {
+			return PlaybackType::PLAYBACK_TYPE_STREAM;
+		} break;
+	}
+}
+
+bool AudioServer::is_stream_registered_as_sample(const Ref<AudioStream> &p_stream) {
+	ERR_FAIL_COND_V_MSG(p_stream.is_null(), false, "Parameter p_stream is null.");
+	return AudioDriver::get_singleton()->is_stream_registered_as_sample(p_stream);
+}
+
+void AudioServer::register_stream_as_sample(const Ref<AudioStream> &p_stream) {
+	ERR_FAIL_COND_MSG(p_stream.is_null(), "Parameter p_stream is null.");
+	ERR_FAIL_COND_MSG(!(p_stream->can_be_sampled()), "Parameter p_stream cannot be sampled.");
+	Ref<AudioSample> sample = p_stream->generate_sample();
+	register_sample(sample);
+}
+
+void AudioServer::unregister_stream_as_sample(const Ref<AudioStream> &p_stream) {
+	ERR_FAIL_COND_MSG(p_stream.is_null(), "Parameter p_stream is null.");
+	ERR_FAIL_COND_MSG(!(p_stream->can_be_sampled()), "Parameter p_stream cannot be sampled.");
+	Ref<AudioSample> sample = p_stream->generate_sample();
+	unregister_sample(sample);
+}
+
+void AudioServer::register_sample(const Ref<AudioSample> &p_sample) {
+	ERR_FAIL_COND_MSG(p_sample.is_null(), "Parameter p_sample is null.");
+	ERR_FAIL_COND_MSG(p_sample->stream.is_null(), "Parameter p_sample->stream is null.");
+	ERR_FAIL_COND_MSG(!(p_sample->stream->can_be_sampled()), "Parameter p_stream cannot be sampled.");
+	AudioDriver::get_singleton()->register_sample(p_sample);
+}
+
+void AudioServer::unregister_sample(const Ref<AudioSample> &p_sample) {
+	ERR_FAIL_COND_MSG(p_sample.is_null(), "Parameter p_sample is null.");
+	ERR_FAIL_COND_MSG(p_sample->stream.is_null(), "Parameter p_sample->stream is null.");
+	AudioDriver::get_singleton()->unregister_sample(p_sample);
+}
+
+void AudioServer::start_sample_playback(const Ref<AudioSamplePlayback> &p_playback) {
+	ERR_FAIL_COND_MSG(p_playback.is_null(), "Parameter p_playback is null.");
+	AudioDriver::get_singleton()->start_sample_playback(p_playback);
+}
+
+void AudioServer::stop_sample_playback(const Ref<AudioSamplePlayback> &p_playback) {
+	ERR_FAIL_COND_MSG(p_playback.is_null(), "Parameter p_playback is null.");
+	AudioDriver::get_singleton()->stop_sample_playback(p_playback);
+}
+
+void AudioServer::set_sample_playback_pause(const Ref<AudioSamplePlayback> &p_playback, bool p_paused) {
+	ERR_FAIL_COND_MSG(p_playback.is_null(), "Parameter p_playback is null.");
+	AudioDriver::get_singleton()->set_sample_playback_pause(p_playback, p_paused);
+}
+
+bool AudioServer::is_sample_playback_active(const Ref<AudioSamplePlayback> &p_playback) {
+	ERR_FAIL_COND_V_MSG(p_playback.is_null(), false, "Parameter p_playback is null.");
+	return AudioDriver::get_singleton()->is_sample_playback_active(p_playback);
+}
+
+void AudioServer::update_sample_playback_pitch_scale(const Ref<AudioSamplePlayback> &p_playback, float p_pitch_scale) {
+	ERR_FAIL_COND_MSG(p_playback.is_null(), "Parameter p_playback is null.");
+	return AudioDriver::get_singleton()->update_sample_playback_pitch_scale(p_playback, p_pitch_scale);
+}
 
 void AudioServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_bus_count", "amount"), &AudioServer::set_bus_count);
@@ -1774,6 +1891,9 @@ void AudioServer::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("set_enable_tagging_used_audio_streams", "enable"), &AudioServer::set_enable_tagging_used_audio_streams);
 
+	ClassDB::bind_method(D_METHOD("is_stream_registered_as_sample", "stream"), &AudioServer::is_stream_registered_as_sample);
+	ClassDB::bind_method(D_METHOD("register_stream_as_sample", "stream"), &AudioServer::register_stream_as_sample);
+
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "bus_count"), "set_bus_count", "get_bus_count");
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "output_device"), "set_output_device", "get_output_device");
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "input_device"), "set_input_device", "get_input_device");
@@ -1789,6 +1909,11 @@ void AudioServer::_bind_methods() {
 	BIND_ENUM_CONSTANT(SPEAKER_SURROUND_31);
 	BIND_ENUM_CONSTANT(SPEAKER_SURROUND_51);
 	BIND_ENUM_CONSTANT(SPEAKER_SURROUND_71);
+
+	BIND_ENUM_CONSTANT(PLAYBACK_TYPE_DEFAULT);
+	BIND_ENUM_CONSTANT(PLAYBACK_TYPE_STREAM);
+	BIND_ENUM_CONSTANT(PLAYBACK_TYPE_SAMPLE);
+	BIND_ENUM_CONSTANT(PLAYBACK_TYPE_MAX);
 }
 
 AudioServer::AudioServer() {

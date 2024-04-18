@@ -8,6 +8,13 @@
 	</description>
 	<tutorials>
 	</tutorials>
+	<methods>
+		<method name="get_sample" qualifiers="const">
+			<return type="AudioSample" />
+			<description>
+			</description>
+		</method>
+	</methods>
 	<members>
 		<member name="bar_beats" type="int" setter="set_bar_beats" getter="get_bar_beats" default="4">
 		</member>
