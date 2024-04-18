@@ -1705,6 +1705,14 @@ void AudioServer::get_argument_options(const StringName &p_function, int p_idx, 
 }
 #endif
 
+void AudioServer::register_sample(const Ref<AudioStream> &p_sample) {
+	ERR_FAIL_COND_MSG(p_sample.is_null(), "Parameter p_sample is null.");
+
+#ifdef SAMPLES_ENABLED
+	ERR_FAIL_COND_MSG(!(p_sample->can_be_sampled()), "Parameter p_sample cannot be sampled.");
+#endif
+}
+
 void AudioServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_bus_count", "amount"), &AudioServer::set_bus_count);
 	ClassDB::bind_method(D_METHOD("get_bus_count"), &AudioServer::get_bus_count);
@@ -1773,6 +1781,8 @@ void AudioServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("generate_bus_layout"), &AudioServer::generate_bus_layout);
 
 	ClassDB::bind_method(D_METHOD("set_enable_tagging_used_audio_streams", "enable"), &AudioServer::set_enable_tagging_used_audio_streams);
+
+	ClassDB::bind_method(D_METHOD("register_sample", "sample"), &AudioServer::register_sample);
 
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "bus_count"), "set_bus_count", "get_bus_count");
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "output_device"), "set_output_device", "get_output_device");

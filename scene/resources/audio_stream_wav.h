@@ -149,6 +149,12 @@ public:
 	virtual Ref<AudioStreamPlayback> instantiate_playback() override;
 	virtual String get_stream_name() const override;
 
+#ifdef SAMPLES_ENABLED
+	virtual bool can_be_sampled() const override {
+		return true;
+	};
+#endif
+
 	AudioStreamWAV();
 	~AudioStreamWAV();
 };

@@ -47,6 +47,12 @@ extern void godot_audio_resume();
 extern int godot_audio_input_start();
 extern void godot_audio_input_stop();
 
+// Samples
+#ifdef SAMPLES_ENABLED
+extern bool godot_audio_is_sample_registered(const int p_sample_object_id);
+extern int godot_audio_register_sample(const int p_sample_object_id, int *p_sample_buf, int p_sample_size);
+#endif
+
 // Worklet
 typedef int32_t GodotAudioState[4];
 extern int godot_audio_worklet_create(int p_channels);
