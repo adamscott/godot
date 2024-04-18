@@ -43,6 +43,51 @@
 
 class AudioStream;
 
+class AudioSamplePlayback : public RefCounted {
+	GDCLASS(AudioSamplePlayback, RefCounted);
+
+protected:
+	static void _bind_methods();
+
+public:
+	enum PositionMode {
+		AUDIO_SAMPLE_PLAYBACK_POSITION_NONE,
+		AUDIO_SAMPLE_PLAYBACK_POSITION_2D,
+		AUDIO_SAMPLE_PLAYBACK_POSITION_3D,
+	};
+
+	Ref<AudioStream> stream;
+
+	float offset = 0.0f;
+	float volume_db = 0.0f;
+	Vector<AudioFrame> volume_vector;
+	PositionMode position_mode = AUDIO_SAMPLE_PLAYBACK_POSITION_NONE;
+	Vector3 position;
+	StringName bus;
+};
+
+class AudioSample : public RefCounted {
+	GDCLASS(AudioSample, RefCounted)
+
+public:
+	enum LoopMode {
+		LOOP_DISABLED,
+		LOOP_FORWARD,
+		LOOP_PINGPONG,
+		LOOP_BACKWARD,
+	};
+
+	Ref<AudioStream> stream;
+	Vector<AudioFrame> data;
+	int num_channels = 1;
+	int sample_rate = 44100;
+	LoopMode loop_mode = LOOP_DISABLED;
+	int loop_begin = 0;
+	int loop_end = 0;
+};
+
+///////////
+
 class AudioStreamPlayback : public RefCounted {
 	GDCLASS(AudioStreamPlayback, RefCounted);
 
@@ -75,6 +120,14 @@ public:
 	virtual Variant get_parameter(const StringName &p_name) const;
 
 	virtual int mix(AudioFrame *p_buffer, float p_rate_scale, int p_frames);
+
+	virtual void set_is_sample(bool p_is_sample) {}
+	virtual bool get_is_sample() const { return false; }
+	virtual Ref<AudioSamplePlayback> get_sample_playback() const;
+	virtual void set_sample_playback(const Ref<AudioSamplePlayback> &p_playback) {}
+
+	AudioStreamPlayback();
+	~AudioStreamPlayback();
 };
 
 class AudioStreamPlaybackResampled : public AudioStreamPlayback {
@@ -161,6 +214,9 @@ public:
 	};
 
 	virtual void get_parameter_list(List<Parameter> *r_parameters);
+
+	virtual bool can_be_sampled() const { return false; };
+	virtual Ref<AudioSample> generate_sample() const;
 };
 
 // Microphone
