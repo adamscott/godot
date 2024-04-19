@@ -188,11 +188,11 @@ Error AudioDriverWeb::input_stop() {
 }
 
 #ifdef SAMPLES_ENABLED
-bool AudioDriverWeb::is_sample_registered(const Ref<AudioStream> &p_sample) const {
-	return godot_audio_is_sample_registered((int64_t)p_sample->get_instance_id());
+bool AudioDriverWeb::is_sample_registered(const int64_t p_sample_id) const {
+	return godot_audio_sample_is_registered(p_sample_id) != 0;
 }
 
-void AudioDriverWeb::register_sample(const Ref<AudioStream> &p_sample) {
+void AudioDriverWeb::register_sample(const int64_t p_sample_id, const int *p_buffer, const int p_buffer_length) {
 }
 #endif
 
