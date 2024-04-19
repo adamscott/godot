@@ -163,6 +163,7 @@ public:
 	virtual void get_parameter_list(List<Parameter> *r_parameters);
 
 	virtual bool can_be_sampled() const { return false; };
+	virtual Vector<uint8_t> get_sample_data() const { return Vector<uint8_t>(); };
 };
 
 // Microphone

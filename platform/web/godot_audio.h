@@ -50,7 +50,7 @@ extern void godot_audio_input_stop();
 // Samples
 #ifdef SAMPLES_ENABLED
 extern int godot_audio_sample_is_registered(int p_sample_object_id);
-extern int godot_audio_register_sample(int p_sample_object_id, int *p_sample_buf, int p_sample_size);
+extern void godot_audio_sample_register(int p_sample_object_id, int *p_sample_buf, int p_sample_size);
 #endif
 
 // Worklet

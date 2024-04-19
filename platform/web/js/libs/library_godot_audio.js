@@ -35,8 +35,11 @@ const GodotAudio = {
 		input: null,
 		driver: null,
 		interval: 0,
+		samples: null,
 
 		init: function (mix_rate, latency, onstatechange, onlatencyupdate) {
+			GodotAudio.samples = new Map();
+
 			const opts = {};
 			// If mix_rate is 0, let the browser choose.
 			if (mix_rate) {
@@ -214,14 +217,22 @@ const GodotAudio = {
 	godot_audio_sample_is_registered__proxy: 'sync',
 	godot_audio_sample_is_registered__sig: 'ii',
 	godot_audio_sample_is_registered: function (sampleObjectId) {
-		console.log("sampleObjectId:", sampleObjectId);
-		return 0;
+		return GodotAudio.samples.has(sampleObjectId);
 	},
 
 	godot_audio_sample_register__proxy: 'sync',
-	godot_audio_sample_register__sig: 'iiii',
-	godot_audio_sample_register: function() {
-
+	godot_audio_sample_register__sig: 'viii',
+	godot_audio_sample_register: function(sampleObjectId, bufferPtr, bufferSize) {
+		const bytes_array = new Uint8Array(bufferSize);
+		let i = 0;
+		for (i = 0; i < bufferSize; i++) {
+			bytes_array[i] = GodotRuntime.getHeapValue(bufferPtr + i, 'i8');
+		}
+		const sample = {
+			buffer: bytes_array.buffer
+		};
+		console.log(sample);
+		GodotAudio.samples.set(sampleObjectId, sample);
 	}
 };
 
@@ -425,7 +436,7 @@ autoAddDeps(GodotAudioWorklet, '$GodotAudioWorklet');
 mergeInto(LibraryManager.library, GodotAudioWorklet);
 
 /*
- * The deprecated ScriptProcessorNode API, used when threads are disabled.
+ * The ScriptProcessorNode API, used when threads are disabled.
  */
 const GodotAudioScript = {
 	$GodotAudioScript__deps: ['$GodotAudio'],
