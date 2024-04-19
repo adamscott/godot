@@ -210,6 +210,19 @@ const GodotAudio = {
 			GodotAudio.input = null;
 		}
 	},
+
+	godot_audio_sample_is_registered__proxy: 'sync',
+	godot_audio_sample_is_registered__sig: 'ii',
+	godot_audio_sample_is_registered: function (sampleObjectId) {
+		console.log("sampleObjectId:", sampleObjectId);
+		return 0;
+	},
+
+	godot_audio_sample_register__proxy: 'sync',
+	godot_audio_sample_register__sig: 'iiii',
+	godot_audio_sample_register: function() {
+
+	}
 };
 
 autoAddDeps(GodotAudio, '$GodotAudio');
