@@ -46,6 +46,14 @@ class AudioStream;
 class AudioStreamPlayback : public RefCounted {
 	GDCLASS(AudioStreamPlayback, RefCounted);
 
+public:
+	class Sample : public RefCounted {
+	};
+
+private:
+	bool _is_sample = false;
+	Ref<Sample> sample;
+
 protected:
 	static void _bind_methods();
 	GDVIRTUAL1(_start, double)
@@ -75,6 +83,18 @@ public:
 	virtual Variant get_parameter(const StringName &p_name) const;
 
 	virtual int mix(AudioFrame *p_buffer, float p_rate_scale, int p_frames);
+
+	virtual void set_is_sample(bool p_is_sample) {
+		_is_sample = p_is_sample;
+	};
+	virtual bool get_is_sample() const { return _is_sample; };
+
+	virtual void set_sample(Ref<Sample> &p_sample) {
+		sample = p_sample;
+	};
+	virtual Ref<Sample> get_sample() const {
+		return sample;
+	};
 };
 
 class AudioStreamPlaybackResampled : public AudioStreamPlayback {

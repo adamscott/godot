@@ -142,6 +142,8 @@ Ref<AudioStreamPlayback> AudioStreamPlayerInternal::play_basic() {
 		stream_playback->set_parameter(K.value.path, K.value.value);
 	}
 
+	stream_playback->set_is_sample(get_is_sample());
+
 	stream_playbacks.push_back(stream_playback);
 	active.set();
 	_set_process(true);

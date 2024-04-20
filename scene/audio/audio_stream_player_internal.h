@@ -51,6 +51,7 @@ class AudioStreamPlayerInternal : public Object {
 	Node *node = nullptr;
 	Callable play_callable;
 	bool physical = false;
+	bool _is_sample = false;
 
 	HashMap<StringName, ParameterData> playback_parameters;
 
@@ -98,6 +99,9 @@ public:
 
 	bool has_stream_playback();
 	Ref<AudioStreamPlayback> get_stream_playback();
+
+	void set_is_sample(bool p_is_sample) { _is_sample = p_is_sample; };
+	bool get_is_sample() const { return _is_sample; };
 
 	AudioStreamPlayerInternal(Node *p_node, const Callable &p_play_callable, bool p_physical);
 };

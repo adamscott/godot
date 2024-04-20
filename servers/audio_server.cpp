@@ -367,6 +367,10 @@ void AudioServer::_mix_step() {
 			continue;
 		}
 
+		if (playback->stream_playback->get_is_sample()) {
+			continue;
+		}
+
 		bool fading_out = playback->state.load() == AudioStreamPlaybackListNode::FADE_OUT_TO_DELETION || playback->state.load() == AudioStreamPlaybackListNode::FADE_OUT_TO_PAUSE;
 
 		AudioFrame *buf = mix_buffer.ptrw();
