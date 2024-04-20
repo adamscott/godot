@@ -617,6 +617,7 @@ String AudioStreamWAV::get_stream_name() const {
 Ref<AudioSample> AudioStreamWAV::get_sample() const {
 	Ref<AudioSample> sample;
 	sample.instantiate();
+	sample->stream = this;
 	sample->data = get_data();
 	switch (loop_mode) {
 		case AudioStreamWAV::LoopMode::LOOP_DISABLED: {
@@ -635,9 +636,9 @@ Ref<AudioSample> AudioStreamWAV::get_sample() const {
 			sample->loop_mode = AudioSample::LoopMode::LOOP_BACKWARD;
 		} break;
 	}
-	sample->loop_start = loop_start;
+	sample->loop_begin = loop_begin;
 	sample->loop_end = loop_end;
-	sample->playback_rate = playback_rate;
+	sample->sample_rate = mix_rate;
 	return sample;
 }
 
