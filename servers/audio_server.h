@@ -57,12 +57,12 @@ public:
 		LOOP_BACKWARD
 	};
 
+	Ref<AudioStream> stream;
 	PackedByteArray data;
 	int sample_rate = 44100;
 	LoopMode loop_mode = LOOP_DISABLED;
 	int loop_begin = 0;
 	int loop_end = 0;
-	Ref<AudioStream> stream = nullptr;
 };
 
 class AudioDriver {
