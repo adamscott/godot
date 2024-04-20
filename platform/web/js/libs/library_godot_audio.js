@@ -221,15 +221,20 @@ const GodotAudio = {
 	},
 
 	godot_audio_sample_register__proxy: 'sync',
-	godot_audio_sample_register__sig: 'viii',
-	godot_audio_sample_register: function(sampleObjectId, bufferPtr, bufferSize) {
-		const bytes_array = new Uint8Array(bufferSize);
+	godot_audio_sample_register__sig: 'viiiiiii',
+	godot_audio_sample_register: function(sampleObjectId, bufferPtr, bufferSize, sampleRate, loopModeStrPtr, loopBegin, loopEnd) {
+		const loopMode = GodotRuntime.parseString(loopModeStrPtr);
+		const bytesArray = new Uint8Array(bufferSize);
 		let i = 0;
 		for (i = 0; i < bufferSize; i++) {
-			bytes_array[i] = GodotRuntime.getHeapValue(bufferPtr + i, 'i8');
+			bytesArray[i] = GodotRuntime.getHeapValue(bufferPtr + i, 'i8');
 		}
 		const sample = {
-			buffer: bytes_array.buffer
+			buffer: bytesArray.buffer,
+			sampleRate,
+			loopMode,
+			loopBegin,
+			loopEnd,
 		};
 		console.log(sample);
 		GodotAudio.samples.set(sampleObjectId, sample);

@@ -188,13 +188,43 @@ Error AudioDriverWeb::input_stop() {
 }
 
 #ifdef SAMPLES_ENABLED
-bool AudioDriverWeb::is_sample_registered(const int64_t p_sample_id) const {
-	return godot_audio_sample_is_registered(p_sample_id) != 0;
+bool AudioDriverWeb::is_sample_registered(Ref<AudioSample> &p_sample) const {
+	ERR_FAIL_COND_V_MSG(p_sample.is_null(), false, "p_sample is null.");
+	ERR_FAIL_COND_V_MSG(p_sample->stream.is_null(), false, "p_sample->stream is null.");
+	return godot_audio_sample_is_registered((int64_t)p_sample->stream->get_instance_id()) != 0;
 }
 
-void AudioDriverWeb::register_sample(const int64_t p_sample_id, Ref<AudioSample> &p_sample) {
+void AudioDriverWeb::register_sample(Ref<AudioSample> &p_sample) {
 	ERR_FAIL_COND_MSG(p_sample.is_null(), "p_sample is null.");
-	godot_audio_sample_register(p_sample_id, (int *)p_sample->data.ptrw(), p_sample->data.size());
+	ERR_FAIL_COND_MSG(p_sample->stream.is_null(), "p_sample->stream is null.");
+
+	String loop_mode;
+	switch (p_sample->loop_mode) {
+		case AudioSample::LOOP_DISABLED: {
+			loop_mode = "disabled";
+		} break;
+
+		case AudioSample::LOOP_FORWARD: {
+			loop_mode = "forward";
+		} break;
+
+		case AudioSample::LOOP_PINGPONG: {
+			loop_mode = "pingpong";
+		} break;
+
+		case AudioSample::LOOP_BACKWARD: {
+			loop_mode = "backward";
+		} break;
+	}
+
+	godot_audio_sample_register(
+			(int64_t)p_sample->stream->get_instance_id(),
+			(int *)p_sample->data.ptrw(),
+			p_sample->data.size(),
+			p_sample->sample_rate,
+			loop_mode.utf8().get_data(),
+			p_sample->loop_begin,
+			p_sample->loop_end);
 }
 #endif
 

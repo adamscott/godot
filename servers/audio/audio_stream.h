@@ -166,6 +166,7 @@ public:
 	virtual Ref<AudioSample> get_sample() const {
 		Ref<AudioSample> sample;
 		sample.instantiate();
+		sample->stream = this;
 		return sample;
 	};
 };

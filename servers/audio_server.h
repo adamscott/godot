@@ -60,9 +60,9 @@ public:
 	PackedByteArray data;
 	int sample_rate = 44100;
 	LoopMode loop_mode = LOOP_DISABLED;
-	int loop_start = 0;
+	int loop_begin = 0;
 	int loop_end = 0;
-	float playback_rate = 0.0f;
+	Ref<AudioStream> stream = nullptr;
 };
 
 class AudioDriver {
@@ -148,10 +148,10 @@ public:
 	void reset_profiling_time() { prof_time.set(0); }
 #endif
 
-	virtual bool is_sample_registered(const int64_t p_sample_id) const {
+	virtual bool is_sample_registered(Ref<AudioSample> &p_sample) const {
 		return false;
 	};
-	virtual void register_sample(const int64_t p_sample_id, Ref<AudioSample> &p_sample){};
+	virtual void register_sample(Ref<AudioSample> &p_sample){};
 
 	AudioDriver() {}
 	virtual ~AudioDriver() {}
