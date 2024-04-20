@@ -153,9 +153,7 @@ public:
 	virtual bool can_be_sampled() const override {
 		return true;
 	};
-	virtual Vector<uint8_t> get_sample_data() const override {
-		return get_data();
-	};
+	virtual Ref<AudioSample> get_sample() const override;
 #endif
 
 	AudioStreamWAV();
