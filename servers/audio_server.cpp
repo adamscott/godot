@@ -1711,8 +1711,8 @@ void AudioServer::register_sample(const Ref<AudioStream> &p_sample) {
 #ifdef SAMPLES_ENABLED
 	ERR_FAIL_COND_MSG(!(p_sample->can_be_sampled()), "Parameter p_sample cannot be sampled.");
 	// AudioDriver::get_singleton()->is_sample_registered(p_sample->get_instance_id());
-	Vector<uint8_t> sample_data = p_sample->get_sample_data();
-	AudioDriver::get_singleton()->register_sample(p_sample->get_instance_id(), sample_data);
+	Ref<AudioSample> sample = p_sample->get_sample();
+	AudioDriver::get_singleton()->register_sample(p_sample->get_instance_id(), sample);
 #endif
 }
 

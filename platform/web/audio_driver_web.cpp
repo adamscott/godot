@@ -192,8 +192,9 @@ bool AudioDriverWeb::is_sample_registered(const int64_t p_sample_id) const {
 	return godot_audio_sample_is_registered(p_sample_id) != 0;
 }
 
-void AudioDriverWeb::register_sample(const int64_t p_sample_id, Vector<uint8_t> &p_sample) {
-	godot_audio_sample_register(p_sample_id, (int *)p_sample.ptrw(), p_sample.size());
+void AudioDriverWeb::register_sample(const int64_t p_sample_id, Ref<AudioSample> &p_sample) {
+	ERR_FAIL_COND_MSG(p_sample.is_null(), "p_sample is null.");
+	godot_audio_sample_register(p_sample_id, (int *)p_sample->data.ptrw(), p_sample->data.size());
 }
 #endif
 

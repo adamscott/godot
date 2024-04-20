@@ -614,6 +614,33 @@ String AudioStreamWAV::get_stream_name() const {
 	return "";
 }
 
+Ref<AudioSample> AudioStreamWAV::get_sample() const {
+	Ref<AudioSample> sample;
+	sample.instantiate();
+	sample->data = get_data();
+	switch (loop_mode) {
+		case AudioStreamWAV::LoopMode::LOOP_DISABLED: {
+			sample->loop_mode = AudioSample::LoopMode::LOOP_DISABLED;
+		} break;
+
+		case AudioStreamWAV::LoopMode::LOOP_FORWARD: {
+			sample->loop_mode = AudioSample::LoopMode::LOOP_FORWARD;
+		} break;
+
+		case AudioStreamWAV::LoopMode::LOOP_PINGPONG: {
+			sample->loop_mode = AudioSample::LoopMode::LOOP_PINGPONG;
+		} break;
+
+		case AudioStreamWAV::LoopMode::LOOP_BACKWARD: {
+			sample->loop_mode = AudioSample::LoopMode::LOOP_BACKWARD;
+		} break;
+	}
+	sample->loop_start = loop_start;
+	sample->loop_end = loop_end;
+	sample->playback_rate = playback_rate;
+	return sample;
+}
+
 void AudioStreamWAV::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_data", "data"), &AudioStreamWAV::set_data);
 	ClassDB::bind_method(D_METHOD("get_data"), &AudioStreamWAV::get_data);

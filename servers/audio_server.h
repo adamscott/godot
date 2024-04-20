@@ -46,6 +46,25 @@ class AudioStream;
 class AudioStreamWAV;
 class AudioStreamPlayback;
 
+class AudioSample : public RefCounted {
+	GDCLASS(AudioSample, RefCounted)
+
+public:
+	enum LoopMode {
+		LOOP_DISABLED,
+		LOOP_FORWARD,
+		LOOP_PINGPONG,
+		LOOP_BACKWARD
+	};
+
+	PackedByteArray data;
+	int sample_rate = 44100;
+	LoopMode loop_mode = LOOP_DISABLED;
+	int loop_start = 0;
+	int loop_end = 0;
+	float playback_rate = 0.0f;
+};
+
 class AudioDriver {
 	static AudioDriver *singleton;
 	uint64_t _last_mix_time = 0;
@@ -132,7 +151,7 @@ public:
 	virtual bool is_sample_registered(const int64_t p_sample_id) const {
 		return false;
 	};
-	virtual void register_sample(const int64_t p_sample_id, Vector<uint8_t> &p_sample){};
+	virtual void register_sample(const int64_t p_sample_id, Ref<AudioSample> &p_sample){};
 
 	AudioDriver() {}
 	virtual ~AudioDriver() {}
