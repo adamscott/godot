@@ -219,6 +219,19 @@ void AudioStreamPlayer2D::play(float p_from_pos) {
 	}
 	setplayback = stream_playback;
 	setplay.set(p_from_pos);
+
+	// Sample handling.
+	if (stream_playback->get_is_sample()) {
+		Ref<AudioSamplePlayback> sample_playback = stream_playback->get_sample_playback();
+		if (sample_playback.is_valid()) {
+			sample_playback->offset = p_from_pos;
+			sample_playback->position_mode = AudioSamplePlayback::AUDIO_SAMPLE_PLAYBACK_POSITION_2D;
+			Vector2 player_position = get_position();
+			sample_playback->position = Vector3(player_position.x, -player_position.y, 0);
+
+			AudioServer::get_singleton()->start_playback_sample(sample_playback);
+		}
+	}
 }
 
 void AudioStreamPlayer2D::seek(float p_seconds) {

@@ -190,35 +190,33 @@ Error AudioDriverWeb::input_stop() {
 #ifdef SAMPLES_ENABLED
 bool AudioDriverWeb::is_sample_registered(const Ref<AudioSample> &p_sample) const {
 	ERR_FAIL_COND_V_MSG(p_sample.is_null(), false, "p_sample is null.");
-	ERR_FAIL_COND_V_MSG(p_sample->stream.is_null(), false, "p_sample->stream is null.");
-	return godot_audio_sample_is_registered((int64_t)p_sample->stream->get_instance_id()) != 0;
+	return godot_audio_sample_is_registered((int64_t)p_sample->get_instance_id()) != 0;
 }
 
 void AudioDriverWeb::register_sample(const Ref<AudioSample> &p_sample) {
 	ERR_FAIL_COND_MSG(p_sample.is_null(), "p_sample is null.");
-	ERR_FAIL_COND_MSG(p_sample->stream.is_null(), "p_sample->stream is null.");
 
 	String loop_mode;
 	switch (p_sample->loop_mode) {
-		case AudioSample::LOOP_DISABLED: {
+		case AudioSample::LoopMode::LOOP_DISABLED: {
 			loop_mode = "disabled";
 		} break;
 
-		case AudioSample::LOOP_FORWARD: {
+		case AudioSample::LoopMode::LOOP_FORWARD: {
 			loop_mode = "forward";
 		} break;
 
-		case AudioSample::LOOP_PINGPONG: {
+		case AudioSample::LoopMode::LOOP_PINGPONG: {
 			loop_mode = "pingpong";
 		} break;
 
-		case AudioSample::LOOP_BACKWARD: {
+		case AudioSample::LoopMode::LOOP_BACKWARD: {
 			loop_mode = "backward";
 		} break;
 	}
 
 	godot_audio_sample_register(
-			(int64_t)p_sample->stream->get_instance_id(),
+			(int64_t)p_sample->get_instance_id(),
 			(int *)p_sample->data.ptrw(),
 			p_sample->num_channels,
 			p_sample->data.size(),
@@ -228,15 +226,9 @@ void AudioDriverWeb::register_sample(const Ref<AudioSample> &p_sample) {
 			p_sample->loop_end);
 }
 
-Ref<AudioSamplePlayback> AudioDriverWeb::create_sample_playback(const Ref<AudioSample> &p_sample) {
-	ERR_FAIL_COND_V_MSG(p_sample.is_null(), nullptr, "p_sample is null.");
-
-	Ref<AudioSamplePlayback> sample_playback;
-	sample_playback.instantiate();
-
-	godot_audio_sample_create((int64_t)p_sample->get_instance_id(), (int64_t)sample_playback->get_instance_id());
-
-	return sample_playback;
+void AudioDriverWeb::start_playback_sample(const Ref<AudioSamplePlayback> &p_playback) {
+	ERR_FAIL_COND_MSG(p_playback.is_null(), "p_playback is null.");
+	godot_audio_sample_start((int64_t)p_playback->sample->get_instance_id(), (int64_t)p_playback->get_instance_id());
 }
 #endif
 
