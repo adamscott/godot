@@ -229,9 +229,8 @@ void AudioDriverWeb::register_sample(const Ref<AudioSample> &p_sample) {
 
 void AudioDriverWeb::start_playback_sample(const Ref<AudioSamplePlayback> &p_playback) {
 	ERR_FAIL_COND_MSG(p_playback.is_null(), "Parameter p_playback is null.");
-	ERR_FAIL_COND_MSG(p_playback->sample.is_null(), "Parameter p_playback->sample is null.");
-	ERR_FAIL_COND_MSG(p_playback->sample->stream.is_null(), "Parameter p_playback->sample->stream is null.");
-	godot_audio_sample_start((int64_t)p_playback->sample->stream->get_instance_id(), (int64_t)p_playback->get_instance_id());
+	ERR_FAIL_COND_MSG(p_playback->stream.is_null(), "Parameter p_playback->stream is null.");
+	godot_audio_sample_start((int64_t)p_playback->stream->get_instance_id(), (int64_t)p_playback->get_instance_id());
 }
 #endif
 

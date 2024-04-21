@@ -91,9 +91,7 @@ Variant AudioStreamPlayback::get_parameter(const StringName &p_name) const {
 }
 
 Ref<AudioSamplePlayback> AudioStreamPlayback::get_sample_playback() const {
-	Ref<AudioSamplePlayback> playback;
-	playback.instantiate();
-	return playback;
+	return nullptr;
 }
 
 void AudioStreamPlayback::_bind_methods() {
