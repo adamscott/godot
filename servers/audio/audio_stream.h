@@ -56,6 +56,7 @@ public:
 	Ref<AudioStream> stream;
 
 	float offset = 0;
+	float volume_db = 0;
 	PositionMode position_mode = AUDIO_SAMPLE_PLAYBACK_POSITION_NONE;
 	Vector3 position;
 };

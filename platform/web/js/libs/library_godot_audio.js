@@ -35,10 +35,12 @@ const GodotAudio = {
 		input: null,
 		driver: null,
 		interval: 0,
-		streamsAsSamples: null,
+		samples: null,
+		sampleNodesList: null,
 
 		init: function (mix_rate, latency, onstatechange, onlatencyupdate) {
-			GodotAudio.streamsAsSamples = new Map();
+			GodotAudio.samples = new Map();
+			GodotAudio.sampleNodesList = new Map();
 
 			const opts = {};
 			// If mix_rate is 0, let the browser choose.
@@ -151,6 +153,76 @@ const GodotAudio = {
 				resolve();
 			});
 		},
+
+		start_sample: async function (playbackObjectId, streamObjectId, startOptions) {
+			/** @type {AudioContext} */
+			const ctx = GodotAudio.ctx;
+
+			GodotAudio.stop_sample(playbackObjectId);
+			if (!GodotAudio.samples.has(streamObjectId)) {
+				console.warn(`Could not start sample "${streamObjectId}", no sample found.`);
+				return;
+			}
+
+			const sample = GodotAudio.samples.get(streamObjectId);
+			const sampleNodes = {
+				/** @type {AudioBufferSourceNode} */
+				source: ctx.createBufferSource(),
+				/** @type {GainNode} */
+				gain: ctx.createGain(),
+			};
+
+			/** @type {AudioBuffer} */
+			const sourceBuffer = ctx.createBuffer(sample.numberOfChannels, sample.length, sample.sampleRate);
+			for (let i = 0; i < sample.numberOfChannels; i++) {
+				const nowBuffering = sourceBuffer.getChannelData(i);
+				for (let j = 0; j < sourceBuffer.length; j++) {
+
+					console.log(sample.buffer[j]);
+					nowBuffering[j] = sample.buffer[j];
+				}
+			}
+
+			sampleNodes.source.buffer = sourceBuffer;
+			sampleNodes.gain.gain.value = startOptions.volumeDb + 1;
+
+			/** @type {AudioNode} */
+			let lastNode;
+
+			switch (startOptions.positionMode) {
+				case "2D": {
+					sampleNodes.source.connect(sampleNodes.gain);
+					lastNode = sampleNodes.gain;
+				} break;
+
+				case "3D": {
+
+				} break;
+
+				case "none":
+				default: {
+					sampleNodes.source.connect(sampleNodes.gain);
+					lastNode = sampleNodes.gain;
+				}
+			}
+
+			lastNode.connect(ctx.destination);
+
+			sampleNodes.source.loop = startOptions.loopMode !== "disabled";
+			sampleNodes.source.start(startOptions.offset);
+			GodotAudio.sampleNodesList.set(playbackObjectId, sampleNodes);
+		},
+
+		stop_sample: function (playbackObjectId) {
+			if (!GodotAudio.sampleNodesList.has(playbackObjectId)) {
+				return;
+			}
+
+			const sampleNodes = GodotAudio.sampleNodesList.get(playbackObjectId);
+			sampleNodes.source.stop();
+
+			GodotAudio.sampleNodesList.delete(playbackObjectId);
+		}
 	},
 
 	godot_audio_is_available__sig: 'i',
@@ -217,40 +289,75 @@ const GodotAudio = {
 	godot_audio_sample_stream_is_registered__proxy: 'sync',
 	godot_audio_sample_stream_is_registered__sig: 'ii',
 	godot_audio_sample_stream_is_registered: function (streamObjectId) {
-		return GodotAudio.streamsAsSamples.has(streamObjectId);
+		return GodotAudio.samples.has(streamObjectId);
 	},
 
 	godot_audio_sample_register_stream__proxy: 'sync',
 	godot_audio_sample_register_stream__sig: 'viiiiiii',
 	godot_audio_sample_register_stream: function(streamObjectId, bufferPtr, bufferSize, numberOfChannels, sampleRate, loopModeStrPtr, loopBegin, loopEnd) {
 		const loopMode = GodotRuntime.parseString(loopModeStrPtr);
-		const bytesArray = new Uint8Array(bufferSize);
+		let bytesArray = new Uint8Array(bufferSize);
 		let i = 0;
 		for (i = 0; i < bufferSize; i++) {
 			bytesArray[i] = GodotRuntime.getHeapValue(bufferPtr + i, 'i8');
 		}
-		const streamAsSample = {
+
+		switch (loopMode) {
+			case "backward": {
+				bytesArray = bytesArray.reverse();
+			} break;
+
+			case "pingpong": {
+				const newArray = new Uint8Array(bufferSize * 2);
+				newArray.set(bytesArray);
+				newArray.set(bytesArray.reverse(), bytesArray.length);
+				bytesArray = bytesArray;
+			} break;
+
+			case "forward":
+			case "disabled":
+			default: {
+				// Do nothing.
+			} break;
+		}
+
+		let length = bufferSize / sampleRate;
+
+		const sample = {
 			buffer: bytesArray.buffer,
 			numberOfChannels,
 			sampleRate,
 			loopMode,
 			loopBegin,
 			loopEnd,
+			length,
 		};
-		console.log(streamAsSample);
-		GodotAudio.streamsAsSamples.set(streamObjectId, streamAsSample);
+		console.log(sample);
+		GodotAudio.samples.set(streamObjectId, sample);
 	},
 
 	godot_audio_sample_start__proxy: 'sync',
 	godot_audio_sample_start__sig: 'vii',
-	godot_audio_sample_start: function (playbackObjectId, sampleObjectId) {
-		console.log("godot_audio_sample_start:", playbackObjectId, sampleObjectId);
+	godot_audio_sample_start: function (playbackObjectId, streamObjectId, offset, volumeDb, positionModeStrPtr, positionPtr) {
+		const positionMode = GodotRuntime.parseString(positionModeStrPtr);
+		const position = {
+			x: GodotRuntime.getHeapValue(positionPtr, 'double'),
+			y: GodotRuntime.getHeapValue(positionPtr + 8, 'double'),
+			z: GodotRuntime.getHeapValue(positionPtr + 16, 'double'),
+		};
+		const startOptions = {
+			offset,
+			volumeDb,
+			positionMode,
+			position,
+		};
+		GodotAudio.start_sample(playbackObjectId, streamObjectId, startOptions);
 	},
 
 	godot_audio_sample_stop__proxy: 'sync',
 	godot_audio_sample_stop__sig: 'vi',
 	godot_audio_sample_stop: function (playbackObjectId) {
-		console.log("godot_audio_sample_stop:", playbackObjectId);
+		GodotAudio.stop_sample(playbackObjectId);
 	}
 };
 
