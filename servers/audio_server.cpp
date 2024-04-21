@@ -239,10 +239,6 @@ AudioDriver *AudioDriverManager::get_driver(int p_driver) {
 	return drivers[p_driver];
 }
 
-Ref<AudioSamplePlayback> AudioDriver::create_sample_playback(const Ref<AudioSample> &p_sample) {
-	return nullptr;
-}
-
 //////////////////////////////////////////////
 //////////////////////////////////////////////
 //////////////////////////////////////////////
@@ -1713,24 +1709,23 @@ void AudioServer::get_argument_options(const StringName &p_function, int p_idx, 
 }
 #endif
 
-bool AudioServer::is_sample_registered(const Ref<AudioStream> &p_sample) {
+bool AudioServer::is_sample_registered(const Ref<AudioSample> &p_sample) {
 	ERR_FAIL_COND_V_MSG(p_sample.is_null(), false, "Parameter p_sample is null.");
 	return AudioDriver::get_singleton()->is_sample_registered(p_sample);
 }
 
-void AudioServer::register_sample(const Ref<AudioStream> &p_sample) {
+void AudioServer::register_sample(const Ref<AudioSample> &p_sample) {
 	ERR_FAIL_COND_MSG(p_sample.is_null(), "Parameter p_sample is null.");
 
 #ifdef SAMPLES_ENABLED
-	ERR_FAIL_COND_MSG(!(p_sample->can_be_sampled()), "Parameter p_sample cannot be sampled.");
-	// AudioDriver::get_singleton()->is_sample_registered(p_sample->get_instance_id());
-	Ref<AudioSample> sample = p_sample->get_sample();
-	AudioDriver::get_singleton()->register_sample(sample);
+	ERR_FAIL_COND_MSG(!(p_sample->stream->can_be_sampled()), "Parameter p_sample->stream cannot be sampled.");
+	AudioDriver::get_singleton()->register_sample(p_sample);
 #endif
 }
 
-Ref<AudioSamplePlayback> AudioServer::create_sample_playback(const Ref<AudioSample> &p_sample) {
-	return AudioDriver::get_singleton()->create_sample_playback(p_sample);
+void AudioServer::start_playback_sample(const Ref<AudioSamplePlayback> &p_playback) {
+	ERR_FAIL_COND_MSG(p_playback.is_null(), "Parameter p_playback is null.");
+	AudioDriver::get_singleton()->start_playback_sample(p_playback);
 }
 
 void AudioServer::_bind_methods() {

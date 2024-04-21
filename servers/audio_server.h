@@ -150,11 +150,12 @@ public:
 	void reset_profiling_time() { prof_time.set(0); }
 #endif
 
-	virtual bool is_sample_registered(const Ref<AudioSample> &p_sample) const {
+	virtual bool is_sample_registered(Ref<AudioSample> &p_sample) const {
 		return false;
 	};
-	virtual void register_sample(const Ref<AudioSample> &p_sample){};
-	virtual Ref<AudioSamplePlayback> create_sample_playback(const Ref<AudioSample> &p_sample);
+	virtual void register_sample(Ref<AudioSample> &p_sample){};
+	virtual Ref<AudioSamplePlayback> create_playback_sample(Ref<AudioSample> &p_sample);
+	virtual void start_playback_sample(Ref<AudioSamplePlayback> &p_playback, float p_gain = 1.0f, float p_start_time = 0.0f, float p_pitch_scale = 1.0f, bool p_has_position = false, Vector3 p_position = Vector3());
 
 	AudioDriver() {}
 	virtual ~AudioDriver() {}
@@ -468,9 +469,10 @@ public:
 #endif
 
 #ifdef SAMPLES_ENABLED
-	bool is_sample_registered(const Ref<AudioStream> &p_sample);
-	void register_sample(const Ref<AudioStream> &p_sample);
-	Ref<AudioSamplePlayback> create_sample_playback(const Ref<AudioSample> &p_sample);
+	bool is_sample_registered(Ref<AudioStream> &p_sample);
+	void register_sample(Ref<AudioStream> &p_sample);
+	Ref<AudioSamplePlayback> create_playback_sample(Ref<AudioSample> &p_sample);
+	void start_playback_sample(Ref<AudioSamplePlayback> &p_playback, float p_gain = 1.0f, float p_start_time = 0.0f, float p_pitch_scale = 1.0f, bool p_has_position = false, Vector3 p_position = Vector3());
 #endif
 
 	AudioServer();

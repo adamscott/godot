@@ -241,10 +241,16 @@ const GodotAudio = {
 		GodotAudio.samples.set(sampleObjectId, sample);
 	},
 
-	godot_audio_sample_create__proxy: 'sync',
-	godot_audio_sample_create__sig: 'vii',
-	godot_audio_sample_create: function (sampleObjectId, playbackObjectId) {
-		console.log("godot_audio_sample_create:", sampleObjectId, playbackObjectId);
+	godot_audio_sample_start__proxy: 'sync',
+	godot_audio_sample_start__sig: 'vii',
+	godot_audio_sample_start: function (playbackObjectId, sampleObjectId) {
+		console.log("godot_audio_sample_start:", playbackObjectId, sampleObjectId);
+	},
+
+	godot_audio_sample_stop__proxy: 'sync',
+	godot_audio_sample_stop__sig: 'vi',
+	godot_audio_sample_stop: function (playbackObjectId) {
+		console.log("godot_audio_sample_stop:", playbackObjectId);
 	}
 };
 

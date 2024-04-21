@@ -90,7 +90,7 @@ public:
 #ifdef SAMPLES_ENABLED
 	virtual bool is_sample_registered(const Ref<AudioSample> &p_sample) const override;
 	virtual void register_sample(const Ref<AudioSample> &p_sample) override;
-	virtual Ref<AudioSamplePlayback> create_sample_playback(const Ref<AudioSample> &p_sample) override;
+	virtual void start_playback_sample(const Ref<AudioSamplePlayback> &p_playback) override;
 #endif
 
 	AudioDriverWeb() {}
