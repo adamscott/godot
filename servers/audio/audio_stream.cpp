@@ -271,6 +271,13 @@ void AudioStream::get_parameter_list(List<Parameter> *r_parameters) {
 	}
 }
 
+Ref<AudioSample> AudioStream::get_sample() const {
+	Ref<AudioSample> sample;
+	sample.instantiate();
+	sample->stream = this;
+	return sample;
+}
+
 void AudioStream::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_length"), &AudioStream::get_length);
 	ClassDB::bind_method(D_METHOD("is_monophonic"), &AudioStream::is_monophonic);

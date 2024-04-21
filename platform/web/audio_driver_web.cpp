@@ -216,7 +216,7 @@ void AudioDriverWeb::register_sample(const Ref<AudioSample> &p_sample) {
 		} break;
 	}
 
-	godot_audio_sample_register(
+	godot_audio_sample_register_stream(
 			(int64_t)p_sample->stream->get_instance_id(),
 			(int *)p_sample->data.ptrw(),
 			p_sample->num_channels,
