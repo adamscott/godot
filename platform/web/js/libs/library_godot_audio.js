@@ -35,10 +35,10 @@ const GodotAudio = {
 		input: null,
 		driver: null,
 		interval: 0,
-		samples: null,
+		streamsAsSamples: null,
 
 		init: function (mix_rate, latency, onstatechange, onlatencyupdate) {
-			GodotAudio.samples = new Map();
+			GodotAudio.streamsAsSamples = new Map();
 
 			const opts = {};
 			// If mix_rate is 0, let the browser choose.
@@ -214,22 +214,22 @@ const GodotAudio = {
 		}
 	},
 
-	godot_audio_sample_is_registered__proxy: 'sync',
-	godot_audio_sample_is_registered__sig: 'ii',
-	godot_audio_sample_is_registered: function (sampleObjectId) {
-		return GodotAudio.samples.has(sampleObjectId);
+	godot_audio_sample_stream_is_registered__proxy: 'sync',
+	godot_audio_sample_stream_is_registered__sig: 'ii',
+	godot_audio_sample_stream_is_registered: function (streamObjectId) {
+		return GodotAudio.streamsAsSamples.has(streamObjectId);
 	},
 
-	godot_audio_sample_register__proxy: 'sync',
-	godot_audio_sample_register__sig: 'viiiiiii',
-	godot_audio_sample_register: function(sampleObjectId, bufferPtr, bufferSize, numberOfChannels, sampleRate, loopModeStrPtr, loopBegin, loopEnd) {
+	godot_audio_sample_register_stream__proxy: 'sync',
+	godot_audio_sample_register_stream__sig: 'viiiiiii',
+	godot_audio_sample_register_stream: function(streamObjectId, bufferPtr, bufferSize, numberOfChannels, sampleRate, loopModeStrPtr, loopBegin, loopEnd) {
 		const loopMode = GodotRuntime.parseString(loopModeStrPtr);
 		const bytesArray = new Uint8Array(bufferSize);
 		let i = 0;
 		for (i = 0; i < bufferSize; i++) {
 			bytesArray[i] = GodotRuntime.getHeapValue(bufferPtr + i, 'i8');
 		}
-		const sample = {
+		const streamAsSample = {
 			buffer: bytesArray.buffer,
 			numberOfChannels,
 			sampleRate,
@@ -237,8 +237,8 @@ const GodotAudio = {
 			loopBegin,
 			loopEnd,
 		};
-		console.log(sample);
-		GodotAudio.samples.set(sampleObjectId, sample);
+		console.log(streamAsSample);
+		GodotAudio.streamsAsSamples.set(streamObjectId, streamAsSample);
 	},
 
 	godot_audio_sample_start__proxy: 'sync',

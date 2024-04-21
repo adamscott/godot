@@ -188,12 +188,7 @@ public:
 	virtual void get_parameter_list(List<Parameter> *r_parameters);
 
 	virtual bool can_be_sampled() const { return false; };
-	virtual Ref<AudioSample> get_sample() const {
-		Ref<AudioSample> sample;
-		sample.instantiate();
-		sample->stream = this;
-		return sample;
-	};
+	virtual Ref<AudioSample> get_sample() const { return nullptr; };
 };
 
 // Microphone
