@@ -45,6 +45,7 @@ class AudioDriverDummy;
 class AudioStream;
 class AudioStreamWAV;
 class AudioStreamPlayback;
+class AudioSamplePlayback;
 
 class AudioSample : public RefCounted {
 	GDCLASS(AudioSample, RefCounted)
@@ -466,6 +467,7 @@ public:
 
 #ifdef SAMPLES_ENABLED
 	void register_sample(const Ref<AudioStream> &p_sample);
+	Ref<AudioSamplePlayback> create_playback_sample(Ref<AudioSample> &p_sample);
 #endif
 
 	AudioServer();

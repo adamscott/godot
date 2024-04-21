@@ -1720,6 +1720,11 @@ void AudioServer::register_sample(const Ref<AudioStream> &p_sample) {
 #endif
 }
 
+Ref<AudioSamplePlayback> AudioServer::create_playback_sample(Ref<AudioSample> &p_sample) {
+	Ref<AudioSamplePlayback> sample_playback;
+	return sample_playback;
+}
+
 void AudioServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_bus_count", "amount"), &AudioServer::set_bus_count);
 	ClassDB::bind_method(D_METHOD("get_bus_count"), &AudioServer::get_bus_count);

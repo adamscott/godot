@@ -43,16 +43,18 @@
 
 class AudioStream;
 
+class AudioSamplePlayback : public RefCounted {
+	GDCLASS(AudioSamplePlayback, RefCounted);
+
+public:
+	Ref<AudioSample> sample;
+};
+
 class AudioStreamPlayback : public RefCounted {
 	GDCLASS(AudioStreamPlayback, RefCounted);
 
-public:
-	class Sample : public RefCounted {
-	};
-
 private:
-	bool _is_sample = false;
-	Ref<Sample> sample;
+	Ref<AudioSamplePlayback> sample;
 
 protected:
 	static void _bind_methods();
@@ -84,17 +86,10 @@ public:
 
 	virtual int mix(AudioFrame *p_buffer, float p_rate_scale, int p_frames);
 
-	virtual void set_is_sample(bool p_is_sample) {
-		_is_sample = p_is_sample;
-	};
-	virtual bool get_is_sample() const { return _is_sample; };
-
-	virtual void set_sample(Ref<Sample> &p_sample) {
-		sample = p_sample;
-	};
-	virtual Ref<Sample> get_sample() const {
-		return sample;
-	};
+	virtual void set_is_sample(bool p_is_sample){};
+	virtual bool get_is_sample() const { return false; };
+	virtual void set_sample_playback(Ref<AudioSamplePlayback> &p_sample){};
+	virtual Ref<AudioSamplePlayback> get_sample_playback() const { return nullptr; };
 };
 
 class AudioStreamPlaybackResampled : public AudioStreamPlayback {
