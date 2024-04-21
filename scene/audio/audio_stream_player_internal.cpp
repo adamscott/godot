@@ -146,7 +146,7 @@ Ref<AudioStreamPlayback> AudioStreamPlayerInternal::play_basic() {
 	stream_playback->set_is_sample(get_is_sample());
 	if (stream_playback->get_is_sample()) {
 		Ref<AudioSample> sample = stream->get_sample();
-		Ref<AudioSamplePlayback> sample_playback = AudioServer::get_singleton()->create_playback_sample(sample);
+		Ref<AudioSamplePlayback> sample_playback = AudioServer::get_singleton()->create_sample_playback(sample);
 		stream_playback->set_sample_playback(sample_playback);
 	}
 

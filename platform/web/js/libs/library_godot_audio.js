@@ -238,6 +238,12 @@ const GodotAudio = {
 		};
 		console.log(sample);
 		GodotAudio.samples.set(sampleObjectId, sample);
+	},
+
+	godot_audio_sample_create__proxy: 'sync',
+	godot_audio_sample_create__sig: 'vii',
+	godot_audio_sample_create: function (sampleObjectId, playbackObjectId) {
+		console.log("godot_audio_sample_create:", sampleObjectId, playbackObjectId);
 	}
 };
 

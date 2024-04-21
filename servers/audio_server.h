@@ -153,6 +153,7 @@ public:
 		return false;
 	};
 	virtual void register_sample(Ref<AudioSample> &p_sample){};
+	virtual Ref<AudioSamplePlayback> create_sample_playback(Ref<AudioSample> &p_sample);
 
 	AudioDriver() {}
 	virtual ~AudioDriver() {}
@@ -467,7 +468,7 @@ public:
 
 #ifdef SAMPLES_ENABLED
 	void register_sample(const Ref<AudioStream> &p_sample);
-	Ref<AudioSamplePlayback> create_playback_sample(Ref<AudioSample> &p_sample);
+	Ref<AudioSamplePlayback> create_sample_playback(Ref<AudioSample> &p_sample);
 #endif
 
 	AudioServer();
