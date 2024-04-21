@@ -239,6 +239,10 @@ AudioDriver *AudioDriverManager::get_driver(int p_driver) {
 	return drivers[p_driver];
 }
 
+Ref<AudioSamplePlayback> AudioDriver::create_sample_playback(Ref<AudioSample> &p_sample) {
+	return nullptr;
+}
+
 //////////////////////////////////////////////
 //////////////////////////////////////////////
 //////////////////////////////////////////////
@@ -1720,9 +1724,8 @@ void AudioServer::register_sample(const Ref<AudioStream> &p_sample) {
 #endif
 }
 
-Ref<AudioSamplePlayback> AudioServer::create_playback_sample(Ref<AudioSample> &p_sample) {
-	Ref<AudioSamplePlayback> sample_playback;
-	return sample_playback;
+Ref<AudioSamplePlayback> AudioServer::create_sample_playback(Ref<AudioSample> &p_sample) {
+	return AudioDriver::get_singleton()->create_sample_playback(p_sample);
 }
 
 void AudioServer::_bind_methods() {

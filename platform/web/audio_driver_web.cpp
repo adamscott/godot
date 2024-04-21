@@ -226,6 +226,17 @@ void AudioDriverWeb::register_sample(Ref<AudioSample> &p_sample) {
 			p_sample->loop_begin,
 			p_sample->loop_end);
 }
+
+Ref<AudioSamplePlayback> AudioDriverWeb::create_sample_playback(Ref<AudioSample> &p_sample) {
+	ERR_FAIL_COND_V_MSG(p_sample.is_null(), nullptr, "p_sample is null.");
+
+	Ref<AudioSamplePlayback> sample_playback;
+	sample_playback.instantiate();
+
+	godot_audio_sample_create((int64_t)p_sample->get_instance_id(), (int64_t)sample_playback->get_instance_id());
+
+	return sample_playback;
+}
 #endif
 
 #ifdef THREADS_ENABLED
