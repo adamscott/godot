@@ -90,6 +90,12 @@ Variant AudioStreamPlayback::get_parameter(const StringName &p_name) const {
 	return ret;
 }
 
+Ref<AudioSamplePlayback> AudioStreamPlayback::get_sample_playback() const {
+	Ref<AudioSamplePlayback> playback;
+	playback.instantiate();
+	return playback;
+}
+
 void AudioStreamPlayback::_bind_methods() {
 	GDVIRTUAL_BIND(_start, "from_pos")
 	GDVIRTUAL_BIND(_stop)

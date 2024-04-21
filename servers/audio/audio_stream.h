@@ -98,8 +98,8 @@ public:
 
 	virtual void set_is_sample(bool p_is_sample){};
 	virtual bool get_is_sample() const { return false; };
-	virtual void set_sample_playback(Ref<AudioSamplePlayback> &p_sample){};
-	virtual Ref<AudioSamplePlayback> get_sample_playback() const { return nullptr; };
+	virtual Ref<AudioSamplePlayback> get_sample_playback() const;
+	virtual void set_sample_playback(const Ref<AudioSamplePlayback> &p_playback){};
 };
 
 class AudioStreamPlaybackResampled : public AudioStreamPlayback {

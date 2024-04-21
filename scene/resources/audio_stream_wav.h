@@ -82,8 +82,8 @@ public:
 
 	virtual void set_is_sample(bool p_is_sample) override;
 	virtual bool get_is_sample() const override;
-	virtual void set_sample_playback(Ref<AudioSamplePlayback> &p_sample) override;
 	virtual Ref<AudioSamplePlayback> get_sample_playback() const override;
+	virtual void set_sample_playback(const Ref<AudioSamplePlayback> &p_playback) override;
 
 	AudioStreamPlaybackWAV();
 };

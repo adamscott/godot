@@ -418,7 +418,7 @@ bool AudioStreamPlaybackWAV::get_is_sample() const {
 	return _is_sample;
 };
 
-void AudioStreamPlaybackWAV::set_sample_playback(Ref<AudioSamplePlayback> &p_sample) {
+void AudioStreamPlaybackWAV::set_sample_playback(const Ref<AudioSamplePlayback> &p_sample) {
 	sample = p_sample;
 };
 
