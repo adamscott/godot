@@ -51,7 +51,7 @@ extern void godot_audio_input_stop();
 #ifdef SAMPLES_ENABLED
 extern int godot_audio_sample_stream_is_registered(int p_stream_object_id);
 extern void godot_audio_sample_register_stream(int p_stream_object_id, int *p_sample_buf, int p_sample_size, int p_num_channels, int p_sample_rate, const char *p_loop_mode, int p_loop_begin, int p_loop_end);
-extern void godot_audio_sample_start(int p_playback_object_id, int p_sample_object_id);
+extern void godot_audio_sample_start(int p_playback_object_id, int p_stream_object_id, float p_offset, float p_volume_db, const char *p_position_mode, double *p_position);
 extern void godot_audio_sample_stop(int p_playback_object_id);
 #endif
 

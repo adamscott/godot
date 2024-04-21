@@ -230,7 +230,35 @@ void AudioDriverWeb::register_sample(const Ref<AudioSample> &p_sample) {
 void AudioDriverWeb::start_playback_sample(const Ref<AudioSamplePlayback> &p_playback) {
 	ERR_FAIL_COND_MSG(p_playback.is_null(), "Parameter p_playback is null.");
 	ERR_FAIL_COND_MSG(p_playback->stream.is_null(), "Parameter p_playback->stream is null.");
-	godot_audio_sample_start((int64_t)p_playback->stream->get_instance_id(), (int64_t)p_playback->get_instance_id());
+
+	String position_mode;
+	switch (p_playback->position_mode) {
+		case AudioSamplePlayback::PositionMode::AUDIO_SAMPLE_PLAYBACK_POSITION_NONE: {
+			position_mode = "none";
+		} break;
+
+		case AudioSamplePlayback::PositionMode::AUDIO_SAMPLE_PLAYBACK_POSITION_2D: {
+			position_mode = "2D";
+		} break;
+
+		case AudioSamplePlayback::PositionMode::AUDIO_SAMPLE_PLAYBACK_POSITION_3D: {
+			position_mode = "3D";
+		} break;
+	}
+
+	PackedFloat64Array position;
+	position.resize(3);
+	position.set(0, p_playback->position.x);
+	position.set(1, p_playback->position.y);
+	position.set(2, p_playback->position.z);
+
+	godot_audio_sample_start(
+			(int64_t)p_playback->get_instance_id(),
+			(int64_t)p_playback->stream->get_instance_id(),
+			p_playback->offset,
+			p_playback->volume_db,
+			position_mode.utf8().get_data(),
+			position.ptrw());
 }
 #endif
 

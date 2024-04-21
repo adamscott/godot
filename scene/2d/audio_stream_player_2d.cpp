@@ -223,6 +223,7 @@ void AudioStreamPlayer2D::play(float p_from_pos) {
 	if (stream_playback->get_is_sample()) {
 		Ref<AudioSamplePlayback> sample_playback = stream_playback->get_sample_playback();
 		sample_playback->offset = p_from_pos;
+		sample_playback->volume_db = get_volume_db();
 		sample_playback->position_mode = AudioSamplePlayback::AUDIO_SAMPLE_PLAYBACK_POSITION_2D;
 		Vector2 player_position = get_position();
 		sample_playback->position = Vector3(player_position.x, -player_position.y, 0);
