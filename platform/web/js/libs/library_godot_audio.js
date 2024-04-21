@@ -222,7 +222,7 @@ const GodotAudio = {
 
 	godot_audio_sample_register__proxy: 'sync',
 	godot_audio_sample_register__sig: 'viiiiiii',
-	godot_audio_sample_register: function(sampleObjectId, bufferPtr, bufferSize, sampleRate, loopModeStrPtr, loopBegin, loopEnd) {
+	godot_audio_sample_register: function(sampleObjectId, bufferPtr, bufferSize, numberOfChannels, sampleRate, loopModeStrPtr, loopBegin, loopEnd) {
 		const loopMode = GodotRuntime.parseString(loopModeStrPtr);
 		const bytesArray = new Uint8Array(bufferSize);
 		let i = 0;
@@ -231,6 +231,7 @@ const GodotAudio = {
 		}
 		const sample = {
 			buffer: bytesArray.buffer,
+			numberOfChannels,
 			sampleRate,
 			loopMode,
 			loopBegin,
