@@ -1709,16 +1709,17 @@ void AudioServer::get_argument_options(const StringName &p_function, int p_idx, 
 }
 #endif
 
-bool AudioServer::is_sample_registered(const Ref<AudioSample> &p_sample) {
-	ERR_FAIL_COND_V_MSG(p_sample.is_null(), false, "Parameter p_sample is null.");
-	return AudioDriver::get_singleton()->is_sample_registered(p_sample);
+bool AudioServer::is_stream_registered_as_sample(const Ref<AudioStream> &p_stream) {
+	ERR_FAIL_COND_V_MSG(p_stream.is_null(), false, "Parameter p_stream is null.");
+	return AudioDriver::get_singleton()->is_stream_registered_as_sample(p_stream);
 }
 
 void AudioServer::register_sample(const Ref<AudioSample> &p_sample) {
 	ERR_FAIL_COND_MSG(p_sample.is_null(), "Parameter p_sample is null.");
+	ERR_FAIL_COND_MSG(p_sample->stream.is_null(), "Parameter p_sample->stream is null.");
 
 #ifdef SAMPLES_ENABLED
-	ERR_FAIL_COND_MSG(!(p_sample->stream->can_be_sampled()), "Parameter p_sample->stream cannot be sampled.");
+	ERR_FAIL_COND_MSG(!(p_sample->stream->can_be_sampled()), "Parameter p_stream cannot be sampled.");
 	AudioDriver::get_singleton()->register_sample(p_sample);
 #endif
 }
@@ -1797,6 +1798,7 @@ void AudioServer::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("set_enable_tagging_used_audio_streams", "enable"), &AudioServer::set_enable_tagging_used_audio_streams);
 
+	ClassDB::bind_method(D_METHOD("is_stream_registered_as_sample", "stream"), &AudioServer::is_stream_registered_as_sample);
 	ClassDB::bind_method(D_METHOD("register_sample", "sample"), &AudioServer::register_sample);
 
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "bus_count"), "set_bus_count", "get_bus_count");

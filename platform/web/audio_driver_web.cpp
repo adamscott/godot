@@ -188,13 +188,14 @@ Error AudioDriverWeb::input_stop() {
 }
 
 #ifdef SAMPLES_ENABLED
-bool AudioDriverWeb::is_sample_registered(const Ref<AudioSample> &p_sample) const {
-	ERR_FAIL_COND_V_MSG(p_sample.is_null(), false, "p_sample is null.");
-	return godot_audio_sample_is_registered((int64_t)p_sample->get_instance_id()) != 0;
+bool AudioDriverWeb::is_stream_registered_as_sample(const Ref<AudioStream> &p_stream) const {
+	ERR_FAIL_COND_V_MSG(p_stream.is_null(), false, "Parameter p_stream is null.");
+	return godot_audio_sample_stream_is_registered((int64_t)p_stream->get_instance_id()) != 0;
 }
 
 void AudioDriverWeb::register_sample(const Ref<AudioSample> &p_sample) {
-	ERR_FAIL_COND_MSG(p_sample.is_null(), "p_sample is null.");
+	ERR_FAIL_COND_MSG(p_sample.is_null(), "Parameter p_sample is null.");
+	ERR_FAIL_COND_MSG(p_sample->stream.is_null(), "Parameter p_sample->stream is null.");
 
 	String loop_mode;
 	switch (p_sample->loop_mode) {
@@ -216,7 +217,7 @@ void AudioDriverWeb::register_sample(const Ref<AudioSample> &p_sample) {
 	}
 
 	godot_audio_sample_register(
-			(int64_t)p_sample->get_instance_id(),
+			(int64_t)p_sample->stream->get_instance_id(),
 			(int *)p_sample->data.ptrw(),
 			p_sample->num_channels,
 			p_sample->data.size(),

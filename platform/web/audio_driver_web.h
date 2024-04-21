@@ -88,7 +88,7 @@ public:
 	static void resume();
 
 #ifdef SAMPLES_ENABLED
-	virtual bool is_sample_registered(const Ref<AudioSample> &p_sample) const override;
+	virtual bool is_stream_registered_as_sample(const Ref<AudioStream> &p_stream) const override;
 	virtual void register_sample(const Ref<AudioSample> &p_sample) override;
 	virtual void start_playback_sample(const Ref<AudioSamplePlayback> &p_playback) override;
 #endif
