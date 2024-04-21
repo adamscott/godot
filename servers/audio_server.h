@@ -60,6 +60,7 @@ public:
 
 	Ref<AudioStream> stream;
 	PackedByteArray data;
+	int num_channels = 1;
 	int sample_rate = 44100;
 	LoopMode loop_mode = LOOP_DISABLED;
 	int loop_begin = 0;
@@ -149,11 +150,11 @@ public:
 	void reset_profiling_time() { prof_time.set(0); }
 #endif
 
-	virtual bool is_sample_registered(Ref<AudioSample> &p_sample) const {
+	virtual bool is_sample_registered(const Ref<AudioSample> &p_sample) const {
 		return false;
 	};
-	virtual void register_sample(Ref<AudioSample> &p_sample){};
-	virtual Ref<AudioSamplePlayback> create_sample_playback(Ref<AudioSample> &p_sample);
+	virtual void register_sample(const Ref<AudioSample> &p_sample){};
+	virtual Ref<AudioSamplePlayback> create_sample_playback(const Ref<AudioSample> &p_sample);
 
 	AudioDriver() {}
 	virtual ~AudioDriver() {}
@@ -467,8 +468,9 @@ public:
 #endif
 
 #ifdef SAMPLES_ENABLED
+	bool is_sample_registered(const Ref<AudioStream> &p_sample);
 	void register_sample(const Ref<AudioStream> &p_sample);
-	Ref<AudioSamplePlayback> create_sample_playback(Ref<AudioSample> &p_sample);
+	Ref<AudioSamplePlayback> create_sample_playback(const Ref<AudioSample> &p_sample);
 #endif
 
 	AudioServer();

@@ -188,13 +188,13 @@ Error AudioDriverWeb::input_stop() {
 }
 
 #ifdef SAMPLES_ENABLED
-bool AudioDriverWeb::is_sample_registered(Ref<AudioSample> &p_sample) const {
+bool AudioDriverWeb::is_sample_registered(const Ref<AudioSample> &p_sample) const {
 	ERR_FAIL_COND_V_MSG(p_sample.is_null(), false, "p_sample is null.");
 	ERR_FAIL_COND_V_MSG(p_sample->stream.is_null(), false, "p_sample->stream is null.");
 	return godot_audio_sample_is_registered((int64_t)p_sample->stream->get_instance_id()) != 0;
 }
 
-void AudioDriverWeb::register_sample(Ref<AudioSample> &p_sample) {
+void AudioDriverWeb::register_sample(const Ref<AudioSample> &p_sample) {
 	ERR_FAIL_COND_MSG(p_sample.is_null(), "p_sample is null.");
 	ERR_FAIL_COND_MSG(p_sample->stream.is_null(), "p_sample->stream is null.");
 
@@ -220,6 +220,7 @@ void AudioDriverWeb::register_sample(Ref<AudioSample> &p_sample) {
 	godot_audio_sample_register(
 			(int64_t)p_sample->stream->get_instance_id(),
 			(int *)p_sample->data.ptrw(),
+			p_sample->num_channels,
 			p_sample->data.size(),
 			p_sample->sample_rate,
 			loop_mode.utf8().get_data(),
@@ -227,7 +228,7 @@ void AudioDriverWeb::register_sample(Ref<AudioSample> &p_sample) {
 			p_sample->loop_end);
 }
 
-Ref<AudioSamplePlayback> AudioDriverWeb::create_sample_playback(Ref<AudioSample> &p_sample) {
+Ref<AudioSamplePlayback> AudioDriverWeb::create_sample_playback(const Ref<AudioSample> &p_sample) {
 	ERR_FAIL_COND_V_MSG(p_sample.is_null(), nullptr, "p_sample is null.");
 
 	Ref<AudioSamplePlayback> sample_playback;

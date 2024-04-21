@@ -239,7 +239,7 @@ AudioDriver *AudioDriverManager::get_driver(int p_driver) {
 	return drivers[p_driver];
 }
 
-Ref<AudioSamplePlayback> AudioDriver::create_sample_playback(Ref<AudioSample> &p_sample) {
+Ref<AudioSamplePlayback> AudioDriver::create_sample_playback(const Ref<AudioSample> &p_sample) {
 	return nullptr;
 }
 
@@ -1713,6 +1713,11 @@ void AudioServer::get_argument_options(const StringName &p_function, int p_idx, 
 }
 #endif
 
+bool AudioServer::is_sample_registered(const Ref<AudioStream> &p_sample) {
+	ERR_FAIL_COND_V_MSG(p_sample.is_null(), false, "Parameter p_sample is null.");
+	return AudioDriver::get_singleton()->is_sample_registered(p_sample);
+}
+
 void AudioServer::register_sample(const Ref<AudioStream> &p_sample) {
 	ERR_FAIL_COND_MSG(p_sample.is_null(), "Parameter p_sample is null.");
 
@@ -1724,7 +1729,7 @@ void AudioServer::register_sample(const Ref<AudioStream> &p_sample) {
 #endif
 }
 
-Ref<AudioSamplePlayback> AudioServer::create_sample_playback(Ref<AudioSample> &p_sample) {
+Ref<AudioSamplePlayback> AudioServer::create_sample_playback(const Ref<AudioSample> &p_sample) {
 	return AudioDriver::get_singleton()->create_sample_playback(p_sample);
 }
 
