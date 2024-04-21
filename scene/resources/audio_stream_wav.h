@@ -64,7 +64,7 @@ class AudioStreamPlaybackWAV : public AudioStreamPlayback {
 	void do_resample(const Depth *p_src, AudioFrame *p_dst, int64_t &p_offset, int32_t &p_increment, uint32_t p_amount, IMA_ADPCM_State *p_ima_adpcm);
 
 	bool _is_sample;
-	Ref<AudioSample> sample;
+	Ref<AudioSamplePlayback> sample_playback;
 
 public:
 	virtual void start(double p_from_pos = 0.0) override;

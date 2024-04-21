@@ -53,7 +53,7 @@ public:
 		AUDIO_SAMPLE_PLAYBACK_POSITION_3D
 	};
 
-	Ref<AudioSample> sample;
+	Ref<AudioStream> stream;
 
 	float offset = 0;
 	PositionMode position_mode = AUDIO_SAMPLE_PLAYBACK_POSITION_NONE;

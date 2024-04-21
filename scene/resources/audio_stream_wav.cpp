@@ -412,19 +412,19 @@ void AudioStreamPlaybackWAV::tag_used_streams() {
 
 void AudioStreamPlaybackWAV::set_is_sample(bool p_is_sample) {
 	_is_sample = p_is_sample;
-};
+}
 
 bool AudioStreamPlaybackWAV::get_is_sample() const {
 	return _is_sample;
-};
-
-void AudioStreamPlaybackWAV::set_sample_playback(const Ref<AudioSamplePlayback> &p_sample) {
-	sample = p_sample;
-};
+}
 
 Ref<AudioSamplePlayback> AudioStreamPlaybackWAV::get_sample_playback() const {
-	return sample;
-};
+	return sample_playback;
+}
+
+void AudioStreamPlaybackWAV::set_sample_playback(const Ref<AudioSamplePlayback> &p_playback) {
+	sample_playback = p_playback;
+}
 
 AudioStreamPlaybackWAV::AudioStreamPlaybackWAV() {}
 
