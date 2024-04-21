@@ -155,7 +155,7 @@ public:
 		return false;
 	};
 	virtual void register_sample(const Ref<AudioSample> &p_sample){};
-	virtual void start_playback_sample(const Ref<AudioSamplePlayback> &p_playback);
+	virtual void start_playback_sample(const Ref<AudioSamplePlayback> &p_playback){};
 
 	AudioDriver() {}
 	virtual ~AudioDriver() {}
@@ -470,6 +470,7 @@ public:
 
 #ifdef SAMPLES_ENABLED
 	bool is_stream_registered_as_sample(const Ref<AudioStream> &p_stream);
+	void register_stream_as_sample(const Ref<AudioStream> &p_stream);
 	void register_sample(const Ref<AudioSample> &p_sample);
 	void start_playback_sample(const Ref<AudioSamplePlayback> &p_playback);
 #endif
