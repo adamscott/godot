@@ -1736,6 +1736,11 @@ void AudioServer::start_playback_sample(const Ref<AudioSamplePlayback> &p_playba
 	AudioDriver::get_singleton()->start_playback_sample(p_playback);
 }
 
+void AudioServer::stop_playback_sample(const Ref<AudioSamplePlayback> &p_playback) {
+	ERR_FAIL_COND_MSG(p_playback.is_null(), "Parameter p_playback is null.");
+	AudioDriver::get_singleton()->stop_playback_sample(p_playback);
+}
+
 void AudioServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_bus_count", "amount"), &AudioServer::set_bus_count);
 	ClassDB::bind_method(D_METHOD("get_bus_count"), &AudioServer::get_bus_count);

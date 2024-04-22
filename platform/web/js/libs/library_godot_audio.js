@@ -45,6 +45,7 @@ const GodotAudio = {
 			const opts = {};
 			// If mix_rate is 0, let the browser choose.
 			if (mix_rate) {
+				GodotAudio.sampleRate = mix_rate;
 				opts['sampleRate'] = mix_rate;
 			}
 			// Do not specify, leave 'interactive' for good performance.
@@ -170,6 +171,7 @@ const GodotAudio = {
 				source: ctx.createBufferSource(),
 				/** @type {GainNode} */
 				gain: ctx.createGain(),
+				startOptions,
 			};
 
 			sampleNodes.source.buffer = sample.audioBuffer;
@@ -199,8 +201,14 @@ const GodotAudio = {
 
 			// lastNode.connect(ctx.destination);
 
-			sampleNodes.source.loop = startOptions.loopMode !== "disabled";
+			sampleNodes.source.loop = sample.loopMode !== "disabled";
 			sampleNodes.source.start(startOptions.offset);
+
+			sampleNodes.source.addEventListener("ended", () => {
+				GodotAudio.stop_sample(playbackObjectId);
+			});
+
+			console.log(GodotAudio);
 			GodotAudio.sampleNodesList.set(playbackObjectId, sampleNodes);
 		},
 
@@ -286,20 +294,9 @@ const GodotAudio = {
 	godot_audio_sample_register_stream__proxy: 'sync',
 	godot_audio_sample_register_stream__sig: 'viiiiiii',
 	godot_audio_sample_register_stream: function(streamObjectId, framesPtr, framesTotal, numberOfChannels, sampleRate, loopModeStrPtr, loopBegin, loopEnd) {
+		console.log("[js] register stream");
 		const loopMode = GodotRuntime.parseString(loopModeStrPtr);
 		numberOfChannels = 2;
-
-		/** @type {AudioContext} */
-		const ctx = GodotAudio.ctx;
-		let audioBuffer = ctx.createBuffer(numberOfChannels, framesTotal, sampleRate);
-		for (let channel = 0; channel < numberOfChannels; channel++) {
-			const nowBuffering = audioBuffer.getChannelData(channel);
-			const offset = channel * framesTotal;
-			for (let i = 0; i < framesTotal; i++) {
-				nowBuffering[i] = GodotRuntime.getHeapValue(framesPtr + (i * 4) + offset, 'float');
-				// console.log(nowBuffering[i]);
-			}
-		}
 
 		switch (loopMode) {
 			// case "backward": {
@@ -321,7 +318,7 @@ const GodotAudio = {
 		}
 
 		const sample = {
-			audioBuffer,
+			ready: false,
 			numberOfChannels,
 			sampleRate,
 			loopMode,
@@ -329,6 +326,20 @@ const GodotAudio = {
 			loopEnd,
 		};
 		console.log(sample);
+
+		/** @type {Float32Array} */
+		const subLeft = GodotRuntime.heapSub(HEAPF32, framesPtr, framesTotal);
+		/** @type {Float32Array} */
+		const subRight = GodotRuntime.heapSub(HEAPF32, framesPtr + (framesTotal * 4), framesTotal);
+
+		/** @type {AudioContext} */
+		const ctx = GodotAudio.ctx;
+		const audioBuffer = ctx.createBuffer(2, framesTotal, GodotAudio.ctx.sampleRate);
+		audioBuffer.copyToChannel(new Float32Array(subLeft), 0, 0);
+		audioBuffer.copyToChannel(new Float32Array(subRight), 1, 0);
+
+		sample.audioBuffer = audioBuffer;
+
 		GodotAudio.samples.set(streamObjectId, sample);
 	},
 

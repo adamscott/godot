@@ -91,6 +91,7 @@ public:
 	virtual bool is_stream_registered_as_sample(const Ref<AudioStream> &p_stream) const override;
 	virtual void register_sample(const Ref<AudioSample> &p_sample) override;
 	virtual void start_playback_sample(const Ref<AudioSamplePlayback> &p_playback) override;
+	virtual void stop_playback_sample(const Ref<AudioSamplePlayback> &p_playback) override;
 #endif
 
 	AudioDriverWeb() {}
