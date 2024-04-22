@@ -634,8 +634,6 @@ Ref<AudioSample> AudioStreamWAV::get_sample() const {
 	Ref<AudioSample> sample;
 	sample.instantiate();
 	sample->stream = this;
-
-	sample->num_channels = stereo ? 2 : 1;
 	switch (loop_mode) {
 		case AudioStreamWAV::LoopMode::LOOP_DISABLED: {
 			sample->loop_mode = AudioSample::LoopMode::LOOP_DISABLED;
