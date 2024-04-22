@@ -216,10 +216,33 @@ void AudioDriverWeb::register_sample(const Ref<AudioSample> &p_sample) {
 		} break;
 	}
 
+	Vector<AudioFrame> frames;
+	int frames_total = mix_rate * p_sample->stream->get_length();
+	{
+		Ref<AudioStreamPlayback> stream_playback = p_sample->stream->instantiate_playback();
+		frames.resize(frames_total);
+		AudioFrame *frames_ptr = frames.ptrw();
+		stream_playback->start();
+		stream_playback->mix(frames_ptr, 1.0f, frames_total);
+
+		// for (const AudioFrame &E : frames) {
+		// 	print_line(vformat("left: %s, right: %s", E.left, E.right));
+		// }
+	}
+
+	PackedFloat32Array data;
+	data.resize(frames_total * 2);
+	for (int i = 0; i < frames_total; i++) {
+		data.append(frames[i].left);
+	}
+	for (int i = 0; i < frames_total; i++) {
+		data.append(frames[i].right);
+	}
+
 	godot_audio_sample_register_stream(
 			(int64_t)p_sample->stream->get_instance_id(),
-			(int *)p_sample->data.ptrw(),
-			p_sample->data.size(),
+			(float *)data.ptrw(),
+			frames_total,
 			p_sample->num_channels,
 			p_sample->sample_rate,
 			loop_mode.utf8().get_data(),
