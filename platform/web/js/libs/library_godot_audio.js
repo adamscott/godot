@@ -173,13 +173,11 @@ const GodotAudio = {
 			};
 
 			/** @type {AudioBuffer} */
-			const sourceBuffer = ctx.createBuffer(sample.numberOfChannels, sample.length, sample.sampleRate);
+			const sourceBuffer = ctx.createBuffer(sample.numberOfChannels, sample.sampleRate * sample.length, sample.sampleRate);
 			for (let i = 0; i < sample.numberOfChannels; i++) {
 				const nowBuffering = sourceBuffer.getChannelData(i);
 				for (let j = 0; j < sourceBuffer.length; j++) {
-
-					console.log(sample.buffer[j]);
-					nowBuffering[j] = sample.buffer[j];
+					nowBuffering[j] = ((sample.bytesArray[j] / 255) * 2) - 1;
 				}
 			}
 
@@ -324,7 +322,7 @@ const GodotAudio = {
 		let length = bufferSize / sampleRate;
 
 		const sample = {
-			buffer: bytesArray.buffer,
+			bytesArray,
 			numberOfChannels,
 			sampleRate,
 			loopMode,

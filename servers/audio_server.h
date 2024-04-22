@@ -59,7 +59,7 @@ public:
 	};
 
 	Ref<AudioStream> stream;
-	PackedByteArray data;
+	Vector<AudioFrame> data;
 	int num_channels = 1;
 	int sample_rate = 44100;
 	LoopMode loop_mode = LOOP_DISABLED;
