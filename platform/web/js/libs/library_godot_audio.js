@@ -171,35 +171,37 @@ const GodotAudio = {
 				source: ctx.createBufferSource(),
 				/** @type {GainNode} */
 				gain: ctx.createGain(),
+				/** @type {StereoPannerNode | null} */
+				stereoPanner: null,
 				startOptions,
 			};
 
 			sampleNodes.source.buffer = sample.audioBuffer;
-			sampleNodes.source.connect(ctx.destination);
 
-			// sampleNodes.gain.gain.value = startOptions.volumeDb + 1;
+			sampleNodes.gain.gain.value = startOptions.volumeDb + 1;
+			sampleNodes.source.connect(sampleNodes.gain);
+			
+			/** @type {AudioNode} */
+			let lastNode = sampleNodes.gain;
 
-			// /** @type {AudioNode} */
-			// let lastNode;
+			switch (startOptions.positionMode) {
+				case "2D": {
+					sampleNodes.stereoPanner = ctx.createStereoPanner();
+					lastNode.connect(sampleNodes.stereoPanner);
+					lastNode = sampleNodes.stereoPanner;
+				} break;
 
-			// switch (startOptions.positionMode) {
-			// 	case "2D": {
-			// 		sampleNodes.source.connect(sampleNodes.gain);
-			// 		lastNode = sampleNodes.gain;
-			// 	} break;
+				case "3D": {
 
-			// 	case "3D": {
+				} break;
 
-			// 	} break;
+				case "none":
+				default: {
+					// Do nothing.
+				}
+			}
 
-			// 	case "none":
-			// 	default: {
-			// 		sampleNodes.source.connect(sampleNodes.gain);
-			// 		lastNode = sampleNodes.gain;
-			// 	}
-			// }
-
-			// lastNode.connect(ctx.destination);
+			lastNode.connect(ctx.destination);
 
 			sampleNodes.source.loop = sample.loopMode !== "disabled";
 			sampleNodes.source.start(startOptions.offset);
@@ -221,6 +223,19 @@ const GodotAudio = {
 			sampleNodes.source.stop();
 
 			GodotAudio.sampleNodesList.delete(playbackObjectId);
+		},
+
+		update_sample_pan: function (playbackObjectId, left, right) {
+			if (!GodotAudio.sampleNodesList.has(playbackObjectId)) {
+				return;
+			}
+
+			const sampleNodes = GodotAudio.sampleNodesList.get(playbackObjectId);
+			if (sampleNodes.stereoPanner == null) {
+				return;
+			}
+
+			sampleNodes.stereoPanner.pan.value = -left + right;
 		}
 	},
 
@@ -365,6 +380,12 @@ const GodotAudio = {
 	godot_audio_sample_stop__sig: 'vi',
 	godot_audio_sample_stop: function (playbackObjectId) {
 		GodotAudio.stop_sample(playbackObjectId);
+	},
+
+	godot_audio_sample_update_pan__proxy: 'sync',
+	godot_audio_sample_update_pan__sig: 'viii',
+	godot_audio_sample_update_pan: function (playbackObjectId, left, right) {
+		GodotAudio.update_sample_pan(playbackObjectId, left, right);
 	}
 };
 

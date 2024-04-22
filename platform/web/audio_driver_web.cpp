@@ -290,8 +290,12 @@ void AudioDriverWeb::start_playback_sample(const Ref<AudioSamplePlayback> &p_pla
 
 void AudioDriverWeb::stop_playback_sample(const Ref<AudioSamplePlayback> &p_playback) {
 	ERR_FAIL_COND_MSG(p_playback.is_null(), "Parameter p_playback is null.");
-
 	godot_audio_sample_stop((int64_t)p_playback->get_instance_id());
+}
+
+void AudioDriverWeb::update_playback_sample_pan(const Ref<AudioSamplePlayback> &p_playback, float p_left, float p_right) {
+	ERR_FAIL_COND_MSG(p_playback.is_null(), "Parameter p_playback is null.");
+	godot_audio_sample_update_pan((int64_t)p_playback->get_instance_id(), p_left, p_right);
 }
 #endif
 
