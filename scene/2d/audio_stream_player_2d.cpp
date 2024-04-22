@@ -173,6 +173,16 @@ void AudioStreamPlayer2D::_update_panning() {
 
 		const AudioFrame &prev_sample = volume_vector[0];
 		AudioFrame new_sample = AudioFrame(l, r) * multiplier;
+
+		// Samples.
+		for (const Ref<AudioStreamPlayback> &playback : internal->stream_playbacks) {
+			Ref<AudioSamplePlayback> sample_playback = playback->get_sample_playback();
+			if (sample_playback.is_null()) {
+				continue;
+			}
+			AudioServer::get_singleton()->update_playback_sample_pan(sample_playback, l, r);
+		}
+
 		volume_vector.write[0] = AudioFrame(MAX(prev_sample[0], new_sample[0]), MAX(prev_sample[1], new_sample[1]));
 	}
 

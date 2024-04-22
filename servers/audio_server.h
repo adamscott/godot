@@ -157,6 +157,7 @@ public:
 	virtual void register_sample(const Ref<AudioSample> &p_sample){};
 	virtual void start_playback_sample(const Ref<AudioSamplePlayback> &p_playback){};
 	virtual void stop_playback_sample(const Ref<AudioSamplePlayback> &p_playback){};
+	virtual void update_playback_sample_pan(const Ref<AudioSamplePlayback> &p_playback, float p_left = 0.0f, float p_right = 0.0f){};
 
 	AudioDriver() {}
 	virtual ~AudioDriver() {}
@@ -475,6 +476,7 @@ public:
 	void register_sample(const Ref<AudioSample> &p_sample);
 	void start_playback_sample(const Ref<AudioSamplePlayback> &p_playback);
 	void stop_playback_sample(const Ref<AudioSamplePlayback> &p_playback);
+	void update_playback_sample_pan(const Ref<AudioSamplePlayback> &p_playback, float p_left, float p_right);
 #endif
 
 	AudioServer();

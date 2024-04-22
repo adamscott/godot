@@ -92,6 +92,7 @@ public:
 	virtual void register_sample(const Ref<AudioSample> &p_sample) override;
 	virtual void start_playback_sample(const Ref<AudioSamplePlayback> &p_playback) override;
 	virtual void stop_playback_sample(const Ref<AudioSamplePlayback> &p_playback) override;
+	virtual void update_playback_sample_pan(const Ref<AudioSamplePlayback> &p_playback, float p_left = 0.0f, float p_right = 0.0f) override;
 #endif
 
 	AudioDriverWeb() {}
