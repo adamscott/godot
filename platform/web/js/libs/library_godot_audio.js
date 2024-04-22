@@ -172,39 +172,32 @@ const GodotAudio = {
 				gain: ctx.createGain(),
 			};
 
-			/** @type {AudioBuffer} */
-			const sourceBuffer = ctx.createBuffer(sample.numberOfChannels, sample.sampleRate * sample.length, sample.sampleRate);
-			for (let i = 0; i < sample.numberOfChannels; i++) {
-				const nowBuffering = sourceBuffer.getChannelData(i);
-				for (let j = 0; j < sourceBuffer.length; j++) {
-					nowBuffering[j] = ((sample.bytesArray[j] / 255) * 2) - 1;
-				}
-			}
+			sampleNodes.source.buffer = sample.audioBuffer;
+			sampleNodes.source.connect(ctx.destination);
 
-			sampleNodes.source.buffer = sourceBuffer;
-			sampleNodes.gain.gain.value = startOptions.volumeDb + 1;
+			// sampleNodes.gain.gain.value = startOptions.volumeDb + 1;
 
-			/** @type {AudioNode} */
-			let lastNode;
+			// /** @type {AudioNode} */
+			// let lastNode;
 
-			switch (startOptions.positionMode) {
-				case "2D": {
-					sampleNodes.source.connect(sampleNodes.gain);
-					lastNode = sampleNodes.gain;
-				} break;
+			// switch (startOptions.positionMode) {
+			// 	case "2D": {
+			// 		sampleNodes.source.connect(sampleNodes.gain);
+			// 		lastNode = sampleNodes.gain;
+			// 	} break;
 
-				case "3D": {
+			// 	case "3D": {
 
-				} break;
+			// 	} break;
 
-				case "none":
-				default: {
-					sampleNodes.source.connect(sampleNodes.gain);
-					lastNode = sampleNodes.gain;
-				}
-			}
+			// 	case "none":
+			// 	default: {
+			// 		sampleNodes.source.connect(sampleNodes.gain);
+			// 		lastNode = sampleNodes.gain;
+			// 	}
+			// }
 
-			lastNode.connect(ctx.destination);
+			// lastNode.connect(ctx.destination);
 
 			sampleNodes.source.loop = startOptions.loopMode !== "disabled";
 			sampleNodes.source.start(startOptions.offset);
@@ -292,25 +285,33 @@ const GodotAudio = {
 
 	godot_audio_sample_register_stream__proxy: 'sync',
 	godot_audio_sample_register_stream__sig: 'viiiiiii',
-	godot_audio_sample_register_stream: function(streamObjectId, bufferPtr, bufferSize, numberOfChannels, sampleRate, loopModeStrPtr, loopBegin, loopEnd) {
+	godot_audio_sample_register_stream: function(streamObjectId, framesPtr, framesTotal, numberOfChannels, sampleRate, loopModeStrPtr, loopBegin, loopEnd) {
 		const loopMode = GodotRuntime.parseString(loopModeStrPtr);
-		let bytesArray = new Uint8Array(bufferSize);
-		let i = 0;
-		for (i = 0; i < bufferSize; i++) {
-			bytesArray[i] = GodotRuntime.getHeapValue(bufferPtr + i, 'i8');
+		numberOfChannels = 2;
+
+		/** @type {AudioContext} */
+		const ctx = GodotAudio.ctx;
+		let audioBuffer = ctx.createBuffer(numberOfChannels, framesTotal, sampleRate);
+		for (let channel = 0; channel < numberOfChannels; channel++) {
+			const nowBuffering = audioBuffer.getChannelData(channel);
+			const offset = channel * framesTotal;
+			for (let i = 0; i < framesTotal; i++) {
+				nowBuffering[i] = GodotRuntime.getHeapValue(framesPtr + (i * 4) + offset, 'float');
+				// console.log(nowBuffering[i]);
+			}
 		}
 
 		switch (loopMode) {
-			case "backward": {
-				bytesArray = bytesArray.reverse();
-			} break;
+			// case "backward": {
+			// 	bytesArray = bytesArray.reverse();
+			// } break;
 
-			case "pingpong": {
-				const newArray = new Uint8Array(bufferSize * 2);
-				newArray.set(bytesArray);
-				newArray.set(bytesArray.reverse(), bytesArray.length);
-				bytesArray = bytesArray;
-			} break;
+			// case "pingpong": {
+			// 	const newArray = new Uint8Array(bufferSize * 2);
+			// 	newArray.set(bytesArray);
+			// 	newArray.set(bytesArray.reverse(), bytesArray.length);
+			// 	bytesArray = bytesArray;
+			// } break;
 
 			case "forward":
 			case "disabled":
@@ -319,16 +320,13 @@ const GodotAudio = {
 			} break;
 		}
 
-		let length = bufferSize / sampleRate;
-
 		const sample = {
-			bytesArray,
+			audioBuffer,
 			numberOfChannels,
 			sampleRate,
 			loopMode,
 			loopBegin,
 			loopEnd,
-			length,
 		};
 		console.log(sample);
 		GodotAudio.samples.set(streamObjectId, sample);

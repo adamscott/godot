@@ -635,17 +635,6 @@ Ref<AudioSample> AudioStreamWAV::get_sample() const {
 	sample.instantiate();
 	sample->stream = this;
 
-	Ref<AudioStreamPlaybackWAV> stream_playback;
-	stream_playback.instantiate();
-	stream_playback->base = this;
-
-	int frame_length = AudioServer::get_singleton()->get_mix_rate() * get_length();
-	Vector<AudioFrame> frames;
-	frames.resize(frame_length);
-	AudioFrame *frames_ptr = frames.ptrw();
-
-	stream_playback->mix(frames_ptr, 1.0f, frame_length);
-
 	sample->num_channels = stereo ? 2 : 1;
 	switch (loop_mode) {
 		case AudioStreamWAV::LoopMode::LOOP_DISABLED: {
