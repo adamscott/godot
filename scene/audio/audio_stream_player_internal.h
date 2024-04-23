@@ -53,7 +53,6 @@ class AudioStreamPlayerInternal : public Object {
 	Callable play_callable;
 	bool physical = false;
 	bool _is_sample = false;
-	Ref<AudioSamplePlayback> sample_playback;
 
 	HashMap<StringName, ParameterData> playback_parameters;
 
