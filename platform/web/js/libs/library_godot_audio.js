@@ -309,28 +309,9 @@ const GodotAudio = {
 	godot_audio_sample_register_stream__proxy: 'sync',
 	godot_audio_sample_register_stream__sig: 'viiiiiii',
 	godot_audio_sample_register_stream: function (streamObjectId, framesPtr, framesTotal, numberOfChannels, sampleRate, loopModeStrPtr, loopBegin, loopEnd) {
-		console.log('[js] register stream');
 		const loopMode = GodotRuntime.parseString(loopModeStrPtr);
+		// eslint-disable-next-line no-param-reassign
 		numberOfChannels = 2;
-
-		switch (loopMode) {
-		// case "backward": {
-		// 	bytesArray = bytesArray.reverse();
-		// } break;
-
-		// case "pingpong": {
-		// 	const newArray = new Uint8Array(bufferSize * 2);
-		// 	newArray.set(bytesArray);
-		// 	newArray.set(bytesArray.reverse(), bytesArray.length);
-		// 	bytesArray = bytesArray;
-		// } break;
-
-		case 'forward':
-		case 'disabled':
-		default: {
-			// Do nothing.
-		} break;
-		}
 
 		const sample = {
 			ready: false,
