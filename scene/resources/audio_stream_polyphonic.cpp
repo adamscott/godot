@@ -260,6 +260,22 @@ void AudioStreamPlaybackPolyphonic::stop_stream(ID p_stream_id) {
 	s->finish_request.set();
 }
 
+void AudioStreamPlaybackPolyphonic::set_is_sample(bool p_is_sample) {
+	_is_sample = p_is_sample;
+}
+
+bool AudioStreamPlaybackPolyphonic::get_is_sample() const {
+	return _is_sample;
+}
+
+Ref<AudioSamplePlayback> AudioStreamPlaybackPolyphonic::get_sample_playback() const {
+	return sample_playback;
+}
+
+void AudioStreamPlaybackPolyphonic::set_sample_playback(const Ref<AudioSamplePlayback> &p_playback) {
+	sample_playback = p_playback;
+}
+
 void AudioStreamPlaybackPolyphonic::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("play_stream", "stream", "from_offset", "volume_db", "pitch_scale"), &AudioStreamPlaybackPolyphonic::play_stream, DEFVAL(0), DEFVAL(0), DEFVAL(1.0));
 	ClassDB::bind_method(D_METHOD("set_stream_volume", "stream", "volume_db"), &AudioStreamPlaybackPolyphonic::set_stream_volume);

@@ -75,7 +75,7 @@ class AudioStreamPlaybackOggVorbis : public AudioStreamPlaybackResampled {
 	Ref<OggPacketSequencePlayback> vorbis_data_playback;
 	Ref<AudioStreamOggVorbis> vorbis_stream;
 
-	bool _is_sample;
+	bool _is_sample = false;
 	Ref<AudioSamplePlayback> sample_playback;
 
 	int _mix_frames(AudioFrame *p_buffer, int p_frames);

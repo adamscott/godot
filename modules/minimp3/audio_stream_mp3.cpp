@@ -145,6 +145,22 @@ void AudioStreamPlaybackMP3::tag_used_streams() {
 	mp3_stream->tag_used(get_playback_position());
 }
 
+void AudioStreamPlaybackMP3::set_is_sample(bool p_is_sample) {
+	_is_sample = p_is_sample;
+}
+
+bool AudioStreamPlaybackMP3::get_is_sample() const {
+	return _is_sample;
+}
+
+Ref<AudioSamplePlayback> AudioStreamPlaybackMP3::get_sample_playback() const {
+	return sample_playback;
+}
+
+void AudioStreamPlaybackMP3::set_sample_playback(const Ref<AudioSamplePlayback> &p_playback) {
+	sample_playback = p_playback;
+}
+
 void AudioStreamPlaybackMP3::set_parameter(const StringName &p_name, const Variant &p_value) {
 	if (p_name == SNAME("looping")) {
 		if (p_value == Variant()) {
@@ -287,6 +303,20 @@ int AudioStreamMP3::get_bar_beats() const {
 	return bar_beats;
 }
 
+Ref<AudioSample> AudioStreamMP3::get_sample() const {
+	Ref<AudioSample> sample;
+	sample.instantiate();
+	sample->stream = this;
+	if (loop) {
+		sample->loop_mode = AudioSample::LoopMode::LOOP_FORWARD;
+	} else {
+		sample->loop_mode = AudioSample::LoopMode::LOOP_DISABLED;
+	}
+	sample->loop_begin = loop_offset;
+	sample->loop_end = 0;
+	return sample;
+}
+
 void AudioStreamMP3::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_data", "data"), &AudioStreamMP3::set_data);
 	ClassDB::bind_method(D_METHOD("get_data"), &AudioStreamMP3::get_data);
@@ -305,6 +335,8 @@ void AudioStreamMP3::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("set_bar_beats", "count"), &AudioStreamMP3::set_bar_beats);
 	ClassDB::bind_method(D_METHOD("get_bar_beats"), &AudioStreamMP3::get_bar_beats);
+
+	ClassDB::bind_method(D_METHOD("get_sample"), &AudioStreamMP3::get_sample);
 
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_BYTE_ARRAY, "data", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), "set_data", "get_data");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "bpm", PROPERTY_HINT_RANGE, "0,400,0.01,or_greater"), "set_bpm", "get_bpm");

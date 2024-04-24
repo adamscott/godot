@@ -81,6 +81,9 @@ class AudioStreamPlaybackPolyphonic : public AudioStreamPlayback {
 	bool active = false;
 	uint32_t id_counter = 1;
 
+	bool _is_sample = false;
+	Ref<AudioSamplePlayback> sample_playback;
+
 	_FORCE_INLINE_ Stream *_find_stream(int64_t p_id);
 
 	friend class AudioStreamPolyphonic;
@@ -112,6 +115,11 @@ public:
 	void set_stream_pitch_scale(ID p_stream_id, float p_pitch_scale);
 	bool is_stream_playing(ID p_stream_id) const;
 	void stop_stream(ID p_stream_id);
+
+	virtual void set_is_sample(bool p_is_sample) override;
+	virtual bool get_is_sample() const override;
+	virtual Ref<AudioSamplePlayback> get_sample_playback() const override;
+	virtual void set_sample_playback(const Ref<AudioSamplePlayback> &p_playback) override;
 
 	AudioStreamPlaybackPolyphonic();
 };

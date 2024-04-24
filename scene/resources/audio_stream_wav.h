@@ -63,7 +63,7 @@ class AudioStreamPlaybackWAV : public AudioStreamPlayback {
 	template <typename Depth, bool is_stereo, bool is_ima_adpcm>
 	void do_resample(const Depth *p_src, AudioFrame *p_dst, int64_t &p_offset, int32_t &p_increment, uint32_t p_amount, IMA_ADPCM_State *p_ima_adpcm);
 
-	bool _is_sample;
+	bool _is_sample = false;
 	Ref<AudioSamplePlayback> sample_playback;
 
 public:

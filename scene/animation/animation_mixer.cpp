@@ -33,7 +33,10 @@
 
 #include "core/config/engine.h"
 #include "core/config/project_settings.h"
+#include "scene/2d/audio_stream_player_2d.h"
+#include "scene/3d/audio_stream_player_3d.h"
 #include "scene/animation/animation_player.h"
+#include "scene/audio/audio_stream_player.h"
 #include "scene/resources/animation.h"
 #include "scene/scene_string_names.h"
 #include "servers/audio/audio_stream.h"
@@ -1518,6 +1521,7 @@ void AnimationMixer::_blend_process(double p_delta, bool p_update_only) {
 					}
 				} break;
 				case Animation::TYPE_AUDIO: {
+					print_line(vformat("blend process TYPE_AUDIO"));
 					// The end of audio should be observed even if the blend value is 0, build up the information and store to the cache for that.
 					TrackCacheAudio *t = static_cast<TrackCacheAudio *>(track);
 					Object *t_obj = ObjectDB::get_instance(t->object_id);
@@ -1565,15 +1569,18 @@ void AnimationMixer::_blend_process(double p_delta, bool p_update_only) {
 					if (idx < 0) {
 						continue;
 					}
+
 					// Play stream.
 					Ref<AudioStream> stream = a->audio_track_get_key_stream(i, idx);
 					if (stream.is_valid()) {
+						print_line(vformat("stream %s", stream));
 						double start_ofs = a->audio_track_get_key_start_offset(i, idx);
 						double end_ofs = a->audio_track_get_key_end_offset(i, idx);
 						double len = stream->get_length();
 						if (seeked) {
 							start_ofs += time - a->track_get_key_time(i, idx);
 						}
+
 						if (t_obj->call(SNAME("get_stream")) != t->audio_stream) {
 							t_obj->call(SNAME("set_stream"), t->audio_stream);
 							t->audio_stream_playback.unref();
@@ -1591,6 +1598,17 @@ void AnimationMixer::_blend_process(double p_delta, bool p_update_only) {
 						if (t->audio_stream_playback.is_null()) {
 							t->audio_stream_playback = t_obj->call(SNAME("get_stream_playback"));
 						}
+
+						if (t_obj->call(SNAME("get_is_sample"))) {
+							print_line(vformat("is_sample!!"));
+							Ref<AudioSamplePlayback> sample_playback;
+							sample_playback.instantiate();
+							sample_playback->stream = stream;
+							t->audio_stream_playback->set_sample_playback(sample_playback);
+							AudioServer::get_singleton()->start_sample_playback(sample_playback);
+							continue;
+						}
+
 						PlayingAudioStreamInfo pasi;
 						pasi.index = t->audio_stream_playback->play_stream(stream, start_ofs);
 						pasi.start = time;
