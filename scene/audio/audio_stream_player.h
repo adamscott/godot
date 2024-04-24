@@ -106,6 +106,9 @@ public:
 	bool has_stream_playback();
 	Ref<AudioStreamPlayback> get_stream_playback();
 
+	void set_is_sample(bool p_is_sample);
+	bool get_is_sample() const;
+
 	AudioStreamPlayer();
 	~AudioStreamPlayer();
 };
