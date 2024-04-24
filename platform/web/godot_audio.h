@@ -55,7 +55,7 @@ extern void godot_audio_sample_unregister_stream(int p_stream_object_id);
 extern void godot_audio_sample_start(int p_playback_object_id, int p_stream_object_id, float p_offset, float p_volume_db, const char *p_position_mode, double *p_position);
 extern void godot_audio_sample_stop(int p_playback_object_id);
 extern int godot_audio_sample_is_active(int p_playback_object_id);
-extern void godot_audio_sample_update(int p_playback_object_id, float p_left, float p_right);
+extern void godot_audio_sample_update(int p_playback_object_id, float p_pan, float p_volume_db, float p_pitch_scale);
 #endif
 
 // Worklet

@@ -225,7 +225,7 @@ const GodotAudio = {
 			GodotAudio.sampleNodesList.delete(playbackObjectId);
 		},
 
-		update_sample: function (playbackObjectId, pan, volumeDb) {
+		update_sample: function (playbackObjectId, pan, volumeDb, pitchScale) {
 			if (!GodotAudio.sampleNodesList.has(playbackObjectId)) {
 				return;
 			}
@@ -396,8 +396,8 @@ const GodotAudio = {
 
 	godot_audio_sample_update__proxy: 'sync',
 	godot_audio_sample_update__sig: 'viii',
-	godot_audio_sample_update: function (playbackObjectId, pan, volumeDb) {
-		GodotAudio.update_sample(playbackObjectId, pan, volumeDb);
+	godot_audio_sample_update: function (playbackObjectId, pan, volumeDb, pitchScale) {
+		GodotAudio.update_sample(playbackObjectId, pan, volumeDb, pitchScale);
 	},
 };
 

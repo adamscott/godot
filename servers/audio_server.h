@@ -159,7 +159,7 @@ public:
 	virtual void start_sample_playback(const Ref<AudioSamplePlayback> &p_playback){};
 	virtual void stop_sample_playback(const Ref<AudioSamplePlayback> &p_playback){};
 	virtual bool is_sample_playback_active(const Ref<AudioSamplePlayback> &p_playback) { return false; };
-	virtual void update_sample_playback(const Ref<AudioSamplePlayback> &p_playback, float p_pan = 0.0f, float p_volume_db = 0.0f){};
+	virtual void update_sample_playback(const Ref<AudioSamplePlayback> &p_playback, float p_pan = 0.0f, float p_volume_db = 0.0f, float p_pitch_scale = 0.0f){};
 
 	AudioDriver() {}
 	virtual ~AudioDriver() {}
@@ -481,7 +481,7 @@ public:
 	void start_sample_playback(const Ref<AudioSamplePlayback> &p_playback);
 	void stop_sample_playback(const Ref<AudioSamplePlayback> &p_playback);
 	bool is_sample_playback_active(const Ref<AudioSamplePlayback> &p_playback);
-	void update_sample_playback(const Ref<AudioSamplePlayback> &p_playback, float p_pan = 0.0f, float p_volume_db = 0.0f);
+	void update_sample_playback(const Ref<AudioSamplePlayback> &p_playback, float p_pan = 0.0f, float p_volume_db = 0.0f, float p_pitch_scale = 0.0f);
 #endif
 
 	AudioServer();
