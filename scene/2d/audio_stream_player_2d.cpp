@@ -174,13 +174,18 @@ void AudioStreamPlayer2D::_update_panning() {
 		const AudioFrame &prev_sample = volume_vector[0];
 		AudioFrame new_sample = AudioFrame(l, r) * multiplier;
 
-		// Samples.
-		for (const Ref<AudioStreamPlayback> &playback : internal->stream_playbacks) {
-			Ref<AudioSamplePlayback> sample_playback = playback->get_sample_playback();
-			if (sample_playback.is_null()) {
-				continue;
+		{
+			// Samples.
+			for (const Ref<AudioStreamPlayback> &playback : internal->stream_playbacks) {
+				const Ref<AudioSamplePlayback> sample_playback = playback->get_sample_playback();
+				if (sample_playback.is_null()) {
+					continue;
+				}
+				AudioServer::get_singleton()->update_sample_playback(
+						sample_playback,
+						-l + r,
+						get_volume_db());
 			}
-			AudioServer::get_singleton()->update_playback_sample_pan(sample_playback, l, r);
 		}
 
 		volume_vector.write[0] = AudioFrame(MAX(prev_sample[0], new_sample[0]), MAX(prev_sample[1], new_sample[1]));
@@ -239,7 +244,7 @@ void AudioStreamPlayer2D::play(float p_from_pos) {
 		Vector2 player_position = get_position();
 		sample_playback->position = Vector3(player_position.x, -player_position.y, 0);
 
-		AudioServer::get_singleton()->start_playback_sample(sample_playback);
+		AudioServer::get_singleton()->start_sample_playback(sample_playback);
 	}
 }
 
