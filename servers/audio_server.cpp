@@ -1762,9 +1762,9 @@ bool AudioServer::is_sample_playback_active(const Ref<AudioSamplePlayback> &p_pl
 	return AudioDriver::get_singleton()->is_sample_playback_active(p_playback);
 }
 
-void AudioServer::update_sample_playback(const Ref<AudioSamplePlayback> &p_playback, float p_pan, float p_volume_db) {
+void AudioServer::update_sample_playback(const Ref<AudioSamplePlayback> &p_playback, float p_pan, float p_volume_db, float p_pitch_scale) {
 	ERR_FAIL_COND_MSG(p_playback.is_null(), "Parameter p_playback is null.");
-	AudioDriver::get_singleton()->update_sample_playback(p_playback, p_pan, p_volume_db);
+	AudioDriver::get_singleton()->update_sample_playback(p_playback, p_pan, p_volume_db, p_pitch_scale);
 }
 
 void AudioServer::_bind_methods() {

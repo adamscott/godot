@@ -184,7 +184,8 @@ void AudioStreamPlayer2D::_update_panning() {
 				AudioServer::get_singleton()->update_sample_playback(
 						sample_playback,
 						-l + r,
-						get_volume_db());
+						get_volume_db(),
+						get_pitch_scale());
 			}
 		}
 
