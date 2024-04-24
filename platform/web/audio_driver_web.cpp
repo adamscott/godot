@@ -223,26 +223,16 @@ void AudioDriverWeb::register_sample(const Ref<AudioSample> &p_sample) {
 		frames.resize(frames_total);
 		AudioFrame *frames_ptr = frames.ptrw();
 		stream_playback->start();
-
-		print_line(vformat("[godot] before mix"));
 		stream_playback->mix(frames_ptr, 1.0f, frames_total);
-		print_line(vformat("[godot] after mix"));
-
-		// for (const AudioFrame &E : frames) {
-		// 	print_line(vformat("left: %s, right: %s", E.left, E.right));
-		// }
 	}
 
-	print_line(vformat("[godot] start resize/set"));
 	PackedFloat32Array data;
 	data.resize(frames_total * 2);
 	for (int i = 0; i < frames_total; i++) {
 		data.set(i, frames[i].left);
 		data.set(i + frames_total, frames[i].right);
 	}
-	print_line(vformat("[godot] end resize/set"));
 
-	print_line(vformat("[godot] register stream"));
 	godot_audio_sample_register_stream(
 			(int64_t)p_sample->stream->get_instance_id(),
 			(float *)data.ptrw(),
@@ -254,7 +244,14 @@ void AudioDriverWeb::register_sample(const Ref<AudioSample> &p_sample) {
 			p_sample->loop_end);
 }
 
-void AudioDriverWeb::start_playback_sample(const Ref<AudioSamplePlayback> &p_playback) {
+void AudioDriverWeb::unregister_sample(const Ref<AudioSample> &p_sample) {
+	ERR_FAIL_COND_MSG(p_sample.is_null(), "Parameter p_sample is null.");
+	ERR_FAIL_COND_MSG(p_sample->stream.is_null(), "Parameter p_sample->stream is null.");
+
+	godot_audio_sample_unregister_stream((int64_t)p_sample->stream->get_instance_id());
+}
+
+void AudioDriverWeb::start_sample_playback(const Ref<AudioSamplePlayback> &p_playback) {
 	ERR_FAIL_COND_MSG(p_playback.is_null(), "Parameter p_playback is null.");
 	ERR_FAIL_COND_MSG(p_playback->stream.is_null(), "Parameter p_playback->stream is null.");
 
@@ -288,14 +285,19 @@ void AudioDriverWeb::start_playback_sample(const Ref<AudioSamplePlayback> &p_pla
 			position.ptrw());
 }
 
-void AudioDriverWeb::stop_playback_sample(const Ref<AudioSamplePlayback> &p_playback) {
+void AudioDriverWeb::stop_sample_playback(const Ref<AudioSamplePlayback> &p_playback) {
 	ERR_FAIL_COND_MSG(p_playback.is_null(), "Parameter p_playback is null.");
 	godot_audio_sample_stop((int64_t)p_playback->get_instance_id());
 }
 
-void AudioDriverWeb::update_playback_sample_pan(const Ref<AudioSamplePlayback> &p_playback, float p_left, float p_right) {
+bool AudioDriverWeb::is_sample_playback_active(const Ref<AudioSamplePlayback> &p_playback) {
+	ERR_FAIL_COND_V_MSG(p_playback.is_null(), false, "Parameter p_playback is null.");
+	return godot_audio_sample_is_active((int64_t)p_playback->get_instance_id()) != 0;
+}
+
+void AudioDriverWeb::update_sample_playback(const Ref<AudioSamplePlayback> &p_playback, float p_pan, float p_volume_db) {
 	ERR_FAIL_COND_MSG(p_playback.is_null(), "Parameter p_playback is null.");
-	godot_audio_sample_update_pan((int64_t)p_playback->get_instance_id(), p_left, p_right);
+	godot_audio_sample_update((int64_t)p_playback->get_instance_id(), p_pan, p_volume_db);
 }
 #endif
 

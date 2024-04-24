@@ -155,9 +155,11 @@ public:
 		return false;
 	};
 	virtual void register_sample(const Ref<AudioSample> &p_sample){};
-	virtual void start_playback_sample(const Ref<AudioSamplePlayback> &p_playback){};
-	virtual void stop_playback_sample(const Ref<AudioSamplePlayback> &p_playback){};
-	virtual void update_playback_sample_pan(const Ref<AudioSamplePlayback> &p_playback, float p_left = 0.0f, float p_right = 0.0f){};
+	virtual void unregister_sample(const Ref<AudioSample> &p_sample){};
+	virtual void start_sample_playback(const Ref<AudioSamplePlayback> &p_playback){};
+	virtual void stop_sample_playback(const Ref<AudioSamplePlayback> &p_playback){};
+	virtual bool is_sample_playback_active(const Ref<AudioSamplePlayback> &p_playback) { return false; };
+	virtual void update_sample_playback(const Ref<AudioSamplePlayback> &p_playback, float p_pan = 0.0f, float p_volume_db = 0.0f){};
 
 	AudioDriver() {}
 	virtual ~AudioDriver() {}
@@ -473,10 +475,13 @@ public:
 #ifdef SAMPLES_ENABLED
 	bool is_stream_registered_as_sample(const Ref<AudioStream> &p_stream);
 	void register_stream_as_sample(const Ref<AudioStream> &p_stream);
+	void unregister_stream_as_sample(const Ref<AudioStream> &p_stream);
 	void register_sample(const Ref<AudioSample> &p_sample);
-	void start_playback_sample(const Ref<AudioSamplePlayback> &p_playback);
-	void stop_playback_sample(const Ref<AudioSamplePlayback> &p_playback);
-	void update_playback_sample_pan(const Ref<AudioSamplePlayback> &p_playback, float p_left, float p_right);
+	void unregister_sample(const Ref<AudioSample> &p_sample);
+	void start_sample_playback(const Ref<AudioSamplePlayback> &p_playback);
+	void stop_sample_playback(const Ref<AudioSamplePlayback> &p_playback);
+	bool is_sample_playback_active(const Ref<AudioSamplePlayback> &p_playback);
+	void update_sample_playback(const Ref<AudioSamplePlayback> &p_playback, float p_pan = 0.0f, float p_volume_db = 0.0f);
 #endif
 
 	AudioServer();

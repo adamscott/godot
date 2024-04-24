@@ -90,9 +90,11 @@ public:
 #ifdef SAMPLES_ENABLED
 	virtual bool is_stream_registered_as_sample(const Ref<AudioStream> &p_stream) const override;
 	virtual void register_sample(const Ref<AudioSample> &p_sample) override;
-	virtual void start_playback_sample(const Ref<AudioSamplePlayback> &p_playback) override;
-	virtual void stop_playback_sample(const Ref<AudioSamplePlayback> &p_playback) override;
-	virtual void update_playback_sample_pan(const Ref<AudioSamplePlayback> &p_playback, float p_left = 0.0f, float p_right = 0.0f) override;
+	virtual void unregister_sample(const Ref<AudioSample> &p_sample) override;
+	virtual void start_sample_playback(const Ref<AudioSamplePlayback> &p_playback) override;
+	virtual void stop_sample_playback(const Ref<AudioSamplePlayback> &p_playback) override;
+	virtual bool is_sample_playback_active(const Ref<AudioSamplePlayback> &p_playback) override;
+	virtual void update_sample_playback(const Ref<AudioSamplePlayback> &p_playback, float p_pan = 0.0f, float p_volume_db = 0.0f) override;
 #endif
 
 	AudioDriverWeb() {}

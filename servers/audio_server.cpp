@@ -1721,6 +1721,13 @@ void AudioServer::register_stream_as_sample(const Ref<AudioStream> &p_stream) {
 	register_sample(sample);
 }
 
+void AudioServer::unregister_stream_as_sample(const Ref<AudioStream> &p_stream) {
+	ERR_FAIL_COND_MSG(p_stream.is_null(), "Parameter p_stream is null.");
+	ERR_FAIL_COND_MSG(!(p_stream->can_be_sampled()), "Parameter p_stream cannot be sampled.");
+	Ref<AudioSample> sample = p_stream->get_sample();
+	unregister_sample(sample);
+}
+
 void AudioServer::register_sample(const Ref<AudioSample> &p_sample) {
 	ERR_FAIL_COND_MSG(p_sample.is_null(), "Parameter p_sample is null.");
 	ERR_FAIL_COND_MSG(p_sample->stream.is_null(), "Parameter p_sample->stream is null.");
@@ -1731,19 +1738,33 @@ void AudioServer::register_sample(const Ref<AudioSample> &p_sample) {
 #endif
 }
 
-void AudioServer::start_playback_sample(const Ref<AudioSamplePlayback> &p_playback) {
-	ERR_FAIL_COND_MSG(p_playback.is_null(), "Parameter p_playback is null.");
-	AudioDriver::get_singleton()->start_playback_sample(p_playback);
+void AudioServer::unregister_sample(const Ref<AudioSample> &p_sample) {
+	ERR_FAIL_COND_MSG(p_sample.is_null(), "Parameter p_sample is null.");
+	ERR_FAIL_COND_MSG(p_sample->stream.is_null(), "Parameter p_sample->stream is null.");
+
+#ifdef SAMPLES_ENABLED
+	AudioDriver::get_singleton()->unregister_sample(p_sample);
+#endif
 }
 
-void AudioServer::stop_playback_sample(const Ref<AudioSamplePlayback> &p_playback) {
+void AudioServer::start_sample_playback(const Ref<AudioSamplePlayback> &p_playback) {
 	ERR_FAIL_COND_MSG(p_playback.is_null(), "Parameter p_playback is null.");
-	AudioDriver::get_singleton()->stop_playback_sample(p_playback);
+	AudioDriver::get_singleton()->start_sample_playback(p_playback);
 }
 
-void AudioServer::update_playback_sample_pan(const Ref<AudioSamplePlayback> &p_playback, float p_left, float p_right) {
+void AudioServer::stop_sample_playback(const Ref<AudioSamplePlayback> &p_playback) {
 	ERR_FAIL_COND_MSG(p_playback.is_null(), "Parameter p_playback is null.");
-	AudioDriver::get_singleton()->update_playback_sample_pan(p_playback, p_left, p_right);
+	AudioDriver::get_singleton()->stop_sample_playback(p_playback);
+}
+
+bool AudioServer::is_sample_playback_active(const Ref<AudioSamplePlayback> &p_playback) {
+	ERR_FAIL_COND_V_MSG(p_playback.is_null(), false, "Parameter p_playback is null.");
+	return AudioDriver::get_singleton()->is_sample_playback_active(p_playback);
+}
+
+void AudioServer::update_sample_playback(const Ref<AudioSamplePlayback> &p_playback, float p_pan, float p_volume_db) {
+	ERR_FAIL_COND_MSG(p_playback.is_null(), "Parameter p_playback is null.");
+	AudioDriver::get_singleton()->update_sample_playback(p_playback, p_pan, p_volume_db);
 }
 
 void AudioServer::_bind_methods() {
@@ -1817,7 +1838,6 @@ void AudioServer::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("is_stream_registered_as_sample", "stream"), &AudioServer::is_stream_registered_as_sample);
 	ClassDB::bind_method(D_METHOD("register_stream_as_sample", "stream"), &AudioServer::register_stream_as_sample);
-	ClassDB::bind_method(D_METHOD("register_sample", "sample"), &AudioServer::register_sample);
 
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "bus_count"), "set_bus_count", "get_bus_count");
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "output_device"), "set_output_device", "get_output_device");

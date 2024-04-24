@@ -180,33 +180,33 @@ const GodotAudio = {
 
 			sampleNodes.gain.gain.value = startOptions.volumeDb + 1;
 			sampleNodes.source.connect(sampleNodes.gain);
-			
+
 			/** @type {AudioNode} */
 			let lastNode = sampleNodes.gain;
 
 			switch (startOptions.positionMode) {
-				case "2D": {
-					sampleNodes.stereoPanner = ctx.createStereoPanner();
-					lastNode.connect(sampleNodes.stereoPanner);
-					lastNode = sampleNodes.stereoPanner;
-				} break;
+			case '2D': {
+				sampleNodes.stereoPanner = ctx.createStereoPanner();
+				lastNode.connect(sampleNodes.stereoPanner);
+				lastNode = sampleNodes.stereoPanner;
+			} break;
 
-				case "3D": {
+			case '3D': {
 
-				} break;
+			} break;
 
-				case "none":
-				default: {
-					// Do nothing.
-				}
+			case 'none':
+			default: {
+				// Do nothing.
+			}
 			}
 
 			lastNode.connect(ctx.destination);
 
-			sampleNodes.source.loop = sample.loopMode !== "disabled";
+			sampleNodes.source.loop = sample.loopMode !== 'disabled';
 			sampleNodes.source.start(startOptions.offset);
 
-			sampleNodes.source.addEventListener("ended", () => {
+			sampleNodes.source.addEventListener('ended', () => {
 				GodotAudio.stop_sample(playbackObjectId);
 			});
 
@@ -225,7 +225,7 @@ const GodotAudio = {
 			GodotAudio.sampleNodesList.delete(playbackObjectId);
 		},
 
-		update_sample_pan: function (playbackObjectId, left, right) {
+		update_sample: function (playbackObjectId, pan, volumeDb) {
 			if (!GodotAudio.sampleNodesList.has(playbackObjectId)) {
 				return;
 			}
@@ -235,8 +235,8 @@ const GodotAudio = {
 				return;
 			}
 
-			sampleNodes.stereoPanner.pan.value = -left + right;
-		}
+			sampleNodes.stereoPanner.pan.value = pan;
+		},
 	},
 
 	godot_audio_is_available__sig: 'i',
@@ -308,28 +308,28 @@ const GodotAudio = {
 
 	godot_audio_sample_register_stream__proxy: 'sync',
 	godot_audio_sample_register_stream__sig: 'viiiiiii',
-	godot_audio_sample_register_stream: function(streamObjectId, framesPtr, framesTotal, numberOfChannels, sampleRate, loopModeStrPtr, loopBegin, loopEnd) {
-		console.log("[js] register stream");
+	godot_audio_sample_register_stream: function (streamObjectId, framesPtr, framesTotal, numberOfChannels, sampleRate, loopModeStrPtr, loopBegin, loopEnd) {
+		console.log('[js] register stream');
 		const loopMode = GodotRuntime.parseString(loopModeStrPtr);
 		numberOfChannels = 2;
 
 		switch (loopMode) {
-			// case "backward": {
-			// 	bytesArray = bytesArray.reverse();
-			// } break;
+		// case "backward": {
+		// 	bytesArray = bytesArray.reverse();
+		// } break;
 
-			// case "pingpong": {
-			// 	const newArray = new Uint8Array(bufferSize * 2);
-			// 	newArray.set(bytesArray);
-			// 	newArray.set(bytesArray.reverse(), bytesArray.length);
-			// 	bytesArray = bytesArray;
-			// } break;
+		// case "pingpong": {
+		// 	const newArray = new Uint8Array(bufferSize * 2);
+		// 	newArray.set(bytesArray);
+		// 	newArray.set(bytesArray.reverse(), bytesArray.length);
+		// 	bytesArray = bytesArray;
+		// } break;
 
-			case "forward":
-			case "disabled":
-			default: {
-				// Do nothing.
-			} break;
+		case 'forward':
+		case 'disabled':
+		default: {
+			// Do nothing.
+		} break;
 		}
 
 		const sample = {
@@ -358,6 +358,12 @@ const GodotAudio = {
 		GodotAudio.samples.set(streamObjectId, sample);
 	},
 
+	godot_audio_sample_unregister_stream__proxy: 'sync',
+	godot_audio_sample_unregister_stream__sig: 'vi',
+	godot_audio_sample_unregister_stream: function (streamObjectId) {
+		GodotAudio.samples.delete(streamObjectId);
+	},
+
 	godot_audio_sample_start__proxy: 'sync',
 	godot_audio_sample_start__sig: 'vii',
 	godot_audio_sample_start: function (playbackObjectId, streamObjectId, offset, volumeDb, positionModeStrPtr, positionPtr) {
@@ -382,11 +388,17 @@ const GodotAudio = {
 		GodotAudio.stop_sample(playbackObjectId);
 	},
 
-	godot_audio_sample_update_pan__proxy: 'sync',
-	godot_audio_sample_update_pan__sig: 'viii',
-	godot_audio_sample_update_pan: function (playbackObjectId, left, right) {
-		GodotAudio.update_sample_pan(playbackObjectId, left, right);
-	}
+	godot_audio_sample_is_active__proxy: 'sync',
+	godot_audio_sample_is_active__sig: 'vi',
+	godot_audio_sample_is_active: function (playbackObjectId) {
+		return GodotAudio.sampleNodesList.has(playbackObjectId);
+	},
+
+	godot_audio_sample_update__proxy: 'sync',
+	godot_audio_sample_update__sig: 'viii',
+	godot_audio_sample_update: function (playbackObjectId, pan, volumeDb) {
+		GodotAudio.update_sample(playbackObjectId, pan, volumeDb);
+	},
 };
 
 autoAddDeps(GodotAudio, '$GodotAudio');
