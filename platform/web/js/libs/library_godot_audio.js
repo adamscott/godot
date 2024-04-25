@@ -392,6 +392,18 @@ const GodotAudio = {
 				movedBus,
 				buses.slice(toPos - 1)
 			);
+
+			/** @type {Map<number, SampleNode>} */
+			const sampleNodes = GodotAudio.sampleNodes;
+			sampleNodes.forEach((sampleNode) => {
+				if (sampleNode.currentBus === busIndex) {
+					sampleNode.currentBus = toPos;
+					return;
+				}
+				if (sampleNode.currentBus < toPos) {
+					sampleNode.currentBus -= 1;
+				}
+			});
 		},
 
 		/** @type {(busIndex: number, volumeDb: number) => void} */
