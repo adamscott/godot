@@ -359,6 +359,14 @@ float AudioStreamPlayer2D::get_panning_strength() const {
 	return panning_strength;
 }
 
+AudioServer::PlaybackType AudioStreamPlayer2D::get_playback_type() const {
+	return internal->get_playback_type();
+}
+
+void AudioStreamPlayer2D::set_playback_type(AudioServer::PlaybackType p_playback_type) {
+	internal->set_playback_type(p_playback_type);
+}
+
 bool AudioStreamPlayer2D::_set(const StringName &p_name, const Variant &p_value) {
 	return internal->set(p_name, p_value);
 }
@@ -369,14 +377,6 @@ bool AudioStreamPlayer2D::_get(const StringName &p_name, Variant &r_ret) const {
 
 void AudioStreamPlayer2D::_get_property_list(List<PropertyInfo> *p_list) const {
 	internal->get_property_list(p_list);
-}
-
-bool AudioStreamPlayer2D::get_is_sample() const {
-	return internal->get_is_sample();
-}
-
-void AudioStreamPlayer2D::set_is_sample(bool p_is_sample) {
-	internal->set_is_sample(p_is_sample);
 }
 
 void AudioStreamPlayer2D::_bind_methods() {
@@ -426,8 +426,8 @@ void AudioStreamPlayer2D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("has_stream_playback"), &AudioStreamPlayer2D::has_stream_playback);
 	ClassDB::bind_method(D_METHOD("get_stream_playback"), &AudioStreamPlayer2D::get_stream_playback);
 
-	ClassDB::bind_method(D_METHOD("set_is_sample"), &AudioStreamPlayer2D::set_is_sample);
-	ClassDB::bind_method(D_METHOD("get_is_sample"), &AudioStreamPlayer2D::get_is_sample);
+	ClassDB::bind_method(D_METHOD("set_playback_type", "playback_type"), &AudioStreamPlayer2D::set_playback_type);
+	ClassDB::bind_method(D_METHOD("get_playback_type"), &AudioStreamPlayer2D::get_playback_type);
 
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "stream", PROPERTY_HINT_RESOURCE_TYPE, "AudioStream"), "set_stream", "get_stream");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "volume_db", PROPERTY_HINT_RANGE, "-80,24,suffix:dB"), "set_volume_db", "get_volume_db");
@@ -441,7 +441,7 @@ void AudioStreamPlayer2D::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "panning_strength", PROPERTY_HINT_RANGE, "0,3,0.01,or_greater"), "set_panning_strength", "get_panning_strength");
 	ADD_PROPERTY(PropertyInfo(Variant::STRING_NAME, "bus", PROPERTY_HINT_ENUM, ""), "set_bus", "get_bus");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "area_mask", PROPERTY_HINT_LAYERS_2D_PHYSICS), "set_area_mask", "get_area_mask");
-	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "is_sample"), "set_is_sample", "get_is_sample");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "playback_type", PROPERTY_HINT_ENUM, "Default,Stream,Sample"), "set_playback_type", "get_playback_type");
 
 	ADD_SIGNAL(MethodInfo("finished"));
 }

@@ -216,12 +216,12 @@ Ref<AudioStreamPlayback> AudioStreamPlayer::get_stream_playback() {
 	return internal->get_stream_playback();
 }
 
-bool AudioStreamPlayer::get_is_sample() const {
-	return internal->get_is_sample();
+AudioServer::PlaybackType AudioStreamPlayer::get_playback_type() const {
+	return internal->get_playback_type();
 }
 
-void AudioStreamPlayer::set_is_sample(bool p_is_sample) {
-	internal->set_is_sample(p_is_sample);
+void AudioStreamPlayer::set_playback_type(AudioServer::PlaybackType p_playback_type) {
+	internal->set_playback_type(p_playback_type);
 }
 
 void AudioStreamPlayer::_bind_methods() {
@@ -262,8 +262,8 @@ void AudioStreamPlayer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("has_stream_playback"), &AudioStreamPlayer::has_stream_playback);
 	ClassDB::bind_method(D_METHOD("get_stream_playback"), &AudioStreamPlayer::get_stream_playback);
 
-	ClassDB::bind_method(D_METHOD("set_is_sample"), &AudioStreamPlayer::set_is_sample);
-	ClassDB::bind_method(D_METHOD("get_is_sample"), &AudioStreamPlayer::get_is_sample);
+	ClassDB::bind_method(D_METHOD("set_playback_type", "playback_type"), &AudioStreamPlayer::set_playback_type);
+	ClassDB::bind_method(D_METHOD("get_playback_type"), &AudioStreamPlayer::get_playback_type);
 
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "stream", PROPERTY_HINT_RESOURCE_TYPE, "AudioStream"), "set_stream", "get_stream");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "volume_db", PROPERTY_HINT_RANGE, "-80,24,suffix:dB"), "set_volume_db", "get_volume_db");
@@ -274,7 +274,7 @@ void AudioStreamPlayer::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "mix_target", PROPERTY_HINT_ENUM, "Stereo,Surround,Center"), "set_mix_target", "get_mix_target");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "max_polyphony", PROPERTY_HINT_NONE, ""), "set_max_polyphony", "get_max_polyphony");
 	ADD_PROPERTY(PropertyInfo(Variant::STRING_NAME, "bus", PROPERTY_HINT_ENUM, ""), "set_bus", "get_bus");
-	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "is_sample"), "set_is_sample", "get_is_sample");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "playback_type", PROPERTY_HINT_ENUM, "Default,Stream,Sample"), "set_playback_type", "get_playback_type");
 
 	ADD_SIGNAL(MethodInfo("finished"));
 

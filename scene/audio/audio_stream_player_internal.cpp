@@ -143,8 +143,9 @@ Ref<AudioStreamPlayback> AudioStreamPlayerInternal::play_basic() {
 	}
 
 	// Sample handling.
-	if (get_is_sample() && stream->can_be_sampled()) {
-		stream_playback->set_is_sample(get_is_sample());
+
+	if (_is_sample() && stream->can_be_sampled()) {
+		stream_playback->set_is_sample(true);
 		if (stream_playback->get_is_sample()) {
 			if (stream_playback->get_sample_playback().is_null()) {
 				if (!AudioServer::get_singleton()->is_stream_registered_as_sample(stream)) {
@@ -257,7 +258,7 @@ void AudioStreamPlayerInternal::seek(float p_seconds) {
 void AudioStreamPlayerInternal::stop() {
 	for (Ref<AudioStreamPlayback> &playback : stream_playbacks) {
 		AudioServer::get_singleton()->stop_playback_stream(playback);
-		if (get_is_sample() && playback->get_sample_playback().is_valid()) {
+		if (_is_sample() && playback->get_sample_playback().is_valid()) {
 			print_line(vformat("found sample playback"));
 			AudioServer::get_singleton()->stop_sample_playback(playback->get_sample_playback());
 		}
@@ -322,6 +323,14 @@ bool AudioStreamPlayerInternal::has_stream_playback() {
 Ref<AudioStreamPlayback> AudioStreamPlayerInternal::get_stream_playback() {
 	ERR_FAIL_COND_V_MSG(stream_playbacks.is_empty(), Ref<AudioStreamPlayback>(), "Player is inactive. Call play() before requesting get_stream_playback().");
 	return stream_playbacks[stream_playbacks.size() - 1];
+}
+
+void AudioStreamPlayerInternal::set_playback_type(AudioServer::PlaybackType p_playback_type) {
+	playback_type = p_playback_type;
+}
+
+AudioServer::PlaybackType AudioStreamPlayerInternal::get_playback_type() const {
+	return playback_type;
 }
 
 StringName AudioStreamPlayerInternal::get_bus() const {

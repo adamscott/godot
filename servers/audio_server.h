@@ -206,6 +206,13 @@ public:
 		SPEAKER_SURROUND_71,
 	};
 
+	enum PlaybackType {
+		PLAYBACK_TYPE_DEFAULT,
+		PLAYBACK_TYPE_STREAM,
+		PLAYBACK_TYPE_SAMPLE,
+		PLAYBACK_TYPE_MAX
+	};
+
 	enum {
 		AUDIO_DATA_INVALID_ID = -1,
 		MAX_CHANNELS_PER_BUS = 4,
@@ -480,6 +487,8 @@ public:
 	virtual void get_argument_options(const StringName &p_function, int p_idx, List<String> *r_options) const override;
 #endif
 
+	PlaybackType get_default_playback_type() const;
+
 #ifdef SAMPLES_ENABLED
 	bool is_stream_registered_as_sample(const Ref<AudioStream> &p_stream);
 	void register_stream_as_sample(const Ref<AudioStream> &p_stream);
@@ -497,6 +506,7 @@ public:
 };
 
 VARIANT_ENUM_CAST(AudioServer::SpeakerMode)
+VARIANT_ENUM_CAST(AudioServer::PlaybackType)
 
 class AudioBusLayout : public Resource {
 	GDCLASS(AudioBusLayout, Resource);

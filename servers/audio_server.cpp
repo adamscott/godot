@@ -1724,6 +1724,25 @@ void AudioServer::get_argument_options(const StringName &p_function, int p_idx, 
 }
 #endif
 
+AudioServer::PlaybackType AudioServer::get_default_playback_type() const {
+	int playback_type = GLOBAL_GET("audio/general/default_playback_type");
+	ERR_FAIL_COND_V_MSG(
+			playback_type < 0 || playback_type >= PlaybackType::PLAYBACK_TYPE_MAX,
+			PlaybackType::PLAYBACK_TYPE_STREAM,
+			vformat(R"(Project settings value (%s) for "audio/general/default_playback_type" is not supported)", playback_type));
+
+	switch (playback_type) {
+		case 1: {
+			return PlaybackType::PLAYBACK_TYPE_SAMPLE;
+		} break;
+
+		case 0:
+		default: {
+			return PlaybackType::PLAYBACK_TYPE_STREAM;
+		} break;
+	}
+}
+
 bool AudioServer::is_stream_registered_as_sample(const Ref<AudioStream> &p_stream) {
 	ERR_FAIL_COND_V_MSG(p_stream.is_null(), false, "Parameter p_stream is null.");
 	return AudioDriver::get_singleton()->is_stream_registered_as_sample(p_stream);
