@@ -129,6 +129,8 @@ void AudioStreamPlayer2D::_update_panning() {
 	volume_vector.write[2] = AudioFrame(0, 0);
 	volume_vector.write[3] = AudioFrame(0, 0);
 
+	StringName actual_bus = _get_actual_bus();
+
 	for (Viewport *vp : viewports) {
 		if (!vp->is_audio_listener_2d()) {
 			continue;
@@ -183,6 +185,7 @@ void AudioStreamPlayer2D::_update_panning() {
 				}
 				AudioServer::get_singleton()->update_sample_playback(
 						sample_playback,
+						actual_bus,
 						-l + r,
 						get_volume_db(),
 						get_pitch_scale());
@@ -193,7 +196,7 @@ void AudioStreamPlayer2D::_update_panning() {
 	}
 
 	for (const Ref<AudioStreamPlayback> &playback : internal->stream_playbacks) {
-		AudioServer::get_singleton()->set_playback_bus_exclusive(playback, _get_actual_bus(), volume_vector);
+		AudioServer::get_singleton()->set_playback_bus_exclusive(playback, actual_bus, volume_vector);
 	}
 
 	for (Ref<AudioStreamPlayback> &playback : internal->stream_playbacks) {
@@ -229,6 +232,7 @@ float AudioStreamPlayer2D::get_pitch_scale() const {
 }
 
 void AudioStreamPlayer2D::play(float p_from_pos) {
+	print_line(vformat("play(%s)", p_from_pos));
 	Ref<AudioStreamPlayback> stream_playback = internal->play_basic();
 	if (stream_playback.is_null()) {
 		return;
@@ -242,8 +246,7 @@ void AudioStreamPlayer2D::play(float p_from_pos) {
 		sample_playback->offset = p_from_pos;
 		sample_playback->volume_db = get_volume_db();
 		sample_playback->position_mode = AudioSamplePlayback::AUDIO_SAMPLE_PLAYBACK_POSITION_2D;
-		Vector2 player_position = get_position();
-		sample_playback->position = Vector3(player_position.x, -player_position.y, 0);
+		sample_playback->bus = _get_actual_bus();
 
 		AudioServer::get_singleton()->start_sample_playback(sample_playback);
 	}
@@ -254,6 +257,7 @@ void AudioStreamPlayer2D::seek(float p_seconds) {
 }
 
 void AudioStreamPlayer2D::stop() {
+	print_line(vformat("internal->stop()"));
 	setplay.set(-1);
 	internal->stop();
 }

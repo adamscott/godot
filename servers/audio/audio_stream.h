@@ -59,6 +59,7 @@ public:
 	float volume_db = 0;
 	PositionMode position_mode = AUDIO_SAMPLE_PLAYBACK_POSITION_NONE;
 	Vector3 position;
+	StringName bus;
 };
 
 class AudioStreamPlayback : public RefCounted {

@@ -52,10 +52,18 @@ extern void godot_audio_input_stop();
 extern int godot_audio_sample_stream_is_registered(int p_stream_object_id);
 extern void godot_audio_sample_register_stream(int p_stream_object_id, float *p_frames_buf, int p_frames_total, int p_num_channels, int p_sample_rate, const char *p_loop_mode, int p_loop_begin, int p_loop_end);
 extern void godot_audio_sample_unregister_stream(int p_stream_object_id);
-extern void godot_audio_sample_start(int p_playback_object_id, int p_stream_object_id, float p_offset, float p_volume_db, const char *p_position_mode, double *p_position);
+extern void godot_audio_sample_start(int p_playback_object_id, int p_stream_object_id, int p_bus_index, float p_offset, float p_volume_db, const char *p_position_mode);
 extern void godot_audio_sample_stop(int p_playback_object_id);
 extern int godot_audio_sample_is_active(int p_playback_object_id);
-extern void godot_audio_sample_update(int p_playback_object_id, float p_pan, float p_volume_db, float p_pitch_scale);
+extern void godot_audio_sample_update(int p_playback_object_id, int p_bus_index, float p_pan, float p_volume_db, float p_pitch_scale);
+
+extern void godot_audio_sample_bus_set_count(int p_count);
+extern void godot_audio_sample_bus_remove(int p_index);
+extern void godot_audio_sample_bus_add(int p_at_pos = -1);
+extern void godot_audio_sample_bus_move(int p_bus, int p_to_pos);
+extern void godot_audio_sample_bus_set_volume_db(int p_bus, float p_volume_db);
+extern void godot_audio_sample_bus_set_solo(int p_bus, bool p_enable);
+extern void godot_audio_sample_bus_set_mute(int p_bus, bool p_enable);
 #endif
 
 // Worklet

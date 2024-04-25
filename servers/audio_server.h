@@ -159,7 +159,15 @@ public:
 	virtual void start_sample_playback(const Ref<AudioSamplePlayback> &p_playback){};
 	virtual void stop_sample_playback(const Ref<AudioSamplePlayback> &p_playback){};
 	virtual bool is_sample_playback_active(const Ref<AudioSamplePlayback> &p_playback) { return false; };
-	virtual void update_sample_playback(const Ref<AudioSamplePlayback> &p_playback, float p_pan = 0.0f, float p_volume_db = 0.0f, float p_pitch_scale = 0.0f){};
+	virtual void update_sample_playback(const Ref<AudioSamplePlayback> &p_playback, const StringName &p_bus, float p_pan = 0.0f, float p_volume_db = 0.0f, float p_pitch_scale = 0.0f){};
+
+	virtual void set_sample_bus_count(int p_count){};
+	virtual void remove_sample_bus(int p_bus){};
+	virtual void add_sample_bus(int p_at_pos = -1){};
+	virtual void move_sample_bus(int p_bus, int p_to_pos){};
+	virtual void set_sample_bus_volume_db(int p_bus, float p_volume_db){};
+	virtual void set_sample_bus_solo(int p_bus, bool p_enable){};
+	virtual void set_sample_bus_mute(int p_bus, bool p_enable){};
 
 	AudioDriver() {}
 	virtual ~AudioDriver() {}
@@ -481,7 +489,7 @@ public:
 	void start_sample_playback(const Ref<AudioSamplePlayback> &p_playback);
 	void stop_sample_playback(const Ref<AudioSamplePlayback> &p_playback);
 	bool is_sample_playback_active(const Ref<AudioSamplePlayback> &p_playback);
-	void update_sample_playback(const Ref<AudioSamplePlayback> &p_playback, float p_pan = 0.0f, float p_volume_db = 0.0f, float p_pitch_scale = 0.0f);
+	void update_sample_playback(const Ref<AudioSamplePlayback> &p_playback, const StringName &p_bus, float p_pan = 0.0f, float p_volume_db = 0.0f, float p_pitch_scale = 0.0f);
 #endif
 
 	AudioServer();

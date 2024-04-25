@@ -270,19 +270,13 @@ void AudioDriverWeb::start_sample_playback(const Ref<AudioSamplePlayback> &p_pla
 		} break;
 	}
 
-	PackedFloat64Array position;
-	position.resize(3);
-	position.set(0, p_playback->position.x);
-	position.set(1, p_playback->position.y);
-	position.set(2, p_playback->position.z);
-
 	godot_audio_sample_start(
 			(int64_t)p_playback->get_instance_id(),
 			(int64_t)p_playback->stream->get_instance_id(),
+			AudioServer::get_singleton()->get_bus_index(p_playback->bus),
 			p_playback->offset,
 			p_playback->volume_db,
-			position_mode.utf8().get_data(),
-			position.ptrw());
+			position_mode.utf8().get_data());
 }
 
 void AudioDriverWeb::stop_sample_playback(const Ref<AudioSamplePlayback> &p_playback) {
@@ -295,9 +289,42 @@ bool AudioDriverWeb::is_sample_playback_active(const Ref<AudioSamplePlayback> &p
 	return godot_audio_sample_is_active((int64_t)p_playback->get_instance_id()) != 0;
 }
 
-void AudioDriverWeb::update_sample_playback(const Ref<AudioSamplePlayback> &p_playback, float p_pan, float p_volume_db, float p_pitch_scale) {
+void AudioDriverWeb::update_sample_playback(const Ref<AudioSamplePlayback> &p_playback, const StringName &p_bus, float p_pan, float p_volume_db, float p_pitch_scale) {
 	ERR_FAIL_COND_MSG(p_playback.is_null(), "Parameter p_playback is null.");
-	godot_audio_sample_update((int64_t)p_playback->get_instance_id(), p_pan, p_volume_db, p_pitch_scale);
+	godot_audio_sample_update(
+			(int64_t)p_playback->get_instance_id(),
+			AudioServer::get_singleton()->get_bus_index(p_bus),
+			p_pan,
+			p_volume_db,
+			p_pitch_scale);
+}
+
+void AudioDriverWeb::set_sample_bus_count(int p_count) {
+	godot_audio_sample_bus_set_count(p_count);
+}
+
+void AudioDriverWeb::remove_sample_bus(int p_index) {
+	godot_audio_sample_bus_remove(p_index);
+}
+
+void AudioDriverWeb::add_sample_bus(int p_at_pos) {
+	godot_audio_sample_bus_add(p_at_pos);
+}
+
+void AudioDriverWeb::move_sample_bus(int p_bus, int p_to_pos) {
+	godot_audio_sample_bus_move(p_bus, p_to_pos);
+}
+
+void AudioDriverWeb::set_sample_bus_volume_db(int p_bus, float p_volume_db) {
+	godot_audio_sample_bus_set_volume_db(p_bus, p_volume_db);
+}
+
+void AudioDriverWeb::set_sample_bus_solo(int p_bus, bool p_enable) {
+	godot_audio_sample_bus_set_solo(p_bus, p_enable);
+}
+
+void AudioDriverWeb::set_sample_bus_mute(int p_bus, bool p_enable) {
+	godot_audio_sample_bus_set_mute(p_bus, p_enable);
 }
 #endif
 
