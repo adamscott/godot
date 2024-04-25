@@ -237,7 +237,6 @@ void AudioDriverWeb::register_sample(const Ref<AudioSample> &p_sample) {
 			(int64_t)p_sample->stream->get_instance_id(),
 			(float *)data.ptrw(),
 			frames_total,
-			p_sample->num_channels,
 			p_sample->sample_rate,
 			loop_mode.utf8().get_data(),
 			p_sample->loop_begin,
