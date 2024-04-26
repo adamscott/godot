@@ -93,6 +93,7 @@ public:
 	virtual void unregister_sample(const Ref<AudioSample> &p_sample) override;
 	virtual void start_sample_playback(const Ref<AudioSamplePlayback> &p_playback) override;
 	virtual void stop_sample_playback(const Ref<AudioSamplePlayback> &p_playback) override;
+	virtual void set_sample_playback_pause(const Ref<AudioSamplePlayback> &p_playback, bool p_paused) override;
 	virtual bool is_sample_playback_active(const Ref<AudioSamplePlayback> &p_playback) override;
 	virtual void update_sample_playback(const Ref<AudioSamplePlayback> &p_playback, const StringName &p_bus, float p_pan = 0.0f, float p_volume_db = 0.0f, float p_pitch_scale = 0.0f) override;
 

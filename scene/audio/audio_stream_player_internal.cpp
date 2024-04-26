@@ -154,6 +154,7 @@ Ref<AudioStreamPlayback> AudioStreamPlayerInternal::play_basic() {
 				Ref<AudioSamplePlayback> sample_playback;
 				sample_playback.instantiate();
 				sample_playback->stream = stream;
+				print_line(vformat("sample_playback set: %s", sample_playback->get_instance_id()));
 				stream_playback->set_sample_playback(sample_playback);
 			}
 		}
@@ -168,7 +169,11 @@ Ref<AudioStreamPlayback> AudioStreamPlayerInternal::play_basic() {
 void AudioStreamPlayerInternal::set_stream_paused(bool p_pause) {
 	// TODO this does not have perfect recall, fix that maybe? If there are zero playbacks registered with the AudioServer, this bool isn't persisted.
 	for (Ref<AudioStreamPlayback> &playback : stream_playbacks) {
+		print_line(vformat("playback paused"));
 		AudioServer::get_singleton()->set_playback_paused(playback, p_pause);
+		if (_is_sample() && playback->get_sample_playback().is_valid()) {
+			AudioServer::get_singleton()->set_sample_playback_pause(playback->get_sample_playback(), p_pause);
+		}
 	}
 }
 

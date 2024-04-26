@@ -46,6 +46,9 @@ class AudioStream;
 class AudioSamplePlayback : public RefCounted {
 	GDCLASS(AudioSamplePlayback, RefCounted);
 
+protected:
+	static void _bind_methods();
+
 public:
 	enum PositionMode {
 		AUDIO_SAMPLE_PLAYBACK_POSITION_NONE,
@@ -60,6 +63,9 @@ public:
 	PositionMode position_mode = AUDIO_SAMPLE_PLAYBACK_POSITION_NONE;
 	Vector3 position;
 	StringName bus;
+
+	AudioSamplePlayback();
+	~AudioSamplePlayback();
 };
 
 class AudioStreamPlayback : public RefCounted {

@@ -173,6 +173,7 @@ void register_server_types() {
 
 	GDREGISTER_CLASS(AudioStream);
 	GDREGISTER_CLASS(AudioStreamPlayback);
+	GDREGISTER_CLASS(AudioSamplePlayback);
 	GDREGISTER_VIRTUAL_CLASS(AudioStreamPlaybackResampled);
 	GDREGISTER_CLASS(AudioStreamMicrophone);
 	GDREGISTER_CLASS(AudioStreamRandomizer);

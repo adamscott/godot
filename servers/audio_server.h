@@ -158,6 +158,7 @@ public:
 	virtual void unregister_sample(const Ref<AudioSample> &p_sample){};
 	virtual void start_sample_playback(const Ref<AudioSamplePlayback> &p_playback){};
 	virtual void stop_sample_playback(const Ref<AudioSamplePlayback> &p_playback){};
+	virtual void set_sample_playback_pause(const Ref<AudioSamplePlayback> &p_playback, bool p_paused){};
 	virtual bool is_sample_playback_active(const Ref<AudioSamplePlayback> &p_playback) { return false; };
 	virtual void update_sample_playback(const Ref<AudioSamplePlayback> &p_playback, const StringName &p_bus, float p_pan = 0.0f, float p_volume_db = 0.0f, float p_pitch_scale = 0.0f){};
 
@@ -497,6 +498,7 @@ public:
 	void unregister_sample(const Ref<AudioSample> &p_sample);
 	void start_sample_playback(const Ref<AudioSamplePlayback> &p_playback);
 	void stop_sample_playback(const Ref<AudioSamplePlayback> &p_playback);
+	void set_sample_playback_pause(const Ref<AudioSamplePlayback> &p_playback, bool p_paused);
 	bool is_sample_playback_active(const Ref<AudioSamplePlayback> &p_playback);
 	void update_sample_playback(const Ref<AudioSamplePlayback> &p_playback, const StringName &p_bus, float p_pan = 0.0f, float p_volume_db = 0.0f, float p_pitch_scale = 0.0f);
 #endif

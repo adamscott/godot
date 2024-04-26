@@ -1791,6 +1791,11 @@ void AudioServer::stop_sample_playback(const Ref<AudioSamplePlayback> &p_playbac
 	AudioDriver::get_singleton()->stop_sample_playback(p_playback);
 }
 
+void AudioServer::set_sample_playback_pause(const Ref<AudioSamplePlayback> &p_playback, bool p_paused) {
+	ERR_FAIL_COND_MSG(p_playback.is_null(), "Parameter p_playback is null.");
+	AudioDriver::get_singleton()->set_sample_playback_pause(p_playback, p_paused);
+}
+
 bool AudioServer::is_sample_playback_active(const Ref<AudioSamplePlayback> &p_playback) {
 	ERR_FAIL_COND_V_MSG(p_playback.is_null(), false, "Parameter p_playback is null.");
 	return AudioDriver::get_singleton()->is_sample_playback_active(p_playback);
