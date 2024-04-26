@@ -32,6 +32,7 @@
 
 #include "core/config/project_settings.h"
 #include "core/os/os.h"
+#include "servers/audio_server.h"
 
 void AudioStreamPlayback::start(double p_from_pos) {
 	if (GDVIRTUAL_CALL(_start, p_from_pos)) {
@@ -105,6 +106,14 @@ void AudioStreamPlayback::_bind_methods() {
 	GDVIRTUAL_BIND(_tag_used_streams);
 	GDVIRTUAL_BIND(_set_parameter, "name", "value");
 	GDVIRTUAL_BIND(_get_parameter, "name");
+}
+
+AudioStreamPlayback::AudioStreamPlayback() {}
+
+AudioStreamPlayback::~AudioStreamPlayback() {
+	if (get_sample_playback().is_valid() && likely(AudioServer::get_singleton() != nullptr)) {
+		AudioServer::get_singleton()->stop_sample_playback(get_sample_playback());
+	}
 }
 //////////////////////////////
 
