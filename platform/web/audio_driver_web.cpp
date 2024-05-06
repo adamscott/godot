@@ -271,14 +271,14 @@ void AudioDriverWeb::start_sample_playback(const Ref<AudioSamplePlayback> &p_pla
 	constexpr int real_max_channels = AudioServer::MAX_CHANNELS_PER_BUS * 2;
 	PackedFloat32Array volume;
 	volume.resize(real_max_channels);
-	for (int i = 0; i < real_max_channels; i += 1) {
+	for (int i = 0; i < real_max_channels; i += 2) {
 		if (p_playback->volume_vector.size() == 0) {
-			volume.set(i * 2, 0);
-			volume.set((i * 2) + 1, 0);
+			volume.set(i, 0);
+			volume.set(i + 1, 0);
 		} else {
-			const AudioFrame &frame = p_playback->volume_vector.get(i);
-			volume.set(i * 2, frame.left);
-			volume.set((i * 2) + 1, frame.right);
+			const AudioFrame &frame = p_playback->volume_vector.get(i / 2);
+			volume.set(i, frame.left);
+			volume.set(i + 1, frame.right);
 		}
 	}
 
