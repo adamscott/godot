@@ -49,7 +49,7 @@ extern void godot_audio_input_stop();
 
 // Samples
 extern int godot_audio_sample_stream_is_registered(const char *p_stream_object_id);
-extern void godot_audio_sample_register_stream(const char *p_stream_object_id, float *p_frames_buf, int p_frames_total, int p_sample_rate, const char *p_loop_mode, int p_loop_begin, int p_loop_end);
+extern void godot_audio_sample_register_stream(const char *p_stream_object_id, float *p_frames_buf, int p_frames_total, const char *p_loop_mode, int p_loop_begin, int p_loop_end);
 extern void godot_audio_sample_unregister_stream(const char *p_stream_object_id);
 extern void godot_audio_sample_start(const char *p_playback_object_id, const char *p_stream_object_id, int p_bus_index, float p_offset, float *p_volume_ptr, const char *p_position_mode);
 extern void godot_audio_sample_stop(const char *p_playback_object_id);

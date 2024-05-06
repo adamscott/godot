@@ -236,7 +236,6 @@ void AudioDriverWeb::register_sample(const Ref<AudioSample> &p_sample) {
 			itos(p_sample->stream->get_instance_id()).utf8().get_data(),
 			(float *)data.ptrw(),
 			frames_total,
-			p_sample->sample_rate,
 			loop_mode.utf8().get_data(),
 			p_sample->loop_begin,
 			p_sample->loop_end);
