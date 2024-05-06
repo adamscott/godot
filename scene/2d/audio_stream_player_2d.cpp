@@ -192,8 +192,6 @@ void AudioStreamPlayer2D::_update_panning() {
 		AudioServer::get_singleton()->set_playback_bus_exclusive(playback, actual_bus, volume_vector);
 		if (playback->get_is_sample() && playback->get_sample_playback().is_valid()) {
 			Ref<AudioSamplePlayback> sample_playback = playback->get_sample_playback();
-			// AudioServer::get_singleton()->update_sample_playback_pan(sample_playback, actual_bus, last_pan);
-			// AudioServer::get_singleton()->update_sample_playback_volume_db(sample_playback, actual_bus, Math::linear_to_db(last_multiplier));
 			AudioServer::get_singleton()->update_sample_playback_pitch_scale(sample_playback, internal->pitch_scale);
 		}
 	}
