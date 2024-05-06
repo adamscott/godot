@@ -239,7 +239,7 @@ class SampleNode {
 	}
 	set loopMode(val) {
 		this._loopMode = val;
-		this._source.loop = this._loopMode === "forward";
+		this._source.loop = val === "forward";
 	}
 
 	/** @type {number} */
@@ -1010,7 +1010,7 @@ const _GodotAudio = {
 			offset,
 			volume,
 			positionMode,
-			playbackRate: 1
+			playbackRate: 1,
 		};
 		GodotAudio.start_sample(playbackObjectId, streamObjectId, busIndex, startOptions);
 	},
