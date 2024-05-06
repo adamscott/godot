@@ -84,41 +84,41 @@ const GodotDisplayVK = {
 
 			let elem = GodotDisplayVK.textinput;
 			switch (type) {
-			case 0: // KEYBOARD_TYPE_DEFAULT
-				elem.type = 'text';
-				elem.inputmode = '';
-				break;
-			case 1: // KEYBOARD_TYPE_MULTILINE
-				elem = GodotDisplayVK.textarea;
-				break;
-			case 2: // KEYBOARD_TYPE_NUMBER
-				elem.type = 'text';
-				elem.inputmode = 'numeric';
-				break;
-			case 3: // KEYBOARD_TYPE_NUMBER_DECIMAL
-				elem.type = 'text';
-				elem.inputmode = 'decimal';
-				break;
-			case 4: // KEYBOARD_TYPE_PHONE
-				elem.type = 'tel';
-				elem.inputmode = '';
-				break;
-			case 5: // KEYBOARD_TYPE_EMAIL_ADDRESS
-				elem.type = 'email';
-				elem.inputmode = '';
-				break;
-			case 6: // KEYBOARD_TYPE_PASSWORD
-				elem.type = 'password';
-				elem.inputmode = '';
-				break;
-			case 7: // KEYBOARD_TYPE_URL
-				elem.type = 'url';
-				elem.inputmode = '';
-				break;
-			default:
-				elem.type = 'text';
-				elem.inputmode = '';
-				break;
+				case 0: // KEYBOARD_TYPE_DEFAULT
+					elem.type = 'text';
+					elem.inputmode = '';
+					break;
+				case 1: // KEYBOARD_TYPE_MULTILINE
+					elem = GodotDisplayVK.textarea;
+					break;
+				case 2: // KEYBOARD_TYPE_NUMBER
+					elem.type = 'text';
+					elem.inputmode = 'numeric';
+					break;
+				case 3: // KEYBOARD_TYPE_NUMBER_DECIMAL
+					elem.type = 'text';
+					elem.inputmode = 'decimal';
+					break;
+				case 4: // KEYBOARD_TYPE_PHONE
+					elem.type = 'tel';
+					elem.inputmode = '';
+					break;
+				case 5: // KEYBOARD_TYPE_EMAIL_ADDRESS
+					elem.type = 'email';
+					elem.inputmode = '';
+					break;
+				case 6: // KEYBOARD_TYPE_PASSWORD
+					elem.type = 'password';
+					elem.inputmode = '';
+					break;
+				case 7: // KEYBOARD_TYPE_URL
+					elem.type = 'url';
+					elem.inputmode = '';
+					break;
+				default:
+					elem.type = 'text';
+					elem.inputmode = '';
+					break;
 			}
 
 			elem.readonly = false;
@@ -738,18 +738,18 @@ const GodotDisplay = {
 		}, false);
 		GodotDisplayScreen.hidpi = !!p_hidpi;
 		switch (GodotConfig.canvas_resize_policy) {
-		case 0: // None
-			GodotDisplayScreen.desired_size = [canvas.width, canvas.height];
-			break;
-		case 1: // Project
-			GodotDisplayScreen.desired_size = [p_width, p_height];
-			break;
-		default: // Full window
-			// Ensure we display in the right place, the size will be handled by updateSize
-			canvas.style.position = 'absolute';
-			canvas.style.top = 0;
-			canvas.style.left = 0;
-			break;
+			case 0: // None
+				GodotDisplayScreen.desired_size = [canvas.width, canvas.height];
+				break;
+			case 1: // Project
+				GodotDisplayScreen.desired_size = [p_width, p_height];
+				break;
+			default: // Full window
+				// Ensure we display in the right place, the size will be handled by updateSize
+				canvas.style.position = 'absolute';
+				canvas.style.top = 0;
+				canvas.style.left = 0;
+				break;
 		}
 		GodotDisplayScreen.updateSize();
 		if (p_fullscreen) {

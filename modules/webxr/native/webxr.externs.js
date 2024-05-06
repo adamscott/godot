@@ -10,7 +10,7 @@ Navigator.prototype.xr;
 /**
  * @constructor
  */
-function XRSessionInit() {};
+function XRSessionInit() { };
 
 /**
  * @type {Array<string>}
@@ -25,7 +25,7 @@ XRSessionInit.prototype.optionalFeatures;
 /**
  * @constructor
  */
-function XR() {}
+function XR() { }
 
 /**
  * @type {?function (Event)}
@@ -37,7 +37,7 @@ XR.prototype.ondevicechanged;
  *
  * @return {!Promise<boolean>}
  */
-XR.prototype.isSessionSupported = function(mode) {};
+XR.prototype.isSessionSupported = function (mode) { };
 
 /**
  * @param {string} mode
@@ -45,12 +45,12 @@ XR.prototype.isSessionSupported = function(mode) {};
  *
  * @return {!Promise<XRSession>}
  */
-XR.prototype.requestSession = function(mode, options) {};
+XR.prototype.requestSession = function (mode, options) { };
 
 /**
  * @constructor
  */
-function XRSession() {}
+function XRSession() { }
 
 /**
  * @type {XRRenderState}
@@ -126,36 +126,36 @@ XRSession.prototype.onvisibilitychange;
  * @param {XRRenderStateInit} state
  * @return {void}
  */
-XRSession.prototype.updateRenderState = function (state) {};
+XRSession.prototype.updateRenderState = function (state) { };
 
 /**
  * @param {XRFrameRequestCallback} callback
  * @return {number}
  */
-XRSession.prototype.requestAnimationFrame = function (callback) {};
+XRSession.prototype.requestAnimationFrame = function (callback) { };
 
 /**
  * @param {number} handle
  * @return {void}
  */
-XRSession.prototype.cancelAnimationFrame = function (handle) {};
+XRSession.prototype.cancelAnimationFrame = function (handle) { };
 
 /**
  * @return {Promise<void>}
  */
-XRSession.prototype.end = function () {};
+XRSession.prototype.end = function () { };
 
 /**
  * @param {string} referenceSpaceType
  * @return {Promise<XRReferenceSpace>}
  */
-XRSession.prototype.requestReferenceSpace = function (referenceSpaceType) {};
+XRSession.prototype.requestReferenceSpace = function (referenceSpaceType) { };
 
 /**
  * @param {number} rate
  * @return {Promise<undefined>}
  */
-XRSession.prototype.updateTargetFrameRate = function (rate) {};
+XRSession.prototype.updateTargetFrameRate = function (rate) { };
 
 /**
  * @typedef {function(number, XRFrame): undefined}
@@ -165,7 +165,7 @@ var XRFrameRequestCallback;
 /**
  * @constructor
  */
-function XRRenderStateInit() {}
+function XRRenderStateInit() { }
 
 /**
  * @type {number}
@@ -190,7 +190,7 @@ XRRenderStateInit.prototype.baseLayer;
 /**
  * @constructor
  */
-function XRRenderState() {};
+function XRRenderState() { };
 
 /**
  * @type {number}
@@ -215,7 +215,7 @@ XRRenderState.prototype.baseLayer;
 /**
  * @constructor
  */
-function XRFrame() {}
+function XRFrame() { }
 
 /**
  * @type {XRSession}
@@ -226,14 +226,14 @@ XRFrame.prototype.session;
  * @param {XRReferenceSpace} referenceSpace
  * @return {?XRViewerPose}
  */
-XRFrame.prototype.getViewerPose = function (referenceSpace) {};
+XRFrame.prototype.getViewerPose = function (referenceSpace) { };
 
 /**
  * @param {XRSpace} space
  * @param {XRSpace} baseSpace
  * @return {XRPose}
  */
-XRFrame.prototype.getPose = function (space, baseSpace) {};
+XRFrame.prototype.getPose = function (space, baseSpace) { };
 
 /**
  * @param {Array<XRSpace>} spaces
@@ -241,19 +241,19 @@ XRFrame.prototype.getPose = function (space, baseSpace) {};
  * @param {Float32Array} transforms
  * @return {boolean}
  */
-XRFrame.prototype.fillPoses = function (spaces, baseSpace, transforms) {};
+XRFrame.prototype.fillPoses = function (spaces, baseSpace, transforms) { };
 
 /**
  * @param {Array<XRJointSpace>} jointSpaces
  * @param {Float32Array} radii
  * @return {boolean}
  */
-XRFrame.prototype.fillJointRadii = function (jointSpaces, radii) {};
+XRFrame.prototype.fillJointRadii = function (jointSpaces, radii) { };
 
 /**
  * @constructor
  */
-function XRReferenceSpace() {};
+function XRReferenceSpace() { };
 
 /**
  * @type {Array<DOMPointReadOnly>}
@@ -264,7 +264,7 @@ XRReferenceSpace.prototype.boundsGeometry;
  * @param {XRRigidTransform} originOffset
  * @return {XRReferenceSpace}
  */
-XRReferenceSpace.prototype.getOffsetReferenceSpace = function(originOffset) {};
+XRReferenceSpace.prototype.getOffsetReferenceSpace = function (originOffset) { };
 
 /**
  * @type {?function (Event)}
@@ -274,7 +274,7 @@ XRReferenceSpace.prototype.onreset;
 /**
  * @constructor
  */
-function XRRigidTransform() {};
+function XRRigidTransform() { };
 
 /**
  * @type {DOMPointReadOnly}
@@ -299,7 +299,7 @@ XRRigidTransform.prototype.inverse;
 /**
  * @constructor
  */
-function XRView() {}
+function XRView() { }
 
 /**
  * @type {string}
@@ -319,7 +319,7 @@ XRView.prototype.transform;
 /**
  * @constructor
  */
-function XRViewerPose() {}
+function XRViewerPose() { }
 
 /**
  * @type {Array<XRView>}
@@ -329,7 +329,7 @@ XRViewerPose.prototype.views;
 /**
  * @constructor
  */
-function XRViewport() {}
+function XRViewport() { }
 
 /**
  * @type {number}
@@ -354,7 +354,7 @@ XRViewport.prototype.height;
 /**
  * @constructor
  */
-function XRWebGLLayerInit() {};
+function XRWebGLLayerInit() { };
 
 /**
  * @type {boolean}
@@ -398,7 +398,7 @@ XRWebGLLayerInit.prototype.framebufferScaleFactor;
  * @param {WebGLRenderContext|WebGL2RenderingContext} ctx
  * @param {?XRWebGLLayerInit} options
  */
-function XRWebGLLayer(session, ctx, options) {}
+function XRWebGLLayer(session, ctx, options) { }
 
 /**
  * @type {boolean}
@@ -429,28 +429,28 @@ XRWebGLLayer.prototype.framebuffer;
  * @param {XRView} view
  * @return {?XRViewport}
  */
-XRWebGLLayer.prototype.getViewport = function(view) {};
+XRWebGLLayer.prototype.getViewport = function (view) { };
 
 /**
  * @param {XRSession} session
  * @return {number}
  */
-XRWebGLLayer.prototype.getNativeFramebufferScaleFactor = function (session) {};
+XRWebGLLayer.prototype.getNativeFramebufferScaleFactor = function (session) { };
 
 /**
  * @constructor
  */
-function WebGLRenderingContextBase() {};
+function WebGLRenderingContextBase() { };
 
 /**
  * @return {Promise<void>}
  */
-WebGLRenderingContextBase.prototype.makeXRCompatible = function () {};
+WebGLRenderingContextBase.prototype.makeXRCompatible = function () { };
 
 /**
  * @constructor
  */
-function XRInputSourcesChangeEvent() {};
+function XRInputSourcesChangeEvent() { };
 
 /**
  * @type {Array<XRInputSource>}
@@ -465,7 +465,7 @@ XRInputSourcesChangeEvent.prototype.removed;
 /**
  * @constructor
  */
-function XRInputSourceEvent() {};
+function XRInputSourceEvent() { };
 
 /**
  * @type {XRFrame}
@@ -480,7 +480,7 @@ XRInputSourceEvent.prototype.inputSource;
 /**
  * @constructor
  */
-function XRInputSource() {};
+function XRInputSource() { };
 
 /**
  * @type {Gamepad}
@@ -520,7 +520,7 @@ XRInputSource.prototype.hand;
 /**
  * @constructor
  */
-function XRHand() {};
+function XRHand() { };
 
 /**
  * Note: In fact, XRHand acts like a Map<string, XRJointSpace>, but I don't know
@@ -528,7 +528,7 @@ function XRHand() {};
  *
  * @return {Array<XRJointSpace>}
  */
-XRHand.prototype.values = function () {};
+XRHand.prototype.values = function () { };
 
 /**
  * @type {number}
@@ -539,18 +539,18 @@ XRHand.prototype.size;
  * @param {string} key
  * @return {XRJointSpace}
  */
-XRHand.prototype.get = function (key) {};
+XRHand.prototype.get = function (key) { };
 
 /**
  * @constructor
  */
-function XRSpace() {};
+function XRSpace() { };
 
 /**
  * @constructor
  * @extends {XRSpace}
  */
-function XRJointSpace() {};
+function XRJointSpace() { };
 
 /**
  * @type {string}
@@ -560,7 +560,7 @@ XRJointSpace.prototype.jointName;
 /**
  * @constructor
  */
-function XRPose() {};
+function XRPose() { };
 
 /**
  * @type {XRRigidTransform}
@@ -579,12 +579,12 @@ XRPose.prototype.emulatedPosition;
 /**
  * @constructor XRLayer
  */
-function XRLayer() {}
+function XRLayer() { }
 
 /**
  * @constructor XRLayerEventInit
  */
-function XRLayerEventInit() {}
+function XRLayerEventInit() { }
 
 /**
  * @type {XRLayer}
@@ -597,7 +597,7 @@ XRLayerEventInit.prototype.layer;
  * @param {string} type
  * @param {XRLayerEventInit} init
  */
-function XRLayerEvent(type, init) {};
+function XRLayerEvent(type, init) { };
 
 /**
  * @type {XRLayer}
@@ -608,7 +608,7 @@ XRLayerEvent.prototype.layer;
  * @constructor XRCompositionLayer
  * @extends {XRLayer}
  */
-function XRCompositionLayer() {};
+function XRCompositionLayer() { };
 
 /**
  * @type {string}
@@ -648,13 +648,13 @@ XRCompositionLayer.prototype.needsRedraw;
 /**
  * @return {void}
  */
-XRCompositionLayer.prototype.destroy = function () {};
+XRCompositionLayer.prototype.destroy = function () { };
 
 /**
  * @constructor XRProjectionLayer
  * @extends {XRCompositionLayer}
  */
-function XRProjectionLayer() {}
+function XRProjectionLayer() { }
 
 /**
  * @type {number}
@@ -690,7 +690,7 @@ XRProjectionLayer.prototype.deltaPose;
  * @constructor XRQuadLayer
  * @extends {XRCompositionLayer}
  */
-function XRQuadLayer() {}
+function XRQuadLayer() { }
 
 /**
  * @type {XRSpace}
@@ -721,7 +721,7 @@ XRQuadLayer.prototype.onredraw;
  * @constructor XRCylinderLayer
  * @extends {XRCompositionLayer}
  */
-function XRCylinderLayer() {}
+function XRCylinderLayer() { }
 
 /**
  * @type {XRSpace}
@@ -757,7 +757,7 @@ XRCylinderLayer.prototype.onredraw;
  * @constructor XREquirectLayer
  * @extends {XRCompositionLayer}
  */
-function XREquirectLayer() {}
+function XREquirectLayer() { }
 
 /**
  * @type {XRSpace}
@@ -798,7 +798,7 @@ XREquirectLayer.prototype.onredraw;
  * @constructor XRCubeLayer
  * @extends {XRCompositionLayer}
  */
-function XRCubeLayer() {}
+function XRCubeLayer() { }
 
 /**
  * @type {XRSpace}
@@ -818,7 +818,7 @@ XRCubeLayer.prototype.onredraw;
 /**
  * @constructor XRSubImage
  */
-function XRSubImage() {}
+function XRSubImage() { }
 
 /**
  * @type {XRViewport}
@@ -829,7 +829,7 @@ XRSubImage.prototype.viewport;
  * @constructor XRWebGLSubImage
  * @extends {XRSubImage}
  */
-function XRWebGLSubImage () {}
+function XRWebGLSubImage() { }
 
 /**
  * @type {WebGLTexture}
@@ -885,7 +885,7 @@ XRWebGLSubImage.prototype.motionVectorTextureHeight;
 /**
  * @constructor XRProjectionLayerInit
  */
-function XRProjectionLayerInit() {}
+function XRProjectionLayerInit() { }
 
 /**
  * @type {string}
@@ -910,7 +910,7 @@ XRProjectionLayerInit.prototype.scaleFactor;
 /**
  * @constructor XRLayerInit
  */
-function XRLayerInit() {}
+function XRLayerInit() { }
 
 /**
  * @type {XRSpace}
@@ -956,7 +956,7 @@ XRLayerInit.prototype.isStatic;
  * @constructor XRQuadLayerInit
  * @extends {XRLayerInit}
  */
-function XRQuadLayerInit() {}
+function XRQuadLayerInit() { }
 
 /**
  * @type {string}
@@ -982,7 +982,7 @@ XRQuadLayerInit.prototype.height;
  * @constructor XRCylinderLayerInit
  * @extends {XRLayerInit}
  */
-function XRCylinderLayerInit() {}
+function XRCylinderLayerInit() { }
 
 /**
  * @type {string}
@@ -1013,7 +1013,7 @@ XRCylinderLayerInit.prototype.aspectRatio;
  * @constructor XREquirectLayerInit
  * @extends {XRLayerInit}
  */
-function XREquirectLayerInit() {}
+function XREquirectLayerInit() { }
 
 /**
  * @type {string}
@@ -1049,7 +1049,7 @@ XREquirectLayerInit.prototype.lowerVerticalAngle;
  * @constructor XRCubeLayerInit
  * @extends {XRLayerInit}
  */
-function XRCubeLayerInit() {}
+function XRCubeLayerInit() { }
 
 /**
  * @type {DOMPointReadOnly}
@@ -1062,7 +1062,7 @@ XRCubeLayerInit.prototype.orientation;
  * @param {XRSession} session
  * @param {WebGLRenderContext|WebGL2RenderingContext} context
  */
-function XRWebGLBinding(session, context) {}
+function XRWebGLBinding(session, context) { }
 
 /**
  * @type {number}
@@ -1078,31 +1078,31 @@ XRWebGLBinding.prototype.usesDepthValues;
  * @param {XRProjectionLayerInit} init
  * @return {XRProjectionLayer}
  */
-XRWebGLBinding.prototype.createProjectionLayer = function (init) {};
+XRWebGLBinding.prototype.createProjectionLayer = function (init) { };
 
 /**
  * @param {XRQuadLayerInit} init
  * @return {XRQuadLayer}
  */
-XRWebGLBinding.prototype.createQuadLayer = function (init) {};
+XRWebGLBinding.prototype.createQuadLayer = function (init) { };
 
 /**
  * @param {XRCylinderLayerInit} init
  * @return {XRCylinderLayer}
  */
-XRWebGLBinding.prototype.createCylinderLayer = function (init) {};
+XRWebGLBinding.prototype.createCylinderLayer = function (init) { };
 
 /**
  * @param {XREquirectLayerInit} init
  * @return {XREquirectLayer}
  */
-XRWebGLBinding.prototype.createEquirectLayer = function (init) {};
+XRWebGLBinding.prototype.createEquirectLayer = function (init) { };
 
 /**
  * @param {XRCubeLayerInit} init
  * @return {XRCubeLayer}
  */
-XRWebGLBinding.prototype.createCubeLayer = function (init) {};
+XRWebGLBinding.prototype.createCubeLayer = function (init) { };
 
 /**
  * @param {XRCompositionLayer} layer
@@ -1110,19 +1110,19 @@ XRWebGLBinding.prototype.createCubeLayer = function (init) {};
  * @param {string} eye
  * @return {XRWebGLSubImage}
  */
-XRWebGLBinding.prototype.getSubImage = function (layer, frame, eye) {};
+XRWebGLBinding.prototype.getSubImage = function (layer, frame, eye) { };
 
 /**
  * @param {XRProjectionLayer} layer
  * @param {XRView} view
  * @return {XRWebGLSubImage}
  */
-XRWebGLBinding.prototype.getViewSubImage = function (layer, view) {};
+XRWebGLBinding.prototype.getViewSubImage = function (layer, view) { };
 
 /**
  * @constructor XRMediaLayerInit
  */
-function XRMediaLayerInit() {}
+function XRMediaLayerInit() { }
 
 /**
  * @type {XRSpace}
@@ -1143,7 +1143,7 @@ XRMediaLayerInit.prototype.invertStereo;
  * @constructor XRMediaQuadLayerInit
  * @extends {XRMediaLayerInit}
  */
-function XRMediaQuadLayerInit() {}
+function XRMediaQuadLayerInit() { }
 
 /**
  * @type {XRRigidTransform}
@@ -1164,7 +1164,7 @@ XRMediaQuadLayerInit.prototype.height;
  * @constructor XRMediaCylinderLayerInit
  * @extends {XRMediaLayerInit}
  */
-function XRMediaCylinderLayerInit() {}
+function XRMediaCylinderLayerInit() { }
 
 /**
  * @type {XRRigidTransform}
@@ -1190,7 +1190,7 @@ XRMediaCylinderLayerInit.prototype.aspectRatio;
  * @constructor XRMediaEquirectLayerInit
  * @extends {XRMediaLayerInit}
  */
-function XRMediaEquirectLayerInit() {}
+function XRMediaEquirectLayerInit() { }
 
 /**
  * @type {XRRigidTransform}
@@ -1222,28 +1222,28 @@ XRMediaEquirectLayerInit.prototype.lowerVerticalAngle;
  *
  * @param {XRSession} session
  */
-function XRMediaBinding(session) {}
+function XRMediaBinding(session) { }
 
 /**
  * @param {HTMLVideoElement} video
  * @param {XRMediaQuadLayerInit} init
  * @return {XRQuadLayer}
  */
-XRMediaBinding.prototype.createQuadLayer = function(video, init) {};
+XRMediaBinding.prototype.createQuadLayer = function (video, init) { };
 
 /**
  * @param {HTMLVideoElement} video
  * @param {XRMediaCylinderLayerInit} init
  * @return {XRCylinderLayer}
  */
-XRMediaBinding.prototype.createCylinderLayer = function(video, init) {};
+XRMediaBinding.prototype.createCylinderLayer = function (video, init) { };
 
 /**
  * @param {HTMLVideoElement} video
  * @param {XRMediaEquirectLayerInit} init
  * @return {XREquirectLayer}
  */
-XRMediaBinding.prototype.createEquirectLayer = function(video, init) {};
+XRMediaBinding.prototype.createEquirectLayer = function (video, init) { };
 
 /**
  * @type {Array<XRLayer>}

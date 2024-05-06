@@ -78,20 +78,20 @@ const GodotJSWrapper = {
 
 		variant2js: function (type, val) {
 			switch (type) {
-			case 0:
-				return null;
-			case 1:
-				return !!GodotRuntime.getHeapValue(val, 'i64');
-			case 2:
-				return GodotRuntime.getHeapValue(val, 'i64');
-			case 3:
-				return GodotRuntime.getHeapValue(val, 'double');
-			case 4:
-				return GodotRuntime.parseString(GodotRuntime.getHeapValue(val, '*'));
-			case 24: // OBJECT
-				return GodotJSWrapper.get_proxied_value(GodotRuntime.getHeapValue(val, 'i64'));
-			default:
-				return undefined;
+				case 0:
+					return null;
+				case 1:
+					return !!GodotRuntime.getHeapValue(val, 'i64');
+				case 2:
+					return GodotRuntime.getHeapValue(val, 'i64');
+				case 3:
+					return GodotRuntime.getHeapValue(val, 'double');
+				case 4:
+					return GodotRuntime.parseString(GodotRuntime.getHeapValue(val, '*'));
+				case 24: // OBJECT
+					return GodotJSWrapper.get_proxied_value(GodotRuntime.getHeapValue(val, 'i64'));
+				default:
+					return undefined;
 			}
 		},
 
@@ -319,35 +319,35 @@ const GodotEval = {
 		}
 
 		switch (typeof eval_ret) {
-		case 'boolean':
-			GodotRuntime.setHeapValue(p_union_ptr, eval_ret, 'i32');
-			return 1; // BOOL
+			case 'boolean':
+				GodotRuntime.setHeapValue(p_union_ptr, eval_ret, 'i32');
+				return 1; // BOOL
 
-		case 'number':
-			GodotRuntime.setHeapValue(p_union_ptr, eval_ret, 'double');
-			return 3; // FLOAT
+			case 'number':
+				GodotRuntime.setHeapValue(p_union_ptr, eval_ret, 'double');
+				return 3; // FLOAT
 
-		case 'string':
-			GodotRuntime.setHeapValue(p_union_ptr, GodotRuntime.allocString(eval_ret), '*');
-			return 4; // STRING
+			case 'string':
+				GodotRuntime.setHeapValue(p_union_ptr, GodotRuntime.allocString(eval_ret), '*');
+				return 4; // STRING
 
-		case 'object':
-			if (eval_ret === null) {
+			case 'object':
+				if (eval_ret === null) {
+					break;
+				}
+
+				if (ArrayBuffer.isView(eval_ret) && !(eval_ret instanceof Uint8Array)) {
+					eval_ret = new Uint8Array(eval_ret.buffer);
+				} else if (eval_ret instanceof ArrayBuffer) {
+					eval_ret = new Uint8Array(eval_ret);
+				}
+				if (eval_ret instanceof Uint8Array) {
+					const func = GodotRuntime.get_func(p_callback);
+					const bytes_ptr = func(p_byte_arr, p_byte_arr_write, eval_ret.length);
+					HEAPU8.set(eval_ret, bytes_ptr);
+					return 29; // PACKED_BYTE_ARRAY
+				}
 				break;
-			}
-
-			if (ArrayBuffer.isView(eval_ret) && !(eval_ret instanceof Uint8Array)) {
-				eval_ret = new Uint8Array(eval_ret.buffer);
-			} else if (eval_ret instanceof ArrayBuffer) {
-				eval_ret = new Uint8Array(eval_ret);
-			}
-			if (eval_ret instanceof Uint8Array) {
-				const func = GodotRuntime.get_func(p_callback);
-				const bytes_ptr = func(p_byte_arr, p_byte_arr_write, eval_ret.length);
-				HEAPU8.set(eval_ret, bytes_ptr);
-				return 29; // PACKED_BYTE_ARRAY
-			}
-			break;
 
 			// no default
 		}

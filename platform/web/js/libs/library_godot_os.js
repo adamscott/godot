@@ -233,7 +233,7 @@ const GodotOS = {
 		'GodotOS._fs_sync_promise = Promise.resolve();',
 	].join(''),
 	$GodotOS: {
-		request_quit: function () {},
+		request_quit: function () { },
 		_async_cbs: [],
 		_fs_sync_promise: null,
 

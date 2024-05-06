@@ -99,15 +99,15 @@ const GodotRTCDataChannel = {
 		}
 
 		switch (ref.readyState) {
-		case 'connecting':
-			return 0;
-		case 'open':
-			return 1;
-		case 'closing':
-			return 2;
-		case 'closed':
-		default:
-			return 3;
+			case 'connecting':
+				return 0;
+			case 'open':
+				return 1;
+			case 'closing':
+				return 2;
+			case 'closed':
+			default:
+				return 3;
 		}
 	},
 

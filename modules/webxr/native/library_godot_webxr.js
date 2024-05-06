@@ -509,19 +509,19 @@ const GodotWebXR = {
 		// Target ray mode.
 		let target_ray_mode = 0;
 		switch (input_source.targetRayMode) {
-		case 'gaze':
-			target_ray_mode = 1;
-			break;
+			case 'gaze':
+				target_ray_mode = 1;
+				break;
 
-		case 'tracked-pointer':
-			target_ray_mode = 2;
-			break;
+			case 'tracked-pointer':
+				target_ray_mode = 2;
+				break;
 
-		case 'screen':
-			target_ray_mode = 3;
-			break;
+			case 'screen':
+				target_ray_mode = 3;
+				break;
 
-		default:
+			default:
 		}
 		GodotRuntime.setHeapValue(r_target_ray_mode, target_ray_mode, 'i32');
 
