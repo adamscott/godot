@@ -65,12 +65,6 @@ void AudioStreamPlayer::set_volume_db(float p_volume) {
 	Vector<AudioFrame> volume_vector = _get_volume_vector();
 	for (Ref<AudioStreamPlayback> &playback : internal->stream_playbacks) {
 		AudioServer::get_singleton()->set_playback_all_bus_volumes_linear(playback, volume_vector);
-		// if (playback->get_is_sample()) {
-		// 	Ref<AudioSamplePlayback> playback_sample = playback->get_sample_playback();
-		// 	if (playback_sample.is_valid()) {
-		// 		AudioServer::get_singleton()->update_sample_playback_volume_db(playback_sample, p_volume);
-		// 	}
-		// }
 	}
 }
 
