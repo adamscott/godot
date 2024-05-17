@@ -142,7 +142,6 @@ Ref<AudioStreamPlayback> AudioStreamPlayerInternal::play_basic() {
 	}
 
 	// Sample handling.
-
 	if (_is_sample() && stream->can_be_sampled()) {
 		stream_playback->set_is_sample(true);
 		if (stream_playback->get_is_sample()) {
