@@ -585,20 +585,19 @@ bool EditorExportPlatformWeb::poll_export() {
 		}
 	}
 
-	int prev = menu_options;
-	menu_options = preset.is_valid();
 	HTTPServerState prev_server_state = server_state;
 	server_state = HTTP_SERVER_STATE_OFF;
+	can_export = false;
 	if (server->is_listening()) {
-		if (preset.is_null() || menu_options == 0) {
+		if (preset.is_null()) {
 			server->stop();
 		} else {
 			server_state = HTTP_SERVER_STATE_ON;
-			menu_options += 1;
+			can_export = true;
 		}
 	}
 
-	return server_state != prev_server_state || menu_options != prev;
+	return server_state != prev_server_state;
 }
 
 Ref<ImageTexture> EditorExportPlatformWeb::get_option_icon(int p_index) const {
@@ -629,6 +628,9 @@ Ref<ImageTexture> EditorExportPlatformWeb::get_option_icon(int p_index) const {
 }
 
 int EditorExportPlatformWeb::get_options_count() const {
+	if (!can_export) {
+		return 0;
+	}
 	if (server_state == HTTP_SERVER_STATE_ON) {
 		return 3;
 	}
