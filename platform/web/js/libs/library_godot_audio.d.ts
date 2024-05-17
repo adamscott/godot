@@ -1,5 +1,5 @@
-export type PositionMode = "none" | "2D" | "3D";
-export type LoopMode = "disabled" | "forward" | "backward" | "pingpong";
+export type PositionMode = "none"|"2D"|"3D";
+export type LoopMode = "disabled"|"forward"|"backward"|"pingpong";
 
 interface SampleParams {
 	id: string
@@ -30,10 +30,12 @@ export declare class Sample {
 	loopEnd: number;
 
 	static getSample(id: string): Sample;
-	static getSampleOrNull(id: string): Sample | null;
+	static getSampleOrNull(id: string): Sample|null;
+	static create(params: SampleParams, options?: SampleOptions): Sample;
 
 	constructor(params: SampleParams, options?: SampleOptions);
 
+	clear(): void;
 	_duplicateAudioBuffer(): Sample;
 }
 
@@ -51,6 +53,8 @@ export declare class SampleNodeBus {
 	get inputNode(): AudioNode;
 	get outputNode(): AudioNode;
 
+	static create(bus: Bus): SampleNodeBus;
+
 	constructor(bus: Bus);
 
 	setVolume(volume: Float32Array): void;
@@ -59,17 +63,17 @@ export declare class SampleNodeBus {
 
 interface SampleNodeParams {
 	id: string,
-	streamObjectId: string,
-	busIndex: number,
+			streamObjectId: string,
+			busIndex: number,
 }
 
 interface SampleNodeOptions {
 	offset: number,
-	positionMode: PositionMode,
-	playbackRate: number,
-	startTime: number,
-	loopMode: LoopMode,
-	volume: Float32Array,
+			positionMode: PositionMode,
+			playbackRate: number,
+			startTime: number,
+			loopMode: LoopMode,
+			volume: Float32Array,
 }
 
 export declare class SampleNode {
@@ -95,9 +99,10 @@ export declare class SampleNode {
 	get sample(): Sample;
 
 	static getSampleNode(id: string): SampleNode;
-	static getSampleNodeOrNull(id: string): SampleNode | null;
+	static getSampleNodeOrNull(id: string): SampleNode|null;
 	static stopSampleNode(id: string): void;
 	static pauseSampleNode(id: void, enable: boolean): void;
+	static create(params: SampleNodeParams, options?: SampleNodeOptions): SampleNode;
 
 	constructor(params: SampleNodeParams, options?: SampleNodeOptions);
 
@@ -113,7 +118,7 @@ export declare class SampleNode {
 
 export declare class Bus {
 	static _buses: Bus[];
-	static _busSolo: Bus | null;
+	static _busSolo: Bus|null;
 
 	_gainNode: GainNode;
 	_soloNode: GainNode;
@@ -134,6 +139,7 @@ export declare class Bus {
 	static get count(): number;
 	static set count(val: number);
 	static addAt(index: number): void;
+	static create(): Bus;
 
 	constructor();
 
