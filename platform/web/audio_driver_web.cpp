@@ -270,23 +270,23 @@ void AudioDriverWeb::start_sample_playback(const Ref<AudioSamplePlayback> &p_pla
 	constexpr int real_max_channels = AudioServer::MAX_CHANNELS_PER_BUS * 2;
 	PackedFloat32Array volume;
 	volume.resize(real_max_channels);
+	float *volume_ptrw = volume.ptrw();
 	for (int i = 0; i < real_max_channels; i += 2) {
-		if (p_playback->volume_vector.size() == 0) {
-			volume.set(i, 0);
-			volume.set(i + 1, 0);
+		if (p_playback->volume_vector.is_empty()) {
+			volume_ptrw[i] = 0;
+			volume_ptrw[i + 1] = 0;
 		} else {
-			const AudioFrame &frame = p_playback->volume_vector.get(i / 2);
-			volume.set(i, frame.left);
-			volume.set(i + 1, frame.right);
+			const AudioFrame &frame = p_playback->volume_vector[i / 2];
+			volume_ptrw[i] = frame.left;
+			volume_ptrw[i + 1] = frame.right;
 		}
 	}
-
 	godot_audio_sample_start(
 			itos(p_playback->get_instance_id()).utf8().get_data(),
 			itos(p_playback->stream->get_instance_id()).utf8().get_data(),
 			AudioServer::get_singleton()->get_bus_index(p_playback->bus),
 			p_playback->offset,
-			volume.ptrw(),
+			volume_ptrw,
 			position_mode.utf8().get_data());
 }
 
@@ -319,27 +319,27 @@ void AudioDriverWeb::set_sample_playback_bus_volumes_linear(const Ref<AudioSampl
 
 	PackedInt32Array buses;
 	buses.resize(p_bus_volumes.size());
+	int32_t *buses_ptrw = buses.ptrw();
 	PackedFloat32Array values;
 	values.resize(p_bus_volumes.size() * AudioServer::MAX_CHANNELS_PER_BUS * 2);
-
+	float *values_ptrw = values.ptrw();
 	int idx = 0;
 	for (KeyValue<StringName, Vector<AudioFrame>> pair : p_bus_volumes) {
 		int bus_index = AudioServer::get_singleton()->get_bus_index(pair.key);
-		buses.set(idx, bus_index);
+		buses_ptrw[idx] = bus_index;
 		ERR_FAIL_COND(pair.value.size() != AudioServer::MAX_CHANNELS_PER_BUS);
 		for (int i = 0; i < real_max_channels; i += 2) {
-			const AudioFrame &frame = pair.value.get(i / 2);
-			values.set((idx * real_max_channels) + i, frame.left);
-			values.set((idx * real_max_channels) + i + 1, frame.right);
+			const AudioFrame &frame = pair.value[i / 2];
+			values_ptrw[(idx * real_max_channels) + i] = frame.left;
+			values_ptrw[(idx * real_max_channels) + i + 1] = frame.right;
 		}
 		idx++;
 	}
-
 	godot_audio_sample_set_volumes_linear(
 			itos(p_playback->get_instance_id()).utf8().get_data(),
-			buses.ptrw(),
+			buses_ptrw,
 			buses.size(),
-			values.ptrw(),
+			values_ptrw,
 			values.size());
 }
 
