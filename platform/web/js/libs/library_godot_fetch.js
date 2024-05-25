@@ -31,8 +31,7 @@
 const GodotFetch = {
 	$GodotFetch__deps: ['$IDHandler', '$GodotRuntime'],
 	$GodotFetch: {
-
-		onread: function (id, result) {
+		onread: (id, result) => {
 			const obj = IDHandler.get(id);
 			if (!obj) {
 				return;
@@ -44,13 +43,13 @@ const GodotFetch = {
 			obj.done = result.done;
 		},
 
-		onresponse: function (id, response) {
+		onresponse: (id, response) => {
 			const obj = IDHandler.get(id);
 			if (!obj) {
 				return;
 			}
 			let chunked = false;
-			response.headers.forEach(function (value, header) {
+			response.headers.forEach((value, header) => {
 				const v = value.toLowerCase().trim();
 				const h = header.toLowerCase().trim();
 				if (h === 'transfer-encoding' && v === 'chunked') {
@@ -63,7 +62,7 @@ const GodotFetch = {
 			obj.chunked = chunked;
 		},
 
-		onerror: function (id, err) {
+		onerror: (id, err) => {
 			GodotRuntime.error(err);
 			const obj = IDHandler.get(id);
 			if (!obj) {
@@ -72,7 +71,7 @@ const GodotFetch = {
 			obj.error = err;
 		},
 
-		create: function (method, url, headers, body) {
+		create: (method, url, headers, body) => {
 			const obj = {
 				request: null,
 				response: null,
@@ -90,11 +89,13 @@ const GodotFetch = {
 				body: body,
 			};
 			obj.request = fetch(url, init);
-			obj.request.then(GodotFetch.onresponse.bind(null, id)).catch(GodotFetch.onerror.bind(null, id));
+			obj.request
+				.then(GodotFetch.onresponse.bind(null, id))
+				.catch(GodotFetch.onerror.bind(null, id));
 			return id;
 		},
 
-		free: function (id) {
+		free: (id) => {
 			const obj = IDHandler.get(id);
 			if (!obj) {
 				return;
@@ -104,12 +105,16 @@ const GodotFetch = {
 				return;
 			}
 			// Try to abort
-			obj.request.then(function (response) {
-				response.abort();
-			}).catch(function (e) { /* nothing to do */ });
+			obj.request
+				.then((response) => {
+					response.abort();
+				})
+				.catch((e) => {
+					/* nothing to do */
+				});
 		},
 
-		read: function (id) {
+		read: (id) => {
 			const obj = IDHandler.get(id);
 			if (!obj) {
 				return;
@@ -120,35 +125,49 @@ const GodotFetch = {
 					return;
 				}
 				obj.reading = true;
-				obj.reader.read().then(GodotFetch.onread.bind(null, id)).catch(GodotFetch.onerror.bind(null, id));
+				obj.reader
+					.read()
+					.then(GodotFetch.onread.bind(null, id))
+					.catch(GodotFetch.onerror.bind(null, id));
 			}
 		},
 	},
 
 	godot_js_fetch_create__proxy: 'sync',
 	godot_js_fetch_create__sig: 'iiiiiii',
-	godot_js_fetch_create: function (p_method, p_url, p_headers, p_headers_size, p_body, p_body_size) {
+	godot_js_fetch_create: (
+		p_method,
+		p_url,
+		p_headers,
+		p_headers_size,
+		p_body,
+		p_body_size
+	) => {
 		const method = GodotRuntime.parseString(p_method);
 		const url = GodotRuntime.parseString(p_url);
 		const headers = GodotRuntime.parseStringArray(p_headers, p_headers_size);
-		const body = p_body_size ? GodotRuntime.heapSlice(HEAP8, p_body, p_body_size) : null;
-		return GodotFetch.create(method, url, headers.map(function (hv) {
-			const idx = hv.indexOf(':');
-			if (idx <= 0) {
-				return [];
-			}
-			return [
-				hv.slice(0, idx).trim(),
-				hv.slice(idx + 1).trim(),
-			];
-		}).filter(function (v) {
-			return v.length === 2;
-		}), body);
+		const body = p_body_size
+			? GodotRuntime.heapSlice(HEAP8, p_body, p_body_size)
+			: null;
+		return GodotFetch.create(
+			method,
+			url,
+			headers
+				.map((hv) => {
+					const idx = hv.indexOf(':');
+					if (idx <= 0) {
+						return [];
+					}
+					return [hv.slice(0, idx).trim(), hv.slice(idx + 1).trim()];
+				})
+				.filter((v) => v.length === 2),
+			body
+		);
 	},
 
 	godot_js_fetch_state_get__proxy: 'sync',
 	godot_js_fetch_state_get__sig: 'ii',
-	godot_js_fetch_state_get: function (p_id) {
+	godot_js_fetch_state_get: (p_id) => {
 		const obj = IDHandler.get(p_id);
 		if (!obj) {
 			return -1;
@@ -170,7 +189,7 @@ const GodotFetch = {
 
 	godot_js_fetch_http_status_get__proxy: 'sync',
 	godot_js_fetch_http_status_get__sig: 'ii',
-	godot_js_fetch_http_status_get: function (p_id) {
+	godot_js_fetch_http_status_get: (p_id) => {
 		const obj = IDHandler.get(p_id);
 		if (!obj || !obj.response) {
 			return 0;
@@ -180,14 +199,14 @@ const GodotFetch = {
 
 	godot_js_fetch_read_headers__proxy: 'sync',
 	godot_js_fetch_read_headers__sig: 'iiii',
-	godot_js_fetch_read_headers: function (p_id, p_parse_cb, p_ref) {
+	godot_js_fetch_read_headers: (p_id, p_parse_cb, p_ref) => {
 		const obj = IDHandler.get(p_id);
 		if (!obj || !obj.response) {
 			return 1;
 		}
 		const cb = GodotRuntime.get_func(p_parse_cb);
 		const arr = [];
-		obj.response.headers.forEach(function (v, h) {
+		obj.response.headers.forEach((v, h) => {
 			arr.push(`${h}:${v}`);
 		});
 		const c_ptr = GodotRuntime.allocStringArray(arr);
@@ -198,7 +217,7 @@ const GodotFetch = {
 
 	godot_js_fetch_read_chunk__proxy: 'sync',
 	godot_js_fetch_read_chunk__sig: 'iiii',
-	godot_js_fetch_read_chunk: function (p_id, p_buf, p_buf_size) {
+	godot_js_fetch_read_chunk: (p_id, p_buf, p_buf_size) => {
 		const obj = IDHandler.get(p_id);
 		if (!obj || !obj.response) {
 			return 0;
@@ -225,7 +244,7 @@ const GodotFetch = {
 
 	godot_js_fetch_is_chunked__proxy: 'sync',
 	godot_js_fetch_is_chunked__sig: 'ii',
-	godot_js_fetch_is_chunked: function (p_id) {
+	godot_js_fetch_is_chunked: (p_id) => {
 		const obj = IDHandler.get(p_id);
 		if (!obj || !obj.response) {
 			return -1;
@@ -235,7 +254,7 @@ const GodotFetch = {
 
 	godot_js_fetch_free__proxy: 'sync',
 	godot_js_fetch_free__sig: 'vi',
-	godot_js_fetch_free: function (id) {
+	godot_js_fetch_free: (id) => {
 		GodotFetch.free(id);
 	},
 };

@@ -7,18 +7,11 @@
   "license": "MIT",
   "scripts": {
     "docs": "jsdoc --template js/jsdoc2rst/ js/engine/engine.js js/engine/config.js js/engine/features.js --destination ''",
-    "lint": "cd ../.. && eslint --no-config-lookup --config ./platform/web/eslint.config.cjs ./platform/web/js ./modules ./misc/dist/html",
-    "format": "npm run lint -- --fix"
+    "lint": "biome lint ../../platform/web/js ../../modules ../../misc/dist/html",
+    "format": "biome format ../../platform/web/js ../../modules ../../misc/dist/html"
   },
   "devDependencies": {
-    "@eslint/js": "^9.3.0",
-    "@html-eslint/eslint-plugin": "^0.24.1",
-    "@html-eslint/parser": "^0.24.1",
-    "@stylistic/eslint-plugin": "^2.1.0",
-    "eslint": "^9.3.0",
-    "eslint-plugin-html": "^8.1.1",
-    "espree": "^10.0.1",
-    "globals": "^15.3.0",
+    "@biomejs/biome": "1.7.3",
     "jsdoc": "^4.0.3"
   }
 }

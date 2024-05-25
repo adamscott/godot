@@ -9,14 +9,16 @@
  *
  * @typedef {Object} EngineConfig
  */
-const EngineConfig = {}; // eslint-disable-line no-unused-vars
+const EngineConfig = {};
 
 /**
  * @struct
  * @constructor
  * @ignore
  */
-const InternalConfig = function (initConfig) { // eslint-disable-line no-unused-vars
+
+// biome-ignore lint/complexity/useArrowFunction: Constructor
+const InternalConfig = function (initConfig) {
 	const cfg = /** @lends {InternalConfig.prototype} */ {
 		/**
 		 * Whether to unload the engine automatically after the instance is initialized.
@@ -194,8 +196,8 @@ const InternalConfig = function (initConfig) { // eslint-disable-line no-unused-
 		 * @ignore
 		 * @type {?function(...*)}
 		 */
-		onPrint: function () {
-			console.log.apply(console, Array.from(arguments)); // eslint-disable-line no-console
+		onPrint: (...args) => {
+			console.log.apply(console, args);
 		},
 		/**
 		 * A callback function for handling the standard error stream. This method should usually only be used in debug pages.
@@ -204,13 +206,13 @@ const InternalConfig = function (initConfig) { // eslint-disable-line no-unused-
 		 *
 		 * @callback EngineConfig.onPrintError
 		 * @param {...*} [var_args] A variadic number of arguments to be printed as errors.
-		*/
+		 */
 		/**
 		 * @ignore
 		 * @type {?function(...*)}
 		 */
-		onPrintError: function (var_args) {
-			console.error.apply(console, Array.from(arguments)); // eslint-disable-line no-console
+		onPrintError: (...var_args) => {
+			console.error.apply(console, ...var_args);
 		},
 	};
 
@@ -235,7 +237,7 @@ const InternalConfig = function (initConfig) { // eslint-disable-line no-unused-
 		// NOTE: We must explicitly pass the default, accessing it via
 		// the key will fail due to closure compiler renames.
 		function parse(key, def) {
-			if (typeof (config[key]) === 'undefined') {
+			if (typeof config[key] === 'undefined') {
 				return def;
 			}
 			return config[key];
@@ -251,7 +253,10 @@ const InternalConfig = function (initConfig) { // eslint-disable-line no-unused-
 		this.executable = parse('executable', this.executable);
 		this.mainPack = parse('mainPack', this.mainPack);
 		this.locale = parse('locale', this.locale);
-		this.canvasResizePolicy = parse('canvasResizePolicy', this.canvasResizePolicy);
+		this.canvasResizePolicy = parse(
+			'canvasResizePolicy',
+			this.canvasResizePolicy
+		);
 		this.persistentPaths = parse('persistentPaths', this.persistentPaths);
 		this.persistentDrops = parse('persistentDrops', this.persistentDrops);
 		this.experimentalVK = parse('experimentalVK', this.experimentalVK);
@@ -272,37 +277,44 @@ const InternalConfig = function (initConfig) { // eslint-disable-line no-unused-
 	Config.prototype.getModuleConfig = function (loadPath, response) {
 		let r = response;
 		return {
-			'print': this.onPrint,
-			'printErr': this.onPrintError,
-			'thisProgram': this.executable,
-			'noExitRuntime': false,
-			'dynamicLibraries': [`${loadPath}.side.wasm`],
-			'instantiateWasm': function (imports, onSuccess) {
+			print: this.onPrint,
+			printErr: this.onPrintError,
+			thisProgram: this.executable,
+			noExitRuntime: false,
+			dynamicLibraries: [`${loadPath}.side.wasm`],
+			instantiateWasm: (imports, onSuccess) => {
 				function done(result) {
-					onSuccess(result['instance'], result['module']);
+					onSuccess(result.instance, result.module);
 				}
-				if (typeof (WebAssembly.instantiateStreaming) !== 'undefined') {
-					WebAssembly.instantiateStreaming(Promise.resolve(r), imports).then(done);
+				if (typeof WebAssembly.instantiateStreaming !== 'undefined') {
+					WebAssembly.instantiateStreaming(Promise.resolve(r), imports).then(
+						done
+					);
 				} else {
-					r.arrayBuffer().then(function (buffer) {
+					r.arrayBuffer().then((buffer) => {
 						WebAssembly.instantiate(buffer, imports).then(done);
 					});
 				}
 				r = null;
 				return {};
 			},
-			'locateFile': function (path) {
+			locateFile: (path) => {
 				if (!path.startsWith('godot.')) {
 					return path;
-				} else if (path.endsWith('.worker.js')) {
+				}
+				if (path.endsWith('.worker.js')) {
 					return `${loadPath}.worker.js`;
-				} else if (path.endsWith('.audio.worklet.js')) {
+				}
+				if (path.endsWith('.audio.worklet.js')) {
 					return `${loadPath}.audio.worklet.js`;
-				} else if (path.endsWith('.js')) {
+				}
+				if (path.endsWith('.js')) {
 					return `${loadPath}.js`;
-				} else if (path.endsWith('.side.wasm')) {
+				}
+				if (path.endsWith('.side.wasm')) {
 					return `${loadPath}.side.wasm`;
-				} else if (path.endsWith('.wasm')) {
+				}
+				if (path.endsWith('.wasm')) {
 					return `${loadPath}.wasm`;
 				}
 				return path;
@@ -334,24 +346,27 @@ const InternalConfig = function (initConfig) { // eslint-disable-line no-unused-
 		// Browser locale, or custom one if defined.
 		let locale = this.locale;
 		if (!locale) {
-			locale = navigator.languages ? navigator.languages[0] : navigator.language;
+			locale = navigator.languages
+				? navigator.languages[0]
+				: navigator.language;
 			locale = locale.split('.')[0];
 		}
 		locale = locale.replace('-', '_');
 		const onExit = this.onExit;
 
 		// Godot configuration.
+		// biome-ignore-file lint/complexity/useLiteralKeys: <explanation>
 		return {
-			'canvas': this.canvas,
-			'canvasResizePolicy': this.canvasResizePolicy,
-			'locale': locale,
-			'persistentDrops': this.persistentDrops,
-			'virtualKeyboard': this.experimentalVK,
-			'focusCanvas': this.focusCanvas,
-			'onExecute': this.onExecute,
-			'onExit': function (p_code) {
+			canvas: this.canvas,
+			canvasResizePolicy: this.canvasResizePolicy,
+			locale: locale,
+			persistentDrops: this.persistentDrops,
+			virtualKeyboard: this.experimentalVK,
+			focusCanvas: this.focusCanvas,
+			onExecute: this.onExecute,
+			onExit: (p_code) => {
 				cleanup(); // We always need to call the cleanup callback to free memory.
-				if (typeof (onExit) === 'function') {
+				if (typeof onExit === 'function') {
 					onExit(p_code);
 				}
 			},

@@ -1,40 +1,40 @@
-/* eslint-disable strict */
-
-'use strict';
-
-const fs = require('fs');
+const fs = require('node:fs');
 
 class JSDoclet {
 	constructor(doc) {
 		this.doc = doc;
-		this.description = doc['description'] || '';
-		this.name = doc['name'] || 'unknown';
-		this.longname = doc['longname'] || '';
+		this.description = doc.description || '';
+		this.name = doc.name || 'unknown';
+		this.longname = doc.longname || '';
 		this.types = [];
-		if (doc['type'] && doc['type']['names']) {
-			this.types = doc['type']['names'].slice();
+		if (doc.type?.names) {
+			this.types = doc.type.names.slice();
 		}
 		this.type = this.types.length > 0 ? this.types.join('\\|') : '*';
-		this.variable = doc['variable'] || false;
-		this.kind = doc['kind'] || '';
-		this.memberof = doc['memberof'] || null;
-		this.scope = doc['scope'] || '';
+		this.variable = doc.variable || false;
+		this.kind = doc.kind || '';
+		this.memberof = doc.memberof || null;
+		this.scope = doc.scope || '';
 		this.members = [];
-		this.optional = doc['optional'] || false;
-		this.defaultvalue = doc['defaultvalue'];
-		this.summary = doc['summary'] || null;
-		this.classdesc = doc['classdesc'] || null;
+		this.optional = doc.optional || false;
+		this.defaultvalue = doc.defaultvalue;
+		this.summary = doc.summary || null;
+		this.classdesc = doc.classdesc || null;
 
 		// Parameters (functions)
 		this.params = [];
-		this.returns = doc['returns'] ? doc['returns'][0]['type']['names'][0] : 'void';
-		this.returns_desc = doc['returns'] ? doc['returns'][0]['description'] : null;
+		this.returns = doc.returns ? doc.returns[0].type.names[0] : 'void';
+		this.returns_desc = doc.returns ? doc.returns[0].description : null;
 
-		this.params = (doc['params'] || []).slice().map((p) => new JSDoclet(p));
+		this.params = (doc.params || []).slice().map((p) => new JSDoclet(p));
 
 		// Custom tags
-		this.tags = doc['tags'] || [];
-		this.header = this.tags.filter((t) => t['title'] === 'header').map((t) => t['text']).pop() || null;
+		this.tags = doc.tags || [];
+		this.header
+			= this.tags
+				.filter((t) => t.title === 'header')
+				.map((t) => t.text)
+				.pop() || null;
 	}
 
 	add_member(obj) {
@@ -50,7 +50,10 @@ class JSDoclet {
 	}
 
 	is_object() {
-		return this.kind === 'Object' || (this.kind === 'typedef' && this.type === 'Object');
+		return (
+			this.kind === 'Object'
+			|| (this.kind === 'typedef' && this.type === 'Object')
+		);
 	}
 
 	is_class() {
@@ -58,7 +61,10 @@ class JSDoclet {
 	}
 
 	is_function() {
-		return this.kind === 'function' || (this.kind === 'typedef' && this.type === 'function');
+		return (
+			this.kind === 'function'
+			|| (this.kind === 'typedef' && this.type === 'function')
+		);
 	}
 
 	is_module() {
@@ -73,22 +79,22 @@ function format_table(f, data, depth = 0) {
 
 	const column_sizes = new Array(data[0].length).fill(0);
 
-	data.forEach((row) => {
+	for (const row of data) {
 		row.forEach((e, idx) => {
 			column_sizes[idx] = Math.max(e.length, column_sizes[idx]);
 		});
-	});
+	}
 
 	const indent = ' '.repeat(depth);
 	let sep = indent;
-	column_sizes.forEach((size) => {
+	for (const size of column_sizes) {
 		sep += '+';
 		sep += '-'.repeat(size + 2);
-	});
+	}
 	sep += '+\n';
 	f.write(sep);
 
-	data.forEach((row) => {
+	for (const row of data) {
 		let row_text = `${indent}|`;
 		row.forEach((entry, idx) => {
 			row_text += ` ${entry.padEnd(column_sizes[idx])} |`;
@@ -96,7 +102,7 @@ function format_table(f, data, depth = 0) {
 		row_text += '\n';
 		f.write(row_text);
 		f.write(sep);
-	});
+	}
 
 	f.write('\n');
 }
@@ -107,7 +113,10 @@ function make_header(header, sep) {
 
 function indent_multiline(text, depth) {
 	const indent = ' '.repeat(depth);
-	return text.split('\n').map((l) => (l === '' ? l : indent + l)).join('\n');
+	return text
+		.split('\n')
+		.map((l) => (l === '' ? l : indent + l))
+		.join('\n');
 }
 
 function make_rst_signature(obj, types = false, style = false) {
@@ -191,9 +200,9 @@ function make_rst_function(f, obj, depth = 0) {
 	f.write(indent_multiline(obj.description, (depth + 1) * 3));
 	f.write('\n\n');
 
-	obj.params.forEach((param) => {
+	for (const param of obj.params) {
 		make_rst_param(f, param, depth + 1);
-	});
+	}
 
 	if (obj.returns !== 'void') {
 		f.write(indent);
@@ -215,7 +224,9 @@ function make_rst_object(f, obj) {
 	}
 
 	// Format members table and descriptions
-	const data = [['type', 'name']].concat(obj.members.map((m) => [m.type, `:js:attr:\`${m.name}\``]));
+	const data = [['type', 'name']].concat(
+		obj.members.map((m) => [m.type, `:js:attr:\`${m.name}\``])
+	);
 
 	f.write(make_header('Properties', '^'));
 	format_table(f, data, 0);
@@ -229,14 +240,14 @@ function make_rst_object(f, obj) {
 	f.write('   **Property Descriptions**\n\n');
 
 	// Properties first
-	obj.members.filter((m) => !m.is_function()).forEach((m) => {
+	for (const m of obj.members.filter((m) => !m.is_function())) {
 		make_rst_attribute(f, m, 1);
-	});
+	}
 
 	// Callbacks last
-	obj.members.filter((m) => m.is_function()).forEach((m) => {
+	for (const m of obj.members.filter((m) => m.is_function())) {
 		make_rst_function(f, m, 1);
-	});
+	}
 }
 
 function make_rst_class(f, obj) {
@@ -258,29 +269,35 @@ function make_rst_class(f, obj) {
 	const ifuncs = funcs.filter((m) => !m.is_static());
 
 	f.write(make_header('Static Methods', '^'));
-	format_table(f, sfuncs.map((m) => make_data(m)));
+	format_table(
+		f,
+		sfuncs.map((m) => make_data(m))
+	);
 
 	f.write(make_header('Instance Methods', '^'));
-	format_table(f, ifuncs.map((m) => make_data(m)));
+	format_table(
+		f,
+		ifuncs.map((m) => make_data(m))
+	);
 
 	const sig = make_rst_signature(obj);
 	f.write(`.. js:class:: ${obj.name}(${sig})\n\n`);
 	f.write(indent_multiline(obj.description, 3));
 	f.write('\n\n');
 
-	obj.params.forEach((p) => {
+	for (const p of obj.params) {
 		make_rst_param(f, p, 1);
-	});
+	}
 
 	f.write('   **Static Methods**\n\n');
-	sfuncs.forEach((m) => {
+	for (const m of sfuncs) {
 		make_rst_function(f, m, 1);
-	});
+	}
 
 	f.write('   **Instance Methods**\n\n');
-	ifuncs.forEach((m) => {
+	for (const m of ifuncs) {
 		make_rst_function(f, m, 1);
-	});
+	}
 }
 
 function make_rst_module(f, obj) {
@@ -305,23 +322,25 @@ function write_base_object(f, obj) {
 function generate(f, docs) {
 	const globs = [];
 	const SYMBOLS = {};
-	docs.filter((d) => !d.ignore && d.kind !== 'package').forEach((d) => {
+	for (const d of docs.filter((d) => !d.ignore && d.kind !== 'package')) {
 		SYMBOLS[d.name] = d;
 		if (d.memberof) {
 			const up = SYMBOLS[d.memberof];
 			if (up === undefined) {
-				console.log(d); // eslint-disable-line no-console
-				console.log(`Undefined symbol! ${d.memberof}`); // eslint-disable-line no-console
+				console.log(d);
+				console.log(`Undefined symbol! ${d.memberof}`);
 				throw new Error('Undefined symbol!');
 			}
 			SYMBOLS[d.memberof].add_member(d);
 		} else {
 			globs.push(d);
 		}
-	});
+	}
 
 	f.write('.. _doc_html5_shell_classref:\n\n');
-	globs.forEach((obj) => write_base_object(f, obj));
+	for (const obj of globs) {
+		write_base_object(f, obj);
+	}
 }
 
 /**
@@ -331,19 +350,29 @@ function generate(f, docs) {
  *                       all the symbols documented in your code.
  * @param {object} opts - An object with options information.
  */
-exports.publish = function (data, opts) {
-	const docs = data().get().filter((doc) => !doc.undocumented && !doc.ignore).map((doc) => new JSDoclet(doc));
+exports.publish = (data, opts) => {
+	const docs = data()
+		.get()
+		.filter((doc) => !doc.undocumented && !doc.ignore)
+		.map((doc) => new JSDoclet(doc));
 	const dest = opts.destination;
 	if (dest === 'dry-run') {
 		process.stdout.write('Dry run... ');
-		generate({
-			write: function () { /* noop */ },
-		}, docs);
+		generate(
+			{
+				write: () => {
+					/* noop */
+				},
+			},
+			docs
+		);
 		process.stdout.write('Okay!\n');
 		return;
 	}
 	if (dest !== '' && !dest.endsWith('.rst')) {
-		throw new Error('Destination file must be either a ".rst" file, or an empty string (for printing to stdout)');
+		throw new Error(
+			'Destination file must be either a ".rst" file, or an empty string (for printing to stdout)'
+		);
 	}
 	if (dest !== '') {
 		const f = fs.createWriteStream(dest);
