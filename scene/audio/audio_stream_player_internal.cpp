@@ -144,16 +144,14 @@ Ref<AudioStreamPlayback> AudioStreamPlayerInternal::play_basic() {
 	// Sample handling.
 	if (_is_sample() && stream->can_be_sampled()) {
 		stream_playback->set_is_sample(true);
-		if (stream_playback->get_is_sample()) {
-			if (stream_playback->get_sample_playback().is_null()) {
-				if (!AudioServer::get_singleton()->is_stream_registered_as_sample(stream)) {
-					AudioServer::get_singleton()->register_stream_as_sample(stream);
-				}
-				Ref<AudioSamplePlayback> sample_playback;
-				sample_playback.instantiate();
-				sample_playback->stream = stream;
-				stream_playback->set_sample_playback(sample_playback);
+		if (stream_playback->get_is_sample() && stream_playback->get_sample_playback().is_null()) {
+			if (!AudioServer::get_singleton()->is_stream_registered_as_sample(stream)) {
+				AudioServer::get_singleton()->register_stream_as_sample(stream);
 			}
+			Ref<AudioSamplePlayback> sample_playback;
+			sample_playback.instantiate();
+			sample_playback->stream = stream;
+			stream_playback->set_sample_playback(sample_playback);
 		}
 	}
 

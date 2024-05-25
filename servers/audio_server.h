@@ -134,7 +134,7 @@ public:
 	// Samples handling.
 	virtual bool is_stream_registered_as_sample(const Ref<AudioStream> &p_stream) const {
 		return false;
-	};
+	}
 	virtual void register_sample(const Ref<AudioSample> &p_sample) {}
 	virtual void unregister_sample(const Ref<AudioSample> &p_sample) {}
 	virtual void start_sample_playback(const Ref<AudioSamplePlayback> &p_playback) {}
