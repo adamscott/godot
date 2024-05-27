@@ -112,7 +112,7 @@ function GodotAudioClassesInit() {
 	/** @type {SampleClass["prototype"]["_duplicateAudioBuffer"]} */
 	Sample.prototype._duplicateAudioBuffer = function () {
 		if (this._audioBuffer == null) {
-			throw new Error("couldn't duplicate a null audioBuffer");
+			throw new Error('couldn\'t duplicate a null audioBuffer');
 		}
 		/** @type {Float32Array[]} */
 		const channels = new Array(this._audioBuffer.numberOfChannels);
@@ -335,6 +335,7 @@ function GodotAudioClassesInit() {
 		this.loopMode = options.loopMode ?? this.sample.loopMode ?? 'disabled';
 		this._source.buffer = this.sample.audioBuffer;
 
+		// eslint-disable-next-line consistent-this
 		const self = this;
 		this._source.addEventListener('ended', (_) => {
 			switch (self.sample.loopMode) {
@@ -808,7 +809,7 @@ const GodotAudio = {
 				});
 		} else {
 			if (!navigator.getUserMedia) {
-				navigator.getUserMedia =					navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+				navigator.getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
 			}
 			if (!navigator.getUserMedia) {
 				GodotRuntime.error('getUserMedia not available.');
@@ -866,7 +867,7 @@ const GodotAudio = {
 	},
 
 	/** @type {(playbackObjectId: string, streamObjectId: number, busIndex: number, startOptions: SampleNodeConstructorOptions) => void} */
-	start_sample: async function (
+	start_sample: function (
 		playbackObjectId,
 		streamObjectId,
 		busIndex,
