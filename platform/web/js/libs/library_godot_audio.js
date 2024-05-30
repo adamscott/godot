@@ -542,20 +542,20 @@ const GodotAudio = {
 		/** @type {BusClass["addAt"]} */
 		static addAt(index) {
 			const newBus = GodotAudio.Bus.create();
-			newBus.getOutputNode().connect(GodotAudio.ctx.destination);
-			// Inserts at index.
-			GodotAudio.Bus._buses.splice(index, 0, newBus);
+			if (index !== newBus.getId()) {
+				GodotAudio.Bus.move(newBus.getId(), index);
+			}
 		}
 
 		/** @type {BusClass["create"]} */
 		static create() {
 			const newBus = new GodotAudio.Bus();
-			GodotAudio.Bus._buses.push(newBus);
 			const isFirstBus = GodotAudio.Bus._buses.length === 0;
+			GodotAudio.Bus._buses.push(newBus);
 			if (isFirstBus) {
-				newBus.send = null;
+				newBus.setSend(null);
 			} else {
-				newBus.send = GodotAudio.Bus.get(0);
+				newBus.setSend(GodotAudio.Bus.get(0));
 			}
 			return newBus;
 		}
@@ -929,7 +929,7 @@ const GodotAudio = {
 	/** @type {(busIndex: number, sendIndex: number) => void} */
 	set_sample_bus_send: function (busIndex, sendIndex) {
 		const bus = GodotAudio.Bus.get(busIndex);
-		bus.send = GodotAudio.Bus.get(sendIndex);
+		bus.setSend(GodotAudio.Bus.get(sendIndex));
 	},
 
 	/** @type {(busIndex: number, volumeDb: number) => void} */
