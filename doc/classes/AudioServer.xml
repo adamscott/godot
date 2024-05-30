@@ -183,10 +183,12 @@
 				If [code]true[/code], the bus at index [param bus_idx] is in solo mode.
 			</description>
 		</method>
-		<method name="is_stream_registered_as_sample">
+		<method name="is_stream_registered_as_sample" experimental="">
 			<return type="bool" />
 			<param index="0" name="stream" type="AudioStream" />
 			<description>
+				If [code]true[/code], the stream is registered as a sample. The engine will not have to register it before playing the sample.
+				If [code]false[/code], the stream will have to be registered before playing it. To prevent lag spikes, register the stream as sample with [method register_stream_as_sample].
 			</description>
 		</method>
 		<method name="lock">
@@ -204,10 +206,11 @@
 				Moves the bus from index [param index] to index [param to_index].
 			</description>
 		</method>
-		<method name="register_stream_as_sample">
+		<method name="register_stream_as_sample" experimental="">
 			<return type="void" />
 			<param index="0" name="stream" type="AudioStream" />
 			<description>
+				Forces the registration of a stream as a sample. Lag spikes may occur when calling this method, especially on single-threaded builds. It is suggested to call this method while loading assets, where the lag spike could be masked, instead of relying on registring the sample when it needs to be played.
 			</description>
 		</method>
 		<method name="remove_bus">
@@ -356,13 +359,18 @@
 		<constant name="SPEAKER_SURROUND_71" value="3" enum="SpeakerMode">
 			A 7.1 channel surround setup was detected.
 		</constant>
-		<constant name="PLAYBACK_TYPE_DEFAULT" value="0" enum="PlaybackType">
+		<constant name="PLAYBACK_TYPE_DEFAULT" value="0" enum="PlaybackType" experimental="">
+			The playback will be considered of the type declared at [member ProjectSettings.audio/general/default_playback_type].
 		</constant>
-		<constant name="PLAYBACK_TYPE_STREAM" value="1" enum="PlaybackType">
+		<constant name="PLAYBACK_TYPE_STREAM" value="1" enum="PlaybackType" experimental="">
+			Force the playback to be considered as a stream.
 		</constant>
-		<constant name="PLAYBACK_TYPE_SAMPLE" value="2" enum="PlaybackType">
+		<constant name="PLAYBACK_TYPE_SAMPLE" value="2" enum="PlaybackType" experimental="">
+			Force the playback to be considered as a sample.
+			Be careful, as not every platform supports samples.
 		</constant>
-		<constant name="PLAYBACK_TYPE_MAX" value="3" enum="PlaybackType">
+		<constant name="PLAYBACK_TYPE_MAX" value="3" enum="PlaybackType" experimental="">
+			Represents the size of the [enum PlaybackType] enum.
 		</constant>
 	</constants>
 </class>

@@ -57,14 +57,16 @@
 				Override this method to customize the returned value of [method is_monophonic]. Should return [code]true[/code] if this audio stream only supports one channel.
 			</description>
 		</method>
-		<method name="can_be_sampled" qualifiers="const">
+		<method name="can_be_sampled" qualifiers="const" experimental="">
 			<return type="bool" />
 			<description>
+				Returns if the current [AudioStream] can be used as a sample. Only static streams can be sampled.
 			</description>
 		</method>
-		<method name="generate_sample" qualifiers="const">
+		<method name="generate_sample" qualifiers="const" experimental="">
 			<return type="AudioSample" />
 			<description>
+				Generates an [AudioSample] based on the current stream.
 			</description>
 		</method>
 		<method name="get_length" qualifiers="const">
