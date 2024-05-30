@@ -336,8 +336,6 @@ void AudioStreamMP3::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_bar_beats", "count"), &AudioStreamMP3::set_bar_beats);
 	ClassDB::bind_method(D_METHOD("get_bar_beats"), &AudioStreamMP3::get_bar_beats);
 
-	ClassDB::bind_method(D_METHOD("get_sample"), &AudioStreamMP3::generate_sample);
-
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_BYTE_ARRAY, "data", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), "set_data", "get_data");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "bpm", PROPERTY_HINT_RANGE, "0,400,0.01,or_greater"), "set_bpm", "get_bpm");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "beat_count", PROPERTY_HINT_RANGE, "0,512,1,or_greater"), "set_beat_count", "get_beat_count");
