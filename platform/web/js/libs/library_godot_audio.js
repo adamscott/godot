@@ -718,10 +718,6 @@ const GodotAudio = {
 	input: null,
 	driver: null,
 	interval: 0,
-	/** @type {Map<string, Sample>} */
-	samples: null,
-	/** @type {Bus[]} */
-	buses: null,
 
 	/** @type {(linear: number) => number} */
 	linear_to_db: function (linear) {
