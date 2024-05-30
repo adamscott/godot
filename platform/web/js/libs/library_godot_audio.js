@@ -28,8 +28,6 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-/* eslint-disable no-use-before-define */
-
 /**
  * @typedef {typeof import("./library_godot_audio").PositionMode} PositionMode
  * @typedef {typeof import("./library_godot_audio").LoopMode} LoopMode
@@ -353,10 +351,10 @@ const GodotAudio = {
 			const self = this;
 			this._source.addEventListener('ended', (_) => {
 				switch (self.sample.loopMode) {
-					case 'none':
-						GodotAudio.stop_sample(this.id);
-						break;
-					default:
+				case 'none':
+					GodotAudio.stop_sample(this.id);
+					break;
+				default:
 					// do nothing
 				}
 			});
@@ -427,11 +425,11 @@ const GodotAudio = {
 				this._source.stop();
 				return;
 			}
-	
+
 			if (this.pauseTime === 0) {
 				return;
 			}
-	
+
 			/** @type {Sample} */
 			this._source.buffer = this.getSample().audioBuffer;
 			this._source.connect(this._gain);
@@ -538,7 +536,7 @@ const GodotAudio = {
 			buses.splice(toIndex - 1, 0, movedBus);
 			GodotAudio.Bus._buses = buses;
 		}
-		
+
 		/** @type {BusClass["addAt"]} */
 		static addAt(index) {
 			const newBus = GodotAudio.Bus.create();
@@ -635,7 +633,7 @@ const GodotAudio = {
 			if (this.isSolo === enable) {
 				return;
 			}
-	
+
 			if (enable) {
 				if (GodotAudio.Bus._busSolo != null && GodotAudio.Bus._busSolo !== this) {
 					GodotAudio.Bus._busSolo._disableSolo();
@@ -643,7 +641,7 @@ const GodotAudio = {
 				this._enableSolo();
 				return;
 			}
-	
+
 			this._disableSolo();
 		}
 
@@ -750,15 +748,15 @@ const GodotAudio = {
 		ctx.onstatechange = function () {
 			let state = 0;
 			switch (ctx.state) {
-				case 'suspended':
-					state = 0;
-					break;
-				case 'running':
-					state = 1;
-					break;
-				case 'closed':
-					state = 2;
-					break;
+			case 'suspended':
+				state = 0;
+				break;
+			case 'running':
+				state = 1;
+				break;
+			case 'closed':
+				state = 2;
+				break;
 
 				// no default
 			}
