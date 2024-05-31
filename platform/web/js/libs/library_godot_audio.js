@@ -347,12 +347,13 @@ const GodotAudio = {
 			this.setLoopMode(options.loopMode ?? this.getSample().loopMode ?? 'disabled');
 			this._source.buffer = this.getSample().getAudioBuffer();
 
+			/** @type {InstanceType<SampleNodeClass>} */
 			// eslint-disable-next-line consistent-this
 			const self = this;
 			this._source.addEventListener('ended', (_) => {
-				switch (self.sample.loopMode) {
+				switch (self.getSample().loopMode) {
 				case 'none':
-					GodotAudio.stop_sample(this.id);
+					GodotAudio.SampleNode.stopSampleNode(self.id);
 					break;
 				default:
 					// do nothing
@@ -470,7 +471,7 @@ const GodotAudio = {
 			this._source.disconnect();
 			this._source = null;
 
-			for (const sampleNodeBus of this._sampleNodeBuses) {
+			for (const [_, sampleNodeBus] of this._sampleNodeBuses) {
 				sampleNodeBus.clear();
 			}
 			this._sampleNodeBuses.clear();
