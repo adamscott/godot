@@ -305,7 +305,6 @@ void AudioStreamPlayerInternal::set_pitch_scale(float p_pitch_scale) {
 
 	for (Ref<AudioStreamPlayback> &playback : stream_playbacks) {
 		AudioServer::get_singleton()->set_playback_pitch_scale(playback, pitch_scale);
-		AudioServer::get_singleton()->update_sample_playback_pitch_scale(playback, pitch_scale);
 	}
 }
 
