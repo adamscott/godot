@@ -97,7 +97,7 @@ void AudioStreamPlayer::play(float p_from_pos) {
 	internal->ensure_playback_limit();
 
 	// Sample handling.
-	if (stream_playback->get_is_sample()) {
+	if (stream_playback->get_is_sample() && stream_playback->get_sample_playback().is_valid()) {
 		Ref<AudioSamplePlayback> sample_playback = stream_playback->get_sample_playback();
 		sample_playback->offset = p_from_pos;
 		sample_playback->volume_vector = _get_volume_vector();

@@ -1235,11 +1235,8 @@ void AudioServer::set_playback_bus_volumes_linear(Ref<AudioStreamPlayback> p_pla
 	ERR_FAIL_COND(p_bus_volumes.size() > MAX_BUSES_PER_PLAYBACK);
 
 	// Samples.
-	if (p_playback->get_is_sample()) {
+	if (p_playback->get_is_sample() && p_playback->get_sample_playback().is_valid()) {
 		Ref<AudioSamplePlayback> sample_playback = p_playback->get_sample_playback();
-		if (sample_playback.is_null()) {
-			return;
-		}
 		AudioDriver::get_singleton()->set_sample_playback_bus_volumes_linear(sample_playback, p_bus_volumes);
 		return;
 	}
@@ -1294,6 +1291,13 @@ void AudioServer::set_playback_all_bus_volumes_linear(Ref<AudioStreamPlayback> p
 
 void AudioServer::set_playback_pitch_scale(Ref<AudioStreamPlayback> p_playback, float p_pitch_scale) {
 	ERR_FAIL_COND(p_playback.is_null());
+
+	// Samples.
+	if (p_playback->get_is_sample() && p_playback->get_sample_playback().is_valid()) {
+		Ref<AudioSamplePlayback> sample_playback = p_playback->get_sample_playback();
+		AudioServer::get_singleton()->update_sample_playback_pitch_scale(sample_playback, p_pitch_scale);
+		return;
+	}
 
 	AudioStreamPlaybackListNode *playback_node = _find_playback_list_node(p_playback);
 	if (!playback_node) {
