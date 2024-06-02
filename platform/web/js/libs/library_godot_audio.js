@@ -467,7 +467,7 @@ const GodotAudio = {
 			this._source.disconnect();
 			this._source = null;
 
-			for (const [_, sampleNodeBus] of this._sampleNodeBuses) {
+			for (const sampleNodeBus of this._sampleNodeBuses.values()) {
 				sampleNodeBus.clear();
 			}
 			this._sampleNodeBuses.clear();
