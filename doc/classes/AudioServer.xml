@@ -210,7 +210,7 @@
 			<return type="void" />
 			<param index="0" name="stream" type="AudioStream" />
 			<description>
-				Forces the registration of a stream as a sample. Lag spikes may occur when calling this method, especially on single-threaded builds. It is suggested to call this method while loading assets, where the lag spike could be masked, instead of relying on registring the sample when it needs to be played.
+				Forces the registration of a stream as a sample. Lag spikes may occur when calling this method, especially on single-threaded builds. It is suggested to call this method while loading assets, where the lag spike could be masked, instead of relying on registering the sample when it needs to be played.
 			</description>
 		</method>
 		<method name="remove_bus">
