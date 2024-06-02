@@ -76,7 +76,7 @@ const Features = {
 	 */
 	getMissingFeatures: function (supportedFeatures = {}) {
 		const {
-			"threads": supportsThreads = true,
+			'threads': supportsThreads = true,
 		} = supportedFeatures;
 
 		const missing = [];
