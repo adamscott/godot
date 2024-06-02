@@ -15,8 +15,6 @@ interface SampleOptions {
 }
 
 export declare class Sample {
-	static _samples: Map<string, Sample>;
-
 	id: string;
 
 	_audioBuffer: AudioBuffer;
@@ -76,8 +74,6 @@ interface SampleNodeOptions {
 }
 
 export declare class SampleNode {
-	static _sampleNodes: Map<string, SampleNode>;
-
 	id: string;
 	streamObjectId: string;
 	offset: number;
@@ -119,9 +115,6 @@ export declare class SampleNode {
 }
 
 export declare class Bus {
-	static _buses: Bus[];
-	static _busSolo: Bus | null;
-
 	_gainNode: GainNode;
 	_soloNode: GainNode;
 	_muteNode: GainNode;

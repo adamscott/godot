@@ -32,13 +32,9 @@
  * @typedef {typeof import("./library_godot_audio").PositionMode} PositionMode
  * @typedef {typeof import("./library_godot_audio").LoopMode} LoopMode
  * @typedef {typeof import("./library_godot_audio").Sample} Sample
- * @typedef {Sample} SampleClass
  * @typedef {typeof import("./library_godot_audio").SampleNodeBus} SampleNodeBus
- * @typedef {SampleNodeBus} SampleNodeBusClass
  * @typedef {typeof import("./library_godot_audio").SampleNode} SampleNode
- * @typedef {SampleNode} SampleNodeClass
  * @typedef {typeof import("./library_godot_audio").Bus} Bus
- * @typedef {Bus} BusClass
  */
 
 const GodotAudio = {
@@ -62,73 +58,72 @@ const GodotAudio = {
 		CHANNEL_LFE: 5,
 	}),
 
+	/** @type {Map<string, Sample>} */
+	samples: null,
 	/** @type {Sample} */
 	Sample: class {
-		/** @type {SampleClass["_samples"]} */
-		static _samples = new Map();
-
-		/** @type {SampleClass["getSample"]} */
+		/** @type {Sample["getSample"]} */
 		static getSample(id) {
-			if (!GodotAudio.Sample._samples.has(id)) {
+			if (!GodotAudio.samples.has(id)) {
 				throw new Error(`Could not find sample "${id}"`);
 			}
-			return GodotAudio.Sample._samples.get(id);
+			return GodotAudio.samples.get(id);
 		}
 
-		/** @type {SampleClass["getSampleOrNull"]} */
+		/** @type {Sample["getSampleOrNull"]} */
 		static getSampleOrNull(id) {
-			return GodotAudio.Sample._samples.get(id) ?? null;
+			return GodotAudio.samples.get(id) ?? null;
 		}
 
-		/** @type {SampleClass["create"]} */
+		/** @type {Sample["create"]} */
 		static create(params, options = {}) {
 			const sample = new GodotAudio.Sample(params, options);
-			GodotAudio.Sample._samples.set(params.id, sample);
+			GodotAudio.samples.set(params.id, sample);
 			return sample;
 		}
 
-		/** @type {SampleClass["clear"]} */
+		/** @type {Sample["clear"]} */
 		static clear(id) {
-			GodotAudio.Sample._samples.delete(id);
+			GodotAudio.samples.delete(id);
 		}
 
 		/** @type {(params: ConstructorParameters<Sample>[0], options: ConstructorParameters<Sample>[1]) => void} */
 		constructor(params, options = {}) {
-			/** @type {SampleClass["prototype"]["id"]} */
+			/** @type {Sample["prototype"]["id"]} */
 			this.id = params.id;
-			/** @type {SampleClass["prototype"]["_audioBuffer"]} */
+			/** @type {Sample["prototype"]["_audioBuffer"]} */
 			this._audioBuffer = null;
-			/** @type {SampleClass["prototype"]["numberOfChannels"]} */
+			/** @type {Sample["prototype"]["numberOfChannels"]} */
 			this.numberOfChannels = options.numberOfChannels ?? 2;
-			/** @type {SampleClass["prototype"]["sampleRate"]} */
+			/** @type {Sample["prototype"]["sampleRate"]} */
 			this.sampleRate = options.sampleRate ?? 44100;
-			/** @type {SampleClass["prototype"]["loopMode"]} */
+			/** @type {Sample["prototype"]["loopMode"]} */
 			this.loopMode = options.loopMode ?? 'disabled';
-			/** @type {SampleClass["prototype"]["loopBegin"]} */
+			/** @type {Sample["prototype"]["loopBegin"]} */
 			this.loopBegin = options.loopBegin ?? 0;
-			/** @type {SampleClass["prototype"]["loopEnd"]} */
+			/** @type {Sample["prototype"]["loopEnd"]} */
 			this.loopEnd = options.loopEnd ?? 0;
 
 			this.setAudioBuffer(params.audioBuffer);
 		}
 
-		/** @type {SampleClass["prototype"]["getAudioBuffer"]} */
+		/** @type {Sample["prototype"]["getAudioBuffer"]} */
 		getAudioBuffer() {
 			return this._duplicateAudioBuffer();
 		}
 
-		/** @type {SampleClass["prototype"]["setAudioBuffer"]} */
+		/** @type {Sample["prototype"]["setAudioBuffer"]} */
 		setAudioBuffer(val) {
 			this._audioBuffer = val;
 		}
 
-		/** @type {SampleClass["prototype"]["clear"]} */
+		/** @type {Sample["prototype"]["clear"]} */
 		clear() {
 			this.audioBuffer = null;
 			GodotAudio.Sample.clear(this.id);
 		}
 
-		/** @type {SampleClass["prototype"]["_duplicateAudioBuffer"]} */
+		/** @type {Sample["prototype"]["_duplicateAudioBuffer"]} */
 		_duplicateAudioBuffer() {
 			if (this._audioBuffer == null) {
 				throw new Error('couldn\'t duplicate a null audioBuffer');
@@ -150,35 +145,36 @@ const GodotAudio = {
 			return buffer;
 		}
 	},
-	/** @type {SampleNodeBusClass} */
+
+	/** @type {SampleNodeBus} */
 	SampleNodeBus: class {
-		/** @type {SampleNodeBusClass["create"]} */
+		/** @type {SampleNodeBus["create"]} */
 		static create(bus) {
 			return new GodotAudio.SampleNodeBus(bus);
 		}
 
-		/** @type {(bus: ConstructorParameters<SampleNodeBusClass>[0]) => SampleNodeBusClass} */
+		/** @type {(bus: ConstructorParameters<SampleNodeBus>[0]) => SampleNodeBus} */
 		constructor(bus) {
 			const NUMBER_OF_WEB_CHANNELS = 6;
 
-			/** @type {SampleNodeBusClass["prototype"]["_bus"]} */
+			/** @type {SampleNodeBus["prototype"]["_bus"]} */
 			this._bus = bus;
 
-			/** @type {SampleNodeBusClass["prototype"]["_channelSplitter"]} */
+			/** @type {SampleNodeBus["prototype"]["_channelSplitter"]} */
 			this._channelSplitter = GodotAudio.ctx.createChannelSplitter(NUMBER_OF_WEB_CHANNELS);
-			/** @type {SampleNodeBusClass["prototype"]["_l"]} */
+			/** @type {SampleNodeBus["prototype"]["_l"]} */
 			this._l = GodotAudio.ctx.createGain();
-			/** @type {SampleNodeBusClass["prototype"]["_r"]} */
+			/** @type {SampleNodeBus["prototype"]["_r"]} */
 			this._r = GodotAudio.ctx.createGain();
-			/** @type {SampleNodeBusClass["prototype"]["_sl"]} */
+			/** @type {SampleNodeBus["prototype"]["_sl"]} */
 			this._sl = GodotAudio.ctx.createGain();
-			/** @type {SampleNodeBusClass["prototype"]["_sr"]} */
+			/** @type {SampleNodeBus["prototype"]["_sr"]} */
 			this._sr = GodotAudio.ctx.createGain();
-			/** @type {SampleNodeBusClass["prototype"]["_c"]} */
+			/** @type {SampleNodeBus["prototype"]["_c"]} */
 			this._c = GodotAudio.ctx.createGain();
-			/** @type {SampleNodeBusClass["prototype"]["_lfe"]} */
+			/** @type {SampleNodeBus["prototype"]["_lfe"]} */
 			this._lfe = GodotAudio.ctx.createGain();
-			/** @type {SampleNodeBusClass["prototype"]["_channelMerger"]} */
+			/** @type {SampleNodeBus["prototype"]["_channelMerger"]} */
 			this._channelMerger = GodotAudio.ctx.createChannelMerger(NUMBER_OF_WEB_CHANNELS);
 
 			this._channelSplitter
@@ -227,17 +223,17 @@ const GodotAudio = {
 			this._channelMerger.connect(this._bus.getInputNode());
 		}
 
-		/** @type {SampleNodeBusClass["prototype"]["getInputNode"]} */
+		/** @type {SampleNodeBus["prototype"]["getInputNode"]} */
 		getInputNode() {
 			return this._channelSplitter;
 		}
 
-		/** @type {SampleNodeBusClass["prototype"]["getOutputNode"]} */
+		/** @type {SampleNodeBus["prototype"]["getOutputNode"]} */
 		getOutputNode() {
 			return this._channelMerger;
 		}
 
-		/** @type {SampleNodeBusClass["prototype"]["setVolume"]} */
+		/** @type {SampleNodeBus["prototype"]["setVolume"]} */
 		setVolume(volume) {
 			if (volume.length !== GodotAudio.MAX_CHANNELS) {
 				throw new Error(
@@ -252,7 +248,7 @@ const GodotAudio = {
 			this._lfe.gain.value = volume[GodotAudio.GodotChannel.CHANNEL_LFE] ?? 0;
 		}
 
-		/** @type {SampleNodeBusClass["prototype"]["clear"]} */
+		/** @type {SampleNodeBus["prototype"]["clear"]} */
 		clear() {
 			this._bus = null;
 			this._channelSplitter.disconnect();
@@ -273,25 +269,25 @@ const GodotAudio = {
 			this._channelMerger = null;
 		}
 	},
-	/** @type {SampleNodeClass} */
-	SampleNode: class {
-		/** @type {SampleNodeClass["_sampleNodes"]} */
-		static _sampleNodes = new Map();
 
-		/** @type {SampleNodeClass["getSampleNode"]} */
+	/** @type {Map<string, SampleNode>} */
+	sampleNodes: null,
+	/** @type {SampleNode} */
+	SampleNode: class {
+		/** @type {SampleNode["getSampleNode"]} */
 		static getSampleNode(id) {
-			if (!GodotAudio.SampleNode._sampleNodes.has(id)) {
+			if (!GodotAudio.sampleNodes.has(id)) {
 				throw new Error(`Could not find sample node "${id}"`);
 			}
-			return GodotAudio.SampleNode._sampleNodes.get(id);
+			return GodotAudio.sampleNodes.get(id);
 		}
 
-		/** @type {SampleNodeClass["getSampleNodeOrNull"]} */
+		/** @type {SampleNode["getSampleNodeOrNull"]} */
 		static getSampleNodeOrNull(id) {
-			return GodotAudio.SampleNode._sampleNodes.get(id) ?? null;
+			return GodotAudio.sampleNodes.get(id) ?? null;
 		}
 
-		/** @type {SampleNodeClass["stopSampleNode"]} */
+		/** @type {SampleNode["stopSampleNode"]} */
 		static stopSampleNode(id) {
 			const sampleNode = GodotAudio.SampleNode.getSampleNodeOrNull(id);
 			if (sampleNode == null) {
@@ -300,54 +296,54 @@ const GodotAudio = {
 			sampleNode.stop();
 		}
 
-		/** @type {SampleNodeClass["pauseSampleNode"]} */
+		/** @type {SampleNode["pauseSampleNode"]} */
 		static pauseSampleNode(id, enable) {
 			const sampleNode = GodotAudio.SampleNode.getSampleNode(id);
 			sampleNode.pause(enable);
 		}
 
-		/** @type {SampleNodeClass["create"]} */
+		/** @type {SampleNode["create"]} */
 		static create(params, options = {}) {
 			const sampleNode = new GodotAudio.SampleNode(params, options);
-			GodotAudio.SampleNode._sampleNodes.set(params.id, sampleNode);
+			GodotAudio.sampleNodes.set(params.id, sampleNode);
 			return sampleNode;
 		}
 
-		/** @type {SampleNodeClass["clear"]} */
+		/** @type {SampleNode["clear"]} */
 		static clear(id) {
-			GodotAudio.Sample._samples.delete(id);
+			GodotAudio.samples.delete(id);
 		}
 
-		/** @type {(params: ConstructorParameters<SampleNodeClass>[0], options: ConstructorParameters<SampleNodeClass>[1]) => SampleNodeClass} */
+		/** @type {(params: ConstructorParameters<SampleNode>[0], options: ConstructorParameters<SampleNode>[1]) => SampleNode} */
 		constructor(params, options = {}) {
-			/** @type {SampleNodeClass["prototype"]["id"]} */
+			/** @type {SampleNode["prototype"]["id"]} */
 			this.id = params.id;
-			/** @type {SampleNodeClass["prototype"]["streamObjectId"]} */
+			/** @type {SampleNode["prototype"]["streamObjectId"]} */
 			this.streamObjectId = params.streamObjectId;
-			/** @type {SampleNodeClass["prototype"]["offset"]} */
+			/** @type {SampleNode["prototype"]["offset"]} */
 			this.offset = options.offset ?? 0;
-			/** @type {SampleNodeClass["prototype"]["positionMode"]} */
+			/** @type {SampleNode["prototype"]["positionMode"]} */
 			this.positionMode = options.positionMode ?? 'none';
-			/** @type {SampleNodeClass["prototype"]["startTime"]} */
+			/** @type {SampleNode["prototype"]["startTime"]} */
 			this.startTime = options.startTime ?? 0;
-			/** @type {SampleNodeClass["prototype"]["pauseTime"]} */
+			/** @type {SampleNode["prototype"]["pauseTime"]} */
 			this.pauseTime = 0;
-			/** @type {SampleNodeClass["prototype"]["_playbackRate"]} */
+			/** @type {SampleNode["prototype"]["_playbackRate"]} */
 			this._playbackRate = 44100;
-			/** @type {SampleNodeClass["prototype"]["_loopMode"]} */
+			/** @type {SampleNode["prototype"]["_loopMode"]} */
 			this._loopMode = 'disabled';
-			/** @type {SampleNodeClass["prototype"]["_pitchScale"]} */
+			/** @type {SampleNode["prototype"]["_pitchScale"]} */
 			this._pitchScale = 1;
-			/** @type {SampleNodeClass["prototype"]["_sampleNodeBuses"]} */
+			/** @type {SampleNode["prototype"]["_sampleNodeBuses"]} */
 			this._sampleNodeBuses = new Map();
-			/** @type {SampleNodeClass["prototype"]["_source"]} */
+			/** @type {SampleNode["prototype"]["_source"]} */
 			this._source = GodotAudio.ctx.createBufferSource();
 
 			this.setPlaybackRate(options.playbackRate ?? 44100);
 			this.setLoopMode(options.loopMode ?? this.getSample().loopMode ?? 'disabled');
 			this._source.buffer = this.getSample().getAudioBuffer();
 
-			/** @type {InstanceType<SampleNodeClass>} */
+			/** @type {InstanceType<SampleNode>} */
 			// eslint-disable-next-line consistent-this
 			const self = this;
 			this._source.addEventListener('ended', (_) => {
@@ -365,61 +361,61 @@ const GodotAudio = {
 			sampleNodeBus.setVolume(options.volume);
 		}
 
-		/** @type {SampleNodeClass["prototype"]["getLoopMode"]} */
+		/** @type {SampleNode["prototype"]["getLoopMode"]} */
 		getLoopMode() {
 			return this._loopMode;
 		}
 
-		/** @type {SampleNodeClass["prototype"]["setLoopMode"]} */
+		/** @type {SampleNode["prototype"]["setLoopMode"]} */
 		setLoopMode(val) {
 			this._loopMode = val;
 			this._source.loop = val === 'forward';
 		}
 
-		/** @type {SampleNodeClass["prototype"]["getPlaybackRate"]} */
+		/** @type {SampleNode["prototype"]["getPlaybackRate"]} */
 		getPlaybackRate() {
 			return this._playbackRate;
 		}
 
-		/** @type {SampleNodeClass["prototype"]["setPlaybackRate"]} */
+		/** @type {SampleNode["prototype"]["setPlaybackRate"]} */
 		setPlaybackRate(val) {
 			this._playbackRate = val;
 			this._syncPlaybackRate();
 		}
 
-		/** @type {SampleNodeClass["prototype"]["getPitchScale"]} */
+		/** @type {SampleNode["prototype"]["getPitchScale"]} */
 		getPitchScale() {
 			return this._pitchScale;
 		}
 
-		/** @type {SampleNodeClass["prototype"]["setPitchScale"]} */
+		/** @type {SampleNode["prototype"]["setPitchScale"]} */
 		setPitchScale(val) {
 			this._pitchScale = val;
 			this._syncPlaybackRate();
 		}
 
-		/** @type {SampleNodeClass["prototype"]["getSample"]} */
+		/** @type {SampleNode["prototype"]["getSample"]} */
 		getSample() {
 			return GodotAudio.Sample.getSample(this.streamObjectId);
 		}
 
-		/** @type {SampleNodeClass["prototype"]["getOutputNode"]} */
+		/** @type {SampleNode["prototype"]["getOutputNode"]} */
 		getOutputNode() {
 			return this._source;
 		}
 
-		/** @type {SampleNodeClass["prototype"]["start"]} */
+		/** @type {SampleNode["prototype"]["start"]} */
 		start() {
 			this._source.start(this.offset);
 		}
 
-		/** @type {SampleNodeClass["prototype"]["stop"]} */
+		/** @type {SampleNode["prototype"]["stop"]} */
 		stop() {
 			this._source.stop();
 			this.clear();
 		}
 
-		/** @type {SampleNodeClass["prototype"]["pause"]} */
+		/** @type {SampleNode["prototype"]["pause"]} */
 		pause(enable = true) {
 			if (enable) {
 				this.pauseTime = (GodotAudio.ctx.currentTime - this.startTime) / this.playbackRate;
@@ -437,12 +433,12 @@ const GodotAudio = {
 			this._source.start(this.offset + this.pauseTime);
 		}
 
-		/** @type {SampleNodeClass["prototype"]["connect"]} */
+		/** @type {SampleNode["prototype"]["connect"]} */
 		connect(node) {
 			return this.getOutputNode().connect(node);
 		}
 
-		/** @type {SampleNodeClass["prototype"]["setVolumes"]} */
+		/** @type {SampleNode["prototype"]["setVolumes"]} */
 		setVolumes(buses, volumes) {
 			for (let busIdx = 0; busIdx < buses.length; busIdx++) {
 				const sampleNodeBus = this.getSampleNodeBus(buses[busIdx]);
@@ -455,7 +451,7 @@ const GodotAudio = {
 			}
 		}
 
-		/** @type {SampleNodeClass["prototype"]["getSampleNodeBus"]} */
+		/** @type {SampleNode["prototype"]["getSampleNodeBus"]} */
 		getSampleNodeBus(bus) {
 			if (!this._sampleNodeBuses.has(bus)) {
 				const sampleNodeBus = GodotAudio.SampleNodeBus.create(bus);
@@ -465,7 +461,7 @@ const GodotAudio = {
 			return this._sampleNodeBuses.get(bus);
 		}
 
-		/** @type {SampleNodeClass["prototype"]["clear"]} */
+		/** @type {SampleNode["prototype"]["clear"]} */
 		clear() {
 			this._source.stop();
 			this._source.disconnect();
@@ -480,26 +476,26 @@ const GodotAudio = {
 			GodotAudio.SampleNode.clear(this.id);
 		}
 
-		/** @type {SampleNodeClass["prototype"]["_syncPlaybackRate"]} */
+		/** @type {SampleNode["prototype"]["_syncPlaybackRate"]} */
 		_syncPlaybackRate() {
 			this._source.playbackRate.value = this.getPlaybackRate() * this.getPitchScale();
 		}
 	},
+
+	/** @type {Bus[]} */
+	buses: null,
+	/** @type {Bus | null} */
+	busSolo: null,
 	/** @type {Bus} */
 	Bus: class {
-		/** @type {BusClass["_buses"]} */
-		static _buses = [];
-		/** @type {BusClass["_busSolo"]} */
-		static _busSolo = null;
-
-		/** @type {BusClass["getCount"]} */
+		/** @type {Bus["getCount"]} */
 		static getCount() {
-			return GodotAudio.Bus._buses.length;
+			return GodotAudio.buses.length;
 		}
 
-		/** @type {BusClass["setCount"]} */
+		/** @type {Bus["setCount"]} */
 		static setCount(val) {
-			const buses = GodotAudio.Bus._buses;
+			const buses = GodotAudio.buses;
 			if (val === buses.length) {
 				return;
 			}
@@ -511,34 +507,34 @@ const GodotAudio = {
 					const deletedBus = deletedBuses[i];
 					deletedBus.clear();
 				}
-				GodotAudio.Bus._buses = buses.slice(0, val);
+				GodotAudio.buses = buses.slice(0, val);
 				return;
 			}
 
-			for (let i = GodotAudio.Bus._buses.length; i < val; i++) {
+			for (let i = GodotAudio.buses.length; i < val; i++) {
 				GodotAudio.Bus.create();
 			}
 		}
 
-		/** @type {BusClass["get"]} */
+		/** @type {Bus["get"]} */
 		static get(index) {
-			if (index < 0 || index >= GodotAudio.Bus._buses.length) {
+			if (index < 0 || index >= GodotAudio.buses.length) {
 				throw new Error(`invalid bus index "${index}"`);
 			}
-			return GodotAudio.Bus._buses[index];
+			return GodotAudio.buses[index];
 		}
 
-		/** @type {BusClass["move"]} */
+		/** @type {Bus["move"]} */
 		static move(fromIndex, toIndex) {
 			const movedBus = GodotAudio.Bus.get(fromIndex);
-			let buses = GodotAudio.Bus._buses;
+			let buses = GodotAudio.buses;
 			buses = buses.filter((_, i) => i !== fromIndex);
 			// Inserts at index.
 			buses.splice(toIndex - 1, 0, movedBus);
-			GodotAudio.Bus._buses = buses;
+			GodotAudio.buses = buses;
 		}
 
-		/** @type {BusClass["addAt"]} */
+		/** @type {Bus["addAt"]} */
 		static addAt(index) {
 			const newBus = GodotAudio.Bus.create();
 			if (index !== newBus.getId()) {
@@ -546,11 +542,11 @@ const GodotAudio = {
 			}
 		}
 
-		/** @type {BusClass["create"]} */
+		/** @type {Bus["create"]} */
 		static create() {
 			const newBus = new GodotAudio.Bus();
-			const isFirstBus = GodotAudio.Bus._buses.length === 0;
-			GodotAudio.Bus._buses.push(newBus);
+			const isFirstBus = GodotAudio.buses.length === 0;
+			GodotAudio.buses.push(newBus);
 			if (isFirstBus) {
 				newBus.setSend(null);
 			} else {
@@ -560,18 +556,18 @@ const GodotAudio = {
 		}
 
 		constructor() {
-			/** @type {BusClass["prototype"]["_sampleNodes"]} */
+			/** @type {Bus["prototype"]["_sampleNodes"]} */
 			this._sampleNodes = new Set();
-			/** @type {BusClass["prototype"]["isSolo"]} */
+			/** @type {Bus["prototype"]["isSolo"]} */
 			this.isSolo = false;
-			/** @type {BusClass["prototype"]["_send"]} */
+			/** @type {Bus["prototype"]["_send"]} */
 			this._send = null;
 
-			/** @type {BusClass["prototype"]["_gainNode"]} */
+			/** @type {Bus["prototype"]["_gainNode"]} */
 			this._gainNode = GodotAudio.ctx.createGain();
-			/** @type {BusClass["prototype"]["_soloNode"]} */
+			/** @type {Bus["prototype"]["_soloNode"]} */
 			this._soloNode = GodotAudio.ctx.createGain();
-			/** @type {BusClass["prototype"]["_muteNode"]} */
+			/** @type {Bus["prototype"]["_muteNode"]} */
 			this._muteNode = GodotAudio.ctx.createGain();
 
 			this._gainNode
@@ -579,27 +575,27 @@ const GodotAudio = {
 				.connect(this._muteNode);
 		}
 
-		/** @type {BusClass["prototype"]["getId"]} */
+		/** @type {Bus["prototype"]["getId"]} */
 		getId() {
-			return GodotAudio.Bus._buses.indexOf(this);
+			return GodotAudio.buses.indexOf(this);
 		}
 
-		/** @type {BusClass["prototype"]["getVolumeDb"]} */
+		/** @type {Bus["prototype"]["getVolumeDb"]} */
 		getVolumeDb() {
 			return GodotAudio.linear_to_db(this._gainNode.gain.value);
 		}
 
-		/** @type {BusClass["prototype"]["setVolumeDb"]} */
+		/** @type {Bus["prototype"]["setVolumeDb"]} */
 		setVolumeDb(val) {
 			this._gainNode.gain.value = GodotAudio.db_to_linear(val);
 		}
 
-		/** @type {BusClass["prototype"]["getSend"]} */
+		/** @type {Bus["prototype"]["getSend"]} */
 		getSend() {
 			return this._send;
 		}
 
-		/** @type {BusClass["prototype"]["setSend"]} */
+		/** @type {Bus["prototype"]["setSend"]} */
 		setSend(val) {
 			this._send = val;
 			if (val == null) {
@@ -614,30 +610,30 @@ const GodotAudio = {
 			this.connect(val);
 		}
 
-		/** @type {BusClass["prototype"]["getInputNode"]} */
+		/** @type {Bus["prototype"]["getInputNode"]} */
 		getInputNode() {
 			return this._gainNode;
 		}
 
-		/** @type {BusClass["prototype"]["getOutputNode"]} */
+		/** @type {Bus["prototype"]["getOutputNode"]} */
 		getOutputNode() {
 			return this._muteNode;
 		}
 
-		/** @type {BusClass["prototype"]["mute"]} */
+		/** @type {Bus["prototype"]["mute"]} */
 		mute(enable) {
 			this._muteNode.gain.value = enable ? 0 : 1;
 		}
 
-		/** @type {BusClass["prototype"]["solo"]} */
+		/** @type {Bus["prototype"]["solo"]} */
 		solo(enable) {
 			if (this.isSolo === enable) {
 				return;
 			}
 
 			if (enable) {
-				if (GodotAudio.Bus._busSolo != null && GodotAudio.Bus._busSolo !== this) {
-					GodotAudio.Bus._busSolo._disableSolo();
+				if (GodotAudio.busSolo != null && GodotAudio.busSolo !== this) {
+					GodotAudio.busSolo._disableSolo();
 				}
 				this._enableSolo();
 				return;
@@ -646,19 +642,19 @@ const GodotAudio = {
 			this._disableSolo();
 		}
 
-		/** @type {BusClass["prototype"]["addSampleNode"]} */
+		/** @type {Bus["prototype"]["addSampleNode"]} */
 		addSampleNode(sampleNode) {
 			this._sampleNodes.add(sampleNode);
 			sampleNode.getOutputNode().connect(this.getInputNode());
 		}
 
-		/** @type {BusClass["prototype"]["removeSampleNode"]} */
+		/** @type {Bus["prototype"]["removeSampleNode"]} */
 		removeSampleNode(sampleNode) {
 			this._sampleNodes.delete(sampleNode);
 			sampleNode.getOutputNode().disconnect();
 		}
 
-		/** @type {BusClass["prototype"]["connect"]} */
+		/** @type {Bus["prototype"]["connect"]} */
 		connect(bus) {
 			if (bus == null) {
 				throw new Error('cannot connect to null bus');
@@ -668,12 +664,12 @@ const GodotAudio = {
 			return bus;
 		}
 
-		/** @type {BusClass["prototype"]["clear"]} */
+		/** @type {Bus["prototype"]["clear"]} */
 		clear() {
-			GodotAudio.Bus._buses = GodotAudio.Bus._buses.filter((v) => v !== this);
+			GodotAudio.buses = GodotAudio.buses.filter((v) => v !== this);
 		}
 
-		/** @type {BusClass["prototype"]["_syncSampleNodes"]} */
+		/** @type {Bus["prototype"]["_syncSampleNodes"]} */
 		_syncSampleNodes() {
 			const sampleNodes = Array.from(this._sampleNodes);
 			for (let i = 0; i < sampleNodes.length; i++) {
@@ -683,12 +679,12 @@ const GodotAudio = {
 			}
 		}
 
-		/** @type {BusClass["prototype"]["_enableSolo"]} */
+		/** @type {Bus["prototype"]["_enableSolo"]} */
 		_enableSolo() {
 			this.isSolo = true;
-			GodotAudio.Bus._busSolo = this;
+			GodotAudio.busSolo = this;
 			this._soloNode.gain.value = 1;
-			const otherBuses = GodotAudio.Bus._buses.filter(
+			const otherBuses = GodotAudio.buses.filter(
 				(otherBus) => otherBus !== this
 			);
 			for (let i = 0; i < otherBuses.length; i++) {
@@ -697,12 +693,12 @@ const GodotAudio = {
 			}
 		}
 
-		/** @type {BusClass["prototype"]["_disableSolo"]} */
+		/** @type {Bus["prototype"]["_disableSolo"]} */
 		_disableSolo() {
 			this.isSolo = false;
-			GodotAudio.Bus._busSolo = null;
+			GodotAudio.busSolo = null;
 			this._soloNode.gain.value = 1;
-			const otherBuses = GodotAudio.Bus._buses.filter(
+			const otherBuses = GodotAudio.buses.filter(
 				(otherBus) => otherBus !== this
 			);
 			for (let i = 0; i < otherBuses.length; i++) {
@@ -731,10 +727,10 @@ const GodotAudio = {
 
 	init: function (mix_rate, latency, onstatechange, onlatencyupdate) {
 		// Initialize classes static values.
-		GodotAudio.Sample._samples = new Map();
-		GodotAudio.SampleNode._sampleNodes = new Map();
-		GodotAudio.Bus._buses = [];
-		GodotAudio.Bus._busSolo = null;
+		GodotAudio.samples = new Map();
+		GodotAudio.sampleNodes = new Map();
+		GodotAudio.buses = [];
+		GodotAudio.busSolo = null;
 
 		const opts = {};
 		// If mix_rate is 0, let the browser choose.
