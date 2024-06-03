@@ -287,6 +287,7 @@ void AudioStream::get_parameter_list(List<Parameter> *r_parameters) {
 }
 
 Ref<AudioSample> AudioStream::generate_sample() const {
+	ERR_FAIL_COND_V_MSG(!can_be_sampled(), nullptr, "Cannot generate a sample for a stream that cannot be sampled.");
 	Ref<AudioSample> sample;
 	sample.instantiate();
 	sample->stream = this;

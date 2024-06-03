@@ -181,6 +181,18 @@ PackedStringArray AudioDriver::get_input_device_list() {
 	return list;
 }
 
+void AudioDriver::start_sample_playback(const Ref<AudioSamplePlayback> &p_playback) {
+	if (p_playback.is_valid()) {
+		if (p_playback->stream.is_valid()) {
+			WARN_PRINT_ED(vformat(R"(Trying to play stream (%s) as a sample (%s), but the driver doesn't support sample playback.)", p_playback->get_instance_id(), p_playback->stream->get_instance_id()));
+		} else {
+			WARN_PRINT_ED(vformat(R"(Trying to play stream (%s) as a null sample, but the driver doesn't support sample playback.)", p_playback->get_instance_id()));
+		}
+	} else {
+		WARN_PRINT_ED("Trying to play a null sample playback from a driver that don't support sample playback.");
+	}
+}
+
 AudioDriverDummy AudioDriverManager::dummy_driver;
 AudioDriver *AudioDriverManager::drivers[MAX_DRIVERS] = {
 	&AudioDriverManager::dummy_driver,
