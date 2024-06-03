@@ -28,6 +28,8 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
+/* eslint-disable no-use-before-define */
+
 /**
  * @typedef { "none" | "2D" | "3D" } PositionMode
  * @typedef { "disabled" | "forward" | "backward" | "pingpong" } LoopMode
@@ -55,7 +57,7 @@ class Sample {
 	/**
 	 * Returns a `Sample`.
 	 * @param {string} id Id of the `Sample` to get.
-	 * @returns {Sample} 
+	 * @returns {Sample}
 	 * @throws {ReferenceError} When no `Sample` is found
 	 */
 	static getSample(id) {
@@ -68,14 +70,14 @@ class Sample {
 	/**
 	 * Returns a `Sample` or `null`, if it doesn't exist.
 	 * @param {string} id Id of the `Sample` to get.
-	 * @returns {Sample?} 
+	 * @returns {Sample?}
 	 */
 	static getSampleOrNull(id) {
 		return GodotAudio.samples.get(id) ?? null;
 	}
 
 	/**
-	 * Creates a `Sample` based on the params. Will register it to the 
+	 * Creates a `Sample` based on the params. Will register it to the
 	 * `GodotAudio.samples` registry.
 	 * @param {SampleParams} params Base params
 	 * @param {SampleOptions} [options={}] Optional params
@@ -100,7 +102,7 @@ class Sample {
 	 * `Sample` constructor.
 	 * @param {SampleParams} params Base params
 	 * @param {SampleOptions} [options={}] Optional params
-	 * @constructor 
+	 * @constructor
 	 */
 	constructor(params, options = {}) {
 		/** @type {string} */
@@ -278,7 +280,7 @@ class SampleNodeBus {
 	}
 
 	/**
-	 * Sets the volume for each (splitted) channel.
+	 * Sets the volume for each (split) channel.
 	 * @param {Float32Array} volume Volume array from the engine for each channel.
 	 * @returns {void}
 	 */
@@ -580,8 +582,8 @@ class SampleNode {
 
 	/**
 	 * Sets the volumes of the `SampleNode` for each buses passed in parameters.
-	 * @param {Bus[]} buses 
-	 * @param {Float32Array} volumes 
+	 * @param {Bus[]} buses
+	 * @param {Float32Array} volumes
 	 */
 	setVolumes(buses, volumes) {
 		for (let busIdx = 0; busIdx < buses.length; busIdx++) {
@@ -596,7 +598,7 @@ class SampleNode {
 	}
 
 	/**
-	 * Retuns the SampleNodeBus based on the bus in parameters.
+	 * Returns the SampleNodeBus based on the bus in parameters.
 	 * @param {Bus} bus Bus to get the SampleNodeBus from.
 	 * @returns {SampleNodeBus}
 	 */
@@ -650,7 +652,7 @@ class Bus {
 	}
 
 	/**
-	 * Sets the number of registered buses. 
+	 * Sets the number of registered buses.
 	 * Will delete buses if lower than the current number.
 	 * @param {number} val Count of registered buses.
 	 * @returns {void}
@@ -679,7 +681,7 @@ class Bus {
 
 	/**
 	 * Returns a `Bus` based on it's index number.
-	 * @param {number} index 
+	 * @param {number} index
 	 * @returns {Bus}
 	 */
 	static get(index) {
@@ -795,9 +797,9 @@ class Bus {
 	 * Sets the "send" bus.
 	 * If null, this bus sends its contents directly to the output.
 	 * If not null, this bus sends its contents to another bus.
-	 * 
+	 *
 	 * **Note:** if null, `getId()` must be equal to 0. Otherwise, it will throw.
-	 * @param {Bus?} val 
+	 * @param {Bus?} val
 	 * @returns {void}
 	 * @throws {Error} When val is `null` and `getId()` isn't equal to 0
 	 */
@@ -881,7 +883,7 @@ class Bus {
 
 	/**
 	 * Wrapper to simply connect to another bus.
-	 * @param {Bus} bus 
+	 * @param {Bus} bus
 	 * @returns {void}
 	 */
 	connect(bus) {
