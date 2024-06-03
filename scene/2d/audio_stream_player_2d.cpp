@@ -128,9 +128,6 @@ void AudioStreamPlayer2D::_update_panning() {
 	volume_vector.write[2] = AudioFrame(0, 0);
 	volume_vector.write[3] = AudioFrame(0, 0);
 
-	float last_pan = 0.0f;
-	float last_multiplier = 0.0f;
-
 	StringName actual_bus = _get_actual_bus();
 
 	for (Viewport *vp : viewports) {
@@ -179,25 +176,18 @@ void AudioStreamPlayer2D::_update_panning() {
 		AudioFrame new_sample = AudioFrame(l, r) * multiplier;
 
 		volume_vector.write[0] = AudioFrame(MAX(prev_sample[0], new_sample[0]), MAX(prev_sample[1], new_sample[1]));
-
-		// Samples pan and multiplier.
-		float total_multiplier = multiplier + last_multiplier;
-		float current_pan_ratio = multiplier / total_multiplier;
-		float current_pan = current_pan_ratio * (-l + r);
-		last_pan = current_pan + (last_pan * (1 - current_pan_ratio));
-		last_multiplier = MAX(multiplier, last_multiplier);
 	}
 
 	for (const Ref<AudioStreamPlayback> &playback : internal->stream_playbacks) {
 		AudioServer::get_singleton()->set_playback_bus_exclusive(playback, actual_bus, volume_vector);
+	}
+
+	for (const Ref<AudioStreamPlayback> &playback : internal->stream_playbacks) {
+		AudioServer::get_singleton()->set_playback_pitch_scale(playback, internal->pitch_scale);
 		if (playback->get_is_sample() && playback->get_sample_playback().is_valid()) {
 			Ref<AudioSamplePlayback> sample_playback = playback->get_sample_playback();
 			AudioServer::get_singleton()->update_sample_playback_pitch_scale(sample_playback, internal->pitch_scale);
 		}
-	}
-
-	for (Ref<AudioStreamPlayback> &playback : internal->stream_playbacks) {
-		AudioServer::get_singleton()->set_playback_pitch_scale(playback, internal->pitch_scale);
 	}
 
 	last_mix_count = AudioServer::get_singleton()->get_mix_count();
