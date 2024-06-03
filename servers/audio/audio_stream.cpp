@@ -32,11 +32,6 @@
 
 #include "core/config/project_settings.h"
 #include "core/os/os.h"
-#include "servers/audio_server.h"
-
-void AudioSamplePlayback::_bind_methods() {
-}
-//////////////////////////////
 
 void AudioStreamPlayback::start(double p_from_pos) {
 	if (GDVIRTUAL_CALL(_start, p_from_pos)) {

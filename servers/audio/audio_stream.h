@@ -46,9 +46,6 @@ class AudioStream;
 class AudioSamplePlayback : public RefCounted {
 	GDCLASS(AudioSamplePlayback, RefCounted);
 
-protected:
-	static void _bind_methods();
-
 public:
 	enum PositionMode {
 		AUDIO_SAMPLE_PLAYBACK_POSITION_NONE,
@@ -215,7 +212,7 @@ public:
 
 	virtual void get_parameter_list(List<Parameter> *r_parameters);
 
-	virtual bool can_be_sampled() const { return false; };
+	virtual bool can_be_sampled() const { return false; }
 	virtual Ref<AudioSample> generate_sample() const;
 };
 
