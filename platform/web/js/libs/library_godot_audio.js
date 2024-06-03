@@ -285,9 +285,9 @@ class SampleNodeBus {
 	 * @returns {void}
 	 */
 	setVolume(volume) {
-		if (volume.length !== GodotAudio.MAX_CHANNELS) {
+		if (volume.length !== GodotAudio.MAX_VOLUME_CHANNELS) {
 			throw new Error(
-				`Volume length isn't "${GodotAudio.MAX_CHANNELS}", is ${volume.length} instead`
+				`Volume length isn't "${GodotAudio.MAX_VOLUME_CHANNELS}", is ${volume.length} instead`
 			);
 		}
 		this._l.gain.value = volume[GodotAudio.GodotChannel.CHANNEL_L] ?? 0;
@@ -458,7 +458,7 @@ class SampleNode {
 			}
 		});
 
-		const bus = GodotAudio.Bus.get(params.busIndex);
+		const bus = GodotAudio.Bus.getBus(params.busIndex);
 		const sampleNodeBus = this.getSampleNodeBus(bus);
 		sampleNodeBus.setVolume(options.volume);
 	}
@@ -590,8 +590,8 @@ class SampleNode {
 			const sampleNodeBus = this.getSampleNodeBus(buses[busIdx]);
 			sampleNodeBus.setVolume(
 				volumes.slice(
-					busIdx * GodotAudio.MAX_CHANNELS,
-					busIdx * GodotAudio.MAX_CHANNELS + GodotAudio.MAX_CHANNELS
+					busIdx * GodotAudio.MAX_VOLUME_CHANNELS,
+					(busIdx * GodotAudio.MAX_VOLUME_CHANNELS) + GodotAudio.MAX_VOLUME_CHANNELS
 				)
 			);
 		}
@@ -683,10 +683,23 @@ class Bus {
 	 * Returns a `Bus` based on it's index number.
 	 * @param {number} index
 	 * @returns {Bus}
+	 * @throws {ReferenceError} If the index value is outside the registry.
 	 */
-	static get(index) {
+	static getBus(index) {
 		if (index < 0 || index >= GodotAudio.buses.length) {
-			throw new Error(`invalid bus index "${index}"`);
+			throw new ReferenceError(`invalid bus index "${index}"`);
+		}
+		return GodotAudio.buses[index];
+	}
+
+	/**
+	 * Returns a `Bus` based on it's index number. Returns null if it doesn't exist.
+	 * @param {number} index
+	 * @returns {Bus?}
+	 */
+	static getBusOrNull(index) {
+		if (index < 0 || index >= GodotAudio.buses.length) {
+			return null;
 		}
 		return GodotAudio.buses[index];
 	}
@@ -698,7 +711,7 @@ class Bus {
 	 * @returns {void}
 	 */
 	static move(fromIndex, toIndex) {
-		const movedBus = GodotAudio.Bus.get(fromIndex);
+		const movedBus = GodotAudio.Bus.getBus(fromIndex);
 		let buses = GodotAudio.buses;
 		buses = buses.filter((_, i) => i !== fromIndex);
 		// Inserts at index.
@@ -729,7 +742,7 @@ class Bus {
 		if (isFirstBus) {
 			newBus.setSend(null);
 		} else {
-			newBus.setSend(GodotAudio.Bus.get(0));
+			newBus.setSend(GodotAudio.Bus.getBus(0));
 		}
 		return newBus;
 	}
@@ -949,7 +962,14 @@ class Bus {
 }
 
 const GodotAudio = {
-	MAX_CHANNELS: 8,
+	/**
+	 * Max number of volume channels.
+	 */
+	MAX_VOLUME_CHANNELS: 8,
+
+	/**
+	 * Represents the index of each sound channel relative to the engine.
+	 */
 	GodotChannel: Object.freeze({
 		CHANNEL_L: 0,
 		CHANNEL_R: 1,
@@ -960,6 +980,10 @@ const GodotAudio = {
 		CHANNEL_SL: 7,
 		CHANNEL_SR: 8,
 	}),
+
+	/**
+	 * Represents the index of each sound channel relative to the Web Audio API.
+	 */
 	WebChannel: Object.freeze({
 		CHANNEL_L: 0,
 		CHANNEL_R: 1,
@@ -970,7 +994,10 @@ const GodotAudio = {
 	}),
 
 	// `Sample` class
-	/** @type {Map<string, Sample>} */
+	/**
+	 * Registry of `Sample`s.
+	 * @type {Map<string, Sample>}
+	 */
 	samples: null,
 	Sample,
 
@@ -978,14 +1005,23 @@ const GodotAudio = {
 	SampleNodeBus,
 
 	// `SampleNode` class
-	/** @type {Map<string, SampleNode>} */
+	/**
+	 * Registry of `SampleNode`s.
+	 * @type {Map<string, SampleNode>}
+	 */
 	sampleNodes: null,
 	SampleNode,
 
 	// `Bus` class
-	/** @type {Bus[]} */
+	/**
+	 * Registry of `Bus`es.
+	 * @type {Bus[]}
+	 */
 	buses: null,
-	/** @type {Bus | null} */
+	/**
+	 * Reference to the current bus in solo mode.
+	 * @type {Bus | null}
+	 */
 	busSolo: null,
 	Bus,
 
@@ -995,12 +1031,20 @@ const GodotAudio = {
 	driver: null,
 	interval: 0,
 
-	/** @type {(linear: number) => number} */
+	/**
+	 * Converts linear volume to Db.
+	 * @param {number} linear Linear value to convert.
+	 * @returns {number}
+	 */
 	linear_to_db: function (linear) {
 		// eslint-disable-next-line no-loss-of-precision
 		return Math.log(linear) * 8.6858896380650365530225783783321;
 	},
-	/** @type {(db: number) => number} */
+	/**
+	 * Converts Db volume to linear.
+	 * @param {number} db Db value to convert.
+	 * @returns {number}
+	 */
 	db_to_linear: function (db) {
 		// eslint-disable-next-line no-loss-of-precision
 		return Math.exp(db * 0.11512925464970228420089957273422);
@@ -1135,7 +1179,14 @@ const GodotAudio = {
 			});
 	},
 
-	/** @type {(playbackObjectId: string, streamObjectId: number, busIndex: number, startOptions: SampleNodeConstructorOptions) => void} */
+	/**
+	 * Triggered when a sample node needs to start.
+	 * @param {string} playbackObjectId The unique id of the sample playback
+	 * @param {string} streamObjectId The unique id of the stream
+	 * @param {number} busIndex Index of the bus currently binded to the sample playback
+	 * @param {SampleNodeOptions} startOptions Optional params
+	 * @returns {void}
+	 */
 	start_sample: function (
 		playbackObjectId,
 		streamObjectId,
@@ -1154,71 +1205,128 @@ const GodotAudio = {
 		sampleNode.start();
 	},
 
-	/** @type {(playbackObjectId: string) => void} */
+	/**
+	 * Triggered when a sample node needs to be stopped.
+	 * @param {string} playbackObjectId Id of the sample playback
+	 * @returns {void}
+	 */
 	stop_sample: function (playbackObjectId) {
 		GodotAudio.SampleNode.stopSampleNode(playbackObjectId);
 	},
 
-	/** @type {(playbackObjectId: string, pause: boolean) => void} */
+	/**
+	 * Triggered when a sample node needs to be paused or unpaused.
+	 * @param {string} playbackObjectId Id of the sample playback
+	 * @param {boolean} pause State of the pause
+	 * @returns {void}
+	 */
 	sample_set_pause: function (playbackObjectId, pause) {
 		GodotAudio.SampleNode.pauseSampleNode(playbackObjectId, pause);
 	},
 
-	/** @type {(playbackObjectId: string, busIndex: number, pitchScale: number) => void} */
+	/**
+	 * Triggered when a sample node needs its pitch scale to be updated.
+	 * @param {string} playbackObjectId Id of the sample playback
+	 * @param {number} pitchScale Pitch scale of the sample playback
+	 * @returns {void}
+	 */
 	update_sample_pitch_scale: function (playbackObjectId, pitchScale) {
 		const sampleNode = GodotAudio.SampleNode.getSampleNode(playbackObjectId);
-		sampleNode.pitchScale = pitchScale;
+		sampleNode.setPitchScale(pitchScale);
 	},
 
-	/** @type {(playbackObjectId: string, busIndexes: number[], volumes: Float32Array) => void} */
+	/**
+	 * Triggered when a sample node volumes need to be updated.
+	 * @param {string} playbackObjectId Id of the sample playback
+	 * @param {number[]} busIndexes Indexes of the buses that need to be updated
+	 * @param {Float32Array} volumes Array of the volumes
+	 * @returns {void}
+	 */
 	sample_set_volumes_linear(playbackObjectId, busIndexes, volumes) {
 		const sampleNode = GodotAudio.SampleNode.getSampleNode(playbackObjectId);
-		const buses = busIndexes.map((busIndex) => GodotAudio.Bus.get(busIndex));
+		const buses = busIndexes.map((busIndex) => GodotAudio.Bus.getBus(busIndex));
 		sampleNode.setVolumes(buses, volumes);
 	},
 
-	/** @type {(count: number) => void} */
+	/**
+	 * Triggered when the bus count changes.
+	 * @param {number} count Number of buses
+	 * @returns {void}
+	 */
 	set_sample_bus_count: function (count) {
 		GodotAudio.Bus.setCount(count);
 	},
 
-	/** @type {(index: number) => void} */
+	/**
+	 * Triggered when a bus needs to be removed.
+	 * @param {number} index Bus index
+	 * @returns {void}
+	 */
 	remove_sample_bus: function (index) {
-		const bus = GodotAudio.Bus.get(index);
+		const bus = GodotAudio.Bus.getBus(index);
 		bus.clear();
 	},
 
-	/** @type {(atPos: number) => void} */
+	/**
+	 * Triggered when a bus needs to be at the desired position.
+	 * @param {number} atPos Position to add the bus
+	 * @returns {void}
+	 */
 	add_sample_bus: function (atPos) {
 		GodotAudio.Bus.addAt(atPos);
 	},
 
-	/** @type {(busIndex: number, toPos: number) => void} */
+	/**
+	 * Triggered when a bus needs to be moved.
+	 * @param {number} busIndex Index of the bus to move
+	 * @param {number} toPos Index of the new position of the bus
+	 * @returns {void}
+	 */
 	move_sample_bus: function (busIndex, toPos) {
 		GodotAudio.Bus.move(busIndex, toPos);
 	},
 
-	/** @type {(busIndex: number, sendIndex: number) => void} */
+	/**
+	 * Triggered when the "send" value of a bus changes.
+	 * @param {number} busIndex Index of the bus to update the "send" value
+	 * @param {number} sendIndex Index of the bus that is the new "send"
+	 * @returns {void}
+	 */
 	set_sample_bus_send: function (busIndex, sendIndex) {
-		const bus = GodotAudio.Bus.get(busIndex);
-		bus.setSend(GodotAudio.Bus.get(sendIndex));
+		const bus = GodotAudio.Bus.getBus(busIndex);
+		bus.setSend(GodotAudio.Bus.getBus(sendIndex));
 	},
 
-	/** @type {(busIndex: number, volumeDb: number) => void} */
+	/**
+	 * Triggered when a bus needs its volume db to be updated.
+	 * @param {number} busIndex Index of the bus to update its volume db
+	 * @param {number} volumeDb Volume of the bus
+	 * @returns {void}
+	 */
 	set_sample_bus_volume_db: function (busIndex, volumeDb) {
-		const bus = GodotAudio.Bus.get(busIndex);
+		const bus = GodotAudio.Bus.getBus(busIndex);
 		bus.volumeDb = volumeDb;
 	},
 
-	/** @type {(busIndex: number, enable: boolean) => void} */
+	/**
+	 * Triggered when a bus needs to update its solo status
+	 * @param {number} busIndex Index of the bus to update its solo status
+	 * @param {boolean} enable Status of the solo
+	 * @returns {void}
+	 */
 	set_sample_bus_solo: function (busIndex, enable) {
-		const bus = GodotAudio.Bus.get(busIndex);
+		const bus = GodotAudio.Bus.getBus(busIndex);
 		bus.solo(enable);
 	},
 
-	/** @type {(busIndex: number, enable: boolean) => void} */
+	/**
+	 * Triggered when a bus needs to update its mute status
+	 * @param {number} busIndex Index of the bus to update its mute status
+	 * @param {boolean} enable Status of the mute
+	 * @returns {void}
+	 */
 	set_sample_bus_mute: function (busIndex, enable) {
-		const bus = GodotAudio.Bus.get(busIndex);
+		const bus = GodotAudio.Bus.getBus(busIndex);
 		bus.mute(enable);
 	},
 };
