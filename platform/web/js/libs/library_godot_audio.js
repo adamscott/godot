@@ -1385,6 +1385,13 @@ const _GodotAudio = {
 		}
 	},
 
+	godot_audio_get_browser_mix_rate__proxy: 'sync',
+	godot_audio_get_browser_mix_rate__sig: 'i',
+	godot_audio_get_browser_mix_rate: function () {
+		const ctx = new AudioContext();
+		return ctx.sampleRate;
+	},
+
 	godot_audio_input_start__proxy: 'sync',
 	godot_audio_input_start__sig: 'i',
 	godot_audio_input_start: function () {
