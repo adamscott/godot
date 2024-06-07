@@ -446,7 +446,7 @@ class SampleNode {
 		const self = this;
 		this._source.addEventListener('ended', (_) => {
 			switch (self.getSample().loopMode) {
-			case 'none':
+			case 'disabled':
 				GodotAudio.SampleNode.stopSampleNode(self.id);
 				break;
 			default:
@@ -474,7 +474,14 @@ class SampleNode {
 	 */
 	setLoopMode(val) {
 		this._loopMode = val;
-		this._source.loop = val === 'forward';
+		switch (val) {
+		case 'forward':
+		case 'backward':
+			this._source.loop = true;
+			break;
+		default:
+			this._source.loop = false;
+		}
 	}
 
 	/**
