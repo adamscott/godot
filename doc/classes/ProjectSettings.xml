@@ -411,11 +411,11 @@
 		</member>
 		<member name="audio/general/default_playback_type" type="int" setter="" getter="" default="0" experimental="">
 			Specifies the default playback type of the platform.
-			The default value is set to `Stream`, as most platforms have no issues mixing streams.
+			The default value is set to [code]Stream[/code], as most platforms have no issues mixing streams.
 		</member>
 		<member name="audio/general/default_playback_type.web" type="int" setter="" getter="" default="1" experimental="">
 			Specifies the default playback type of the Web platform.
-			The default value is set to `Sample` as the Web platform (especially when exporting a single-threaded game) is not suited to mix audio streams outside of the Web Audio API.
+			The default value is set to [code]Sample[/code] as the Web platform (especially when exporting a single-threaded game) is not suited to mix audio streams outside of the Web Audio API.
 		</member>
 		<member name="audio/general/ios/mix_with_others" type="bool" setter="" getter="" default="false">
 			Sets the [url=https://developer.apple.com/documentation/avfaudio/avaudiosession/categoryoptions/1616611-mixwithothers]mixWithOthers[/url] option for the AVAudioSession on iOS. This will override the mix behavior, if the category is set to [code]Play and Record[/code], [code]Playback[/code], or [code]Multi Route[/code].
