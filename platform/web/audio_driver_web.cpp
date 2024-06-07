@@ -218,8 +218,21 @@ void AudioDriverWeb::register_sample(const Ref<AudioSample> &p_sample) {
 		} break;
 	}
 
+	double length = p_sample->stream->get_length();
+	switch (p_sample->loop_mode) {
+		case AudioSample::LoopMode::LOOP_FORWARD:
+		case AudioSample::LoopMode::LOOP_PINGPONG:
+		case AudioSample::LoopMode::LOOP_BACKWARD: {
+			// TODO: Calculate length based on `loop_begin` / `loop_end`.
+		} break;
+
+		default: {
+			// Do nothing.
+		}
+	}
+
 	Vector<AudioFrame> frames;
-	int frames_total = mix_rate * p_sample->stream->get_length();
+	int frames_total = mix_rate * length;
 	{
 		Ref<AudioStreamPlayback> stream_playback = p_sample->stream->instantiate_playback();
 		frames.resize(frames_total);
