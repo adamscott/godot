@@ -31,7 +31,6 @@
 /* eslint-disable no-use-before-define */
 
 /**
- * @typedef { "none" | "2D" | "3D" } PositionMode
  * @typedef { "disabled" | "forward" | "backward" | "pingpong" } LoopMode
  */
 
@@ -331,7 +330,6 @@ class SampleNodeBus {
  * }} SampleNodeParams
  * @typedef {{
  *   offset?: number
- *   positionMode?: PositionMode
  *   playbackRate?: number
  *   startTime?: number
  *   loopMode?: LoopMode
@@ -424,8 +422,6 @@ class SampleNode {
 		this.streamObjectId = params.streamObjectId;
 		/** @type {number} */
 		this.offset = options.offset ?? 0;
-		/** @type {PositionMode} */
-		this.positionMode = options.positionMode ?? 'none';
 		/** @type {LoopMode} */
 		this.startTime = options.startTime ?? 0;
 		/** @type {number} */
@@ -1415,13 +1411,28 @@ const _GodotAudio = {
 
 	godot_audio_sample_stream_is_registered__proxy: 'sync',
 	godot_audio_sample_stream_is_registered__sig: 'ii',
-	godot_audio_sample_stream_is_registered: function (streamObjectId) {
-		return GodotAudio.Sample.getSampleOrNull(streamObjectId) != null;
+	/**
+	 * Returns if the sample stream is registered
+	 * @param {number} streamObjectIdStrPtr Pointer of the streamObjectId
+	 * @returns {number}
+	 */
+	godot_audio_sample_stream_is_registered: function (streamObjectIdStrPtr) {
+		const streamObjectId = GodotRuntime.parseString(streamObjectIdStrPtr);
+		return Number(GodotAudio.Sample.getSampleOrNull(streamObjectId) != null);
 	},
 
 	godot_audio_sample_register_stream__proxy: 'sync',
 	godot_audio_sample_register_stream__sig: 'viiiiiii',
-	/** @type {(streamObjectIdStrPtr: number, framesPtr: number, framesTotal: number, sampleRate: number, loopModeStrPtr: number, loopBegin: number, loopEnd: number) => void} */
+	/**
+	 * Registers a stream.
+	 * @param {number} streamObjectIdStrPtr StreamObjectId pointer
+	 * @param {number} framesPtr Frames pointer
+	 * @param {number} framesTotal Frames total value
+	 * @param {number} loopModeStrPtr Loop mode pointer
+	 * @param {number} loopBegin Loop begin value
+	 * @param {number} loopEnd Loop end value
+	 * @returns {void}
+	 */
 	godot_audio_sample_register_stream: function (
 		streamObjectIdStrPtr,
 		framesPtr,
@@ -1470,7 +1481,11 @@ const _GodotAudio = {
 
 	godot_audio_sample_unregister_stream__proxy: 'sync',
 	godot_audio_sample_unregister_stream__sig: 'vi',
-	/** @type {(streamObjectIdStrPtr: number) => void} */
+	/**
+	 * Unregisters a stream.
+	 * @param {number} streamObjectIdStrPtr StreamObjectId pointer
+	 * @returns {void}
+	 */
 	godot_audio_sample_unregister_stream: function (streamObjectIdStrPtr) {
 		const streamObjectId = GodotRuntime.parseString(streamObjectIdStrPtr);
 		const sample = GodotAudio.Sample.getSampleOrNull(streamObjectId);
@@ -1480,27 +1495,33 @@ const _GodotAudio = {
 	},
 
 	godot_audio_sample_start__proxy: 'sync',
-	godot_audio_sample_start__sig: 'viiiiii',
-	/** @type {(playbackObjectIdStrPtr: number, streamObjectIdStrPtr: number, busIndex: number, offset: number, volumePtr: number, positionModeStrPtr: number)} */
+	godot_audio_sample_start__sig: 'viiiii',
+	/**
+	 * Starts a sample.
+	 * @param {number} playbackObjectIdStrPtr Playback object id pointer
+	 * @param {number} streamObjectIdStrPtr Stream object id pointer
+	 * @param {number} busIndex Bus index
+	 * @param {number} offset Sample offset
+	 * @param {number} volumePtr Volume pointer
+	 * @returns {void}
+	 */
 	godot_audio_sample_start: function (
 		playbackObjectIdStrPtr,
 		streamObjectIdStrPtr,
 		busIndex,
 		offset,
-		volumePtr,
-		positionModeStrPtr
+		volumePtr
 	) {
-		const playbackObjectId = GodotRuntime.parseString(playbackObjectIdStrPtr);
-		const streamObjectId = GodotRuntime.parseString(streamObjectIdStrPtr);
 		/** @type {string} */
-		const positionMode = GodotRuntime.parseString(positionModeStrPtr);
+		const playbackObjectId = GodotRuntime.parseString(playbackObjectIdStrPtr);
+		/** @type {string} */
+		const streamObjectId = GodotRuntime.parseString(streamObjectIdStrPtr);
 		/** @type {Float32Array} */
 		const volume = GodotRuntime.heapSub(HEAPF32, volumePtr, 8);
 		/** @type {SampleNodeConstructorOptions} */
 		const startOptions = {
 			offset,
 			volume,
-			positionMode,
 			playbackRate: 1,
 		};
 		GodotAudio.start_sample(
@@ -1513,7 +1534,11 @@ const _GodotAudio = {
 
 	godot_audio_sample_stop__proxy: 'sync',
 	godot_audio_sample_stop__sig: 'vi',
-	/** @type {(playbackObjectIdStrPtr: number) => void} */
+	/**
+	 * Stops a sample from playing.
+	 * @param {number} playbackObjectIdStrPtr Playback object id pointer
+	 * @returns {void}
+	 */
 	godot_audio_sample_stop: function (playbackObjectIdStrPtr) {
 		const playbackObjectId = GodotRuntime.parseString(playbackObjectIdStrPtr);
 		GodotAudio.stop_sample(playbackObjectId);
@@ -1521,20 +1546,36 @@ const _GodotAudio = {
 
 	godot_audio_sample_set_pause__proxy: 'sync',
 	godot_audio_sample_set_pause__sig: 'vii',
+	/**
+	 * Sets the pause state of a sample.
+	 * @param {number} playbackObjectIdStrPtr Playback object id pointer
+	 * @param {number} pause Pause state
+	 */
 	godot_audio_sample_set_pause: function (playbackObjectIdStrPtr, pause) {
 		const playbackObjectId = GodotRuntime.parseString(playbackObjectIdStrPtr);
-		GodotAudio.sample_set_pause(playbackObjectId, pause);
+		GodotAudio.sample_set_pause(playbackObjectId, Boolean(pause));
 	},
 
 	godot_audio_sample_is_active__proxy: 'sync',
-	godot_audio_sample_is_active__sig: 'vi',
+	godot_audio_sample_is_active__sig: 'ii',
+	/**
+	 * Returns if the sample is active.
+	 * @param {number} playbackObjectIdStrPtr Playback object id pointer
+	 * @returns {number}
+	 */
 	godot_audio_sample_is_active: function (playbackObjectIdStrPtr) {
 		const playbackObjectId = GodotRuntime.parseString(playbackObjectIdStrPtr);
-		return GodotAudio.sampleNodes.has(playbackObjectId);
+		return Number(GodotAudio.sampleNodes.has(playbackObjectId));
 	},
 
 	godot_audio_sample_update_pitch_scale__proxy: 'sync',
 	godot_audio_sample_update_pitch_scale__sig: 'vii',
+	/**
+	 * Updates the pitch scale of a sample.
+	 * @param {number} playbackObjectIdStrPtr Playback object id pointer
+	 * @param {number} pitchScale Pitch scale value
+	 * @returns {void}
+	 */
 	godot_audio_sample_update_pitch_scale: function (
 		playbackObjectIdStrPtr,
 		pitchScale
@@ -1545,6 +1586,15 @@ const _GodotAudio = {
 
 	godot_audio_sample_set_volumes_linear__proxy: 'sync',
 	godot_audio_sample_set_volumes_linear__sig: 'vii',
+	/**
+	 * Sets the volumes linear of each mentioned bus for the sample.
+	 * @param {number} playbackObjectIdStrPtr Playback object id pointer
+	 * @param {number} busesPtr Buses array pointer
+	 * @param {number} busesSize Buses array size
+	 * @param {number} volumesPtr Volumes array pointer
+	 * @param {number} volumesSize Volumes array size
+	 * @returns {void}
+	 */
 	godot_audio_sample_set_volumes_linear: function (
 		playbackObjectIdStrPtr,
 		busesPtr,
@@ -1552,6 +1602,7 @@ const _GodotAudio = {
 		volumesPtr,
 		volumesSize
 	) {
+		/** @type {string} */
 		const playbackObjectId = GodotRuntime.parseString(playbackObjectIdStrPtr);
 
 		/** @type {Uint32Array} */
@@ -1568,50 +1619,95 @@ const _GodotAudio = {
 
 	godot_audio_sample_bus_set_count__proxy: 'sync',
 	godot_audio_sample_bus_set_count__sig: 'vi',
+	/**
+	 * Sets the bus count.
+	 * @param {number} count Bus count
+	 * @returns {void}
+	 */
 	godot_audio_sample_bus_set_count: function (count) {
 		GodotAudio.set_sample_bus_count(count);
 	},
 
 	godot_audio_sample_bus_remove__proxy: 'sync',
 	godot_audio_sample_bus_remove__sig: 'vi',
+	/**
+	 * Removes a bus.
+	 * @param {number} index Index of the bus to remove
+	 * @returns {void}
+	 */
 	godot_audio_sample_bus_remove: function (index) {
 		GodotAudio.remove_sample_bus(index);
 	},
 
 	godot_audio_sample_bus_add__proxy: 'sync',
 	godot_audio_sample_bus_add__sig: 'vi',
+	/**
+	 * Adds a bus at the defined position.
+	 * @param {number} atPos Position to add the bus
+	 * @returns {void}
+	 */
 	godot_audio_sample_bus_add: function (atPos) {
 		GodotAudio.add_sample_bus(atPos);
 	},
 
 	godot_audio_sample_bus_move__proxy: 'sync',
 	godot_audio_sample_bus_move__sig: 'vii',
-	godot_audio_sample_bus_move: function (bus, toPos) {
-		GodotAudio.move_sample_bus(bus, toPos);
+	/**
+	 * Moves the bus from a position to another.
+	 * @param {number} fromPos Position of the bus to move
+	 * @param {number} toPos Final position of the bus
+	 * @returns {void}
+	 */
+	godot_audio_sample_bus_move: function (fromPos, toPos) {
+		GodotAudio.move_sample_bus(fromPos, toPos);
 	},
 
 	godot_audio_sample_bus_set_send__proxy: 'sync',
 	godot_audio_sample_bus_set_send__sig: 'vii',
+	/**
+	 * Sets the "send" of a bus.
+	 * @param {number} bus Position of the bus to set the send
+	 * @param {number} sendIndex Position of the "send" bus
+	 * @returns {void}
+	 */
 	godot_audio_sample_bus_set_send: function (bus, sendIndex) {
 		GodotAudio.set_sample_bus_send(bus, sendIndex);
 	},
 
 	godot_audio_sample_bus_set_volume_db__proxy: 'sync',
 	godot_audio_sample_bus_set_volume_db__sig: 'vii',
+	/**
+	 * Sets the volume db of a bus.
+	 * @param {number} bus Position of the bus to set the volume db
+	 * @param {number} volumeDb Volume db to set
+	 * @returns {void}
+	 */
 	godot_audio_sample_bus_set_volume_db: function (bus, volumeDb) {
 		GodotAudio.set_sample_bus_volume_db(bus, volumeDb);
 	},
 
 	godot_audio_sample_bus_set_solo__proxy: 'sync',
 	godot_audio_sample_bus_set_solo__sig: 'vii',
+	/**
+	 * Sets the state of solo for a bus
+	 * @param {number} bus Position of the bus to set the solo state
+	 * @param {number} enable State of the solo
+	 * @returns {void}
+	 */
 	godot_audio_sample_bus_set_solo: function (bus, enable) {
-		GodotAudio.set_sample_bus_solo(bus, enable);
+		GodotAudio.set_sample_bus_solo(bus, Boolean(enable));
 	},
 
 	godot_audio_sample_bus_set_mute__proxy: 'sync',
 	godot_audio_sample_bus_set_mute__sig: 'vii',
+	/**
+	 * Sets the state of mute for a bus
+	 * @param {number} bus Position of the bus to set the mute state
+	 * @param {number} enable State of the mute
+	 * @returns {void}
+	 */
 	godot_audio_sample_bus_set_mute: function (bus, enable) {
-		GodotAudio.set_sample_bus_mute(bus, enable);
+		GodotAudio.set_sample_bus_mute(bus, Boolean(enable));
 	},
 };
 

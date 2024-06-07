@@ -547,8 +547,6 @@ void AudioStreamPlayer3D::play(float p_from_pos) {
 	if (stream_playback->get_is_sample()) {
 		Ref<AudioSamplePlayback> sample_playback = stream_playback->get_sample_playback();
 		sample_playback->offset = p_from_pos;
-		sample_playback->volume_db = get_volume_db();
-		sample_playback->position_mode = AudioSamplePlayback::AUDIO_SAMPLE_PLAYBACK_POSITION_3D;
 		sample_playback->bus = _get_actual_bus();
 
 		AudioServer::get_singleton()->start_sample_playback(sample_playback);

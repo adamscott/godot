@@ -101,7 +101,6 @@ void AudioStreamPlayer::play(float p_from_pos) {
 		Ref<AudioSamplePlayback> sample_playback = stream_playback->get_sample_playback();
 		sample_playback->offset = p_from_pos;
 		sample_playback->volume_vector = _get_volume_vector();
-		sample_playback->position_mode = AudioSamplePlayback::AUDIO_SAMPLE_PLAYBACK_POSITION_NONE;
 		sample_playback->bus = get_bus();
 
 		AudioServer::get_singleton()->start_sample_playback(sample_playback);
