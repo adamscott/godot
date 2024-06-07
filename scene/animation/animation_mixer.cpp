@@ -614,8 +614,8 @@ bool AnimationMixer::_update_caches() {
 	root_motion_cache.rot = Quaternion(0, 0, 0, 1);
 	root_motion_cache.scale = Vector3(1, 1, 1);
 
-	List<StringName> sname;
-	get_animation_list(&sname);
+	List<StringName> sname_list;
+	get_animation_list(&sname_list);
 
 	bool check_path = GLOBAL_GET("animation/warnings/check_invalid_track_paths");
 	bool check_angle_interpolation = GLOBAL_GET("animation/warnings/check_angle_interpolation_type_conflicting");
@@ -644,7 +644,7 @@ bool AnimationMixer::_update_caches() {
 	if (has_reset_anim) {
 		reset_anim = get_animation(SceneStringName(RESET));
 	}
-	for (const StringName &E : sname) {
+	for (const StringName &E : sname_list) {
 		Ref<Animation> anim = get_animation(E);
 		for (int i = 0; i < anim->get_track_count(); i++) {
 			NodePath path = anim->track_get_path(i);
