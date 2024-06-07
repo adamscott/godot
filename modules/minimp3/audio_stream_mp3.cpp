@@ -307,11 +307,9 @@ Ref<AudioSample> AudioStreamMP3::generate_sample() const {
 	Ref<AudioSample> sample;
 	sample.instantiate();
 	sample->stream = this;
-	if (loop) {
-		sample->loop_mode = AudioSample::LoopMode::LOOP_FORWARD;
-	} else {
-		sample->loop_mode = AudioSample::LoopMode::LOOP_DISABLED;
-	}
+	sample->loop_mode = loop
+			? AudioSample::LoopMode::LOOP_FORWARD
+			: AudioSample::LoopMode::LOOP_DISABLED;
 	sample->loop_begin = loop_offset;
 	sample->loop_end = 0;
 	return sample;
