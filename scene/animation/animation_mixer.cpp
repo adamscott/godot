@@ -33,9 +33,13 @@
 
 #include "core/config/engine.h"
 #include "core/config/project_settings.h"
+#include "scene/2d/audio_stream_player_2d.h"
+#include "scene/3d/audio_stream_player_3d.h"
 #include "scene/animation/animation_player.h"
+#include "scene/audio/audio_stream_player.h"
 #include "scene/resources/animation.h"
 #include "servers/audio/audio_stream.h"
+#include "servers/audio_server.h"
 
 #ifndef _3D_DISABLED
 #include "scene/3d/mesh_instance_3d.h"
@@ -518,6 +522,14 @@ int AnimationMixer::get_audio_max_polyphony() const {
 	return audio_max_polyphony;
 }
 
+void AnimationMixer::set_audio_playback_type(AudioServer::PlaybackType p_playback_type) {
+	playback_type = p_playback_type;
+}
+
+AudioServer::PlaybackType AnimationMixer::get_audio_playback_type() const {
+	return playback_type;
+}
+
 #ifdef TOOLS_ENABLED
 void AnimationMixer::set_editing(bool p_editing) {
 	if (editing == p_editing) {
@@ -833,6 +845,8 @@ bool AnimationMixer::_update_caches() {
 						track_audio->object_id = child->get_instance_id();
 						track_audio->audio_stream.instantiate();
 						track_audio->audio_stream->set_polyphony(audio_max_polyphony);
+						track_audio->playback_type = (AudioServer::PlaybackType)(int)(child->call(SNAME("get_playback_type")));
+						track_audio->bus = (StringName)(child->call(SNAME("get_bus")));
 
 						track = track_audio;
 
@@ -1605,7 +1619,7 @@ void AnimationMixer::_blend_process(double p_delta, bool p_update_only) {
 						}
 
 						PlayingAudioStreamInfo pasi;
-						pasi.index = t->audio_stream_playback->play_stream(stream, start_ofs);
+						pasi.index = t->audio_stream_playback->play_stream(stream, start_ofs, 0, 1.0, t->playback_type);
 						pasi.start = time;
 						if (len && end_ofs > 0) { // Force an end at a time.
 							pasi.len = len - start_ofs - end_ofs;
@@ -2248,8 +2262,12 @@ void AnimationMixer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_callback_mode_discrete", "mode"), &AnimationMixer::set_callback_mode_discrete);
 	ClassDB::bind_method(D_METHOD("get_callback_mode_discrete"), &AnimationMixer::get_callback_mode_discrete);
 
+	/* ---- Audio ---- */
 	ClassDB::bind_method(D_METHOD("set_audio_max_polyphony", "max_polyphony"), &AnimationMixer::set_audio_max_polyphony);
 	ClassDB::bind_method(D_METHOD("get_audio_max_polyphony"), &AnimationMixer::get_audio_max_polyphony);
+
+	ClassDB::bind_method(D_METHOD("set_playback_type", "playback_type"), &AnimationMixer::set_audio_playback_type);
+	ClassDB::bind_method(D_METHOD("get_playback_type"), &AnimationMixer::get_audio_playback_type);
 
 	/* ---- Root motion accumulator for Skeleton3D ---- */
 	ClassDB::bind_method(D_METHOD("set_root_motion_track", "path"), &AnimationMixer::set_root_motion_track);
@@ -2284,6 +2302,7 @@ void AnimationMixer::_bind_methods() {
 
 	ADD_GROUP("Audio", "audio_");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "audio_max_polyphony", PROPERTY_HINT_RANGE, "1,127,1"), "set_audio_max_polyphony", "get_audio_max_polyphony");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "playback_type", PROPERTY_HINT_ENUM, "Default,Stream,Sample"), "set_playback_type", "get_playback_type");
 
 	ADD_GROUP("Callback Mode", "callback_mode_");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "callback_mode_process", PROPERTY_HINT_ENUM, "Physics,Idle,Manual"), "set_callback_mode_process", "get_callback_mode_process");

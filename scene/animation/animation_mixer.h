@@ -279,12 +279,15 @@ protected:
 		Ref<AudioStreamPolyphonic> audio_stream;
 		Ref<AudioStreamPlaybackPolyphonic> audio_stream_playback;
 		HashMap<ObjectID, PlayingAudioTrackInfo> playing_streams; // Key is Animation resource ObjectID.
+		AudioServer::PlaybackType playback_type;
+		StringName bus;
 
 		TrackCacheAudio(const TrackCacheAudio &p_other) :
 				TrackCache(p_other),
 				audio_stream(p_other.audio_stream),
 				audio_stream_playback(p_other.audio_stream_playback),
-				playing_streams(p_other.playing_streams) {}
+				playing_streams(p_other.playing_streams),
+				playback_type(p_other.playback_type) {}
 
 		TrackCacheAudio() {
 			type = Animation::TYPE_AUDIO;
@@ -312,6 +315,9 @@ protected:
 	void _clear_playing_caches();
 	void _init_root_motion_cache();
 	bool _update_caches();
+
+	/* ---- Audio ---- */
+	AudioServer::PlaybackType playback_type;
 
 	/* ---- Blending processor ---- */
 	LocalVector<AnimationInstance> animation_instances;
@@ -425,8 +431,12 @@ public:
 	void set_callback_mode_discrete(AnimationCallbackModeDiscrete p_mode);
 	AnimationCallbackModeDiscrete get_callback_mode_discrete() const;
 
+	/* ---- Audio ---- */
 	void set_audio_max_polyphony(int p_audio_max_polyphony);
 	int get_audio_max_polyphony() const;
+
+	AudioServer::PlaybackType get_audio_playback_type() const;
+	void set_audio_playback_type(AudioServer::PlaybackType p_playback_type);
 
 	/* ---- Root motion accumulator for Skeleton3D ---- */
 	void set_root_motion_track(const NodePath &p_track);

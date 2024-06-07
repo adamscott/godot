@@ -255,21 +255,6 @@ void AudioDriverWeb::start_sample_playback(const Ref<AudioSamplePlayback> &p_pla
 	ERR_FAIL_COND_MSG(p_playback.is_null(), "Parameter p_playback is null.");
 	ERR_FAIL_COND_MSG(p_playback->stream.is_null(), "Parameter p_playback->stream is null.");
 
-	String position_mode;
-	switch (p_playback->position_mode) {
-		case AudioSamplePlayback::PositionMode::AUDIO_SAMPLE_PLAYBACK_POSITION_NONE: {
-			position_mode = "none";
-		} break;
-
-		case AudioSamplePlayback::PositionMode::AUDIO_SAMPLE_PLAYBACK_POSITION_2D: {
-			position_mode = "2D";
-		} break;
-
-		case AudioSamplePlayback::PositionMode::AUDIO_SAMPLE_PLAYBACK_POSITION_3D: {
-			position_mode = "3D";
-		} break;
-	}
-
 	constexpr int real_max_channels = AudioServer::MAX_CHANNELS_PER_BUS * 2;
 	PackedFloat32Array volume;
 	volume.resize(real_max_channels);
@@ -289,8 +274,7 @@ void AudioDriverWeb::start_sample_playback(const Ref<AudioSamplePlayback> &p_pla
 			itos(p_playback->stream->get_instance_id()).utf8().get_data(),
 			AudioServer::get_singleton()->get_bus_index(p_playback->bus),
 			p_playback->offset,
-			volume_ptrw,
-			position_mode.utf8().get_data());
+			volume_ptrw);
 }
 
 void AudioDriverWeb::stop_sample_playback(const Ref<AudioSamplePlayback> &p_playback) {

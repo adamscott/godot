@@ -47,19 +47,10 @@ class AudioSamplePlayback : public RefCounted {
 	GDCLASS(AudioSamplePlayback, RefCounted);
 
 public:
-	enum PositionMode {
-		AUDIO_SAMPLE_PLAYBACK_POSITION_NONE,
-		AUDIO_SAMPLE_PLAYBACK_POSITION_2D,
-		AUDIO_SAMPLE_PLAYBACK_POSITION_3D,
-	};
-
 	Ref<AudioStream> stream;
 
 	float offset = 0.0f;
-	float volume_db = 0.0f;
 	Vector<AudioFrame> volume_vector;
-	PositionMode position_mode = AUDIO_SAMPLE_PLAYBACK_POSITION_NONE;
-	Vector3 position;
 	StringName bus;
 };
 
