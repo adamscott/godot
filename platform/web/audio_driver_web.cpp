@@ -230,14 +230,15 @@ void AudioDriverWeb::register_sample(const Ref<AudioSample> &p_sample) {
 
 	PackedFloat32Array data;
 	data.resize(frames_total * 2);
+	float *data_ptrw = data.ptrw();
 	for (int i = 0; i < frames_total; i++) {
-		data.set(i, frames[i].left);
-		data.set(i + frames_total, frames[i].right);
+		data_ptrw[i] = frames[i].left;
+		data_ptrw[i + frames_total] = frames[i].right;
 	}
 
 	godot_audio_sample_register_stream(
 			itos(p_sample->stream->get_instance_id()).utf8().get_data(),
-			(float *)data.ptrw(),
+			data_ptrw,
 			frames_total,
 			loop_mode.utf8().get_data(),
 			p_sample->loop_begin,
