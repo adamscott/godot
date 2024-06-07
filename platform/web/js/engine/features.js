@@ -76,6 +76,7 @@ const Features = {
 	 */
 	getMissingFeatures: function (supportedFeatures = {}) {
 		const {
+			// Quotes are needed for the Closure compiler.
 			'threads': supportsThreads = true,
 		} = supportedFeatures;
 
