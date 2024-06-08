@@ -309,7 +309,7 @@ void AudioStreamPlaybackPolyphonic::set_sample_playback(const Ref<AudioSamplePla
 }
 
 void AudioStreamPlaybackPolyphonic::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("play_stream", "stream", "from_offset", "volume_db", "pitch_scale"), &AudioStreamPlaybackPolyphonic::play_stream, DEFVAL(0), DEFVAL(0), DEFVAL(1.0));
+	ClassDB::bind_method(D_METHOD("play_stream", "stream", "from_offset", "volume_db", "pitch_scale", "playback_type", "bus"), &AudioStreamPlaybackPolyphonic::play_stream, DEFVAL(0), DEFVAL(0), DEFVAL(1.0), DEFVAL(0), DEFVAL(SNAME("Master")));
 	ClassDB::bind_method(D_METHOD("set_stream_volume", "stream", "volume_db"), &AudioStreamPlaybackPolyphonic::set_stream_volume);
 	ClassDB::bind_method(D_METHOD("set_stream_pitch_scale", "stream", "pitch_scale"), &AudioStreamPlaybackPolyphonic::set_stream_pitch_scale);
 	ClassDB::bind_method(D_METHOD("is_stream_playing", "stream"), &AudioStreamPlaybackPolyphonic::is_stream_playing);
