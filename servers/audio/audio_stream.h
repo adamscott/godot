@@ -205,6 +205,8 @@ public:
 
 	virtual bool can_be_sampled() const { return false; }
 	virtual Ref<AudioSample> generate_sample() const;
+
+	virtual bool is_meta_stream() const { return false; }
 };
 
 // Microphone
@@ -335,6 +337,8 @@ public:
 
 	virtual double get_length() const override; //if supported, otherwise return 0
 	virtual bool is_monophonic() const override;
+
+	virtual bool is_meta_stream() const override { return true; }
 
 	AudioStreamRandomizer();
 };

@@ -154,7 +154,7 @@ Ref<AudioStreamPlayback> AudioStreamPlayerInternal::play_basic() {
 				sample_playback->stream = stream;
 				stream_playback->set_sample_playback(sample_playback);
 			}
-		} else {
+		} else if (!stream->is_meta_stream()) {
 			WARN_PRINT(vformat(R"(%s is trying to play a sample from a stream that cannot be sampled.)", node->get_path()));
 		}
 	}
