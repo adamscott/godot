@@ -81,6 +81,12 @@
 				Returns a newly created [AudioStreamPlayback] intended to play this audio stream. Useful for when you want to extend [method _instantiate_playback] but call [method instantiate_playback] from an internally held AudioStream subresource. An example of this can be found in the source code for [code]AudioStreamRandomPitch::instantiate_playback[/code].
 			</description>
 		</method>
+		<method name="is_meta_stream" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns if the stream is a collection of others streams.
+			</description>
+		</method>
 		<method name="is_monophonic" qualifiers="const">
 			<return type="bool" />
 			<description>

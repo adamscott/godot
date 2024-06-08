@@ -52,6 +52,8 @@ public:
 	void set_polyphony(int p_voices);
 	int get_polyphony() const;
 
+	virtual bool is_meta_stream() const override { return true; }
+
 	AudioStreamPolyphonic();
 };
 
