@@ -522,14 +522,6 @@ int AnimationMixer::get_audio_max_polyphony() const {
 	return audio_max_polyphony;
 }
 
-void AnimationMixer::set_audio_playback_type(AudioServer::PlaybackType p_playback_type) {
-	playback_type = p_playback_type;
-}
-
-AudioServer::PlaybackType AnimationMixer::get_audio_playback_type() const {
-	return playback_type;
-}
-
 #ifdef TOOLS_ENABLED
 void AnimationMixer::set_editing(bool p_editing) {
 	if (editing == p_editing) {
@@ -2266,9 +2258,6 @@ void AnimationMixer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_audio_max_polyphony", "max_polyphony"), &AnimationMixer::set_audio_max_polyphony);
 	ClassDB::bind_method(D_METHOD("get_audio_max_polyphony"), &AnimationMixer::get_audio_max_polyphony);
 
-	ClassDB::bind_method(D_METHOD("set_playback_type", "playback_type"), &AnimationMixer::set_audio_playback_type);
-	ClassDB::bind_method(D_METHOD("get_playback_type"), &AnimationMixer::get_audio_playback_type);
-
 	/* ---- Root motion accumulator for Skeleton3D ---- */
 	ClassDB::bind_method(D_METHOD("set_root_motion_track", "path"), &AnimationMixer::set_root_motion_track);
 	ClassDB::bind_method(D_METHOD("get_root_motion_track"), &AnimationMixer::get_root_motion_track);
@@ -2302,7 +2291,6 @@ void AnimationMixer::_bind_methods() {
 
 	ADD_GROUP("Audio", "audio_");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "audio_max_polyphony", PROPERTY_HINT_RANGE, "1,127,1"), "set_audio_max_polyphony", "get_audio_max_polyphony");
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "playback_type", PROPERTY_HINT_ENUM, "Default,Stream,Sample"), "set_playback_type", "get_playback_type");
 
 	ADD_GROUP("Callback Mode", "callback_mode_");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "callback_mode_process", PROPERTY_HINT_ENUM, "Physics,Idle,Manual"), "set_callback_mode_process", "get_callback_mode_process");

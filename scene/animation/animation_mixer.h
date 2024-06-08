@@ -435,9 +435,6 @@ public:
 	void set_audio_max_polyphony(int p_audio_max_polyphony);
 	int get_audio_max_polyphony() const;
 
-	AudioServer::PlaybackType get_audio_playback_type() const;
-	void set_audio_playback_type(AudioServer::PlaybackType p_playback_type);
-
 	/* ---- Root motion accumulator for Skeleton3D ---- */
 	void set_root_motion_track(const NodePath &p_track);
 	NodePath get_root_motion_track() const;
