@@ -1245,7 +1245,7 @@ const GodotAudio = {
 	 * @param {Float32Array} volumes Array of the volumes
 	 * @returns {void}
 	 */
-	sample_set_volumes_linear(playbackObjectId, busIndexes, volumes) {
+	sample_set_volumes_linear: function (playbackObjectId, busIndexes, volumes) {
 		const sampleNode = GodotAudio.SampleNode.getSampleNode(playbackObjectId);
 		const buses = busIndexes.map((busIndex) => GodotAudio.Bus.getBus(busIndex));
 		sampleNode.setVolumes(buses, volumes);
