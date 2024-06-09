@@ -31,7 +31,7 @@
 #ifndef DISABLE_DEPRECATED
 
 AudioStreamPlaybackPolyphonic::ID AudioStreamPlaybackPolyphonic::_play_stream_bind_compat_91382(const Ref<AudioStream> &p_stream, float p_from_offset, float p_volume_db, float p_pitch_scale) {
-	return play_stream(p_stream, p_from_offset, p_volume_db, p_pitch_scale);
+	return play_stream(p_stream, p_from_offset, p_volume_db, p_pitch_scale, AudioServer::PlaybackType::PLAYBACK_TYPE_DEFAULT, SceneStringName(Master));
 }
 
 void AudioStreamPlaybackPolyphonic::_bind_compatibility_methods() {
