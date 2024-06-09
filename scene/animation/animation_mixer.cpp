@@ -34,7 +34,6 @@
 #include "core/config/engine.h"
 #include "core/config/project_settings.h"
 #include "scene/2d/audio_stream_player_2d.h"
-#include "scene/3d/audio_stream_player_3d.h"
 #include "scene/animation/animation_player.h"
 #include "scene/audio/audio_stream_player.h"
 #include "scene/resources/animation.h"
@@ -42,6 +41,7 @@
 #include "servers/audio_server.h"
 
 #ifndef _3D_DISABLED
+#include "scene/3d/audio_stream_player_3d.h"
 #include "scene/3d/mesh_instance_3d.h"
 #include "scene/3d/node_3d.h"
 #include "scene/3d/skeleton_3d.h"
