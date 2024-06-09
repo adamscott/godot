@@ -127,6 +127,13 @@ public:
 	virtual Ref<AudioSamplePlayback> get_sample_playback() const override;
 	virtual void set_sample_playback(const Ref<AudioSamplePlayback> &p_playback) override;
 
+private:
+#ifndef DISABLE_DEPRECATED
+	ID _play_stream_bind_compat_91382(const Ref<AudioStream> &p_stream, float p_from_offset = 0, float p_volume_db = 0, float p_pitch_scale = 1.0);
+	static void _bind_compatibility_methods();
+#endif // DISABLE_DEPRECATED
+
+public:
 	AudioStreamPlaybackPolyphonic();
 };
 

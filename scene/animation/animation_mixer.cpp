@@ -1611,7 +1611,7 @@ void AnimationMixer::_blend_process(double p_delta, bool p_update_only) {
 						}
 
 						PlayingAudioStreamInfo pasi;
-						pasi.index = t->audio_stream_playback->play_stream(stream, start_ofs, 0, 1.0, t->playback_type);
+						pasi.index = t->audio_stream_playback->play_stream(stream, start_ofs, 0, 1.0, t->playback_type, t->bus);
 						pasi.start = time;
 						if (len && end_ofs > 0) { // Force an end at a time.
 							pasi.len = len - start_ofs - end_ofs;
