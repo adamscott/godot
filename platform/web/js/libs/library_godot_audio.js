@@ -1753,8 +1753,8 @@ const GodotAudioWorklet = {
 				const node = GodotAudioWorklet.worklet;
 				node.connect(GodotAudio.ctx.destination);
 				node.port.postMessage({
-					cmd: 'start',
-					data: [state, in_buf, out_buf],
+					'cmd': 'start',
+					'data': [state, in_buf, out_buf],
 				});
 				node.port.onmessage = function (event) {
 					GodotRuntime.error(event.data);
@@ -1796,7 +1796,7 @@ const GodotAudioWorklet = {
 							tot_sent - pending_samples
 						);
 					}
-					port.postMessage({ cmd: 'chunk', data: wbuf.subarray(0, tot_sent) });
+					port.postMessage({ 'cmd': 'chunk', 'data': wbuf.subarray(0, tot_sent) });
 					wpos += pending_samples;
 					pending_samples = 0;
 				}
@@ -1828,8 +1828,8 @@ const GodotAudioWorklet = {
 				const buffer = GodotRuntime.heapSlice(HEAPF32, p_out_buf, p_out_size);
 				node.connect(GodotAudio.ctx.destination);
 				node.port.postMessage({
-					cmd: 'start_nothreads',
-					data: [buffer, p_in_size],
+					'cmd': 'start_nothreads',
+					'data': [buffer, p_in_size],
 				});
 				node.port.onmessage = function (event) {
 					if (!GodotAudioWorklet.worklet) {
@@ -1867,8 +1867,8 @@ const GodotAudioWorklet = {
 				const p = GodotAudioWorklet.promise;
 				p.then(function () {
 					GodotAudioWorklet.worklet.port.postMessage({
-						cmd: 'stop',
-						data: null,
+						'cmd': 'stop',
+						'data': null,
 					});
 					GodotAudioWorklet.worklet.disconnect();
 					GodotAudioWorklet.worklet.port.onmessage = null;
