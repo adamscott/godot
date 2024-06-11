@@ -44,8 +44,6 @@ extern int godot_audio_has_script_processor();
 extern int godot_audio_init(int *p_mix_rate, int p_latency, void (*_state_cb)(int), void (*_latency_cb)(float));
 extern void godot_audio_resume();
 
-extern int godot_audio_get_browser_mix_rate();
-
 extern int godot_audio_input_start();
 extern void godot_audio_input_stop();
 

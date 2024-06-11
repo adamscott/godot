@@ -1082,8 +1082,8 @@ const _GodotAudio = {
 				case 'closed':
 					state = 2;
 					break;
-
-					// no default
+				default:
+					// Do nothing.
 				}
 				onstatechange(state);
 			};
@@ -1373,13 +1373,6 @@ const _GodotAudio = {
 		if (GodotAudio.ctx && GodotAudio.ctx.state !== 'running') {
 			GodotAudio.ctx.resume();
 		}
-	},
-
-	godot_audio_get_browser_mix_rate__proxy: 'sync',
-	godot_audio_get_browser_mix_rate__sig: 'i',
-	godot_audio_get_browser_mix_rate: function () {
-		const ctx = new AudioContext();
-		return ctx.sampleRate;
 	},
 
 	godot_audio_input_start__proxy: 'sync',
