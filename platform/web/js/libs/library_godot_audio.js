@@ -382,7 +382,10 @@ class SampleNode {
 	 * @returns {void}
 	 */
 	static pauseSampleNode(id, enable) {
-		const sampleNode = GodotAudio.SampleNode.getSampleNode(id);
+		const sampleNode = GodotAudio.SampleNode.getSampleNodeOrNull(id);
+		if (sampleNode == null) {
+			return;
+		}
 		sampleNode.pause(enable);
 	}
 
@@ -1225,7 +1228,10 @@ const _GodotAudio = {
 		 * @returns {void}
 		 */
 		update_sample_pitch_scale: function (playbackObjectId, pitchScale) {
-			const sampleNode = GodotAudio.SampleNode.getSampleNode(playbackObjectId);
+			const sampleNode = GodotAudio.SampleNode.getSampleNodeOrNull(playbackObjectId);
+			if (sampleNode == null) {
+				return;
+			}
 			sampleNode.setPitchScale(pitchScale);
 		},
 
@@ -1237,7 +1243,10 @@ const _GodotAudio = {
 		 * @returns {void}
 		 */
 		sample_set_volumes_linear: function (playbackObjectId, busIndexes, volumes) {
-			const sampleNode = GodotAudio.SampleNode.getSampleNode(playbackObjectId);
+			const sampleNode = GodotAudio.SampleNode.getSampleNodeOrNull(playbackObjectId);
+			if (sampleNode == null) {
+				return;
+			}
 			const buses = busIndexes.map((busIndex) => GodotAudio.Bus.getBus(busIndex));
 			sampleNode.setVolumes(buses, volumes);
 		},
