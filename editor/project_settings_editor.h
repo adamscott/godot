@@ -36,6 +36,7 @@
 #include "editor/editor_autoload_settings.h"
 #include "editor/editor_data.h"
 #include "editor/editor_sectioned_inspector.h"
+#include "editor/export_packs_editor.h"
 #include "editor/group_settings_editor.h"
 #include "editor/import_defaults_editor.h"
 #include "editor/localization_editor.h"
@@ -79,6 +80,8 @@ class ProjectSettingsEditor : public AcceptDialog {
 
 	ImportDefaultsEditor *import_defaults_editor = nullptr;
 	EditorData *data = nullptr;
+
+	ExportPacksEditor *export_packs_editor = nullptr;
 
 	void _advanced_toggled(bool p_button_pressed);
 	void _update_advanced(bool p_is_advanced);

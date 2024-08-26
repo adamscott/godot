@@ -37,6 +37,7 @@
 #include "editor/editor_string_names.h"
 #include "editor/editor_undo_redo_manager.h"
 #include "editor/export/editor_export.h"
+#include "editor/export_packs_editor.h"
 #include "editor/themes/editor_scale.h"
 #include "scene/gui/check_button.h"
 #include "servers/movie_writer/movie_writer.h"
@@ -780,6 +781,10 @@ ProjectSettingsEditor::ProjectSettingsEditor(EditorData *p_data) {
 	import_defaults_editor = memnew(ImportDefaultsEditor);
 	import_defaults_editor->set_name(TTR("Import Defaults"));
 	tab_container->add_child(import_defaults_editor);
+
+	export_packs_editor = memnew(ExportPacksEditor);
+	export_packs_editor->set_name(TTR("Export Packs"));
+	tab_container->add_child(export_packs_editor);
 
 	MovieWriter::set_extensions_hint(); // ensure extensions are properly displayed.
 }
