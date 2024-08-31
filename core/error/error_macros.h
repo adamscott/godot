@@ -114,15 +114,6 @@ void _physics_interpolation_warning(const char *p_function, const char *p_file, 
 
 // Integer index out of bounds error macros.
 
-// There should not be warnings for removing const for comparison purposes.
-#if defined(__GNUC__) && !defined(__clang__)
-#define ERR_FAIL_INDEX__PRAGMA_BEGIN _Pragma("GCC diagnostic push") _Pragma("GCC diagnostic ignored \"-Wignored-qualifiers\"")
-#define ERR_FAIL_INDEX__PRAGMA_END _Pragma("GCC diagnostic pop")
-#else
-#define ERR_FAIL_INDEX__PRAGMA_BEGIN
-#define ERR_FAIL_INDEX__PRAGMA_END
-#endif
-
 /**
  * Try using `ERR_FAIL_INDEX_MSG`.
  * Only use this macro if there is no sensible error message.
@@ -130,39 +121,32 @@ void _physics_interpolation_warning(const char *p_function, const char *p_file, 
  * Ensures an integer index `m_index` is less than `m_size` and greater than or equal to 0.
  * If not, the current function returns.
  */
-
-#define ERR_FAIL_INDEX(m_index, m_size)                                                                                                                                                                                                                                                                                                 \
-	ERR_FAIL_INDEX__PRAGMA_BEGIN                                                                                                                                                                                                                                                                                                        \
-	if (unlikely((std::is_signed_v<decltype((m_index))> && ((m_index) < 0)) || (static_cast<typename std::make_unsigned_t<std::remove_reference_t<std::remove_const_t<decltype((m_index))>>>>((m_index)) >= static_cast<typename std::make_unsigned_t<std::remove_reference_t<std::remove_const_t<decltype((m_size))>>>>((m_size))))) { \
-		ERR_FAIL_INDEX__PRAGMA_END                                                                                                                                                                                                                                                                                                      \
-		_err_print_index_error(FUNCTION_STR, __FILE__, __LINE__, m_index, m_size, _STR(m_index), _STR(m_size));                                                                                                                                                                                                                         \
-		return;                                                                                                                                                                                                                                                                                                                         \
-	} else                                                                                                                                                                                                                                                                                                                              \
+#define ERR_FAIL_INDEX(m_index, m_size)                                                                         \
+	if (unlikely((m_index) < 0 || (m_index) >= (m_size))) {                                                     \
+		_err_print_index_error(FUNCTION_STR, __FILE__, __LINE__, m_index, m_size, _STR(m_index), _STR(m_size)); \
+		return;                                                                                                 \
+	} else                                                                                                      \
 		((void)0)
 
 /**
  * Ensures an integer index `m_index` is less than `m_size` and greater than or equal to 0.
  * If not, prints `m_msg` and the current function returns.
  */
-#define ERR_FAIL_INDEX_MSG(m_index, m_size, m_msg)                                                                                                                                                                                                                                                                                      \
-	ERR_FAIL_INDEX__PRAGMA_BEGIN                                                                                                                                                                                                                                                                                                        \
-	if (unlikely((std::is_signed_v<decltype((m_index))> && ((m_index) < 0)) || (static_cast<typename std::make_unsigned_t<std::remove_reference_t<std::remove_const_t<decltype((m_index))>>>>((m_index)) >= static_cast<typename std::make_unsigned_t<std::remove_reference_t<std::remove_const_t<decltype((m_size))>>>>((m_size))))) { \
-		ERR_FAIL_INDEX__PRAGMA_END                                                                                                                                                                                                                                                                                                      \
-		_err_print_index_error(FUNCTION_STR, __FILE__, __LINE__, m_index, m_size, _STR(m_index), _STR(m_size), m_msg);                                                                                                                                                                                                                  \
-		return;                                                                                                                                                                                                                                                                                                                         \
-	} else                                                                                                                                                                                                                                                                                                                              \
+#define ERR_FAIL_INDEX_MSG(m_index, m_size, m_msg)                                                                     \
+	if (unlikely((m_index) < 0 || (m_index) >= (m_size))) {                                                            \
+		_err_print_index_error(FUNCTION_STR, __FILE__, __LINE__, m_index, m_size, _STR(m_index), _STR(m_size), m_msg); \
+		return;                                                                                                        \
+	} else                                                                                                             \
 		((void)0)
 
 /**
  * Same as `ERR_FAIL_INDEX_MSG` but also notifies the editor.
  */
-#define ERR_FAIL_INDEX_EDMSG(m_index, m_size, m_msg)                                                                                                                                                                                                                                                                                    \
-	ERR_FAIL_INDEX__PRAGMA_BEGIN                                                                                                                                                                                                                                                                                                        \
-	if (unlikely((std::is_signed_v<decltype((m_index))> && ((m_index) < 0)) || (static_cast<typename std::make_unsigned_t<std::remove_reference_t<std::remove_const_t<decltype((m_index))>>>>((m_index)) >= static_cast<typename std::make_unsigned_t<std::remove_reference_t<std::remove_const_t<decltype((m_size))>>>>((m_size))))) { \
-		ERR_FAIL_INDEX__PRAGMA_END                                                                                                                                                                                                                                                                                                      \
-		_err_print_index_error(FUNCTION_STR, __FILE__, __LINE__, m_index, m_size, _STR(m_index), _STR(m_size), m_msg, true);                                                                                                                                                                                                            \
-		return;                                                                                                                                                                                                                                                                                                                         \
-	} else                                                                                                                                                                                                                                                                                                                              \
+#define ERR_FAIL_INDEX_EDMSG(m_index, m_size, m_msg)                                                                         \
+	if (unlikely((m_index) < 0 || (m_index) >= (m_size))) {                                                                  \
+		_err_print_index_error(FUNCTION_STR, __FILE__, __LINE__, m_index, m_size, _STR(m_index), _STR(m_size), m_msg, true); \
+		return;                                                                                                              \
+	} else                                                                                                                   \
 		((void)0)
 
 /**
@@ -172,38 +156,32 @@ void _physics_interpolation_warning(const char *p_function, const char *p_file, 
  * Ensures an integer index `m_index` is less than `m_size` and greater than or equal to 0.
  * If not, the current function returns `m_retval`.
  */
-#define ERR_FAIL_INDEX_V(m_index, m_size, m_retval)                                                                                                                                                                                                                                                                                     \
-	ERR_FAIL_INDEX__PRAGMA_BEGIN                                                                                                                                                                                                                                                                                                        \
-	if (unlikely((std::is_signed_v<decltype((m_index))> && ((m_index) < 0)) || (static_cast<typename std::make_unsigned_t<std::remove_reference_t<std::remove_const_t<decltype((m_index))>>>>((m_index)) >= static_cast<typename std::make_unsigned_t<std::remove_reference_t<std::remove_const_t<decltype((m_size))>>>>((m_size))))) { \
-		ERR_FAIL_INDEX__PRAGMA_END                                                                                                                                                                                                                                                                                                      \
-		_err_print_index_error(FUNCTION_STR, __FILE__, __LINE__, m_index, m_size, _STR(m_index), _STR(m_size));                                                                                                                                                                                                                         \
-		return m_retval;                                                                                                                                                                                                                                                                                                                \
-	} else                                                                                                                                                                                                                                                                                                                              \
+#define ERR_FAIL_INDEX_V(m_index, m_size, m_retval)                                                             \
+	if (unlikely((m_index) < 0 || (m_index) >= (m_size))) {                                                     \
+		_err_print_index_error(FUNCTION_STR, __FILE__, __LINE__, m_index, m_size, _STR(m_index), _STR(m_size)); \
+		return m_retval;                                                                                        \
+	} else                                                                                                      \
 		((void)0)
 
 /**
  * Ensures an integer index `m_index` is less than `m_size` and greater than or equal to 0.
  * If not, prints `m_msg` and the current function returns `m_retval`.
  */
-#define ERR_FAIL_INDEX_V_MSG(m_index, m_size, m_retval, m_msg)                                                                                                                                                                                                                                                                          \
-	ERR_FAIL_INDEX__PRAGMA_BEGIN                                                                                                                                                                                                                                                                                                        \
-	if (unlikely((std::is_signed_v<decltype((m_index))> && ((m_index) < 0)) || (static_cast<typename std::make_unsigned_t<std::remove_reference_t<std::remove_const_t<decltype((m_index))>>>>((m_index)) >= static_cast<typename std::make_unsigned_t<std::remove_reference_t<std::remove_const_t<decltype((m_size))>>>>((m_size))))) { \
-		ERR_FAIL_INDEX__PRAGMA_END                                                                                                                                                                                                                                                                                                      \
-		_err_print_index_error(FUNCTION_STR, __FILE__, __LINE__, m_index, m_size, _STR(m_index), _STR(m_size), m_msg);                                                                                                                                                                                                                  \
-		return m_retval;                                                                                                                                                                                                                                                                                                                \
-	} else                                                                                                                                                                                                                                                                                                                              \
+#define ERR_FAIL_INDEX_V_MSG(m_index, m_size, m_retval, m_msg)                                                         \
+	if (unlikely((m_index) < 0 || (m_index) >= (m_size))) {                                                            \
+		_err_print_index_error(FUNCTION_STR, __FILE__, __LINE__, m_index, m_size, _STR(m_index), _STR(m_size), m_msg); \
+		return m_retval;                                                                                               \
+	} else                                                                                                             \
 		((void)0)
 
 /**
  * Same as `ERR_FAIL_INDEX_V_MSG` but also notifies the editor.
  */
-#define ERR_FAIL_INDEX_V_EDMSG(m_index, m_size, m_retval, m_msg)                                                                                                                                                                                                                                                                        \
-	ERR_FAIL_INDEX__PRAGMA_BEGIN                                                                                                                                                                                                                                                                                                        \
-	if (unlikely((std::is_signed_v<decltype((m_index))> && ((m_index) < 0)) || (static_cast<typename std::make_unsigned_t<std::remove_reference_t<std::remove_const_t<decltype((m_index))>>>>((m_index)) >= static_cast<typename std::make_unsigned_t<std::remove_reference_t<std::remove_const_t<decltype((m_size))>>>>((m_size))))) { \
-		ERR_FAIL_INDEX__PRAGMA_END                                                                                                                                                                                                                                                                                                      \
-		_err_print_index_error(FUNCTION_STR, __FILE__, __LINE__, m_index, m_size, _STR(m_index), _STR(m_size), m_msg, true);                                                                                                                                                                                                            \
-		return m_retval;                                                                                                                                                                                                                                                                                                                \
-	} else                                                                                                                                                                                                                                                                                                                              \
+#define ERR_FAIL_INDEX_V_EDMSG(m_index, m_size, m_retval, m_msg)                                                             \
+	if (unlikely((m_index) < 0 || (m_index) >= (m_size))) {                                                                  \
+		_err_print_index_error(FUNCTION_STR, __FILE__, __LINE__, m_index, m_size, _STR(m_index), _STR(m_size), m_msg, true); \
+		return m_retval;                                                                                                     \
+	} else                                                                                                                   \
 		((void)0)
 
 /**
@@ -214,14 +192,12 @@ void _physics_interpolation_warning(const char *p_function, const char *p_file, 
  * Ensures an integer index `m_index` is less than `m_size` and greater than or equal to 0.
  * If not, the application crashes.
  */
-#define CRASH_BAD_INDEX(m_index, m_size)                                                                                                                                                                                                                                                                                                \
-	ERR_FAIL_INDEX__PRAGMA_BEGIN                                                                                                                                                                                                                                                                                                        \
-	if (unlikely((std::is_signed_v<decltype((m_index))> && ((m_index) < 0)) || (static_cast<typename std::make_unsigned_t<std::remove_reference_t<std::remove_const_t<decltype((m_index))>>>>((m_index)) >= static_cast<typename std::make_unsigned_t<std::remove_reference_t<std::remove_const_t<decltype((m_size))>>>>((m_size))))) { \
-		ERR_FAIL_INDEX__PRAGMA_END                                                                                                                                                                                                                                                                                                      \
-		_err_print_index_error(FUNCTION_STR, __FILE__, __LINE__, m_index, m_size, _STR(m_index), _STR(m_size), "", false, true);                                                                                                                                                                                                        \
-		_err_flush_stdout();                                                                                                                                                                                                                                                                                                            \
-		GENERATE_TRAP();                                                                                                                                                                                                                                                                                                                \
-	} else                                                                                                                                                                                                                                                                                                                              \
+#define CRASH_BAD_INDEX(m_index, m_size)                                                                                         \
+	if (unlikely((m_index) < 0 || (m_index) >= (m_size))) {                                                                      \
+		_err_print_index_error(FUNCTION_STR, __FILE__, __LINE__, m_index, m_size, _STR(m_index), _STR(m_size), "", false, true); \
+		_err_flush_stdout();                                                                                                     \
+		GENERATE_TRAP();                                                                                                         \
+	} else                                                                                                                       \
 		((void)0)
 
 /**
@@ -231,20 +207,17 @@ void _physics_interpolation_warning(const char *p_function, const char *p_file, 
  * Ensures an integer index `m_index` is less than `m_size` and greater than or equal to 0.
  * If not, prints `m_msg` and the application crashes.
  */
-#define CRASH_BAD_INDEX_MSG(m_index, m_size, m_msg)                                                                                                                                                                                                                                                                                     \
-	ERR_FAIL_INDEX__PRAGMA_BEGIN                                                                                                                                                                                                                                                                                                        \
-	if (unlikely((std::is_signed_v<decltype((m_index))> && ((m_index) < 0)) || (static_cast<typename std::make_unsigned_t<std::remove_reference_t<std::remove_const_t<decltype((m_index))>>>>((m_index)) >= static_cast<typename std::make_unsigned_t<std::remove_reference_t<std::remove_const_t<decltype((m_size))>>>>((m_size))))) { \
-		ERR_FAIL_INDEX__PRAGMA_END                                                                                                                                                                                                                                                                                                      \
-		_err_print_index_error(FUNCTION_STR, __FILE__, __LINE__, m_index, m_size, _STR(m_index), _STR(m_size), m_msg, false, true);                                                                                                                                                                                                     \
-		_err_flush_stdout();                                                                                                                                                                                                                                                                                                            \
-		GENERATE_TRAP();                                                                                                                                                                                                                                                                                                                \
-	} else                                                                                                                                                                                                                                                                                                                              \
+#define CRASH_BAD_INDEX_MSG(m_index, m_size, m_msg)                                                                                 \
+	if (unlikely((m_index) < 0 || (m_index) >= (m_size))) {                                                                         \
+		_err_print_index_error(FUNCTION_STR, __FILE__, __LINE__, m_index, m_size, _STR(m_index), _STR(m_size), m_msg, false, true); \
+		_err_flush_stdout();                                                                                                        \
+		GENERATE_TRAP();                                                                                                            \
+	} else                                                                                                                          \
 		((void)0)
 
 // Unsigned integer index out of bounds error macros.
 
 /**
- * DEPRECATED: Use `ERR_FAIL_INDEX` instead.
  * Try using `ERR_FAIL_UNSIGNED_INDEX_MSG`.
  * Only use this macro if there is no sensible error message.
  *
@@ -259,7 +232,6 @@ void _physics_interpolation_warning(const char *p_function, const char *p_file, 
 		((void)0)
 
 /**
- * DEPRECATED: Use `ERR_FAIL_INDEX_MSG` instead.
  * Ensures an unsigned integer index `m_index` is less than `m_size`.
  * If not, prints `m_msg` and the current function returns.
  */
@@ -271,7 +243,6 @@ void _physics_interpolation_warning(const char *p_function, const char *p_file, 
 		((void)0)
 
 /**
- * DEPRECATED: Use `ERR_FAIL_INDEX_EDMSG` instead.
  * Same as `ERR_FAIL_UNSIGNED_INDEX_MSG` but also notifies the editor.
  */
 #define ERR_FAIL_UNSIGNED_INDEX_EDMSG(m_index, m_size, m_msg)                                                                \
@@ -282,7 +253,6 @@ void _physics_interpolation_warning(const char *p_function, const char *p_file, 
 		((void)0)
 
 /**
- * DEPRECATED: Use `ERR_FAIL_INDEX_V` instead.
  * Try using `ERR_FAIL_UNSIGNED_INDEX_V_MSG`.
  * Only use this macro if there is no sensible error message.
  *
@@ -297,7 +267,6 @@ void _physics_interpolation_warning(const char *p_function, const char *p_file, 
 		((void)0)
 
 /**
- * DEPRECATED: Use `ERR_FAIL_INDEX_V_MSG` instead.
  * Ensures an unsigned integer index `m_index` is less than `m_size`.
  * If not, prints `m_msg` and the current function returns `m_retval`.
  */
@@ -309,7 +278,6 @@ void _physics_interpolation_warning(const char *p_function, const char *p_file, 
 		((void)0)
 
 /**
- * DEPRECATED: Use `ERR_FAIL_INDEX_V_EDMSG` instead.
  * Same as `ERR_FAIL_UNSIGNED_INDEX_V_EDMSG` but also notifies the editor.
  */
 #define ERR_FAIL_UNSIGNED_INDEX_V_EDMSG(m_index, m_size, m_retval, m_msg)                                                    \
@@ -320,7 +288,6 @@ void _physics_interpolation_warning(const char *p_function, const char *p_file, 
 		((void)0)
 
 /**
- * DEPRECATED: Use `CRASH_BAD_INDEX` instead.
  * Try using `ERR_FAIL_UNSIGNED_INDEX_MSG` or `ERR_FAIL_UNSIGNED_INDEX_V_MSG`.
  * Only use this macro if there is no sensible fallback i.e. the error is unrecoverable, and
  * there is no sensible error message.
@@ -337,7 +304,6 @@ void _physics_interpolation_warning(const char *p_function, const char *p_file, 
 		((void)0)
 
 /**
- * DEPRECATED: Use `CRASH_BAD_INDEX_MSG` instead.
  * Try using `ERR_FAIL_UNSIGNED_INDEX_MSG` or `ERR_FAIL_UNSIGNED_INDEX_V_MSG`.
  * Only use this macro if there is no sensible fallback i.e. the error is unrecoverable.
  *
