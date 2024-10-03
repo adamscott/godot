@@ -33,6 +33,7 @@
 
 #include "tile_atlas_view.h"
 
+#include "core/object/property_bag.h"
 #include "editor/editor_properties.h"
 #include "scene/2d/tile_map.h"
 #include "scene/gui/box_container.h"
@@ -70,22 +71,6 @@ public:
 
 	// Used to draw the tile data property value over a tile.
 	virtual void draw_over_tile(CanvasItem *p_canvas_item, Transform2D p_transform, TileMapCell p_cell, bool p_selected = false) {}
-};
-
-class DummyObject : public Object {
-	GDCLASS(DummyObject, Object)
-private:
-	HashMap<String, Variant> properties;
-
-protected:
-	bool _set(const StringName &p_name, const Variant &p_value);
-	bool _get(const StringName &p_name, Variant &r_ret) const;
-
-public:
-	bool has_dummy_property(const StringName &p_name);
-	void add_dummy_property(const StringName &p_name);
-	void remove_dummy_property(const StringName &p_name);
-	void clear_dummy_properties();
 };
 
 class GenericTilePolygonEditor : public VBoxContainer {
@@ -224,7 +209,7 @@ private:
 	void _property_value_changed(const StringName &p_property, const Variant &p_value, const StringName &p_field);
 
 protected:
-	DummyObject *dummy_object = memnew(DummyObject);
+	PropertyBag *property_bag = memnew(PropertyBag);
 
 	StringName type;
 	String property;
@@ -310,7 +295,7 @@ class TileDataCollisionEditor : public TileDataDefaultEditor {
 
 	// UI
 	GenericTilePolygonEditor *polygon_editor = nullptr;
-	DummyObject *dummy_object = memnew(DummyObject);
+	PropertyBag *property_bag = memnew(PropertyBag);
 	HashMap<StringName, EditorProperty *> property_editors;
 
 	void _property_value_changed(const StringName &p_property, const Variant &p_value, const StringName &p_field);
@@ -361,7 +346,7 @@ private:
 
 	// UI
 	Label *label = nullptr;
-	DummyObject *dummy_object = memnew(DummyObject);
+	PropertyBag *property_bag = memnew(PropertyBag);
 	EditorPropertyEnum *terrain_set_property_editor = nullptr;
 	EditorPropertyEnum *terrain_property_editor = nullptr;
 

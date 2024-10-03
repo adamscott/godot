@@ -94,40 +94,6 @@ void TileDataEditor::set_tile_set(Ref<TileSet> p_tile_set) {
 	_tile_set_changed_plan_update();
 }
 
-bool DummyObject::_set(const StringName &p_name, const Variant &p_value) {
-	if (properties.has(p_name)) {
-		properties[p_name] = p_value;
-		return true;
-	}
-	return false;
-}
-
-bool DummyObject::_get(const StringName &p_name, Variant &r_ret) const {
-	if (properties.has(p_name)) {
-		r_ret = properties[p_name];
-		return true;
-	}
-	return false;
-}
-
-bool DummyObject::has_dummy_property(const StringName &p_name) {
-	return properties.has(p_name);
-}
-
-void DummyObject::add_dummy_property(const StringName &p_name) {
-	ERR_FAIL_COND(properties.has(p_name));
-	properties[p_name] = Variant();
-}
-
-void DummyObject::remove_dummy_property(const StringName &p_name) {
-	ERR_FAIL_COND(!properties.has(p_name));
-	properties.erase(p_name);
-}
-
-void DummyObject::clear_dummy_properties() {
-	properties.clear();
-}
-
 void GenericTilePolygonEditor::_base_control_draw() {
 	ERR_FAIL_COND(!tile_set.is_valid());
 
@@ -1021,21 +987,21 @@ GenericTilePolygonEditor::GenericTilePolygonEditor() {
 }
 
 void TileDataDefaultEditor::_property_value_changed(const StringName &p_property, const Variant &p_value, const StringName &p_field) {
-	ERR_FAIL_NULL(dummy_object);
-	dummy_object->set(p_property, p_value);
+	ERR_FAIL_NULL(property_bag);
+	property_bag->set(p_property, p_value);
 	emit_signal(SNAME("needs_redraw"));
 }
 
 Variant TileDataDefaultEditor::_get_painted_value() {
-	ERR_FAIL_NULL_V(dummy_object, Variant());
-	return dummy_object->get(property);
+	ERR_FAIL_NULL_V(property_bag, Variant());
+	return property_bag->get(property);
 }
 
 void TileDataDefaultEditor::_set_painted_value(TileSetAtlasSource *p_tile_set_atlas_source, Vector2 p_coords, int p_alternative_tile) {
 	TileData *tile_data = p_tile_set_atlas_source->get_tile_data(p_coords, p_alternative_tile);
 	ERR_FAIL_NULL(tile_data);
 	Variant value = tile_data->get(property);
-	dummy_object->set(property, value);
+	property_bag->set(property, value);
 	if (property_editor) {
 		property_editor->update_property();
 	}
@@ -1326,22 +1292,22 @@ void TileDataDefaultEditor::setup_property_editor(Variant::Type p_type, const St
 		property_editor->queue_free();
 	}
 
-	// Update the dummy object.
-	dummy_object->add_dummy_property(p_property);
+	// Update the property bag.
+	property_bag->add_property(p_property);
 
 	// Get the default value for the type.
 	if (p_default_value == Variant()) {
 		Callable::CallError error;
 		Variant painted_value;
 		Variant::construct(p_type, painted_value, nullptr, 0, error);
-		dummy_object->set(p_property, painted_value);
+		property_bag->set(p_property, painted_value);
 	} else {
-		dummy_object->set(p_property, p_default_value);
+		property_bag->set(p_property, p_default_value);
 	}
 
 	// Create and setup the property editor.
-	property_editor = EditorInspectorDefaultPlugin::get_editor_for_property(dummy_object, p_type, p_property, PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT);
-	property_editor->set_object_and_property(dummy_object, p_property);
+	property_editor = EditorInspectorDefaultPlugin::get_editor_for_property(property_bag, p_type, p_property, PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT);
+	property_editor->set_object_and_property(property_bag, p_property);
 	if (p_label.is_empty()) {
 		property_editor->set_label(EditorPropertyNameProcessor::get_singleton()->process_name(p_property, EditorPropertyNameProcessor::get_default_inspector_style(), p_property));
 	} else {
@@ -1383,7 +1349,7 @@ TileDataDefaultEditor::TileDataDefaultEditor() {
 
 TileDataDefaultEditor::~TileDataDefaultEditor() {
 	toolbar->queue_free();
-	memdelete(dummy_object);
+	memdelete(property_bag);
 }
 
 void TileDataTextureOriginEditor::draw_over_tile(CanvasItem *p_canvas_item, Transform2D p_transform, TileMapCell p_cell, bool p_selected) {
@@ -1568,7 +1534,7 @@ TileDataOcclusionShapeEditor::TileDataOcclusionShapeEditor() {
 }
 
 void TileDataCollisionEditor::_property_value_changed(const StringName &p_property, const Variant &p_value, const StringName &p_field) {
-	dummy_object->set(p_property, p_value);
+	property_bag->set(p_property, p_value);
 }
 
 void TileDataCollisionEditor::_property_selected(const StringName &p_path, int p_focusable) {
@@ -1581,24 +1547,24 @@ void TileDataCollisionEditor::_property_selected(const StringName &p_path, int p
 }
 
 void TileDataCollisionEditor::_polygons_changed() {
-	// Update the dummy object properties and their editors.
+	// Update the property bag properties and their editors.
 	for (int i = 0; i < polygon_editor->get_polygon_count(); i++) {
 		StringName one_way_property = vformat("polygon_%d_one_way", i);
 		StringName one_way_margin_property = vformat("polygon_%d_one_way_margin", i);
 
-		if (!dummy_object->has_dummy_property(one_way_property)) {
-			dummy_object->add_dummy_property(one_way_property);
-			dummy_object->set(one_way_property, false);
+		if (!property_bag->has_property(one_way_property)) {
+			property_bag->add_property(one_way_property);
+			property_bag->set(one_way_property, false);
 		}
 
-		if (!dummy_object->has_dummy_property(one_way_margin_property)) {
-			dummy_object->add_dummy_property(one_way_margin_property);
-			dummy_object->set(one_way_margin_property, 1.0);
+		if (!property_bag->has_property(one_way_margin_property)) {
+			property_bag->add_property(one_way_margin_property);
+			property_bag->set(one_way_margin_property, 1.0);
 		}
 
 		if (!property_editors.has(one_way_property)) {
-			EditorProperty *one_way_property_editor = EditorInspectorDefaultPlugin::get_editor_for_property(dummy_object, Variant::BOOL, one_way_property, PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT);
-			one_way_property_editor->set_object_and_property(dummy_object, one_way_property);
+			EditorProperty *one_way_property_editor = EditorInspectorDefaultPlugin::get_editor_for_property(property_bag, Variant::BOOL, one_way_property, PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT);
+			one_way_property_editor->set_object_and_property(property_bag, one_way_property);
 			one_way_property_editor->set_label(one_way_property);
 			one_way_property_editor->connect("property_changed", callable_mp(this, &TileDataCollisionEditor::_property_value_changed).unbind(1));
 			one_way_property_editor->connect("selected", callable_mp(this, &TileDataCollisionEditor::_property_selected));
@@ -1609,8 +1575,8 @@ void TileDataCollisionEditor::_polygons_changed() {
 		}
 
 		if (!property_editors.has(one_way_margin_property)) {
-			EditorProperty *one_way_margin_property_editor = EditorInspectorDefaultPlugin::get_editor_for_property(dummy_object, Variant::FLOAT, one_way_margin_property, PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT);
-			one_way_margin_property_editor->set_object_and_property(dummy_object, one_way_margin_property);
+			EditorProperty *one_way_margin_property_editor = EditorInspectorDefaultPlugin::get_editor_for_property(property_bag, Variant::FLOAT, one_way_margin_property, PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT);
+			one_way_margin_property_editor->set_object_and_property(property_bag, one_way_margin_property);
 			one_way_margin_property_editor->set_label(one_way_margin_property);
 			one_way_margin_property_editor->connect("property_changed", callable_mp(this, &TileDataCollisionEditor::_property_value_changed).unbind(1));
 			one_way_margin_property_editor->connect("selected", callable_mp(this, &TileDataCollisionEditor::_property_selected));
@@ -1622,11 +1588,11 @@ void TileDataCollisionEditor::_polygons_changed() {
 	}
 
 	// Remove unneeded properties and their editors.
-	for (int i = polygon_editor->get_polygon_count(); dummy_object->has_dummy_property(vformat("polygon_%d_one_way", i)); i++) {
-		dummy_object->remove_dummy_property(vformat("polygon_%d_one_way", i));
+	for (int i = polygon_editor->get_polygon_count(); property_bag->has_property(vformat("polygon_%d_one_way", i)); i++) {
+		property_bag->remove_property(vformat("polygon_%d_one_way", i));
 	}
-	for (int i = polygon_editor->get_polygon_count(); dummy_object->has_dummy_property(vformat("polygon_%d_one_way_margin", i)); i++) {
-		dummy_object->remove_dummy_property(vformat("polygon_%d_one_way_margin", i));
+	for (int i = polygon_editor->get_polygon_count(); property_bag->has_property(vformat("polygon_%d_one_way_margin", i)); i++) {
+		property_bag->remove_property(vformat("polygon_%d_one_way_margin", i));
 	}
 	for (int i = polygon_editor->get_polygon_count(); property_editors.has(vformat("polygon_%d_one_way", i)); i++) {
 		property_editors[vformat("polygon_%d_one_way", i)]->queue_free();
@@ -1640,15 +1606,15 @@ void TileDataCollisionEditor::_polygons_changed() {
 
 Variant TileDataCollisionEditor::_get_painted_value() {
 	Dictionary dict;
-	dict["linear_velocity"] = dummy_object->get("linear_velocity");
-	dict["angular_velocity"] = dummy_object->get("angular_velocity");
+	dict["linear_velocity"] = property_bag->get("linear_velocity");
+	dict["angular_velocity"] = property_bag->get("angular_velocity");
 	Array array;
 	for (int i = 0; i < polygon_editor->get_polygon_count(); i++) {
 		ERR_FAIL_COND_V(polygon_editor->get_polygon(i).size() < 3, Variant());
 		Dictionary polygon_dict;
 		polygon_dict["points"] = polygon_editor->get_polygon(i);
-		polygon_dict["one_way"] = dummy_object->get(vformat("polygon_%d_one_way", i));
-		polygon_dict["one_way_margin"] = dummy_object->get(vformat("polygon_%d_one_way_margin", i));
+		polygon_dict["one_way"] = property_bag->get(vformat("polygon_%d_one_way", i));
+		polygon_dict["one_way_margin"] = property_bag->get(vformat("polygon_%d_one_way_margin", i));
 		array.push_back(polygon_dict);
 	}
 	dict["polygons"] = array;
@@ -1669,11 +1635,11 @@ void TileDataCollisionEditor::_set_painted_value(TileSetAtlasSource *p_tile_set_
 	}
 
 	_polygons_changed();
-	dummy_object->set("linear_velocity", tile_data->get_constant_linear_velocity(physics_layer));
-	dummy_object->set("angular_velocity", tile_data->get_constant_angular_velocity(physics_layer));
+	property_bag->set("linear_velocity", tile_data->get_constant_linear_velocity(physics_layer));
+	property_bag->set("angular_velocity", tile_data->get_constant_angular_velocity(physics_layer));
 	for (int i = 0; i < tile_data->get_collision_polygons_count(physics_layer); i++) {
-		dummy_object->set(vformat("polygon_%d_one_way", i), tile_data->is_collision_polygon_one_way(physics_layer, i));
-		dummy_object->set(vformat("polygon_%d_one_way_margin", i), tile_data->get_collision_polygon_one_way_margin(physics_layer, i));
+		property_bag->set(vformat("polygon_%d_one_way", i), tile_data->is_collision_polygon_one_way(physics_layer, i));
+		property_bag->set(vformat("polygon_%d_one_way_margin", i), tile_data->get_collision_polygon_one_way_margin(physics_layer, i));
 	}
 	for (const KeyValue<StringName, EditorProperty *> &E : property_editors) {
 		E.value->update_property();
@@ -1770,13 +1736,13 @@ TileDataCollisionEditor::TileDataCollisionEditor() {
 	polygon_editor->connect("polygons_changed", callable_mp(this, &TileDataCollisionEditor::_polygons_changed));
 	add_child(polygon_editor);
 
-	dummy_object->add_dummy_property("linear_velocity");
-	dummy_object->set("linear_velocity", Vector2());
-	dummy_object->add_dummy_property("angular_velocity");
-	dummy_object->set("angular_velocity", 0.0);
+	property_bag->add_property("linear_velocity");
+	property_bag->set("linear_velocity", Vector2());
+	property_bag->add_property("angular_velocity");
+	property_bag->set("angular_velocity", 0.0);
 
-	EditorProperty *linear_velocity_editor = EditorInspectorDefaultPlugin::get_editor_for_property(dummy_object, Variant::VECTOR2, "linear_velocity", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT);
-	linear_velocity_editor->set_object_and_property(dummy_object, "linear_velocity");
+	EditorProperty *linear_velocity_editor = EditorInspectorDefaultPlugin::get_editor_for_property(property_bag, Variant::VECTOR2, "linear_velocity", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT);
+	linear_velocity_editor->set_object_and_property(property_bag, "linear_velocity");
 	linear_velocity_editor->set_label("linear_velocity");
 	linear_velocity_editor->connect("property_changed", callable_mp(this, &TileDataCollisionEditor::_property_value_changed).unbind(1));
 	linear_velocity_editor->connect("selected", callable_mp(this, &TileDataCollisionEditor::_property_selected));
@@ -1785,8 +1751,8 @@ TileDataCollisionEditor::TileDataCollisionEditor() {
 	add_child(linear_velocity_editor);
 	property_editors["linear_velocity"] = linear_velocity_editor;
 
-	EditorProperty *angular_velocity_editor = EditorInspectorDefaultPlugin::get_editor_for_property(dummy_object, Variant::FLOAT, "angular_velocity", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT);
-	angular_velocity_editor->set_object_and_property(dummy_object, "angular_velocity");
+	EditorProperty *angular_velocity_editor = EditorInspectorDefaultPlugin::get_editor_for_property(property_bag, Variant::FLOAT, "angular_velocity", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT);
+	angular_velocity_editor->set_object_and_property(property_bag, "angular_velocity");
 	angular_velocity_editor->set_label("angular_velocity");
 	angular_velocity_editor->connect("property_changed", callable_mp(this, &TileDataCollisionEditor::_property_value_changed).unbind(1));
 	angular_velocity_editor->connect("selected", callable_mp(this, &TileDataCollisionEditor::_property_selected));
@@ -1799,7 +1765,7 @@ TileDataCollisionEditor::TileDataCollisionEditor() {
 }
 
 TileDataCollisionEditor::~TileDataCollisionEditor() {
-	memdelete(dummy_object);
+	memdelete(property_bag);
 }
 
 void TileDataCollisionEditor::draw_over_tile(CanvasItem *p_canvas_item, Transform2D p_transform, TileMapCell p_cell, bool p_selected) {
@@ -1860,7 +1826,7 @@ void TileDataTerrainsEditor::_update_terrain_selector() {
 	terrain_set_property_editor->update_property();
 
 	// Update the terrain selector.
-	int terrain_set = int(dummy_object->get("terrain_set"));
+	int terrain_set = int(property_bag->get("terrain_set"));
 	if (terrain_set == -1) {
 		terrain_property_editor->hide();
 	} else {
@@ -1889,11 +1855,11 @@ void TileDataTerrainsEditor::_update_terrain_selector() {
 }
 
 void TileDataTerrainsEditor::_property_value_changed(const StringName &p_property, const Variant &p_value, const StringName &p_field) {
-	Variant old_value = dummy_object->get(p_property);
-	dummy_object->set(p_property, p_value);
+	Variant old_value = property_bag->get(p_property);
+	property_bag->set(p_property, p_value);
 	if (p_property == "terrain_set") {
 		if (p_value != old_value) {
-			dummy_object->set("terrain", -1);
+			property_bag->set("terrain", -1);
 		}
 		_update_terrain_selector();
 	}
@@ -1904,14 +1870,14 @@ void TileDataTerrainsEditor::_tile_set_changed() {
 	ERR_FAIL_COND(!tile_set.is_valid());
 
 	// Fix if wrong values are selected.
-	int terrain_set = int(dummy_object->get("terrain_set"));
+	int terrain_set = int(property_bag->get("terrain_set"));
 	if (terrain_set >= tile_set->get_terrain_sets_count()) {
 		terrain_set = -1;
-		dummy_object->set("terrain_set", -1);
+		property_bag->set("terrain_set", -1);
 	}
 	if (terrain_set >= 0) {
-		if (int(dummy_object->get("terrain")) >= tile_set->get_terrains_count(terrain_set)) {
-			dummy_object->set("terrain", -1);
+		if (int(property_bag->get("terrain")) >= tile_set->get_terrains_count(terrain_set)) {
+			property_bag->set("terrain", -1);
 		}
 	}
 
@@ -1933,7 +1899,7 @@ void TileDataTerrainsEditor::forward_draw_over_atlas(TileAtlasView *p_tile_atlas
 			Rect2i texture_region = p_tile_set_atlas_source->get_tile_texture_region(hovered_coords);
 			Vector2i position = texture_region.get_center() + tile_data->get_texture_origin();
 
-			if (terrain_set >= 0 && terrain_set == int(dummy_object->get("terrain_set"))) {
+			if (terrain_set >= 0 && terrain_set == int(property_bag->get("terrain_set"))) {
 				// Draw hovered bit.
 				Transform2D xform;
 				xform.set_origin(position);
@@ -1973,7 +1939,7 @@ void TileDataTerrainsEditor::forward_draw_over_atlas(TileAtlasView *p_tile_atlas
 		Vector2i coords = p_tile_set_atlas_source->get_tile_id(i);
 		if (coords != hovered_coords) {
 			TileData *tile_data = p_tile_set_atlas_source->get_tile_data(coords, 0);
-			if (tile_data->get_terrain_set() != int(dummy_object->get("terrain_set"))) {
+			if (tile_data->get_terrain_set() != int(property_bag->get("terrain_set"))) {
 				// Dimming
 				p_canvas_item->draw_set_transform_matrix(p_transform);
 				Rect2i rect = p_tile_set_atlas_source->get_tile_texture_region(coords);
@@ -2122,7 +2088,7 @@ void TileDataTerrainsEditor::forward_draw_over_alternatives(TileAtlasView *p_til
 			Rect2i texture_region = p_tile_atlas_view->get_alternative_tile_rect(hovered_coords, hovered_alternative);
 			Vector2i position = texture_region.get_center() + tile_data->get_texture_origin();
 
-			if (terrain_set == int(dummy_object->get("terrain_set"))) {
+			if (terrain_set == int(property_bag->get("terrain_set"))) {
 				// Draw hovered bit.
 				Transform2D xform;
 				xform.set_origin(position);
@@ -2165,7 +2131,7 @@ void TileDataTerrainsEditor::forward_draw_over_alternatives(TileAtlasView *p_til
 			int alternative_tile = p_tile_set_atlas_source->get_alternative_tile_id(coords, j);
 			if (coords != hovered_coords || alternative_tile != hovered_alternative) {
 				TileData *tile_data = p_tile_set_atlas_source->get_tile_data(coords, alternative_tile);
-				if (tile_data->get_terrain_set() != int(dummy_object->get("terrain_set"))) {
+				if (tile_data->get_terrain_set() != int(property_bag->get("terrain_set"))) {
 					// Dimming
 					p_canvas_item->draw_set_transform_matrix(p_transform);
 					Rect2i rect = p_tile_atlas_view->get_alternative_tile_rect(coords, alternative_tile);
@@ -2294,19 +2260,19 @@ void TileDataTerrainsEditor::forward_painting_atlas_gui_input(TileAtlasView *p_t
 						int terrain_set = tile_data->get_terrain_set();
 						Rect2i texture_region = p_tile_set_atlas_source->get_tile_texture_region(coords);
 						Vector2i position = texture_region.get_center() + tile_data->get_texture_origin();
-						dummy_object->set("terrain_set", terrain_set);
-						dummy_object->set("terrain", -1);
+						property_bag->set("terrain_set", terrain_set);
+						property_bag->set("terrain", -1);
 
 						Vector<Vector2> polygon = tile_set->get_terrain_polygon(terrain_set);
 						if (Geometry2D::is_point_in_polygon(mb->get_position() - position, polygon)) {
-							dummy_object->set("terrain", tile_data->get_terrain());
+							property_bag->set("terrain", tile_data->get_terrain());
 						}
 						for (int i = 0; i < TileSet::CELL_NEIGHBOR_MAX; i++) {
 							TileSet::CellNeighbor bit = TileSet::CellNeighbor(i);
 							if (tile_set->is_valid_terrain_peering_bit(terrain_set, bit)) {
 								polygon = tile_set->get_terrain_peering_bit_polygon(terrain_set, bit);
 								if (Geometry2D::is_point_in_polygon(mb->get_position() - position, polygon)) {
-									dummy_object->set("terrain", tile_data->get_terrain_peering_bit(bit));
+									property_bag->set("terrain", tile_data->get_terrain_peering_bit(bit));
 								}
 							}
 						}
@@ -2322,8 +2288,8 @@ void TileDataTerrainsEditor::forward_painting_atlas_gui_input(TileAtlasView *p_t
 					if (coords != TileSetAtlasSource::INVALID_ATLAS_COORDS) {
 						tile_data = p_tile_set_atlas_source->get_tile_data(coords, 0);
 					}
-					int terrain_set = int(dummy_object->get("terrain_set"));
-					int terrain = int(dummy_object->get("terrain"));
+					int terrain_set = int(property_bag->get("terrain_set"));
+					int terrain = int(property_bag->get("terrain"));
 					if (terrain_set == -1 || !tile_data || tile_data->get_terrain_set() != terrain_set) {
 						// Paint terrain sets.
 						if (mb->get_button_index() == MouseButton::RIGHT) {
@@ -2692,12 +2658,12 @@ void TileDataTerrainsEditor::forward_painting_alternatives_gui_input(TileAtlasVi
 						int terrain_set = tile_data->get_terrain_set();
 						Rect2i texture_region = p_tile_atlas_view->get_alternative_tile_rect(coords, alternative_tile);
 						Vector2i position = texture_region.get_center() + tile_data->get_texture_origin();
-						dummy_object->set("terrain_set", terrain_set);
-						dummy_object->set("terrain", -1);
+						property_bag->set("terrain_set", terrain_set);
+						property_bag->set("terrain", -1);
 
 						Vector<Vector2> polygon = tile_set->get_terrain_polygon(terrain_set);
 						if (Geometry2D::is_point_in_polygon(mb->get_position() - position, polygon)) {
-							dummy_object->set("terrain", tile_data->get_terrain());
+							property_bag->set("terrain", tile_data->get_terrain());
 						}
 
 						for (int i = 0; i < TileSet::CELL_NEIGHBOR_MAX; i++) {
@@ -2705,7 +2671,7 @@ void TileDataTerrainsEditor::forward_painting_alternatives_gui_input(TileAtlasVi
 							if (tile_set->is_valid_terrain_peering_bit(terrain_set, bit)) {
 								polygon = tile_set->get_terrain_peering_bit_polygon(terrain_set, bit);
 								if (Geometry2D::is_point_in_polygon(mb->get_position() - position, polygon)) {
-									dummy_object->set("terrain", tile_data->get_terrain_peering_bit(bit));
+									property_bag->set("terrain", tile_data->get_terrain_peering_bit(bit));
 								}
 							}
 						}
@@ -2715,8 +2681,8 @@ void TileDataTerrainsEditor::forward_painting_alternatives_gui_input(TileAtlasVi
 						accept_event();
 					}
 				} else {
-					int terrain_set = int(dummy_object->get("terrain_set"));
-					int terrain = int(dummy_object->get("terrain"));
+					int terrain_set = int(property_bag->get("terrain_set"));
+					int terrain = int(property_bag->get("terrain"));
 
 					Vector3i tile = p_tile_atlas_view->get_alternative_tile_at_pos(mb->get_position());
 					Vector2i coords = Vector2i(tile.x, tile.y);
@@ -2729,7 +2695,7 @@ void TileDataTerrainsEditor::forward_painting_alternatives_gui_input(TileAtlasVi
 							// Paint terrain sets.
 							drag_type = DRAG_TYPE_PAINT_TERRAIN_SET;
 							drag_modified.clear();
-							drag_painted_value = int(dummy_object->get("terrain_set"));
+							drag_painted_value = int(property_bag->get("terrain_set"));
 							if (coords != TileSetSource::INVALID_ATLAS_COORDS) {
 								TileMapCell cell;
 								cell.source_id = 0;
@@ -2882,21 +2848,21 @@ TileDataTerrainsEditor::TileDataTerrainsEditor() {
 	toolbar->add_child(picker_button);
 
 	// Setup
-	dummy_object->add_dummy_property("terrain_set");
-	dummy_object->set("terrain_set", -1);
-	dummy_object->add_dummy_property("terrain");
-	dummy_object->set("terrain", -1);
+	property_bag->add_property("terrain_set");
+	property_bag->set("terrain_set", -1);
+	property_bag->add_property("terrain");
+	property_bag->set("terrain", -1);
 
 	// Get the default value for the type.
 	terrain_set_property_editor = memnew(EditorPropertyEnum);
-	terrain_set_property_editor->set_object_and_property(dummy_object, "terrain_set");
+	terrain_set_property_editor->set_object_and_property(property_bag, "terrain_set");
 	terrain_set_property_editor->set_label("Terrain Set");
 	terrain_set_property_editor->connect("property_changed", callable_mp(this, &TileDataTerrainsEditor::_property_value_changed).unbind(1));
 	terrain_set_property_editor->set_tooltip_text(terrain_set_property_editor->get_edited_property());
 	add_child(terrain_set_property_editor);
 
 	terrain_property_editor = memnew(EditorPropertyEnum);
-	terrain_property_editor->set_object_and_property(dummy_object, "terrain");
+	terrain_property_editor->set_object_and_property(property_bag, "terrain");
 	terrain_property_editor->set_label("Terrain");
 	terrain_property_editor->connect("property_changed", callable_mp(this, &TileDataTerrainsEditor::_property_value_changed).unbind(1));
 	add_child(terrain_property_editor);
@@ -2904,7 +2870,7 @@ TileDataTerrainsEditor::TileDataTerrainsEditor() {
 
 TileDataTerrainsEditor::~TileDataTerrainsEditor() {
 	toolbar->queue_free();
-	memdelete(dummy_object);
+	memdelete(property_bag);
 }
 
 Variant TileDataNavigationEditor::_get_painted_value() {
