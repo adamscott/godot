@@ -97,6 +97,7 @@
 #include "scene/main/instance_placeholder.h"
 #include "scene/main/missing_node.h"
 #include "scene/main/multiplayer_api.h"
+#include "scene/main/resource_fetcher.h"
 #include "scene/main/resource_preloader.h"
 #include "scene/main/scene_tree.h"
 #include "scene/main/shader_globals_override.h"
@@ -134,6 +135,7 @@
 #include "scene/resources/physics_material.h"
 #include "scene/resources/placeholder_textures.h"
 #include "scene/resources/portable_compressed_texture.h"
+#include "scene/resources/resource_fetch_list.h"
 #include "scene/resources/resource_format_text.h"
 #include "scene/resources/shader_include.h"
 #include "scene/resources/skeleton_profile.h"
@@ -380,6 +382,7 @@ void register_scene_types() {
 	GDREGISTER_CLASS(CanvasLayer);
 	GDREGISTER_CLASS(CanvasModulate);
 	GDREGISTER_CLASS(ResourcePreloader);
+	GDREGISTER_CLASS(ResourceFetcher);
 	GDREGISTER_CLASS(Window);
 
 	GDREGISTER_CLASS(StatusIndicator);
@@ -861,6 +864,8 @@ void register_scene_types() {
 	GDREGISTER_CLASS(MultiMesh);
 	GDREGISTER_CLASS(SurfaceTool);
 	GDREGISTER_CLASS(MeshDataTool);
+
+	GDREGISTER_CLASS(ResourceFetchList);
 
 #ifndef _3D_DISABLED
 	GDREGISTER_CLASS(AudioStreamPlayer3D);
