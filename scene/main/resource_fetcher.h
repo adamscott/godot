@@ -33,7 +33,6 @@
 
 #include "core/variant/binder_common.h"
 #include "scene/main/node.h"
-#include "scene/resources/resource_fetch_list.h"
 
 class ResourceFetcher : public Node {
 	GDCLASS(ResourceFetcher, Node);
@@ -48,7 +47,11 @@ public:
 private:
 	FetchStatus _status;
 
-	Ref<ResourceFetchList> _fetch_list;
+	HashMap<StringName, Ref<Resource>> _resources;
+
+	void _set_resources(const Array &p_data);
+	Array _get_resources() const;
+	Vector<String> _get_resource_list() const;
 
 protected:
 	static void _bind_methods();
@@ -56,11 +59,15 @@ protected:
 public:
 	void start();
 	void reset();
-
 	FetchStatus get_status() const;
 
-	void set_fetch_list(const Ref<ResourceFetchList> &p_fetch_list);
-	Ref<ResourceFetchList> get_fetch_list() const;
+	void add_resource(const StringName &p_name, const Ref<Resource> &p_resource);
+	void remove_resource(const StringName &p_name);
+	void rename_resource(const StringName &p_from_name, const StringName &p_to_name);
+	bool has_resource(const StringName &p_name) const;
+	Ref<Resource> get_resource(const StringName &p_name) const;
+
+	void get_resource_list(List<StringName> *p_list);
 
 	ResourceFetcher();
 };

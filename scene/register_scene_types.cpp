@@ -135,7 +135,6 @@
 #include "scene/resources/physics_material.h"
 #include "scene/resources/placeholder_textures.h"
 #include "scene/resources/portable_compressed_texture.h"
-#include "scene/resources/resource_fetch_list.h"
 #include "scene/resources/resource_format_text.h"
 #include "scene/resources/shader_include.h"
 #include "scene/resources/skeleton_profile.h"
@@ -864,8 +863,6 @@ void register_scene_types() {
 	GDREGISTER_CLASS(MultiMesh);
 	GDREGISTER_CLASS(SurfaceTool);
 	GDREGISTER_CLASS(MeshDataTool);
-
-	GDREGISTER_CLASS(ResourceFetchList);
 
 #ifndef _3D_DISABLED
 	GDREGISTER_CLASS(AudioStreamPlayer3D);
