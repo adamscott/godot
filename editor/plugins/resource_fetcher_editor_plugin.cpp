@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  resource_fetcher.h                                                    */
+/*  resource_fetcher_editor_plugin.cpp                                    */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,54 +28,61 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef RESOURCE_FETCHER_H
-#define RESOURCE_FETCHER_H
+#include "resource_fetcher_editor_plugin.h"
 
-#include "core/variant/binder_common.h"
-#include "scene/main/node.h"
+#include "editor/editor_command_palette.h"
+#include "editor/editor_node.h"
+#include "editor/gui/editor_bottom_panel.h"
+#include "editor/themes/editor_scale.h"
+#include "scene/main/resource_fetcher.h"
 
-class ResourceFetcher : public Node {
-	GDCLASS(ResourceFetcher, Node);
+void ResourceFetcherEditor::_notification(int p_what) {
+}
 
-public:
-	enum FetchStatus {
-		FETCH_STATUS_EDITOR,
-		FETCH_STATUS_IDLE,
-		FETCH_STATUS_FETCHING,
-		FETCH_STATUS_ERROR,
-	};
+void ResourceFetcherEditor::edit(ResourceFetcher *p_fetcher) {
+	fetcher = p_fetcher;
+}
 
-private:
-	FetchStatus _status;
-	bool _auto_start = true;
+void ResourceFetcherEditor::_bind_methods() {
+}
 
-	LocalVector<Ref<Resource>> _resources;
-	Vector<String> _get_resource_list() const;
+ResourceFetcherEditor::ResourceFetcherEditor() {
+}
 
-protected:
-	static void _bind_methods();
-	void _notification(int p_what);
+ResourceFetcherEditor::~ResourceFetcherEditor() {}
 
-public:
-	void start();
-	void reset();
-	FetchStatus get_status() const;
+void ResourceFetcherEditorPlugin::edit(Object *p_object) {
+	ResourceFetcher *resource_fetcher = Object::cast_to<ResourceFetcher>(p_object);
+	if (resource_fetcher == nullptr) {
+		return;
+	}
 
-	void set_auto_start(bool p_auto_start);
-	bool get_auto_start() const;
+	_fetcher_editor->edit(resource_fetcher);
+}
 
-	void set_resources(const TypedArray<Resource> &p_data);
-	TypedArray<Resource> get_resources() const;
+bool ResourceFetcherEditorPlugin::handles(Object *p_object) const {
+	return p_object->is_class("ResourceFetcher");
+}
 
-	void add_resource(const Ref<Resource> &p_resource);
-	void remove_resource(const Ref<Resource> &p_resource);
-	bool has_resource(const Ref<Resource> &p_resource) const;
+void ResourceFetcherEditorPlugin::make_visible(bool p_visible) {
+	if (p_visible) {
+		_button->show();
+		EditorNode::get_bottom_panel()->make_item_visible(_fetcher_editor);
+		return;
+	}
+	if (_fetcher_editor->is_visible_in_tree()) {
+		EditorNode::get_bottom_panel()->hide_bottom_panel();
+	}
+	_button->hide();
+}
 
-	void get_resource_list(List<StringName> *p_list);
+ResourceFetcherEditorPlugin::ResourceFetcherEditorPlugin() {
+	_fetcher_editor = memnew(ResourceFetcherEditor);
+	_fetcher_editor->set_custom_minimum_size(Size2(0, 250) * EDSCALE);
 
-	ResourceFetcher();
-};
+	_button = EditorNode::get_bottom_panel()->add_item("ResourceFetcher", _fetcher_editor, ED_SHORTCUT_AND_COMMAND("bottom_panels/toggle_resource_resource_fetcher_bottom_panel", TTR("Toggle ResourceFetcher Bottom Panel")));
+	_button->hide();
+}
 
-VARIANT_ENUM_CAST(ResourceFetcher::FetchStatus);
-
-#endif // RESOURCE_FETCHER_H
+ResourceFetcherEditorPlugin::~ResourceFetcherEditorPlugin() {
+}
