@@ -65,8 +65,6 @@ void EditorExportPlugin::add_file(const String &p_path, const Vector<uint8_t> &p
 }
 
 void EditorExportPlugin::add_fetch_file(const String &p_path, const Vector<uint8_t> &p_file) {
-	print_line(vformat("add fetch file: %s", p_path));
-
 	FetchFile fetch_file;
 	fetch_file.path = p_path;
 	fetch_file.data = p_file;
