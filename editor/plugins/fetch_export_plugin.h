@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  resource_fetcher.h                                                    */
+/*  fetch_export_plugin.h                                                 */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,54 +28,33 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef RESOURCE_FETCHER_H
-#define RESOURCE_FETCHER_H
+#ifndef FETCH_EXPORT_PLUGIN_H
+#define FETCH_EXPORT_PLUGIN_H
 
-#include "core/variant/binder_common.h"
-#include "scene/main/node.h"
+#include "editor/export/editor_export_platform.h"
+#include "editor/export/editor_export_plugin.h"
+#include "scene/main/resource_fetcher.h"
 
-class ResourceFetcher : public Node {
-	GDCLASS(ResourceFetcher, Node);
+class FetchExportPlugin : public EditorExportPlugin {
+	GDCLASS(FetchExportPlugin, EditorExportPlugin);
 
-public:
-	enum FetchStatus {
-		FETCH_STATUS_EDITOR,
-		FETCH_STATUS_IDLE,
-		FETCH_STATUS_FETCHING,
-		FETCH_STATUS_ERROR,
-	};
+	Node *_current_scene;
+	LocalVector<Ref<Resource>> _fetched_resources;
 
-private:
-	FetchStatus _status;
-	bool _auto_start = true;
-
-	LocalVector<Ref<Resource>> _resources;
-	Vector<String> _get_resource_list() const;
+	Error _find_resource_fetch_nodes(Node *p_node);
+	Error _parse_fetch_node(ResourceFetcher *p_resource_fetcher);
 
 protected:
-	static void _bind_methods();
-	void _notification(int p_what);
+	String get_name() const override { return "Fetch"; }
+	// PackedStringArray _get_export_features(const Ref<EditorExportPlatform> &p_platform, bool p_debug) const override;
+	uint64_t _get_customization_configuration_hash() const override;
+	bool _begin_customize_scenes(const Ref<EditorExportPlatform> &p_platform, const Vector<String> &p_features) override;
+	Node *_customize_scene(Node *p_root, const String &p_path) override;
+	void _end_customize_scenes() override;
 
 public:
-	void start();
-	void reset();
-	FetchStatus get_status() const;
-
-	void set_auto_start(bool p_auto_start);
-	bool get_auto_start() const;
-
-	void set_resources(const TypedArray<Resource> &p_data);
-	TypedArray<Resource> get_resources() const;
-
-	void add_resource(const Ref<Resource> &p_resource);
-	void remove_resource(const Ref<Resource> &p_resource);
-	bool has_resource(const Ref<Resource> &p_resource) const;
-
-	void get_resource_list(List<StringName> *p_list);
-
-	ResourceFetcher();
+	FetchExportPlugin();
+	~FetchExportPlugin();
 };
 
-VARIANT_ENUM_CAST(ResourceFetcher::FetchStatus);
-
-#endif // RESOURCE_FETCHER_H
+#endif // FETCH_EXPORT_PLUGIN_H

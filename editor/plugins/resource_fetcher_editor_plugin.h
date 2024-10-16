@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  resource_fetcher.h                                                    */
+/*  resource_fetcher_editor_plugin.h                                      */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,54 +28,48 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef RESOURCE_FETCHER_H
-#define RESOURCE_FETCHER_H
+#ifndef RESOURCE_FETCHER_EDITOR_PLUGIN_H
+#define RESOURCE_FETCHER_EDITOR_PLUGIN_H
 
-#include "core/variant/binder_common.h"
-#include "scene/main/node.h"
+#include "editor/plugins/editor_plugin.h"
+#include "scene/gui/button.h"
+#include "scene/gui/panel_container.h"
+#include "scene/main/resource_fetcher.h"
 
-class ResourceFetcher : public Node {
-	GDCLASS(ResourceFetcher, Node);
+class EditorFileDialog;
 
-public:
-	enum FetchStatus {
-		FETCH_STATUS_EDITOR,
-		FETCH_STATUS_IDLE,
-		FETCH_STATUS_FETCHING,
-		FETCH_STATUS_ERROR,
-	};
+class ResourceFetcherEditor : public PanelContainer {
+	GDCLASS(ResourceFetcherEditor, PanelContainer);
 
-private:
-	FetchStatus _status;
-	bool _auto_start = true;
-
-	LocalVector<Ref<Resource>> _resources;
-	Vector<String> _get_resource_list() const;
+	ResourceFetcher *fetcher = nullptr;
 
 protected:
 	static void _bind_methods();
+
 	void _notification(int p_what);
 
 public:
-	void start();
-	void reset();
-	FetchStatus get_status() const;
+	void edit(ResourceFetcher *p_fetcher);
 
-	void set_auto_start(bool p_auto_start);
-	bool get_auto_start() const;
-
-	void set_resources(const TypedArray<Resource> &p_data);
-	TypedArray<Resource> get_resources() const;
-
-	void add_resource(const Ref<Resource> &p_resource);
-	void remove_resource(const Ref<Resource> &p_resource);
-	bool has_resource(const Ref<Resource> &p_resource) const;
-
-	void get_resource_list(List<StringName> *p_list);
-
-	ResourceFetcher();
+	ResourceFetcherEditor();
+	~ResourceFetcherEditor();
 };
 
-VARIANT_ENUM_CAST(ResourceFetcher::FetchStatus);
+class ResourceFetcherEditorPlugin : public EditorPlugin {
+	GDCLASS(ResourceFetcherEditorPlugin, EditorPlugin);
 
-#endif // RESOURCE_FETCHER_H
+	ResourceFetcherEditor *_fetcher_editor = nullptr;
+	Button *_button = nullptr;
+
+public:
+	virtual String get_name() const override { return "ResourceFetcher"; }
+	bool has_main_screen() const override { return false; }
+	virtual void edit(Object *p_object) override;
+	virtual bool handles(Object *p_object) const override;
+	virtual void make_visible(bool p_visible) override;
+
+	ResourceFetcherEditorPlugin();
+	~ResourceFetcherEditorPlugin();
+};
+
+#endif // RESOURCE_FETCHER_EDITOR_PLUGIN_H

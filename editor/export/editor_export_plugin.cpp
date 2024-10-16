@@ -64,6 +64,15 @@ void EditorExportPlugin::add_file(const String &p_path, const Vector<uint8_t> &p
 	extra_files.push_back(ef);
 }
 
+void EditorExportPlugin::add_fetch_file(const String &p_path, const Vector<uint8_t> &p_file) {
+	print_line(vformat("add fetch file: %s", p_path));
+
+	FetchFile fetch_file;
+	fetch_file.path = p_path;
+	fetch_file.data = p_file;
+	fetch_files.push_back(fetch_file);
+}
+
 void EditorExportPlugin::add_shared_object(const String &p_path, const Vector<String> &p_tags, const String &p_target) {
 	shared_objects.push_back(SharedObject(p_path, p_tags, p_target));
 }

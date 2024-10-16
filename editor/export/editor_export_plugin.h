@@ -53,6 +53,11 @@ class EditorExportPlugin : public RefCounted {
 		bool remap = false;
 	};
 	Vector<ExtraFile> extra_files;
+	struct FetchFile {
+		String path;
+		Vector<uint8_t> data;
+	};
+	Vector<FetchFile> fetch_files;
 	bool skipped = false;
 
 	Vector<String> ios_frameworks;
@@ -94,6 +99,7 @@ protected:
 	Ref<EditorExportPlatform> get_export_platform() const;
 
 	void add_file(const String &p_path, const Vector<uint8_t> &p_file, bool p_remap);
+	void add_fetch_file(const String &p_path, const Vector<uint8_t> &p_file);
 	void add_shared_object(const String &p_path, const Vector<String> &tags, const String &p_target = String());
 	void _add_shared_object(const SharedObject &p_shared_object);
 
