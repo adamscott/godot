@@ -47,6 +47,7 @@
 #include "core/version.h"
 #include "editor/editor_string_names.h"
 #include "editor/plugins/editor_context_menu_plugin.h"
+#include "editor/plugins/fetch_export_plugin.h"
 #include "main/main.h"
 #include "scene/3d/bone_attachment_3d.h"
 #include "scene/animation/animation_tree.h"
@@ -7822,8 +7823,11 @@ EditorNode::EditorNode() {
 
 	Ref<DedicatedServerExportPlugin> dedicated_server_export_plugin;
 	dedicated_server_export_plugin.instantiate();
-
 	EditorExport::get_singleton()->add_export_plugin(dedicated_server_export_plugin);
+
+	Ref<FetchExportPlugin> fetch_export_plugin;
+	fetch_export_plugin.instantiate();
+	EditorExport::get_singleton()->add_export_plugin(fetch_export_plugin);
 
 	Ref<PackedSceneEditorTranslationParserPlugin> packed_scene_translation_parser_plugin;
 	packed_scene_translation_parser_plugin.instantiate();

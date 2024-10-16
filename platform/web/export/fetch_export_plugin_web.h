@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  resource_fetcher.h                                                    */
+/*  fetch_export_plugin_web.h                                             */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,54 +28,14 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef RESOURCE_FETCHER_H
-#define RESOURCE_FETCHER_H
+#ifndef WEB_FETCH_EXPORT_PLUGIN_WEB_H
+#define WEB_FETCH_EXPORT_PLUGIN_WEB_H
 
-#include "core/variant/binder_common.h"
-#include "scene/main/node.h"
+#include "core/object/object.h"
+#include "editor/plugins/fetch_export_plugin.h"
 
-class ResourceFetcher : public Node {
-	GDCLASS(ResourceFetcher, Node);
-
-public:
-	enum FetchStatus {
-		FETCH_STATUS_EDITOR,
-		FETCH_STATUS_IDLE,
-		FETCH_STATUS_FETCHING,
-		FETCH_STATUS_ERROR,
-	};
-
-private:
-	FetchStatus _status;
-	bool _auto_start = true;
-
-	LocalVector<Ref<Resource>> _resources;
-	Vector<String> _get_resource_list() const;
-
-protected:
-	static void _bind_methods();
-	void _notification(int p_what);
-
-public:
-	void start();
-	void reset();
-	FetchStatus get_status() const;
-
-	void set_auto_start(bool p_auto_start);
-	bool get_auto_start() const;
-
-	void set_resources(const TypedArray<Resource> &p_data);
-	TypedArray<Resource> get_resources() const;
-
-	void add_resource(const Ref<Resource> &p_resource);
-	void remove_resource(const Ref<Resource> &p_resource);
-	bool has_resource(const Ref<Resource> &p_resource) const;
-
-	void get_resource_list(List<StringName> *p_list);
-
-	ResourceFetcher();
+class FetchExportPluginWeb : public FetchExportPlugin {
+	GDCLASS(FetchExportPluginWeb, FetchExportPlugin);
 };
 
-VARIANT_ENUM_CAST(ResourceFetcher::FetchStatus);
-
-#endif // RESOURCE_FETCHER_H
+#endif // WEB_FETCH_EXPORT_PLUGIN_WEB_H
