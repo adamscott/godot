@@ -490,7 +490,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 	// Export pck and shared objects
 	Vector<SharedObject> shared_objects;
 	String pck_path = base_path + ".pck";
-	Error error = save_pack(p_preset, p_debug, pck_path, &shared_objects);
+	Error error = save_pack(p_preset, p_debug, pck_path, &shared_objects, nullptr, _save_fetch_file);
 	if (error != OK) {
 		add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), pck_path));
 		return error;
@@ -883,6 +883,11 @@ Error EditorExportPlatformWeb::_start_server(const String &p_bind_host, const ui
 
 Error EditorExportPlatformWeb::_stop_server() {
 	server->stop();
+	return OK;
+}
+
+Error EditorExportPlatformWeb::_save_fetch_file(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data) {
+	print_line(vformat("SAVE FETCH FILE: %s", p_path));
 	return OK;
 }
 

@@ -32,16 +32,18 @@
 
 #include "core/error/error_macros.h"
 #include "core/io/file_access.h"
+#include "core/io/resource_loader.h"
 #include "core/variant/typed_array.h"
 #include "editor/editor_file_system.h"
 #include "editor/export/editor_export_preset.h"
 #include "scene/main/resource_fetcher.h"
+#include "scene/resources/packed_scene.h"
 
 Error FetchExportPlugin::_find_resource_fetch_nodes(Node *p_node) {
 	ERR_FAIL_COND_V(p_node == nullptr, FAILED);
 
 	ResourceFetcher *resource_fetcher = Object::cast_to<ResourceFetcher>(p_node);
-	if (resource_fetcher != nullptr) {
+	if (resource_fetcher) {
 		_parse_fetch_node(resource_fetcher);
 	}
 
@@ -68,12 +70,11 @@ Error FetchExportPlugin::_parse_fetch_node(ResourceFetcher *p_resource_fetcher) 
 
 	TypedArray<Resource> resources = p_resource_fetcher->get_resources();
 	for (const Ref<Resource> resource : resources) {
-		if (_fetched_resources.has(resource)) {
+		String file_path = resource->get_path();
+		if (_fetched_resources.has(file_path)) {
 			continue;
 		}
-		_fetched_resources.push_back(resource);
-
-		String file_path = resource->get_path();
+		_fetched_resources.append(file_path);
 
 		if (file_path.is_relative_path()) {
 			file_path = _current_scene->get_scene_file_path().path_join(file_path);
@@ -90,10 +91,39 @@ Error FetchExportPlugin::_parse_fetch_node(ResourceFetcher *p_resource_fetcher) 
 		}
 
 		file_path = file_path.substr(String("res://").length());
-		add_fetch_file(file_path, file_path.to_utf8_buffer());
+		add_fetch_file(file_path, file->get_buffer(file->get_length()));
 
-		int resource_index = filesystem->find_file_index(resource->get_path());
+		Vector<String> file_path_dirs = file_path.split("/");
+		while (file_path_dirs.size() > 1) {
+			int dir_index = filesystem->find_dir_index(file_path_dirs[0]);
+			if (dir_index < 0) {
+				return FAILED;
+			}
+			filesystem = filesystem->get_subdir(dir_index);
+			file_path_dirs.remove_at(0);
+		}
+
+		file_path = file_path_dirs[0];
+		int resource_index = filesystem->find_file_index(file_path);
+		if (resource_index < 0) {
+			return FAILED;
+		}
+
 		Vector<String> deps = filesystem->get_file_deps(resource_index);
+
+		for (const String &dep : deps) {
+			if (_fetched_resources.has(dep)) {
+				continue;
+			}
+			_fetched_resources.append(dep);
+			Error err;
+			Ref<FileAccess> file = FileAccess::open(dep, FileAccess::READ, &err);
+			if (err != OK) {
+				return err;
+			}
+			String dep_path = dep.substr(String("res://").length());
+			add_fetch_file(dep_path, file->get_buffer(file->get_length()));
+		}
 	}
 
 	return OK;
@@ -122,6 +152,26 @@ Node *FetchExportPlugin::_customize_scene(Node *p_root, const String &p_path) {
 }
 
 void FetchExportPlugin::_end_customize_scenes() {
+}
+
+void FetchExportPlugin::_export_file(const String &p_path, const String &p_type, const HashSet<String> &p_features) {
+	if (p_type != "PackedScene") {
+		return;
+	}
+
+	// Let's load the scene in order to discover if there's `ResourceFetcher` nodes inside.
+	Ref<Resource> scene_resource = ResourceLoader::load(p_path, p_type);
+	Ref<PackedScene> scene = scene_resource;
+	if (scene.is_null()) {
+		return;
+	}
+
+	Node *root = scene->instantiate();
+	if (root == nullptr) {
+		return;
+	}
+
+	_find_resource_fetch_nodes(root);
 }
 
 FetchExportPlugin::FetchExportPlugin() {}

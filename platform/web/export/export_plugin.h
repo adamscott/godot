@@ -46,6 +46,8 @@
 class EditorExportPlatformWeb : public EditorExportPlatform {
 	GDCLASS(EditorExportPlatformWeb, EditorExportPlatform);
 
+	static Error _save_fetch_file(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data);
+
 	enum RemoteDebugState {
 		REMOTE_DEBUG_STATE_UNAVAILABLE,
 		REMOTE_DEBUG_STATE_AVAILABLE,

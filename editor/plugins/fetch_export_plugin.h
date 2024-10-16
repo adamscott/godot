@@ -39,18 +39,20 @@ class FetchExportPlugin : public EditorExportPlugin {
 	GDCLASS(FetchExportPlugin, EditorExportPlugin);
 
 	Node *_current_scene;
-	LocalVector<Ref<Resource>> _fetched_resources;
+	Vector<StringName> _fetched_resources;
 
 	Error _find_resource_fetch_nodes(Node *p_node);
 	Error _parse_fetch_node(ResourceFetcher *p_resource_fetcher);
 
 protected:
-	String get_name() const override { return "Fetch"; }
-	// PackedStringArray _get_export_features(const Ref<EditorExportPlatform> &p_platform, bool p_debug) const override;
-	uint64_t _get_customization_configuration_hash() const override;
-	bool _begin_customize_scenes(const Ref<EditorExportPlatform> &p_platform, const Vector<String> &p_features) override;
-	Node *_customize_scene(Node *p_root, const String &p_path) override;
-	void _end_customize_scenes() override;
+	virtual String get_name() const override { return "Fetch"; }
+	// virtual PackedStringArray _get_export_features(const Ref<EditorExportPlatform> &p_platform, bool p_debug) const override;
+	virtual uint64_t _get_customization_configuration_hash() const override;
+	virtual bool _begin_customize_scenes(const Ref<EditorExportPlatform> &p_platform, const Vector<String> &p_features) override;
+	virtual Node *_customize_scene(Node *p_root, const String &p_path) override;
+	virtual void _end_customize_scenes() override;
+
+	virtual void _export_file(const String &p_path, const String &p_type, const HashSet<String> &p_features) override;
 
 public:
 	FetchExportPlugin();
