@@ -55,6 +55,7 @@ protected:
 public:
 	typedef Error (*EditorExportSaveFunction)(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const Vector<uint8_t> &p_key);
 	typedef Error (*EditorExportSaveSharedObject)(void *p_userdata, const SharedObject &p_so);
+	typedef Error (*EditorExportSaveFetch)(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data);
 
 	enum DebugFlags {
 		DEBUG_FLAG_DUMB_CLIENT = 1,
@@ -123,10 +124,12 @@ private:
 	struct ScriptCallbackData {
 		Callable file_cb;
 		Callable so_cb;
+		Callable fetch_cb;
 	};
 
 	static Error _script_save_file(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const Vector<uint8_t> &p_key);
 	static Error _script_add_shared_object(void *p_userdata, const SharedObject &p_so);
+	static Error _script_save_fetch_file(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data);
 
 	void _edit_files_with_filter(Ref<DirAccess> &da, const Vector<String> &p_filters, HashSet<String> &r_list, bool exclude);
 	void _edit_filter_list(HashSet<String> &r_list, const String &p_filter, bool exclude);
@@ -286,8 +289,8 @@ public:
 
 	Array get_current_presets() const;
 
-	Error _export_project_files(const Ref<EditorExportPreset> &p_preset, bool p_debug, const Callable &p_save_func, const Callable &p_so_func);
-	Error export_project_files(const Ref<EditorExportPreset> &p_preset, bool p_debug, EditorExportSaveFunction p_func, void *p_udata, EditorExportSaveSharedObject p_so_func = nullptr);
+	Error _export_project_files(const Ref<EditorExportPreset> &p_preset, bool p_debug, const Callable &p_save_func, const Callable &p_so_func, const Callable &p_fetch_func);
+	Error export_project_files(const Ref<EditorExportPreset> &p_preset, bool p_debug, EditorExportSaveFunction p_func, void *p_udata, EditorExportSaveSharedObject p_so_func = nullptr, EditorExportSaveFetch p_fetch_func = nullptr);
 
 	Dictionary _save_pack(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, bool p_embed = false);
 	Dictionary _save_zip(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path);

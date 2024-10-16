@@ -961,14 +961,34 @@ Error EditorExportPlatform::_script_add_shared_object(void *p_userdata, const Sh
 	return (Error)ret.operator int();
 }
 
-Error EditorExportPlatform::_export_project_files(const Ref<EditorExportPreset> &p_preset, bool p_debug, const Callable &p_save_func, const Callable &p_so_func) {
+Error EditorExportPlatform::_script_save_fetch_file(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data) {
+	Callable cb = ((ScriptCallbackData *)p_userdata)->so_cb;
+	if (!cb.is_valid()) {
+		return OK; // Optional.
+	}
+
+	Variant path = p_path;
+	Variant data = p_data;
+
+	Variant ret;
+	Callable::CallError ce;
+	const Variant *args[2] = { &path, &data };
+
+	cb.callp(args, 2, ret, ce);
+	ERR_FAIL_COND_V_MSG(ce.error != Callable::CallError::CALL_OK, FAILED, vformat("Failed to execute file save callback: %s.", Variant::get_callable_error_text(cb, args, 7, ce)));
+
+	return (Error)ret.operator int();
+}
+
+Error EditorExportPlatform::_export_project_files(const Ref<EditorExportPreset> &p_preset, bool p_debug, const Callable &p_save_func, const Callable &p_so_func, const Callable &p_fetch_func) {
 	ScriptCallbackData data;
 	data.file_cb = p_save_func;
 	data.so_cb = p_so_func;
-	return export_project_files(p_preset, p_debug, _script_save_file, &data, _script_add_shared_object);
+	data.fetch_cb = p_fetch_func;
+	return export_project_files(p_preset, p_debug, _script_save_file, &data, _script_add_shared_object, _script_save_fetch_file);
 }
 
-Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &p_preset, bool p_debug, EditorExportSaveFunction p_func, void *p_udata, EditorExportSaveSharedObject p_so_func) {
+Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &p_preset, bool p_debug, EditorExportSaveFunction p_func, void *p_udata, EditorExportSaveSharedObject p_so_func, EditorExportSaveFetch p_fetch_func) {
 	//figure out paths of files that will be exported
 	HashSet<String> paths;
 	Vector<String> path_remaps;
@@ -1096,6 +1116,14 @@ Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &
 		if (p_so_func) {
 			for (int j = 0; j < export_plugins[i]->shared_objects.size(); j++) {
 				err = p_so_func(p_udata, export_plugins[i]->shared_objects[j]);
+				if (err != OK) {
+					return err;
+				}
+			}
+		}
+		if (p_fetch_func) {
+			for (int j = 0; j < export_plugins[i]->fetch_files.size(); j++) {
+				err = p_fetch_func(p_udata, export_plugins[i]->fetch_files[j].path, export_plugins[i]->fetch_files[j].data);
 				if (err != OK) {
 					return err;
 				}
@@ -2274,7 +2302,7 @@ void EditorExportPlatform::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("gen_export_flags", "flags"), &EditorExportPlatform::gen_export_flags);
 
-	ClassDB::bind_method(D_METHOD("export_project_files", "preset", "debug", "save_cb", "shared_cb"), &EditorExportPlatform::_export_project_files, DEFVAL(Callable()));
+	ClassDB::bind_method(D_METHOD("export_project_files", "preset", "debug", "save_cb", "shared_cb", "fetch_cb"), &EditorExportPlatform::_export_project_files, DEFVAL(Callable()), DEFVAL(Callable()));
 
 	ClassDB::bind_method(D_METHOD("export_project", "preset", "debug", "path", "flags"), &EditorExportPlatform::export_project, DEFVAL(0));
 	ClassDB::bind_method(D_METHOD("export_pack", "preset", "debug", "path", "flags"), &EditorExportPlatform::export_pack, DEFVAL(0));
