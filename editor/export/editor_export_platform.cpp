@@ -326,10 +326,7 @@ Error EditorExportPlatform::_save_zip_patch_file(void *p_userdata, const String 
 Error EditorExportPlatform::_save_fetch_file(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total) {
 	ERR_FAIL_COND_V_MSG(p_total < 1, ERR_PARAMETER_RANGE_ERROR, "Must select at least one file to export.");
 
-	String path = p_path.replace_first("res://", "");
-
-	FetchData *fetch_data = (FetchData *)p_userdata;
-	print_line(vformat("dir: %s", fetch_data->dir));
+	print_line(vformat("_save_fetch_file: (path: %s)", p_path));
 
 	return OK;
 }
@@ -972,21 +969,22 @@ Error EditorExportPlatform::_script_add_shared_object(void *p_userdata, const Sh
 	return (Error)ret.operator int();
 }
 
-Error EditorExportPlatform::_script_save_fetch_file(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data) {
-	Callable cb = ((ScriptCallbackData *)p_userdata)->so_cb;
+Error EditorExportPlatform::_script_save_fetch_file(void *p_userdata, const FetchFile &p_fetch_file) {
+	Callable cb = ((ScriptCallbackData *)p_userdata)->fetch_cb;
 	if (!cb.is_valid()) {
 		return OK; // Optional.
 	}
 
-	Variant path = p_path;
-	Variant data = p_data;
+	Variant path = p_fetch_file.path;
+	Variant data = p_fetch_file.data;
 
 	Variant ret;
 	Callable::CallError ce;
-	const Variant *args[2] = { &path, &data };
+	const int NUMBER_OF_ARGS = 2;
+	const Variant *args[NUMBER_OF_ARGS] = { &path, &data };
 
-	cb.callp(args, 2, ret, ce);
-	ERR_FAIL_COND_V_MSG(ce.error != Callable::CallError::CALL_OK, FAILED, vformat("Failed to execute file save callback: %s.", Variant::get_callable_error_text(cb, args, 7, ce)));
+	cb.callp(args, NUMBER_OF_ARGS, ret, ce);
+	ERR_FAIL_COND_V_MSG(ce.error != Callable::CallError::CALL_OK, FAILED, vformat("Failed to execute fetch save callback: %s.", Variant::get_callable_error_text(cb, args, NUMBER_OF_ARGS, ce)));
 
 	return (Error)ret.operator int();
 }
@@ -1132,14 +1130,6 @@ Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &
 				}
 			}
 		}
-		if (p_fetch_func) {
-			for (int j = 0; j < export_plugins[i]->fetch_files.size(); j++) {
-				err = p_fetch_func(p_udata, export_plugins[i]->fetch_files[j].path, export_plugins[i]->fetch_files[j].data);
-				if (err != OK) {
-					return err;
-				}
-			}
-		}
 		for (int j = 0; j < export_plugins[i]->extra_files.size(); j++) {
 			err = p_func(p_udata, export_plugins[i]->extra_files[j].path, export_plugins[i]->extra_files[j].data, 0, paths.size(), enc_in_filters, enc_ex_filters, key);
 			if (err != OK) {
@@ -1217,9 +1207,8 @@ Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &
 	// for continue statements without accidentally skipping an increment.
 	int idx = total > 0 ? -1 : 0;
 
-	for (const String &E : paths) {
+	for (const String &path : paths) {
 		idx++;
-		String path = E;
 		String type = ResourceLoader::get_resource_type(path);
 
 		bool has_import_file = FileAccess::exists(path + ".import");
@@ -1255,14 +1244,6 @@ Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &
 					}
 				}
 			}
-			if (p_fetch_func) {
-				for (int j = 0; j < export_plugins[i]->fetch_files.size(); j++) {
-					err = p_fetch_func(p_udata, export_plugins[i]->fetch_files[j].path, export_plugins[i]->fetch_files[j].data);
-					if (err != OK) {
-						return err;
-					}
-				}
-			}
 
 			for (int j = 0; j < export_plugins[i]->extra_files.size(); j++) {
 				err = p_func(p_udata, export_plugins[i]->extra_files[j].path, export_plugins[i]->extra_files[j].data, idx, total, enc_in_filters, enc_ex_filters, key);
@@ -1273,6 +1254,15 @@ Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &
 					do_export = false; // If remap, do not.
 					path_remaps.push_back(path);
 					path_remaps.push_back(export_plugins[i]->extra_files[j].path);
+				}
+			}
+
+			if (p_fetch_func) {
+				for (int j = 0; j < export_plugins[i]->fetch_files.size(); j++) {
+					err = p_fetch_func(p_udata, { export_plugins[i]->fetch_files[j].path, export_plugins[i]->fetch_files[j].data });
+					if (err != OK) {
+						return err;
+					}
 				}
 			}
 
@@ -1530,10 +1520,39 @@ Error EditorExportPlatform::_pack_add_shared_object(void *p_userdata, const Shar
 	return OK;
 }
 
+Error EditorExportPlatform::_pack_add_fetch_file(void *p_userdata, const FetchFile &p_fetch_file) {
+	PackData *pack_data = (PackData *)p_userdata;
+	for (const FetchFile &fetch_file : *pack_data->fetch_files) {
+		if (p_fetch_file.path == fetch_file.path) {
+			return OK;
+		}
+	}
+	if (pack_data->fetch_files) {
+		pack_data->fetch_files->push_back(p_fetch_file);
+	}
+
+	return OK;
+}
+
 Error EditorExportPlatform::_zip_add_shared_object(void *p_userdata, const SharedObject &p_so) {
 	ZipData *zip_data = (ZipData *)p_userdata;
 	if (zip_data->so_files) {
 		zip_data->so_files->push_back(p_so);
+	}
+
+	return OK;
+}
+
+Error EditorExportPlatform::_zip_add_fetch_file(void *p_userdata, const FetchFile &p_fetch_file) {
+	ZipData *zip_data = (ZipData *)p_userdata;
+	for (const FetchFile &fetch_file : *zip_data->fetch_files) {
+		if (p_fetch_file.path == fetch_file.path) {
+			return OK;
+		}
+	}
+
+	if (zip_data->fetch_files) {
+		zip_data->fetch_files->push_back(p_fetch_file);
 	}
 
 	return OK;
@@ -1658,9 +1677,10 @@ void EditorExportPlatform::zip_folder_recursive(zipFile &p_zip, const String &p_
 
 Dictionary EditorExportPlatform::_save_pack(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, bool p_embed) {
 	Vector<SharedObject> so_files;
+	Vector<FetchFile> fetch_files;
 	int64_t embedded_start = 0;
 	int64_t embedded_size = 0;
-	Error err_code = save_pack(p_preset, p_debug, p_path, &so_files, nullptr, p_embed, &embedded_start, &embedded_size);
+	Error err_code = save_pack(p_preset, p_debug, p_path, &so_files, &fetch_files, nullptr, p_embed, &embedded_start, &embedded_size);
 
 	Dictionary ret;
 	ret["result"] = err_code;
@@ -1701,11 +1721,6 @@ Dictionary EditorExportPlatform::_save_zip(const Ref<EditorExportPreset> &p_pres
 		ret["so_files"] = arr;
 	}
 
-	return ret;
-}
-
-Dictionary EditorExportPlatform::_save_fetch(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path) {
-	Dictionary ret;
 	return ret;
 }
 
@@ -1751,7 +1766,7 @@ Dictionary EditorExportPlatform::_save_zip_patch(const Ref<EditorExportPreset> &
 	return ret;
 }
 
-Error EditorExportPlatform::save_pack(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, Vector<SharedObject> *p_so_files, EditorExportSaveFunction p_save_func, bool p_embed, int64_t *r_embedded_start, int64_t *r_embedded_size) {
+Error EditorExportPlatform::save_pack(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, Vector<SharedObject> *p_so_files, Vector<FetchFile> *p_fetch_files, EditorExportSaveFunction p_save_func, bool p_embed, int64_t *r_embedded_start, int64_t *r_embedded_size) {
 	EditorProgress ep("savepack", TTR("Packing"), 102, true);
 
 	if (p_save_func == nullptr) {
@@ -1770,11 +1785,13 @@ Error EditorExportPlatform::save_pack(const Ref<EditorExportPreset> &p_preset, b
 	}
 
 	PackData pd;
+	pd.pack_path = p_path;
 	pd.ep = &ep;
 	pd.f = ftmp;
 	pd.so_files = p_so_files;
+	pd.fetch_files = p_fetch_files;
 
-	Error err = export_project_files(p_preset, p_debug, p_save_func, &pd, _pack_add_shared_object);
+	Error err = export_project_files(p_preset, p_debug, p_save_func, &pd, _pack_add_shared_object, _pack_add_fetch_file);
 
 	// Close temp file.
 	pd.f.unref();
@@ -1987,11 +2004,11 @@ Error EditorExportPlatform::save_pack(const Ref<EditorExportPreset> &p_preset, b
 	return OK;
 }
 
-Error EditorExportPlatform::save_pack_patch(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, Vector<SharedObject> *p_so_files, bool p_embed, int64_t *r_embedded_start, int64_t *r_embedded_size) {
-	return save_pack(p_preset, p_debug, p_path, p_so_files, _save_pack_patch_file, p_embed, r_embedded_start, r_embedded_size);
+Error EditorExportPlatform::save_pack_patch(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, Vector<SharedObject> *p_so_files, Vector<FetchFile> *p_fetch_files, bool p_embed, int64_t *r_embedded_start, int64_t *r_embedded_size) {
+	return save_pack(p_preset, p_debug, p_path, p_so_files, p_fetch_files, nullptr, p_embed, r_embedded_start, r_embedded_size);
 }
 
-Error EditorExportPlatform::save_zip(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, Vector<SharedObject> *p_so_files, EditorExportSaveFunction p_save_func) {
+Error EditorExportPlatform::save_zip(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, Vector<SharedObject> *p_so_files, Vector<FetchFile> *p_fetch_files, EditorExportSaveFunction p_save_func) {
 	EditorProgress ep("savezip", TTR("Packing"), 102, true);
 
 	if (p_save_func == nullptr) {
@@ -2008,8 +2025,9 @@ Error EditorExportPlatform::save_zip(const Ref<EditorExportPreset> &p_preset, bo
 	zd.ep = &ep;
 	zd.zip = zip;
 	zd.so_files = p_so_files;
+	zd.fetch_files = p_fetch_files;
 
-	Error err = export_project_files(p_preset, p_debug, p_save_func, &zd, _zip_add_shared_object);
+	Error err = export_project_files(p_preset, p_debug, p_save_func, &zd, _zip_add_shared_object, _zip_add_fetch_file);
 	if (err != OK && err != ERR_SKIP) {
 		add_message(EXPORT_MESSAGE_ERROR, TTR("Save ZIP"), TTR("Failed to export project files."));
 	}
@@ -2033,13 +2051,8 @@ Error EditorExportPlatform::save_zip(const Ref<EditorExportPreset> &p_preset, bo
 	return OK;
 }
 
-Error EditorExportPlatform::save_zip_patch(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, Vector<SharedObject> *p_so_files) {
-	return save_zip(p_preset, p_debug, p_path, p_so_files, _save_zip_patch_file);
-}
-
-Error EditorExportPlatform::save_fetch(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, EditorExportSaveFetch p_fetch_func) {
-	print_line(vformat("save_fetch: %s", p_path));
-	return OK;
+Error EditorExportPlatform::save_zip_patch(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, Vector<SharedObject> *p_so_files, Vector<FetchFile> *p_fetch_files) {
+	return save_zip(p_preset, p_debug, p_path, p_so_files, p_fetch_files, nullptr);
 }
 
 Error EditorExportPlatform::export_pack(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, BitField<EditorExportPlatform::DebugFlags> p_flags) {
