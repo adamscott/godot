@@ -48,7 +48,9 @@ protected:
 	virtual String get_name() const override { return "Fetch"; }
 	// virtual PackedStringArray _get_export_features(const Ref<EditorExportPlatform> &p_platform, bool p_debug) const override;
 	virtual uint64_t _get_customization_configuration_hash() const override;
+	virtual void _export_begin(const HashSet<String> &p_features, bool p_debug, const String &p_path, int p_flags) override;
 	virtual void _export_file(const String &p_path, const String &p_type, const HashSet<String> &p_features) override;
+	virtual void _export_end() override;
 
 public:
 	FetchExportPlugin();
