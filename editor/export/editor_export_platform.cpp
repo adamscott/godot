@@ -1253,6 +1253,14 @@ Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &
 					}
 				}
 			}
+			if (p_fetch_func) {
+				for (int j = 0; j < export_plugins[i]->fetch_files.size(); j++) {
+					err = p_fetch_func(p_udata, export_plugins[i]->fetch_files[j].path, export_plugins[i]->fetch_files[j].data);
+					if (err != OK) {
+						return err;
+					}
+				}
+			}
 
 			for (int j = 0; j < export_plugins[i]->extra_files.size(); j++) {
 				err = p_func(p_udata, export_plugins[i]->extra_files[j].path, export_plugins[i]->extra_files[j].data, idx, total, enc_in_filters, enc_ex_filters, key);
@@ -1762,7 +1770,7 @@ Error EditorExportPlatform::save_pack(const Ref<EditorExportPreset> &p_preset, b
 	pd.f = ftmp;
 	pd.so_files = p_so_files;
 
-	Error err = export_project_files(p_preset, p_debug, p_save_func, &pd, _pack_add_shared_object);
+	Error err = export_project_files(p_preset, p_debug, p_save_func, &pd, _pack_add_shared_object, p_fetch_func);
 
 	// Close temp file.
 	pd.f.unref();
@@ -1984,6 +1992,9 @@ Error EditorExportPlatform::save_zip(const Ref<EditorExportPreset> &p_preset, bo
 
 	if (p_save_func == nullptr) {
 		p_save_func = _save_zip_file;
+	}
+	if (p_fetch_func == nullptr) {
+		p_fetch_func = _save_zip_fetch_file;
 	}
 
 	String tmppath = EditorPaths::get_singleton()->get_cache_dir().path_join("packtmp");
