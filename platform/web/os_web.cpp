@@ -148,6 +148,9 @@ bool OS_Web::_check_internal_feature_support(const String &p_feature) {
 	if (p_feature == "web") {
 		return true;
 	}
+	if (p_feature == "fetch") {
+		return true;
+	}
 	if (godot_js_os_has_feature(p_feature.utf8().get_data())) {
 		return true;
 	}

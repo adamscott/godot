@@ -349,6 +349,7 @@ void EditorExportPlatformWeb::get_preset_features(const Ref<EditorExportPreset> 
 		r_features->push_back("nothreads");
 	}
 	r_features->push_back("wasm32");
+	r_features->push_back("fetch");
 }
 
 void EditorExportPlatformWeb::get_export_options(List<ExportOption> *r_options) const {
@@ -888,6 +889,7 @@ Error EditorExportPlatformWeb::_stop_server() {
 
 Error EditorExportPlatformWeb::_save_fetch_file(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data) {
 	print_line(vformat("SAVE FETCH FILE: %s", p_path));
+
 	return OK;
 }
 
