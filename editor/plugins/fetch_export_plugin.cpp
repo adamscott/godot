@@ -70,7 +70,10 @@ Error FetchExportPlugin::_parse_fetch_node(ResourceFetcher *p_resource_fetcher) 
 
 	TypedArray<Resource> resources = p_resource_fetcher->get_resources();
 	for (const Ref<Resource> resource : resources) {
-		String file_path = resource->get_path();
+		bool is_imported = !resource->get_import_path().is_empty();
+		String file_path = is_imported
+				? resource->get_import_path()
+				: resource->get_path();
 		if (_fetched_resources.has(file_path)) {
 			continue;
 		}
@@ -115,11 +118,23 @@ Error FetchExportPlugin::_parse_fetch_node(ResourceFetcher *p_resource_fetcher) 
 				continue;
 			}
 			_fetched_resources.append(dep);
+
 			Error err;
-			Ref<FileAccess> file = FileAccess::open(dep, FileAccess::READ, &err);
+
+			Ref<Resource> dep_res = ResourceLoader::load(dep, "", ResourceFormatLoader::CACHE_MODE_REUSE, &err);
 			if (err != OK) {
 				return err;
 			}
+
+			bool dep_is_imported = !dep_res->get_import_path().is_empty();
+			String dep_path = dep_is_imported
+					? dep_res->get_import_path()
+					: dep;
+			Ref<FileAccess> file = FileAccess::open(dep_path, FileAccess::READ, &err);
+			if (err != OK) {
+				return err;
+			}
+
 			add_fetch_file(dep, file->get_buffer(file->get_length()));
 		}
 	}
