@@ -30,6 +30,8 @@
 
 #include "export_plugin.h"
 
+#include "core/io/dir_access.h"
+#include "core/io/file_access.h"
 #include "logo_svg.gen.h"
 #include "run_icon_svg.gen.h"
 
@@ -474,13 +476,6 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 		return ERR_FILE_BAD_PATH;
 	}
 
-	List<String> list_features;
-	get_preset_features(p_preset, &list_features);
-	LocalVector<String> features;
-	for (const String &list_feature : list_features) {
-		features.push_back(list_feature);
-	}
-
 	// Find the correct template
 	String template_path = p_debug ? custom_debug : custom_release;
 	template_path = template_path.strip_edges();
@@ -497,22 +492,15 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 
 	// Export pck and shared objects
 	Vector<SharedObject> shared_objects;
+	Vector<FetchFile> fetch_files;
 	String pck_path = base_path + ".pck";
-	Error error = save_pack(p_preset, p_debug, pck_path, &shared_objects, nullptr);
+	Error error = save_pack(p_preset, p_debug, pck_path, &shared_objects, &fetch_files);
 	if (error != OK) {
 		add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), pck_path));
 		return error;
 	}
 
-	// Export "fetch" if the platform supports it.
-	if (features.has("fetch")) {
-		String fetch_path = base_path.get_base_dir();
-		error = save_fetch(p_preset, p_debug, fetch_path, nullptr);
-		if (error != OK) {
-			return error;
-		}
-	}
-
+	// Shared objects.
 	{
 		Ref<DirAccess> da = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
 		for (int i = 0; i < shared_objects.size(); i++) {
@@ -522,6 +510,47 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 				add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), shared_objects[i].path.get_file()));
 				return error;
 			}
+		}
+	}
+
+	// Fetch files.
+	{
+		Error error;
+		String fetch_path = base_dir.path_join(String("fetch"));
+		Ref<DirAccess> root_dir_access = DirAccess::open(".", &error);
+		if (error != OK) {
+			return error;
+		}
+
+		// Erase the contents of `fetch/`.
+		if (DirAccess::exists(fetch_path)) {
+			Ref<DirAccess> fetch_dir_access = DirAccess::open(fetch_path);
+			fetch_dir_access->erase_contents_recursive();
+		}
+
+		// Create `fetch/`.
+		root_dir_access->make_dir_recursive(fetch_path);
+
+		// Create `fetch/.gdignore`.
+		{
+			Ref<FileAccess> gdignore_file_access = FileAccess::open(fetch_path.path_join(".gdignore"), FileAccess::WRITE, &error);
+			if (error != OK) {
+				return error;
+			}
+			gdignore_file_access->store_string("");
+			gdignore_file_access->flush();
+		}
+
+		// Create `fetch/` files.
+		for (const FetchFile &fetch_file : fetch_files) {
+			String to = fetch_path.path_join(String(fetch_file.path).replace_first("res://", ""));
+			String to_base_dir = to.get_base_dir();
+			root_dir_access->make_dir_recursive(to_base_dir);
+			Ref<FileAccess> file_access = FileAccess::open(to, FileAccess::WRITE, &error);
+			if (error != OK) {
+				return error;
+			}
+			file_access->store_buffer(fetch_file.data);
 		}
 	}
 
@@ -900,12 +929,6 @@ Error EditorExportPlatformWeb::_start_server(const String &p_bind_host, const ui
 
 Error EditorExportPlatformWeb::_stop_server() {
 	server->stop();
-	return OK;
-}
-
-Error EditorExportPlatformWeb::_save_fetch_file(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data) {
-	print_line(vformat("SAVE FETCH FILE: %s", p_path));
-
 	return OK;
 }
 

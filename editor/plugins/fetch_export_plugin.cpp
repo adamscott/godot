@@ -89,11 +89,10 @@ Error FetchExportPlugin::_parse_fetch_node(ResourceFetcher *p_resource_fetcher) 
 		if (err != OK) {
 			return err;
 		}
-
-		file_path = file_path.substr(String("res://").length());
 		add_fetch_file(file_path, file->get_buffer(file->get_length()));
 
-		Vector<String> file_path_dirs = file_path.split("/");
+		String res_stripped_file_path = file_path.replace_first("res://", "");
+		Vector<String> file_path_dirs = res_stripped_file_path.split("/");
 		while (file_path_dirs.size() > 1) {
 			int dir_index = filesystem->find_dir_index(file_path_dirs[0]);
 			if (dir_index < 0) {
@@ -121,8 +120,7 @@ Error FetchExportPlugin::_parse_fetch_node(ResourceFetcher *p_resource_fetcher) 
 			if (err != OK) {
 				return err;
 			}
-			String dep_path = dep.substr(String("res://").length());
-			add_fetch_file(dep_path, file->get_buffer(file->get_length()));
+			add_fetch_file(dep, file->get_buffer(file->get_length()));
 		}
 	}
 
@@ -134,6 +132,11 @@ uint64_t FetchExportPlugin::_get_customization_configuration_hash() const {
 	ERR_FAIL_COND_V(preset.is_null(), 0);
 
 	return preset->get_customized_files().hash();
+}
+
+void FetchExportPlugin::_export_begin(const HashSet<String> &p_features, bool p_debug, const String &p_path, int p_flags) {
+	_fetched_resources.clear();
+	_current_scene = nullptr;
 }
 
 void FetchExportPlugin::_export_file(const String &p_path, const String &p_type, const HashSet<String> &p_features) {
@@ -158,6 +161,11 @@ void FetchExportPlugin::_export_file(const String &p_path, const String &p_type,
 	}
 
 	_find_resource_fetch_nodes(root);
+}
+
+void FetchExportPlugin::_export_end() {
+	_fetched_resources.clear();
+	_current_scene = nullptr;
 }
 
 FetchExportPlugin::FetchExportPlugin() {}

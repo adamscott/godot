@@ -53,9 +53,14 @@ protected:
 	static void _bind_methods();
 
 public:
+	struct FetchFile {
+		StringName path;
+		Vector<uint8_t> data;
+	};
+
 	typedef Error (*EditorExportSaveFunction)(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const Vector<uint8_t> &p_key);
 	typedef Error (*EditorExportSaveSharedObject)(void *p_userdata, const SharedObject &p_so);
-	typedef Error (*EditorExportSaveFetch)(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data);
+	typedef Error (*EditorExportSaveFetch)(void *p_userdata, const FetchFile &p_fetch_file);
 
 	enum DebugFlags {
 		DEBUG_FLAG_DUMB_CLIENT = 1,
@@ -92,22 +97,20 @@ private:
 	};
 
 	struct PackData {
+		String pack_path;
 		Ref<FileAccess> f;
 		Vector<SavedData> file_ofs;
 		EditorProgress *ep = nullptr;
 		Vector<SharedObject> *so_files = nullptr;
+		Vector<FetchFile> *fetch_files = nullptr;
 	};
 
 	struct ZipData {
 		void *zip = nullptr;
 		EditorProgress *ep = nullptr;
 		Vector<SharedObject> *so_files = nullptr;
+		Vector<FetchFile> *fetch_files = nullptr;
 		int file_count = 0;
-	};
-
-	struct FetchData {
-		Ref<DirAccess> dir;
-		EditorProgress *editor_progress = nullptr;
 	};
 
 	Vector<ExportMessage> messages;
@@ -121,10 +124,12 @@ private:
 	static Error _save_pack_file(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const Vector<uint8_t> &p_key);
 	static Error _save_pack_patch_file(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const Vector<uint8_t> &p_key);
 	static Error _pack_add_shared_object(void *p_userdata, const SharedObject &p_so);
+	static Error _pack_add_fetch_file(void *p_userdata, const FetchFile &p_fetch_file);
 
 	static Error _save_zip_file(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const Vector<uint8_t> &p_key);
 	static Error _save_zip_patch_file(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const Vector<uint8_t> &p_key);
 	static Error _zip_add_shared_object(void *p_userdata, const SharedObject &p_so);
+	static Error _zip_add_fetch_file(void *p_userdata, const FetchFile &p_fetch_file);
 
 	static Error _save_fetch_file(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total);
 
@@ -136,7 +141,7 @@ private:
 
 	static Error _script_save_file(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const Vector<uint8_t> &p_key);
 	static Error _script_add_shared_object(void *p_userdata, const SharedObject &p_so);
-	static Error _script_save_fetch_file(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data);
+	static Error _script_save_fetch_file(void *p_userdata, const FetchFile &p_fetch_file);
 
 	void _edit_files_with_filter(Ref<DirAccess> &da, const Vector<String> &p_filters, HashSet<String> &r_list, bool exclude);
 	void _edit_filter_list(HashSet<String> &r_list, const String &p_filter, bool exclude);
@@ -301,17 +306,15 @@ public:
 
 	Dictionary _save_pack(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, bool p_embed = false);
 	Dictionary _save_zip(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path);
-	Dictionary _save_fetch(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path);
 
 	Dictionary _save_pack_patch(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path);
 	Dictionary _save_zip_patch(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path);
 
-	Error save_pack(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, Vector<SharedObject> *p_so_files = nullptr, EditorExportSaveFunction p_save_func = nullptr, bool p_embed = false, int64_t *r_embedded_start = nullptr, int64_t *r_embedded_size = nullptr);
-	Error save_zip(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, Vector<SharedObject> *p_so_files = nullptr, EditorExportSaveFunction p_save_func = nullptr);
-	Error save_fetch(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, EditorExportSaveFetch p_fetch_func = nullptr);
+	Error save_pack(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, Vector<SharedObject> *p_so_files = nullptr, Vector<FetchFile> *p_fetch_files = nullptr, EditorExportSaveFunction p_save_func = nullptr, bool p_embed = false, int64_t *r_embedded_start = nullptr, int64_t *r_embedded_size = nullptr);
+	Error save_zip(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, Vector<SharedObject> *p_so_files = nullptr, Vector<FetchFile> *p_fetch_files = nullptr, EditorExportSaveFunction p_save_func = nullptr);
 
-	Error save_pack_patch(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, Vector<SharedObject> *p_so_files = nullptr, bool p_embed = false, int64_t *r_embedded_start = nullptr, int64_t *r_embedded_size = nullptr);
-	Error save_zip_patch(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, Vector<SharedObject> *p_so_files = nullptr);
+	Error save_pack_patch(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, Vector<SharedObject> *p_so_files = nullptr, Vector<FetchFile> *p_fetch_files = nullptr, bool p_embed = false, int64_t *r_embedded_start = nullptr, int64_t *r_embedded_size = nullptr);
+	Error save_zip_patch(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, Vector<SharedObject> *p_so_files = nullptr, Vector<FetchFile> *p_fetch_files = nullptr);
 
 	virtual bool poll_export() { return false; }
 	virtual int get_options_count() const { return 0; }
