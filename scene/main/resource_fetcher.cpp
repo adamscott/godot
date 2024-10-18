@@ -47,8 +47,19 @@ void ResourceFetcher::_notification(int p_what) {
 	}
 }
 
-void ResourceFetcher::start() {
+bool ResourceFetcher::_is_runtime_enabled() const {
 	if (Engine::get_singleton()->is_editor_hint()) {
+		return false;
+	}
+	if (!OS::get_singleton()->has_feature("fetch")) {
+		return false;
+	}
+
+	return true;
+}
+
+void ResourceFetcher::start() {
+	if (!_is_runtime_enabled()) {
 		return;
 	}
 
@@ -57,7 +68,7 @@ void ResourceFetcher::start() {
 }
 
 void ResourceFetcher::reset() {
-	if (Engine::get_singleton()->is_editor_hint()) {
+	if (!_is_runtime_enabled()) {
 		return;
 	}
 

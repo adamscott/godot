@@ -46,11 +46,12 @@ public:
 	};
 
 private:
+	LocalVector<Ref<Resource>> _resources;
+
 	FetchStatus _status;
 	bool _auto_start = true;
 
-	LocalVector<Ref<Resource>> _resources;
-	Vector<String> _get_resource_list() const;
+	bool _is_runtime_enabled() const;
 
 protected:
 	static void _bind_methods();
