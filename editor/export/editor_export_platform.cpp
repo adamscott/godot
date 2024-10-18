@@ -283,11 +283,6 @@ Error EditorExportPlatform::_save_pack_patch_file(void *p_userdata, const String
 	return _save_pack_file(p_userdata, p_path, p_data, p_file, p_total, p_enc_in_filters, p_enc_ex_filters, p_key);
 }
 
-Error EditorExportPlatform::_save_pack_fetch_file(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data) {
-	print_line(vformat("_save_pack_fetch_file: %s", p_path));
-	return OK;
-}
-
 Error EditorExportPlatform::_save_zip_file(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const Vector<uint8_t> &p_key) {
 	ERR_FAIL_COND_V_MSG(p_total < 1, ERR_PARAMETER_RANGE_ERROR, "Must select at least one file to export.");
 
@@ -328,7 +323,14 @@ Error EditorExportPlatform::_save_zip_patch_file(void *p_userdata, const String 
 	return _save_zip_file(p_userdata, p_path, p_data, p_file, p_total, p_enc_in_filters, p_enc_ex_filters, p_key);
 }
 
-Error EditorExportPlatform::_save_zip_fetch_file(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data) {
+Error EditorExportPlatform::_save_fetch_file(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total) {
+	ERR_FAIL_COND_V_MSG(p_total < 1, ERR_PARAMETER_RANGE_ERROR, "Must select at least one file to export.");
+
+	String path = p_path.replace_first("res://", "");
+
+	FetchData *fetch_data = (FetchData *)p_userdata;
+	print_line(vformat("dir: %s", fetch_data->dir));
+
 	return OK;
 }
 
@@ -1658,7 +1660,7 @@ Dictionary EditorExportPlatform::_save_pack(const Ref<EditorExportPreset> &p_pre
 	Vector<SharedObject> so_files;
 	int64_t embedded_start = 0;
 	int64_t embedded_size = 0;
-	Error err_code = save_pack(p_preset, p_debug, p_path, &so_files, nullptr, nullptr, p_embed, &embedded_start, &embedded_size);
+	Error err_code = save_pack(p_preset, p_debug, p_path, &so_files, nullptr, p_embed, &embedded_start, &embedded_size);
 
 	Dictionary ret;
 	ret["result"] = err_code;
@@ -1699,6 +1701,11 @@ Dictionary EditorExportPlatform::_save_zip(const Ref<EditorExportPreset> &p_pres
 		ret["so_files"] = arr;
 	}
 
+	return ret;
+}
+
+Dictionary EditorExportPlatform::_save_fetch(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path) {
+	Dictionary ret;
 	return ret;
 }
 
@@ -1744,14 +1751,11 @@ Dictionary EditorExportPlatform::_save_zip_patch(const Ref<EditorExportPreset> &
 	return ret;
 }
 
-Error EditorExportPlatform::save_pack(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, Vector<SharedObject> *p_so_files, EditorExportSaveFunction p_save_func, EditorExportSaveFetch p_fetch_func, bool p_embed, int64_t *r_embedded_start, int64_t *r_embedded_size) {
+Error EditorExportPlatform::save_pack(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, Vector<SharedObject> *p_so_files, EditorExportSaveFunction p_save_func, bool p_embed, int64_t *r_embedded_start, int64_t *r_embedded_size) {
 	EditorProgress ep("savepack", TTR("Packing"), 102, true);
 
 	if (p_save_func == nullptr) {
 		p_save_func = _save_pack_file;
-	}
-	if (p_fetch_func == nullptr) {
-		p_fetch_func = _save_pack_fetch_file;
 	}
 
 	// Create the temporary export directory if it doesn't exist.
@@ -1770,7 +1774,7 @@ Error EditorExportPlatform::save_pack(const Ref<EditorExportPreset> &p_preset, b
 	pd.f = ftmp;
 	pd.so_files = p_so_files;
 
-	Error err = export_project_files(p_preset, p_debug, p_save_func, &pd, _pack_add_shared_object, p_fetch_func);
+	Error err = export_project_files(p_preset, p_debug, p_save_func, &pd, _pack_add_shared_object);
 
 	// Close temp file.
 	pd.f.unref();
@@ -1984,17 +1988,14 @@ Error EditorExportPlatform::save_pack(const Ref<EditorExportPreset> &p_preset, b
 }
 
 Error EditorExportPlatform::save_pack_patch(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, Vector<SharedObject> *p_so_files, bool p_embed, int64_t *r_embedded_start, int64_t *r_embedded_size) {
-	return save_pack(p_preset, p_debug, p_path, p_so_files, _save_pack_patch_file, _save_pack_fetch_file, p_embed, r_embedded_start, r_embedded_size);
+	return save_pack(p_preset, p_debug, p_path, p_so_files, _save_pack_patch_file, p_embed, r_embedded_start, r_embedded_size);
 }
 
-Error EditorExportPlatform::save_zip(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, Vector<SharedObject> *p_so_files, EditorExportSaveFunction p_save_func, EditorExportSaveFetch p_fetch_func) {
+Error EditorExportPlatform::save_zip(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, Vector<SharedObject> *p_so_files, EditorExportSaveFunction p_save_func) {
 	EditorProgress ep("savezip", TTR("Packing"), 102, true);
 
 	if (p_save_func == nullptr) {
 		p_save_func = _save_zip_file;
-	}
-	if (p_fetch_func == nullptr) {
-		p_fetch_func = _save_zip_fetch_file;
 	}
 
 	String tmppath = EditorPaths::get_singleton()->get_cache_dir().path_join("packtmp");
@@ -2034,6 +2035,11 @@ Error EditorExportPlatform::save_zip(const Ref<EditorExportPreset> &p_preset, bo
 
 Error EditorExportPlatform::save_zip_patch(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, Vector<SharedObject> *p_so_files) {
 	return save_zip(p_preset, p_debug, p_path, p_so_files, _save_zip_patch_file);
+}
+
+Error EditorExportPlatform::save_fetch(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, EditorExportSaveFetch p_fetch_func) {
+	print_line(vformat("save_fetch: %s", p_path));
+	return OK;
 }
 
 Error EditorExportPlatform::export_pack(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, BitField<EditorExportPlatform::DebugFlags> p_flags) {
