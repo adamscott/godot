@@ -474,6 +474,13 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 		return ERR_FILE_BAD_PATH;
 	}
 
+	List<String> list_features;
+	get_preset_features(p_preset, &list_features);
+	LocalVector<String> features;
+	for (const String &list_feature : list_features) {
+		features.push_back(list_feature);
+	}
+
 	// Find the correct template
 	String template_path = p_debug ? custom_debug : custom_release;
 	template_path = template_path.strip_edges();
@@ -491,10 +498,19 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 	// Export pck and shared objects
 	Vector<SharedObject> shared_objects;
 	String pck_path = base_path + ".pck";
-	Error error = save_pack(p_preset, p_debug, pck_path, &shared_objects, nullptr, _save_fetch_file);
+	Error error = save_pack(p_preset, p_debug, pck_path, &shared_objects, nullptr);
 	if (error != OK) {
 		add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), pck_path));
 		return error;
+	}
+
+	// Export "fetch" if the platform supports it.
+	if (features.has("fetch")) {
+		String fetch_path = base_path.get_base_dir();
+		error = save_fetch(p_preset, p_debug, fetch_path, nullptr);
+		if (error != OK) {
+			return error;
+		}
 	}
 
 	{

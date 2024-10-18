@@ -136,26 +136,12 @@ uint64_t FetchExportPlugin::_get_customization_configuration_hash() const {
 	return preset->get_customized_files().hash();
 }
 
-bool FetchExportPlugin::_begin_customize_scenes(const Ref<EditorExportPlatform> &p_platform, const Vector<String> &p_features) {
-	_fetched_resources.clear();
-	_current_scene = nullptr;
-	return true;
-}
-
-Node *FetchExportPlugin::_customize_scene(Node *p_root, const String &p_path) {
-	_current_scene = p_root;
-
-	_find_resource_fetch_nodes(p_root);
-
-	// We didn't "customize" the scene.
-	return nullptr;
-}
-
-void FetchExportPlugin::_end_customize_scenes() {
-}
-
 void FetchExportPlugin::_export_file(const String &p_path, const String &p_type, const HashSet<String> &p_features) {
 	if (p_type != "PackedScene") {
+		return;
+	}
+
+	if (!p_features.has("fetch")) {
 		return;
 	}
 
