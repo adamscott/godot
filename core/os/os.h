@@ -38,6 +38,7 @@
 #include "core/string/ustring.h"
 #include "core/templates/list.h"
 #include "core/templates/vector.h"
+#include "core/variant/variant.h"
 
 #include <stdarg.h>
 #include <stdlib.h>
@@ -95,6 +96,14 @@ public:
 		RENDER_THREAD_UNSAFE,
 		RENDER_THREAD_SAFE,
 		RENDER_SEPARATE_THREAD
+	};
+
+	enum AsyncFetchStatus {
+		ASYNC_FETCH_NOT_IMPLEMENTED,
+		ASYNC_FETCH_IDLE,
+		ASYNC_FETCH_IN_PROGRESS,
+		ASYNC_FETCH_ERROR,
+		ASYNC_FETCH_COMPLETE,
 	};
 
 protected:
@@ -175,6 +184,20 @@ public:
 
 	void set_delta_smoothing(bool p_enabled);
 	bool is_delta_smoothing_enabled() const;
+
+	virtual Error async_fetch_start(const String &p_path) { return FAILED; }
+	virtual Error async_fetch_cancel(const String &p_path) { return FAILED; }
+	virtual Dictionary async_fetch_get_status(const String &p_path) {
+		Dictionary dict;
+		dict["status"] = ASYNC_FETCH_NOT_IMPLEMENTED;
+		dict["progress"] = 0.0;
+		dict["downloaded"] = 0;
+		dict["total"] = -1;
+		return dict;
+	}
+	virtual Error async_fetch_load(const String &p_path) {
+		return FAILED;
+	}
 
 	virtual Vector<String> get_system_fonts() const { return Vector<String>(); }
 	virtual String get_system_font_path(const String &p_font_name, int p_weight = 400, int p_stretch = 100, bool p_italic = false) const { return String(); }

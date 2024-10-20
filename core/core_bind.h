@@ -39,6 +39,7 @@
 #include "core/os/semaphore.h"
 #include "core/os/thread.h"
 #include "core/templates/safe_refcount.h"
+#include "core/variant/variant.h"
 
 class MainLoop;
 template <typename T>
@@ -143,6 +144,14 @@ public:
 		RENDERING_DRIVER_METAL,
 	};
 
+	enum AsyncFetchStatus {
+		ASYNC_FETCH_NOT_IMPLEMENTED,
+		ASYNC_FETCH_IDLE,
+		ASYNC_FETCH_IN_PROGRESS,
+		ASYNC_FETCH_ERROR,
+		ASYNC_FETCH_COMPLETE,
+	};
+
 	PackedByteArray get_entropy(int p_bytes);
 	String get_system_ca_certificates();
 
@@ -161,6 +170,11 @@ public:
 
 	void alert(const String &p_alert, const String &p_title = "ALERT!");
 	void crash(const String &p_message);
+
+	Error async_fetch_start(const String &p_path);
+	Error async_fetch_cancel(const String &p_path);
+	Dictionary async_fetch_get_status(const String &p_path);
+	Error async_fetch_load(const String &p_path);
 
 	Vector<String> get_system_fonts() const;
 	String get_system_font_path(const String &p_font_name, int p_weight = 400, int p_stretch = 100, bool p_italic = false) const;
@@ -641,6 +655,7 @@ VARIANT_ENUM_CAST(core_bind::ResourceLoader::CacheMode);
 VARIANT_BITFIELD_CAST(core_bind::ResourceSaver::SaverFlags);
 
 VARIANT_ENUM_CAST(core_bind::OS::RenderingDriver);
+VARIANT_ENUM_CAST(core_bind::OS::AsyncFetchStatus);
 VARIANT_ENUM_CAST(core_bind::OS::SystemDir);
 
 VARIANT_ENUM_CAST(core_bind::Geometry2D::PolyBooleanOperation);

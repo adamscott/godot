@@ -89,7 +89,7 @@ void EditorHTTPServer::_send_response() {
 	const String cache_path = EditorPaths::get_singleton()->get_cache_dir().path_join("web");
 	const String filepath = cache_path.path_join(req_file);
 
-	if (!mimes.has(req_ext) || !FileAccess::exists(filepath)) {
+	if (!FileAccess::exists(filepath)) {
 		String s = "HTTP/1.1 404 Not Found\r\n";
 		s += "Connection: Close\r\n";
 		s += "\r\n";
@@ -97,7 +97,9 @@ void EditorHTTPServer::_send_response() {
 		peer->put_data((const uint8_t *)cs.get_data(), cs.size() - 1);
 		return;
 	}
-	const String ctype = mimes[req_ext];
+	const String ctype = mimes.has(req_ext)
+			? mimes[req_ext]
+			: "text/plain";
 
 	Ref<FileAccess> f = FileAccess::open(filepath, FileAccess::READ);
 	ERR_FAIL_COND(f.is_null());

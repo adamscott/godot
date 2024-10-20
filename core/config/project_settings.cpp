@@ -1351,6 +1351,10 @@ const HashMap<StringName, HashSet<StringName>> &ProjectSettings::get_scene_group
 	return scene_groups_cache;
 }
 
+bool ProjectSettings::load_resource_pack(const String &p_pack, bool p_replace_files, int p_offset) {
+	return _load_resource_pack(p_pack, p_replace_files, p_offset);
+}
+
 #ifdef TOOLS_ENABLED
 void ProjectSettings::get_argument_options(const StringName &p_function, int p_idx, List<String> *r_options) const {
 	const String pf = p_function;
