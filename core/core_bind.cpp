@@ -29,6 +29,9 @@
 /**************************************************************************/
 
 #include "core_bind.h"
+#include "core/object/class_db.h"
+#include "core/variant/dictionary.h"
+#include "core/variant/variant.h"
 #include "core_bind.compat.inc"
 
 #include "core/config/project_settings.h"
@@ -267,6 +270,22 @@ void OS::alert(const String &p_alert, const String &p_title) {
 
 void OS::crash(const String &p_message) {
 	CRASH_NOW_MSG(p_message);
+}
+
+Error OS::async_fetch_start(const String &p_path) {
+	return ::OS::get_singleton()->async_fetch_start(p_path);
+}
+
+Error OS::async_fetch_cancel(const String &p_path) {
+	return ::OS::get_singleton()->async_fetch_cancel(p_path);
+}
+
+Dictionary OS::async_fetch_get_status(const String &p_path) {
+	return ::OS::get_singleton()->async_fetch_get_status(p_path);
+}
+
+Error OS::async_fetch_load(const String &p_path) {
+	return ::OS::get_singleton()->async_fetch_load(p_path);
 }
 
 Vector<String> OS::get_system_fonts() const {
@@ -624,6 +643,11 @@ void OS::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_processor_count"), &OS::get_processor_count);
 	ClassDB::bind_method(D_METHOD("get_processor_name"), &OS::get_processor_name);
 
+	ClassDB::bind_method(D_METHOD("async_fetch_start", "path"), &OS::async_fetch_start);
+	ClassDB::bind_method(D_METHOD("async_fetch_cancel", "path"), &OS::async_fetch_cancel);
+	ClassDB::bind_method(D_METHOD("async_fetch_get_status", "path"), &OS::async_fetch_get_status);
+	ClassDB::bind_method(D_METHOD("async_fetch_load", "path"), &OS::async_fetch_load);
+
 	ClassDB::bind_method(D_METHOD("get_system_fonts"), &OS::get_system_fonts);
 	ClassDB::bind_method(D_METHOD("get_system_font_path", "font_name", "weight", "stretch", "italic"), &OS::get_system_font_path, DEFVAL(400), DEFVAL(100), DEFVAL(false));
 	ClassDB::bind_method(D_METHOD("get_system_font_path_for_text", "font_name", "text", "locale", "script", "weight", "stretch", "italic"), &OS::get_system_font_path_for_text, DEFVAL(String()), DEFVAL(String()), DEFVAL(400), DEFVAL(100), DEFVAL(false));
@@ -711,6 +735,12 @@ void OS::_bind_methods() {
 	BIND_ENUM_CONSTANT(RENDERING_DRIVER_OPENGL3);
 	BIND_ENUM_CONSTANT(RENDERING_DRIVER_D3D12);
 	BIND_ENUM_CONSTANT(RENDERING_DRIVER_METAL);
+
+	BIND_ENUM_CONSTANT(ASYNC_FETCH_NOT_IMPLEMENTED);
+	BIND_ENUM_CONSTANT(ASYNC_FETCH_IDLE);
+	BIND_ENUM_CONSTANT(ASYNC_FETCH_IN_PROGRESS);
+	BIND_ENUM_CONSTANT(ASYNC_FETCH_ERROR);
+	BIND_ENUM_CONSTANT(ASYNC_FETCH_COMPLETE);
 
 	BIND_ENUM_CONSTANT(SYSTEM_DIR_DESKTOP);
 	BIND_ENUM_CONSTANT(SYSTEM_DIR_DCIM);

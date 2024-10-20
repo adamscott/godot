@@ -225,14 +225,174 @@ const GodotFS = {
 };
 mergeInto(LibraryManager.library, GodotFS);
 
+class AsyncFetch {
+	static exists(path) {
+		return GodotOS._async_fetches[path] != null;
+	}
+
+	static start(path) {
+		if (GodotOS.AsyncFetch.exists(path)) {
+			return null;
+		}
+
+		const asyncFetch = new GodotOS.AsyncFetch(path);
+		GodotOS._async_fetches[path] = asyncFetch;
+		return asyncFetch;
+	}
+
+	static cancel(path) {
+		if (!GodotOS.AsyncFetch.exists(path)) {
+			return false;
+		}
+		GodotOS._async_fetches[path].cancel();
+		delete GodotOS._async_fetches[path];
+		return true;
+	}
+
+	static getStatus(path) {
+		if (!GodotOS.AsyncFetch.exists(path)) {
+			return {
+				status: GodotOS.AsyncFetchStatus.ASYNC_FETCH_IDLE,
+				progress: 0,
+				downloaded: 0,
+				total: -1,
+				done: false,
+			};
+		}
+		return GodotOS._async_fetches[path].status;
+	}
+
+	static getBody(path) {
+		const status = GodotOS.AsyncFetch.getStatus(path);
+		if (status['status'] != GodotOS.AsyncFetchStatus.ASYNC_FETCH_COMPLETE) {
+			return null;
+		}
+		return GodotOS._async_fetches[path].body;
+	}
+
+	constructor(path) {
+		this.BYTE_LENGTH = 8;
+
+		this.path = path;
+		this.abortController = new AbortController();
+		this.total = -1;
+		this.downloaded = 0;
+		this.error = null;
+		this.done = false;
+		this.body = new Uint8Array();
+
+		this._load(path).catch((err) => {
+			GodotRuntime.error(`Error while fetching "${path}":`, err);
+			this.error = err;
+			this.body = new Uint8Array();
+		});
+	}
+
+	get status() {
+		/**
+		 * enum AsyncFetchStatus {
+		 *   ASYNC_FETCH_NOT_IMPLEMENTED,
+		 *   ASYNC_FETCH_IDLE,
+		 *   ASYNC_FETCH_IN_PROGRESS,
+		 *   ASYNC_FETCH_ERROR,
+		 *   ASYNC_FETCH_COMPLETE,
+		 * };
+		 */
+		let progress;
+		let status;
+		if (this.error == null) {
+			if (this.done) {
+				progress = 1;
+				status = GodotOS.AsyncFetchStatus.ASYNC_FETCH_COMPLETE;
+			} else if (this.total > 0) {
+				progress = this.downloaded / this.total;
+				status = GodotOS.AsyncFetchStatus.ASYNC_FETCH_IN_PROGRESS;
+			} else {
+				progress = 0;
+				status = GodotOS.AsyncFetchStatus.ASYNC_FETCH_IDLE;
+			}
+		} else {
+			progress = 0;
+			status = GodotOS.AsyncFetchStatus.ASYNC_FETCH_ERROR;
+		}
+
+		return {
+			status,
+			progress,
+			downloaded: this.downloaded,
+			total: this.total,
+		};
+	}
+
+	cancel() {
+		this.abortController.abort('cancelled');
+	}
+
+	/**
+	 * Start loading the fetch file.
+	 * @param {string} path
+	 */
+	async _load(path) {
+		let loadPath = path;
+		if (loadPath.startsWith('/')) {
+			loadPath = loadPath.substring(1);
+		}
+		const response = await fetch(`fetch/${loadPath}`, {
+			method: 'get',
+			signal: this.abortController.signal,
+		});
+		if (response.headers.has('content-length')) {
+			this.total = Number(response.headers.get('content-length'));
+		}
+
+		const chunks = [];
+		let received = 0;
+		this.downloaded = 0;
+		const reader = response.body.getReader();
+
+		/* eslint no-await-in-loop: "off"*/
+		while (true) {
+			const { done, value } = await reader.read();
+			if (done) {
+				break;
+			}
+			chunks.push(value);
+			received += value.length;
+			this.downloaded += value.byteLength;
+		}
+		this.total = this.downloaded;
+
+		this.body = new Uint8Array(received);
+		let position = 0;
+		for (const chunk of chunks) {
+			this.body.set(chunk, position);
+			position += chunk.length;
+		}
+
+		this.done = true;
+	}
+}
+
+/* eslint no-use-before-define: ["error", { "variables": false }]*/
+
 const GodotOS = {
-	$GodotOS__deps: ['$GodotRuntime', '$GodotConfig', '$GodotFS'],
+	$GodotOS__deps: ['$GodotRuntime', '$GodotConfig', '$GodotFS', '$GodotJSWrapper'],
 	$GodotOS__postset: [
 		'Module["request_quit"] = function() { GodotOS.request_quit() };',
 		'Module["onExit"] = GodotOS.cleanup;',
 		'GodotOS._fs_sync_promise = Promise.resolve();',
 	].join(''),
 	$GodotOS: {
+		AsyncFetch,
+		AsyncFetchStatus: {
+			ASYNC_FETCH_NOT_IMPLEMENTED: 0,
+			ASYNC_FETCH_IDLE: 1,
+			ASYNC_FETCH_IN_PROGRESS: 2,
+			ASYNC_FETCH_ERROR: 3,
+			ASYNC_FETCH_COMPLETE: 4,
+		},
+		_async_fetches: {},
+
 		request_quit: function () {},
 		_async_cbs: [],
 		_fs_sync_promise: null,
@@ -265,6 +425,35 @@ const GodotOS = {
 					callback();
 				}, 0);
 			});
+		},
+
+		/**
+		 *
+		 * @param {string} path
+		 */
+		start_fetch: function (path) {
+			GodotOS.AsyncFetch.start(path);
+		},
+
+		/**
+		 *
+		 * @param {string} path
+		 */
+		cancel_fetch: function (path) {
+			GodotOS.AsyncFetch.cancel(path);
+		},
+
+		/**
+		 *
+		 * @param {string} path
+		 * @returns
+		 */
+		get_status_fetch: function (path) {
+			return GodotOS.AsyncFetch.getStatus(path);
+		},
+
+		load_fetch: function (path) {
+			return GodotOS.AsyncFetch.getBody(path);
 		},
 	},
 
@@ -362,6 +551,48 @@ const GodotOS = {
 		a.click();
 		a.remove();
 		window.URL.revokeObjectURL(url);
+	},
+
+	godot_js_os_async_fetch_start__proxy: 'sync',
+	godot_js_os_async_fetch_start__sig: 'vp',
+	godot_js_os_async_fetch_start: function (p_path_ptr) {
+		const path = GodotRuntime.parseString(p_path_ptr);
+		return GodotOS.start_fetch(path) == null
+			? 1 // FAILED
+			: 0; // OK
+	},
+
+	godot_js_os_async_fetch_cancel__proxy: 'sync',
+	godot_js_os_async_fetch_cancel__sig: 'vp',
+	godot_js_os_async_fetch_cancel: function (p_path_ptr) {
+		const path = GodotRuntime.parseString(p_path_ptr);
+		return GodotOS.cancel_fetch(path)
+			? 0 // OK
+			: 1; // FAILED
+	},
+
+	godot_js_os_async_fetch_get_status__proxy: 'sync',
+	godot_js_os_async_fetch_get_status__sig: 'ipppp',
+	godot_js_os_async_fetch_get_status: function (p_path_ptr, p_progress_ptr, p_downloaded_ptr, p_total_ptr) {
+		const path = GodotRuntime.parseString(p_path_ptr);
+		const {
+			status,
+			progress,
+			downloaded,
+			total,
+		} = GodotOS.get_status_fetch(path);
+		GodotRuntime.setHeapValue(p_progress_ptr, progress, 'double');
+		GodotRuntime.setHeapValue(p_downloaded_ptr, downloaded, 'i32');
+		GodotRuntime.setHeapValue(p_total_ptr, total, 'i32');
+		return status;
+	},
+
+	godot_js_os_async_fetch_load__proxy: 'sync',
+	godot_js_os_async_fetch_load__sig: 'vpp',
+	godot_js_os_async_fetch_load: function (p_path_ptr, p_data_ptr) {
+		const path = GodotRuntime.parseString(p_path_ptr);
+		const data = GodotOS.load_fetch(path);
+		HEAPU8.set(data, p_data_ptr);
 	},
 };
 

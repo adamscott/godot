@@ -55,6 +55,10 @@ extern int godot_js_os_hw_concurrency_get();
 extern int godot_js_os_has_feature(const char *p_ftr);
 extern int godot_js_pwa_cb(void (*p_callback)());
 extern int godot_js_pwa_update();
+extern int godot_js_os_async_fetch_start(const char *p_path);
+extern int godot_js_os_async_fetch_cancel(const char *p_path);
+extern int godot_js_os_async_fetch_get_status(const char *p_path, double *p_progress, int32_t *p_downloaded, int32_t *p_total);
+extern int godot_js_os_async_fetch_load(const char *p_path, uint8_t *p_data);
 
 // Input
 extern void godot_js_input_mouse_button_cb(int (*p_callback)(int p_pressed, int p_button, double p_x, double p_y, int p_modifiers));

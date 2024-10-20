@@ -31,6 +31,13 @@
 #include "os_web.h"
 
 #include "api/javascript_bridge_singleton.h"
+#include "core/io/dir_access.h"
+#include "core/io/file_access.h"
+#include "core/io/file_access_memory.h"
+#include "core/io/pck_packer.h"
+#include "core/os/os.h"
+#include "core/variant/dictionary.h"
+#include "core/variant/variant.h"
 #include "display_server_web.h"
 #include "godot_js.h"
 
@@ -100,6 +107,85 @@ void OS_Web::finalize() {
 }
 
 // Miscellaneous
+
+Error OS_Web::async_fetch_start(const String &p_path) {
+	return (Error)godot_js_os_async_fetch_start(p_path.utf8().get_data());
+}
+
+Error OS_Web::async_fetch_cancel(const String &p_path) {
+	return (Error)godot_js_os_async_fetch_cancel(p_path.utf8().get_data());
+}
+
+Dictionary OS_Web::async_fetch_get_status(const String &p_path) {
+	double progress = 0.0;
+	int32_t downloaded = 0.0;
+	int32_t total = 0.0;
+	OS::AsyncFetchStatus status = (OS::AsyncFetchStatus)godot_js_os_async_fetch_get_status(p_path.utf8().get_data(), &progress, &downloaded, &total);
+	Dictionary dict;
+	dict["status"] = status;
+	dict["progress"] = progress;
+	dict["downloaded"] = downloaded;
+	dict["total"] = total;
+	return dict;
+}
+
+Error OS_Web::async_fetch_load(const String &p_path) {
+	print_line(vformat("async_fetch_load called: %s", p_path));
+
+	Dictionary status = async_fetch_get_status(p_path);
+	if ((AsyncFetchStatus)(int)status["status"] != ASYNC_FETCH_COMPLETE) {
+		return FAILED;
+	}
+
+	PackedByteArray data;
+	data.resize((int)status["total"]);
+	godot_js_os_async_fetch_load(p_path.utf8().get_data(), data.ptrw());
+
+	const String TMP_DIR = "user://__tmp/";
+	const String TMP_FETCH_PCK_PATH = "fetch.pck";
+	const String TMP_FETCH_FILE = "user://__tmp/_fetch.file";
+
+	{
+		DirAccess::make_dir_recursive_absolute(TMP_DIR);
+	}
+
+	{
+		Ref<FileAccess> tmp_file = FileAccess::open(TMP_FETCH_FILE, FileAccess::WRITE);
+		tmp_file->store_buffer(data);
+		tmp_file->flush();
+	}
+
+	{
+		Ref<PCKPacker> tmp;
+		tmp.instantiate();
+		tmp->pck_start(TMP_FETCH_PCK_PATH);
+		String path = p_path;
+		if (p_path.begins_with("/")) {
+			path = path.replace_first("/", "");
+		}
+		String file = String("res://").path_join(path);
+		tmp->add_file(file, TMP_FETCH_FILE);
+		tmp->flush(true);
+	}
+
+	{
+		Ref<FileAccess> tmp_file = FileAccess::open(TMP_FETCH_FILE, FileAccess::READ);
+		print_line(vformat("tmp_fetch_file text: %s", tmp_file->get_as_text()));
+	}
+
+	print_line(vformat("p_path: %s, load_resource_pack: %s", p_path, TMP_FETCH_PCK_PATH));
+	ProjectSettings::get_singleton()->load_resource_pack(TMP_FETCH_PCK_PATH);
+
+	{
+		Ref<DirAccess> local = DirAccess::create_for_path(".");
+		local->remove(TMP_FETCH_PCK_PATH);
+
+		Ref<DirAccess> tmp_dir = DirAccess::create_for_path(TMP_DIR);
+		tmp_dir->erase_contents_recursive();
+	}
+
+	return OK;
+}
 
 Error OS_Web::execute(const String &p_path, const List<String> &p_arguments, String *r_pipe, int *r_exitcode, bool read_stderr, Mutex *p_pipe_mutex, bool p_open_console) {
 	return create_process(p_path, p_arguments);

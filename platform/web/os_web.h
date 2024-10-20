@@ -33,6 +33,8 @@
 
 #include "audio_driver_web.h"
 
+#include "core/variant/dictionary.h"
+#include "core/variant/variant.h"
 #include "godot_js.h"
 
 #include "core/input/input.h"
@@ -78,6 +80,11 @@ public:
 
 	MainLoop *get_main_loop() const override;
 	bool main_loop_iterate();
+
+	Error async_fetch_start(const String &p_path) override;
+	Error async_fetch_cancel(const String &p_path) override;
+	Dictionary async_fetch_get_status(const String &p_path) override;
+	Error async_fetch_load(const String &p_path) override;
 
 	Error execute(const String &p_path, const List<String> &p_arguments, String *r_pipe = nullptr, int *r_exitcode = nullptr, bool read_stderr = false, Mutex *p_pipe_mutex = nullptr, bool p_open_console = false) override;
 	Dictionary execute_with_pipe(const String &p_path, const List<String> &p_arguments, bool p_blocking = true) override;
