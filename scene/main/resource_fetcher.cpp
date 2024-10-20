@@ -44,6 +44,9 @@ void ResourceFetcher::_notification(int p_what) {
 				start();
 			}
 		} break;
+		case NOTIFICATION_PROCESS: {
+			_poll();
+		} break;
 	}
 }
 
@@ -58,6 +61,9 @@ bool ResourceFetcher::_is_runtime_enabled() const {
 	return true;
 }
 
+void ResourceFetcher::_poll() {
+}
+
 void ResourceFetcher::start() {
 	if (!_is_runtime_enabled()) {
 		return;
@@ -65,6 +71,20 @@ void ResourceFetcher::start() {
 
 	_status = FetchStatus::FETCH_STATUS_FETCHING;
 	print_line(vformat("start()!"));
+
+	// for (const Ref<Resource> resource : get_resources()) {
+	// 	if (resource.is_null()) {
+	// 		continue;
+	// 	}
+	// 	Error err = OS::get_singleton()->async_fetch_start(resource->get_path());
+	// 	if (err != OK) {
+	// 		ResourceStatus status = {
+	// 			.status = OS::AsyncFetchStatus::ASYNC_FETCH_ERROR,
+	// 			.try_count = 1
+	// 		};
+	// 		_resource_status.insert(resource, status);
+	// 	}
+	// }
 }
 
 void ResourceFetcher::reset() {
@@ -73,6 +93,13 @@ void ResourceFetcher::reset() {
 	}
 
 	_status = FetchStatus::FETCH_STATUS_IDLE;
+
+	for (const Ref<Resource> resource : get_resources()) {
+		if (resource.is_null()) {
+			continue;
+		}
+		OS::get_singleton()->async_fetch_cancel(resource->get_path());
+	}
 }
 
 ResourceFetcher::FetchStatus ResourceFetcher::get_status() const {

@@ -31,6 +31,7 @@
 #ifndef RESOURCE_FETCHER_H
 #define RESOURCE_FETCHER_H
 
+#include "core/templates/hash_map.h"
 #include "core/variant/binder_common.h"
 #include "scene/main/node.h"
 
@@ -46,12 +47,19 @@ public:
 	};
 
 private:
+	struct ResourceStatus {
+		OS::AsyncFetchStatus status = OS::AsyncFetchStatus::ASYNC_FETCH_IDLE;
+		uint try_count = 0;
+	};
+
 	LocalVector<Ref<Resource>> _resources;
 
 	FetchStatus _status;
 	bool _auto_start = true;
+	HashMap<Ref<Resource>, ResourceStatus> _resource_status;
 
 	bool _is_runtime_enabled() const;
+	void _poll();
 
 protected:
 	static void _bind_methods();

@@ -141,13 +141,11 @@ Error OS_Web::async_fetch_load(const String &p_path) {
 	data.resize((int)status["total"]);
 	godot_js_os_async_fetch_load(p_path.utf8().get_data(), data.ptrw());
 
-	const String TMP_DIR = "user://__tmp/";
-	const String TMP_FETCH_PCK_PATH = "fetch.pck";
-	const String TMP_FETCH_FILE = "user://__tmp/_fetch.file";
+	const String TMP_DIR = "user://_____tmp/";
+	const String TMP_FETCH_PCK_PATH = "user://_____tmp/fetch.pck";
+	const String TMP_FETCH_FILE = "user://_____tmp/_fetch.file";
 
-	{
-		DirAccess::make_dir_recursive_absolute(TMP_DIR);
-	}
+	DirAccess::make_dir_recursive_absolute(TMP_DIR);
 
 	{
 		Ref<FileAccess> tmp_file = FileAccess::open(TMP_FETCH_FILE, FileAccess::WRITE);
@@ -168,21 +166,22 @@ Error OS_Web::async_fetch_load(const String &p_path) {
 		tmp->flush(true);
 	}
 
-	{
-		Ref<FileAccess> tmp_file = FileAccess::open(TMP_FETCH_FILE, FileAccess::READ);
-		print_line(vformat("tmp_fetch_file text: %s", tmp_file->get_as_text()));
-	}
-
 	print_line(vformat("p_path: %s, load_resource_pack: %s", p_path, TMP_FETCH_PCK_PATH));
 	ProjectSettings::get_singleton()->load_resource_pack(TMP_FETCH_PCK_PATH);
 
-	{
-		Ref<DirAccess> local = DirAccess::create_for_path(".");
-		local->remove(TMP_FETCH_PCK_PATH);
+	// {
+	// 	Ref<DirAccess> local = DirAccess::create_for_path(".");
+	// 	Error err = local->remove(TMP_FETCH_PCK_PATH);
+	// 	if (err != OK) {
+	// 		return err;
+	// 	}
 
-		Ref<DirAccess> tmp_dir = DirAccess::create_for_path(TMP_DIR);
-		tmp_dir->erase_contents_recursive();
-	}
+	// 	Ref<DirAccess> tmp_dir = DirAccess::create_for_path(TMP_DIR);
+	// 	err = tmp_dir->erase_contents_recursive();
+	// 	if (err != OK) {
+	// 		return err;
+	// 	}
+	// }
 
 	return OK;
 }
