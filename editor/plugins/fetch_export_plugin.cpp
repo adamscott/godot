@@ -39,7 +39,7 @@
 #include "scene/main/resource_fetcher.h"
 #include "scene/resources/packed_scene.h"
 
-Error FetchExportPlugin::_find_resource_fetch_nodes(Node *p_node) {
+Error FetchExportPlugin::_find_resource_fetcher_nodes(Node *p_node) {
 	ERR_FAIL_COND_V(p_node == nullptr, FAILED);
 
 	ResourceFetcher *resource_fetcher = Object::cast_to<ResourceFetcher>(p_node);
@@ -57,7 +57,7 @@ Error FetchExportPlugin::_find_resource_fetch_nodes(Node *p_node) {
 		if (child == nullptr) {
 			continue;
 		}
-		_find_resource_fetch_nodes(child);
+		_find_resource_fetcher_nodes(child);
 	}
 
 	return OK;
@@ -70,6 +70,10 @@ Error FetchExportPlugin::_parse_fetch_node(ResourceFetcher *p_resource_fetcher) 
 
 	TypedArray<Resource> resources = p_resource_fetcher->get_resources();
 	for (const Ref<Resource> resource : resources) {
+		if (resource.is_null()) {
+			continue;
+		}
+
 		bool is_imported = !resource->get_import_path().is_empty();
 		String file_path = is_imported
 				? resource->get_import_path()
@@ -78,6 +82,12 @@ Error FetchExportPlugin::_parse_fetch_node(ResourceFetcher *p_resource_fetcher) 
 			continue;
 		}
 		_fetched_resources.append(file_path);
+
+		Ref<PackedScene> resource_scene = resource;
+		if (resource_scene.is_valid()) {
+			Node *resource_scene_root = resource_scene->instantiate();
+			_find_resource_fetcher_nodes(resource_scene_root);
+		}
 
 		if (file_path.is_relative_path()) {
 			file_path = _current_scene->get_scene_file_path().path_join(file_path);
@@ -186,7 +196,7 @@ void FetchExportPlugin::_export_file(const String &p_path, const String &p_type,
 		return;
 	}
 
-	_find_resource_fetch_nodes(root);
+	_find_resource_fetcher_nodes(root);
 }
 
 void FetchExportPlugin::_export_end() {

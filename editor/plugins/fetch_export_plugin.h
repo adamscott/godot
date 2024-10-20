@@ -41,7 +41,7 @@ class FetchExportPlugin : public EditorExportPlugin {
 	Node *_current_scene;
 	Vector<StringName> _fetched_resources;
 
-	Error _find_resource_fetch_nodes(Node *p_node);
+	Error _find_resource_fetcher_nodes(Node *p_node);
 	Error _parse_fetch_node(ResourceFetcher *p_resource_fetcher);
 
 protected:
