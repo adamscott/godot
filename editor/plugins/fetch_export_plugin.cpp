@@ -130,12 +130,23 @@ Error FetchExportPlugin::_parse_fetch_node(ResourceFetcher *p_resource_fetcher) 
 			String dep_path = dep_is_imported
 					? dep_res->get_import_path()
 					: dep;
-			Ref<FileAccess> file = FileAccess::open(dep_path, FileAccess::READ, &err);
-			if (err != OK) {
-				return err;
+
+			{
+				Ref<FileAccess> file = FileAccess::open(dep_path, FileAccess::READ, &err);
+				if (err != OK) {
+					return err;
+				}
+				add_fetch_file(dep, file->get_buffer(file->get_length()));
 			}
 
-			add_fetch_file(dep, file->get_buffer(file->get_length()));
+			if (dep_is_imported) {
+				String dep_import_path = dep + ".import";
+				Ref<FileAccess> file_import = FileAccess::open(dep_import_path, FileAccess::READ, &err);
+				if (err != OK) {
+					return err;
+				}
+				add_fetch_file(dep_import_path, file_import->get_buffer(file_import->get_length()));
+			}
 		}
 	}
 
