@@ -1850,6 +1850,16 @@ String OS_Windows::get_cache_path() const {
 		if (has_environment("LOCALAPPDATA")) {
 			cache_path_cache = get_environment("LOCALAPPDATA").replace("\\", "/");
 		}
+		if (cache_path_cache.is_empty()) {
+			cache_path_cache = get_tmp_path();
+		}
+	}
+	return cache_path_cache;
+}
+
+String OS_Windows::get_tmp_path() const {
+	static String tmp_path_cache;
+	if (tmp_path_cache.is_empty()) {
 		if (cache_path_cache.is_empty() && has_environment("TEMP")) {
 			cache_path_cache = get_environment("TEMP").replace("\\", "/");
 		}
@@ -1857,7 +1867,7 @@ String OS_Windows::get_cache_path() const {
 			cache_path_cache = get_config_path();
 		}
 	}
-	return cache_path_cache;
+	return tmp_path_cache;
 }
 
 // Get properly capitalized engine name for system paths

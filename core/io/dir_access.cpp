@@ -323,6 +323,26 @@ Ref<DirAccess> DirAccess::create(AccessType p_access) {
 	return da;
 }
 
+Ref<DirAccess> DirAccess::create_tmp() {
+	Ref<DirAccess> dir_access = DirAccess::open(OS::get_singleton()->get_tmp_path());
+	String hash;
+	while (true) {
+		hash = itos(Math::rand()).sha256_text().substr(0, 10);
+		if (!DirAccess::exists(hash)) {
+			break;
+		}
+	}
+	Error err = dir_access->make_dir(hash);
+	if (err != OK) {
+		return Ref<DirAccess>();
+	}
+	err = dir_access->change_dir(hash);
+	if (err != OK) {
+		return Ref<DirAccess>();
+	}
+	return dir_access;
+}
+
 Error DirAccess::get_open_error() {
 	return last_dir_open_error;
 }

@@ -128,6 +128,7 @@ public:
 	static Ref<DirAccess> create_for_path(const String &p_path);
 
 	static Ref<DirAccess> create(AccessType p_access);
+	static Ref<DirAccess> create_tmp();
 	static Error get_open_error();
 
 	template <typename T>

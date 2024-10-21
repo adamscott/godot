@@ -83,6 +83,29 @@ Ref<FileAccess> FileAccess::create_for_path(const String &p_path) {
 	return ret;
 }
 
+Ref<FileAccess> FileAccess::create_tmp(int p_mode_flags, const String &p_extension, bool p_keep_after_use, Error *r_error) {
+	const String TMP_DIR = OS::get_singleton()->get_tmp_path();
+	String extension = p_extension;
+	if (extension.begins_with(".")) {
+		extension = extension.replace_first(".", "");
+	}
+	String hash;
+	String tmp_file_path;
+	while (true) {
+		hash = itos(Math::rand()).sha256_text().substr(0, 10);
+		tmp_file_path = TMP_DIR.path_join(hash + (extension.is_empty() ? "" : "." + extension));
+		if (!DirAccess::exists(tmp_file_path)) {
+			break;
+		}
+	}
+	Ref<FileAccess> ret = FileAccess::open(tmp_file_path, p_mode_flags, r_error);
+	if (ret.is_valid()) {
+		ret->_is_tmp_file = true;
+		ret->_tmp_keep_after_use = p_keep_after_use;
+	}
+	return ret;
+}
+
 Error FileAccess::reopen(const String &p_path, int p_mode_flags) {
 	return open_internal(p_path, p_mode_flags);
 }
@@ -811,6 +834,8 @@ void FileAccess::_bind_methods() {
 	ClassDB::bind_static_method("FileAccess", D_METHOD("open_compressed", "path", "mode_flags", "compression_mode"), &FileAccess::open_compressed, DEFVAL(0));
 	ClassDB::bind_static_method("FileAccess", D_METHOD("get_open_error"), &FileAccess::get_open_error);
 
+	ClassDB::bind_static_method("FileAccess", D_METHOD("create_tmp", "mode_flags", "extension", "keep_after_use"), &FileAccess::_create_tmp, DEFVAL(""), DEFVAL(false));
+
 	ClassDB::bind_static_method("FileAccess", D_METHOD("get_file_as_bytes", "path"), &FileAccess::_get_file_as_bytes);
 	ClassDB::bind_static_method("FileAccess", D_METHOD("get_file_as_string", "path"), &FileAccess::_get_file_as_string);
 
@@ -896,4 +921,12 @@ void FileAccess::_bind_methods() {
 	BIND_BITFIELD_FLAG(UNIX_SET_USER_ID);
 	BIND_BITFIELD_FLAG(UNIX_SET_GROUP_ID);
 	BIND_BITFIELD_FLAG(UNIX_RESTRICTED_DELETE);
+}
+
+FileAccess::~FileAccess() {
+	if (_is_tmp_file && !_tmp_keep_after_use) {
+		if (DirAccess::exists(get_path_absolute())) {
+			DirAccess::remove_absolute(get_path_absolute());
+		}
+	}
 }
