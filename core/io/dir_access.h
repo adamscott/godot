@@ -61,6 +61,13 @@ private:
 	bool include_navigational = false;
 	bool include_hidden = false;
 
+	bool _is_tmp = false;
+	bool _tmp_keep_after_free = false;
+	String _tmp_path;
+	void _delete_tmp();
+
+	static Ref<DirAccess> _create_tmp(const String &p_prefix = "", bool p_keep = false);
+
 protected:
 	static void _bind_methods();
 
@@ -136,6 +143,7 @@ public:
 	}
 
 	static Ref<DirAccess> open(const String &p_path, Error *r_error = nullptr);
+	static Ref<DirAccess> create_tmp(const String &p_prefix = "", bool p_keep = false, Error *r_error = nullptr);
 
 	static int _get_drive_count();
 	static String get_drive_name(int p_idx);
@@ -161,8 +169,9 @@ public:
 
 	virtual bool is_case_sensitive(const String &p_path) const;
 
+public:
 	DirAccess() {}
-	virtual ~DirAccess() {}
+	virtual ~DirAccess();
 };
 
 #endif // DIR_ACCESS_H
