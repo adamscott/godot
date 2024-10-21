@@ -131,8 +131,6 @@ private:
 	static Error _zip_add_shared_object(void *p_userdata, const SharedObject &p_so);
 	static Error _zip_add_fetch_file(void *p_userdata, const FetchFile &p_fetch_file);
 
-	static Error _save_fetch_file(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total);
-
 	struct ScriptCallbackData {
 		Callable file_cb;
 		Callable so_cb;

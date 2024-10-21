@@ -31,6 +31,7 @@
 #include "resource_fetcher.h"
 
 #include "core/config/engine.h"
+#include "core/io/resource.h"
 #include "core/object/class_db.h"
 #include "core/object/object.h"
 #include "core/string/print_string.h"
@@ -142,6 +143,17 @@ void ResourceFetcher::remove_resource(const Ref<Resource> &p_resource) {
 
 bool ResourceFetcher::has_resource(const Ref<Resource> &p_resource) const {
 	return _resources.has(p_resource);
+}
+
+void ResourceFetcher::backup_resource_paths() {
+	_resource_paths.clear();
+
+	for (Ref<Resource> resource : get_resources()) {
+		if (resource.is_null()) {
+			continue;
+		}
+		_resource_paths.push_back(resource->get_path());
+	}
 }
 
 void ResourceFetcher::_bind_methods() {

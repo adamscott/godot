@@ -323,14 +323,6 @@ Error EditorExportPlatform::_save_zip_patch_file(void *p_userdata, const String 
 	return _save_zip_file(p_userdata, p_path, p_data, p_file, p_total, p_enc_in_filters, p_enc_ex_filters, p_key);
 }
 
-Error EditorExportPlatform::_save_fetch_file(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total) {
-	ERR_FAIL_COND_V_MSG(p_total < 1, ERR_PARAMETER_RANGE_ERROR, "Must select at least one file to export.");
-
-	print_line(vformat("_save_fetch_file: (path: %s)", p_path));
-
-	return OK;
-}
-
 Ref<ImageTexture> EditorExportPlatform::get_option_icon(int p_index) const {
 	Ref<Theme> theme = EditorNode::get_singleton()->get_editor_theme();
 	ERR_FAIL_COND_V(theme.is_null(), Ref<ImageTexture>());
