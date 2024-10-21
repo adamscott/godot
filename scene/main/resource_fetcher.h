@@ -53,6 +53,7 @@ private:
 	};
 
 	LocalVector<Ref<Resource>> _resources;
+	LocalVector<StringName> _resource_paths;
 
 	FetchStatus _status;
 	bool _auto_start = true;
@@ -80,7 +81,7 @@ public:
 	void remove_resource(const Ref<Resource> &p_resource);
 	bool has_resource(const Ref<Resource> &p_resource) const;
 
-	void get_resource_list(List<StringName> *p_list);
+	void backup_resource_paths();
 
 	ResourceFetcher();
 };

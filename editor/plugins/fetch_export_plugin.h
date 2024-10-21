@@ -41,8 +41,12 @@ class FetchExportPlugin : public EditorExportPlugin {
 	Node *_current_scene;
 	Vector<StringName> _fetched_resources;
 
+	bool _is_resource_fetcher_node(Node *p_node);
 	Error _find_resource_fetcher_nodes(Node *p_node);
-	Error _parse_fetch_node(ResourceFetcher *p_resource_fetcher);
+	Error _parse_resource_fetcher_node(ResourceFetcher *p_resource_fetcher);
+
+	Error _clear_resource_fetcher_nodes(Node *p_node);
+	Error _clear_resource_fetcher_node(ResourceFetcher *p_resource_fetcher);
 
 protected:
 	virtual String get_name() const override { return "Fetch"; }
@@ -51,6 +55,9 @@ protected:
 	virtual void _export_begin(const HashSet<String> &p_features, bool p_debug, const String &p_path, int p_flags) override;
 	virtual void _export_file(const String &p_path, const String &p_type, const HashSet<String> &p_features) override;
 	virtual void _export_end() override;
+
+	// virtual bool _begin_customize_scenes(const Ref<EditorExportPlatform> &p_platform, const Vector<String> &p_features) override;
+	// virtual Node *_customize_scene(Node *p_root, const String &p_path) override;
 
 public:
 	FetchExportPlugin();

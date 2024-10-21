@@ -31,20 +31,28 @@
 #include "fetch_export_plugin.h"
 
 #include "core/error/error_macros.h"
+#include "core/io/dir_access.h"
 #include "core/io/file_access.h"
+#include "core/io/file_access_memory.h"
 #include "core/io/resource_loader.h"
+#include "core/string/print_string.h"
 #include "core/variant/typed_array.h"
 #include "editor/editor_file_system.h"
 #include "editor/export/editor_export_preset.h"
 #include "scene/main/resource_fetcher.h"
 #include "scene/resources/packed_scene.h"
 
+bool FetchExportPlugin::_is_resource_fetcher_node(Node *p_node) {
+	ERR_FAIL_COND_V(p_node == nullptr, false);
+	ResourceFetcher *resource_fetcher = Object::cast_to<ResourceFetcher>(p_node);
+	return resource_fetcher != nullptr;
+}
+
 Error FetchExportPlugin::_find_resource_fetcher_nodes(Node *p_node) {
 	ERR_FAIL_COND_V(p_node == nullptr, FAILED);
 
-	ResourceFetcher *resource_fetcher = Object::cast_to<ResourceFetcher>(p_node);
-	if (resource_fetcher) {
-		_parse_fetch_node(resource_fetcher);
+	if (_is_resource_fetcher_node(p_node)) {
+		_parse_resource_fetcher_node(Object::cast_to<ResourceFetcher>(p_node));
 	}
 
 	if (p_node->get_child_count() == 0) {
@@ -63,13 +71,15 @@ Error FetchExportPlugin::_find_resource_fetcher_nodes(Node *p_node) {
 	return OK;
 }
 
-Error FetchExportPlugin::_parse_fetch_node(ResourceFetcher *p_resource_fetcher) {
+Error FetchExportPlugin::_parse_resource_fetcher_node(ResourceFetcher *p_resource_fetcher) {
 	ERR_FAIL_COND_V(p_resource_fetcher == nullptr, FAILED);
 
 	EditorFileSystemDirectory *filesystem = EditorFileSystem::get_singleton()->get_filesystem();
 
 	TypedArray<Resource> resources = p_resource_fetcher->get_resources();
 	for (const Ref<Resource> resource : resources) {
+		Ref<FileAccess> file;
+
 		if (resource.is_null()) {
 			continue;
 		}
@@ -86,7 +96,23 @@ Error FetchExportPlugin::_parse_fetch_node(ResourceFetcher *p_resource_fetcher) 
 		Ref<PackedScene> resource_scene = resource;
 		if (resource_scene.is_valid()) {
 			Node *resource_scene_root = resource_scene->instantiate();
+			// Add resources to export. (`add_fetch_file()`)
 			_find_resource_fetcher_nodes(resource_scene_root);
+			// Remove resources from the exported nodes.
+			_clear_resource_fetcher_nodes(resource_scene_root);
+
+			const String TMP_PATH = resource_scene->get_path().get_basename() + "___tmp.tscn";
+			Ref<PackedScene> new_scene;
+			new_scene.instantiate();
+			new_scene->pack(resource_scene_root);
+			Error err = ResourceSaver::save(new_scene, TMP_PATH);
+			if (err != OK) {
+				print_error(vformat("Couldn't save %s: %s", TMP_PATH, error_names[err]));
+				return err;
+			}
+
+			file = FileAccess::get_file_as_bytes(TMP_PATH);
+			DirAccess::remove_absolute(TMP_PATH);
 		}
 
 		if (file_path.is_relative_path()) {
@@ -98,9 +124,11 @@ Error FetchExportPlugin::_parse_fetch_node(ResourceFetcher *p_resource_fetcher) 
 		}
 
 		Error err;
-		Ref<FileAccess> file = FileAccess::open(file_path, FileAccess::READ, &err);
-		if (err != OK) {
-			return err;
+		if (file.is_null()) {
+			file = FileAccess::open(file_path, FileAccess::READ, &err);
+			if (err != OK) {
+				return err;
+			}
 		}
 		add_fetch_file(file_path, file->get_buffer(file->get_length()));
 
@@ -163,6 +191,39 @@ Error FetchExportPlugin::_parse_fetch_node(ResourceFetcher *p_resource_fetcher) 
 	return OK;
 }
 
+Error FetchExportPlugin::_clear_resource_fetcher_nodes(Node *p_node) {
+	ERR_FAIL_COND_V(p_node == nullptr, FAILED);
+
+	ResourceFetcher *resource_fetcher = Object::cast_to<ResourceFetcher>(p_node);
+	if (resource_fetcher) {
+		_clear_resource_fetcher_node(resource_fetcher);
+	}
+
+	if (p_node->get_child_count() == 0) {
+		return OK;
+	}
+
+	for (Object *obj : p_node->get_children()) {
+		Node *child = Object::cast_to<Node>(obj);
+		if (child == nullptr) {
+			continue;
+		}
+		_clear_resource_fetcher_nodes(child);
+	}
+
+	return OK;
+}
+
+Error FetchExportPlugin::_clear_resource_fetcher_node(ResourceFetcher *p_resource_fetcher) {
+	ERR_FAIL_COND_V(p_resource_fetcher == nullptr, FAILED);
+	p_resource_fetcher->backup_resource_paths();
+	TypedArray<Resource> resources = p_resource_fetcher->get_resources();
+	for (const Ref<Resource> resource : resources) {
+		p_resource_fetcher->remove_resource(resource);
+	}
+	return OK;
+}
+
 uint64_t FetchExportPlugin::_get_customization_configuration_hash() const {
 	Ref<EditorExportPreset> preset = get_export_preset();
 	ERR_FAIL_COND_V(preset.is_null(), 0);
@@ -203,6 +264,16 @@ void FetchExportPlugin::_export_end() {
 	_fetched_resources.clear();
 	_current_scene = nullptr;
 }
+
+// bool FetchExportPlugin::_begin_customize_scenes(const Ref<EditorExportPlatform> &p_platform, const Vector<String> &p_features) {
+// 	return true;
+// }
+
+// Node *FetchExportPlugin::_customize_scene(Node *p_root, const String &p_path) {
+// 	//_clear_resource_fetcher_nodes(p_root);
+// 	//return p_root;
+// 	return nullptr;
+// }
 
 FetchExportPlugin::FetchExportPlugin() {}
 
