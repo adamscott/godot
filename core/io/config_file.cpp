@@ -138,10 +138,11 @@ String ConfigFile::encode_to_text() const {
 		if (first) {
 			first = false;
 		} else {
-			sb.append("\n");
+			sb.append_line();
 		}
 		if (!E.key.is_empty()) {
-			sb.append("[" + E.key + "]\n\n");
+			sb.append_line("[" + E.key + "]");
+			sb.append_line();
 		}
 
 		for (const KeyValue<String, Variant> &F : E.value) {

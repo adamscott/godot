@@ -162,67 +162,67 @@ RID ShaderGLES3::version_create() {
 
 void ShaderGLES3::_build_variant_code(StringBuilder &builder, uint32_t p_variant, const Version *p_version, StageType p_stage_type, uint64_t p_specialization) {
 	if (RasterizerGLES3::is_gles_over_gl()) {
-		builder.append("#version 330\n");
-		builder.append("#define USE_GLES_OVER_GL\n");
+		builder.append_line("#version 330");
+		builder.append_line("#define USE_GLES_OVER_GL");
 	} else {
-		builder.append("#version 300 es\n");
+		builder.append_line("#version 300 es");
 	}
 
 	for (int i = 0; i < specialization_count; i++) {
 		if (p_specialization & (uint64_t(1) << uint64_t(i))) {
-			builder.append("#define " + String(specializations[i].name) + "\n");
+			builder.append_line("#define " + String(specializations[i].name));
 		}
 	}
 	if (p_version->uniforms.size()) {
-		builder.append("#define MATERIAL_UNIFORMS_USED\n");
+		builder.append_line("#define MATERIAL_UNIFORMS_USED");
 	}
 	for (const KeyValue<StringName, CharString> &E : p_version->code_sections) {
-		builder.append(String("#define ") + String(E.key) + "_CODE_USED\n");
+		builder.append_line(String("#define ") + String(E.key) + "_CODE_USED");
 	}
 
-	builder.append("\n"); //make sure defines begin at newline
+	builder.append_line(); //make sure defines begin at newline
 	builder.append(general_defines.get_data());
 	builder.append(variant_defines[p_variant]);
-	builder.append("\n");
+	builder.append_line();
 	for (int j = 0; j < p_version->custom_defines.size(); j++) {
 		builder.append(p_version->custom_defines[j].get_data());
 	}
-	builder.append("\n"); //make sure defines begin at newline
+	builder.append_line(); //make sure defines begin at newline
 
 	// Optional support for external textures.
 	if (GLES3::Config::get_singleton()->external_texture_supported) {
-		builder.append("#extension GL_OES_EGL_image_external : enable\n");
-		builder.append("#extension GL_OES_EGL_image_external_essl3 : enable\n");
+		builder.append_line("#extension GL_OES_EGL_image_external : enable");
+		builder.append_line("#extension GL_OES_EGL_image_external_essl3 : enable");
 	} else {
-		builder.append("#define samplerExternalOES sampler2D\n");
+		builder.append_line("#define samplerExternalOES sampler2D");
 	}
 
 	// Insert multiview extension loading, because it needs to appear before
 	// any non-preprocessor code (like the "precision highp..." lines below).
-	builder.append("#ifdef USE_MULTIVIEW\n");
-	builder.append("#if defined(GL_OVR_multiview2)\n");
-	builder.append("#extension GL_OVR_multiview2 : require\n");
-	builder.append("#elif defined(GL_OVR_multiview)\n");
-	builder.append("#extension GL_OVR_multiview : require\n");
-	builder.append("#endif\n");
+	builder.append_line("#ifdef USE_MULTIVIEW");
+	builder.append_line("#if defined(GL_OVR_multiview2)");
+	builder.append_line("#extension GL_OVR_multiview2 : require");
+	builder.append_line("#elif defined(GL_OVR_multiview)");
+	builder.append_line("#extension GL_OVR_multiview : require");
+	builder.append_line("#endif");
 	if (p_stage_type == StageType::STAGE_TYPE_VERTEX) {
-		builder.append("layout(num_views=2) in;\n");
+		builder.append_line("layout(num_views=2) in;");
 	}
-	builder.append("#define ViewIndex gl_ViewID_OVR\n");
-	builder.append("#define MAX_VIEWS 2\n");
-	builder.append("#else\n");
-	builder.append("#define ViewIndex uint(0)\n");
-	builder.append("#define MAX_VIEWS 1\n");
-	builder.append("#endif\n");
+	builder.append_line("#define ViewIndex gl_ViewID_OVR");
+	builder.append_line("#define MAX_VIEWS 2");
+	builder.append_line("#else");
+	builder.append_line("#define ViewIndex uint(0)");
+	builder.append_line("#define MAX_VIEWS 1");
+	builder.append_line("#endif");
 
 	// Default to highp precision unless specified otherwise.
-	builder.append("precision highp float;\n");
-	builder.append("precision highp int;\n");
+	builder.append_line("precision highp float;");
+	builder.append_line("precision highp int;");
 	if (!RasterizerGLES3::is_gles_over_gl()) {
-		builder.append("precision highp sampler2D;\n");
-		builder.append("precision highp samplerCube;\n");
-		builder.append("precision highp sampler2DArray;\n");
-		builder.append("precision highp sampler3D;\n");
+		builder.append_line("precision highp sampler2D;");
+		builder.append_line("precision highp samplerCube;");
+		builder.append_line("precision highp sampler2DArray;");
+		builder.append_line("precision highp sampler3D;");
 	}
 
 	const StageTemplate &stage_template = stage_templates[p_stage_type];

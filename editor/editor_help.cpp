@@ -2666,7 +2666,7 @@ static void _add_text_to_rt(const String &p_bbcode, RichTextLabel *p_rt, const C
 					const int space_count = line.length() - stripped_line.length();
 
 					if (builder.num_strings_appended() > 0) {
-						builder.append("\n");
+						builder.append_line();
 					}
 					if (space_count > 0) {
 						builder.append(String("\t").repeat(MAX(space_count / 4, 1)) + stripped_line);

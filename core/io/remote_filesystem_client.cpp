@@ -219,7 +219,7 @@ Error RemoteFilesystemClient::_synchronize_with_server(const String &p_host, int
 			sbuild.append(file_cache[i].path);
 			sbuild.append("::");
 			sbuild.append(itos(file_cache[i].server_modified_time));
-			sbuild.append("\n");
+			sbuild.append_line();
 		}
 		String s = sbuild.as_string();
 		CharString cs = s.utf8();

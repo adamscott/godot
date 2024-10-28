@@ -183,30 +183,30 @@ void ShaderRD::_build_variant_code(StringBuilder &builder, uint32_t p_variant, c
 	for (const StageTemplate::Chunk &chunk : p_template.chunks) {
 		switch (chunk.type) {
 			case StageTemplate::Chunk::TYPE_VERSION_DEFINES: {
-				builder.append("\n"); //make sure defines begin at newline
+				builder.append_line(); //make sure defines begin at newline
 				builder.append(general_defines.get_data());
 				builder.append(variant_defines[p_variant].text.get_data());
 				for (int j = 0; j < p_version->custom_defines.size(); j++) {
 					builder.append(p_version->custom_defines[j].get_data());
 				}
-				builder.append("\n"); //make sure defines begin at newline
+				builder.append_line(); //make sure defines begin at newline
 				if (p_version->uniforms.size()) {
-					builder.append("#define MATERIAL_UNIFORMS_USED\n");
+					builder.append_line("#define MATERIAL_UNIFORMS_USED");
 				}
 				for (const KeyValue<StringName, CharString> &E : p_version->code_sections) {
-					builder.append(String("#define ") + String(E.key) + "_CODE_USED\n");
+					builder.append_line(String("#define ") + String(E.key) + "_CODE_USED");
 				}
 #if (defined(MACOS_ENABLED) || defined(IOS_ENABLED))
 				if (RD::get_singleton()->get_device_capabilities().device_family == RDD::DEVICE_VULKAN) {
-					builder.append("#define MOLTENVK_USED\n");
+					builder.append_line("#define MOLTENVK_USED");
 				}
 				// Image atomics are supported on Metal 3.1 but no support in MoltenVK or SPIRV-Cross yet.
-				builder.append("#define NO_IMAGE_ATOMICS\n");
+				builder.append_line("#define NO_IMAGE_ATOMICS");
 #endif
 
-				builder.append(String("#define RENDER_DRIVER_") + OS::get_singleton()->get_current_rendering_driver_name().to_upper() + "\n");
-				builder.append("#define samplerExternalOES sampler2D\n");
-				builder.append("#define textureExternalOES texture2D\n");
+				builder.append_line(String("#define RENDER_DRIVER_") + OS::get_singleton()->get_current_rendering_driver_name().to_upper());
+				builder.append_line("#define samplerExternalOES sampler2D");
+				builder.append_line("#define textureExternalOES texture2D");
 			} break;
 			case StageTemplate::Chunk::TYPE_MATERIAL_UNIFORMS: {
 				builder.append(p_version->uniforms.get_data()); //uniforms (same for vertex and fragment)
