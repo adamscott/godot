@@ -46,7 +46,10 @@ class StringBuilder {
 
 public:
 	StringBuilder &append(const String &p_string);
+	StringBuilder &append_line(const String &p_string = "");
+
 	StringBuilder &append(const char *p_cstring);
+	StringBuilder &append_line(const char *p_cstring);
 
 	_FORCE_INLINE_ StringBuilder &operator+(const String &p_string) {
 		return append(p_string);

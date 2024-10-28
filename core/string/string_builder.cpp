@@ -45,6 +45,10 @@ StringBuilder &StringBuilder::append(const String &p_string) {
 	return *this;
 }
 
+StringBuilder &StringBuilder::append_line(const String &p_string) {
+	return append(p_string + "\n");
+}
+
 StringBuilder &StringBuilder::append(const char *p_cstring) {
 	int32_t len = strlen(p_cstring);
 
@@ -54,6 +58,10 @@ StringBuilder &StringBuilder::append(const char *p_cstring) {
 	string_length += len;
 
 	return *this;
+}
+
+StringBuilder &StringBuilder::append_line(const char *p_cstring) {
+	return append(String::utf8(p_cstring) + "\n");
 }
 
 String StringBuilder::as_string() const {
