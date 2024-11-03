@@ -177,6 +177,7 @@ void ResourceFetcher::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("progress", PropertyInfo(Variant::STRING_NAME, "path"), PropertyInfo(Variant::INT, "downloaded"), PropertyInfo(Variant::INT, "total")));
 	ADD_SIGNAL(MethodInfo("progress_total", PropertyInfo(Variant::INT, "downloaded"), PropertyInfo(Variant::INT, "total")));
 	ADD_SIGNAL(MethodInfo("error", PropertyInfo(Variant::STRING_NAME, "path")));
+	ADD_SIGNAL(MethodInfo("ready"));
 }
 
 ResourceFetcher::ResourceFetcher() {
