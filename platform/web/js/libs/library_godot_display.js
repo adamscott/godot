@@ -334,14 +334,69 @@ mergeInto(LibraryManager.library, GodotDisplayScreen);
  */
 const GodotDisplay = {
 	$GodotDisplay__deps: ['$GodotConfig', '$GodotRuntime', '$GodotDisplayCursor', '$GodotEventListeners', '$GodotDisplayScreen', '$GodotDisplayVK'],
+	$GodotDisplay__postset: `
+		GodotDisplay.init();
+		GodotOS.atexit(function(resolve, reject) { GodotDisplay.clear(); resolve(); });
+	`,
 	$GodotDisplay: {
 		window_icon: '',
+		browserScreenOrientation: 'landscape',
+		godotScreenOrientation: 0,
+		init: function () {
+			screen.orientation.addEventListener('change', GodotDisplay.onBrowserScreenOrientationChange);
+			GodotDisplay.browserScreenOrientation = screen.orientation.type;
+		},
 		getDPI: function () {
 			// devicePixelRatio is given in dppx
 			// https://drafts.csswg.org/css-values/#resolution
 			// > due to the 1:96 fixed ratio of CSS *in* to CSS *px*, 1dppx is equivalent to 96dpi.
 			const dpi = Math.round(window.devicePixelRatio * 96);
 			return dpi >= 96 ? dpi : 96;
+		},
+		onBrowserScreenOrientationChange: function (event) {
+			GodotDisplay.browserScreenOrientation = event.target.type;
+			GodotDisplay.updateScreen();
+		},
+		updateScreen: function () {
+			// enum ScreenOrientation {
+			//   SCREEN_LANDSCAPE,
+			//   SCREEN_PORTRAIT,
+			//   SCREEN_REVERSE_LANDSCAPE,
+			//   SCREEN_REVERSE_PORTRAIT,
+			//   SCREEN_SENSOR_LANDSCAPE,
+			//   SCREEN_SENSOR_PORTRAIT,
+			//   SCREEN_SENSOR,
+			// };
+			let godotScreenOrientation = '';
+			switch (GodotDisplay.godotScreenOrientation) {
+			case 0:
+				godotScreenOrientation = 'SCREEN_LANDSCAPE';
+				break;
+			case 1:
+				godotScreenOrientation = 'SCREEN_PORTRAIT';
+				break;
+			case 2:
+				godotScreenOrientation = 'SCREEN_REVERSE_LANDSCAPE';
+				break;
+			case 3:
+				godotScreenOrientation = 'SCREEN_REVERSE_PORTRAIT';
+				break;
+			case 4:
+				godotScreenOrientation = 'SCREEN_SENSOR_LANDSCAPE';
+				break;
+			case 5:
+				godotScreenOrientation = 'SCREEN_SENSOR_PORTRAIT';
+				break;
+			case 6:
+				godotScreenOrientation = 'SCREEN_SENSOR';
+				break;
+			default:
+					// Do nothing.
+			}
+			GodotRuntime.print(`Browser orientation: ${GodotDisplay.browserScreenOrientation}, Godot orientation: ${godotScreenOrientation}`);
+		},
+		clear: function () {
+			screen.orientation.removeEventListener('change', GodotDisplay.onBrowserScreenOrientationChange);
 		},
 	},
 
@@ -757,36 +812,17 @@ const GodotDisplay = {
 		}
 	},
 
-	godot_js_display_screen_orientation_get__proxy: 'sync',
-	godot_js_display_screen_orientation_get__sig: 'i',
-	godot_js_display_screen_orientation_get: function () {
-		// enum ScreenOrientation {
-		//   SCREEN_LANDSCAPE,
-		//   SCREEN_PORTRAIT,
-		//   SCREEN_REVERSE_LANDSCAPE,
-		//   SCREEN_REVERSE_PORTRAIT,
-		//   SCREEN_SENSOR_LANDSCAPE,
-		//   SCREEN_SENSOR_PORTRAIT,
-		//   SCREEN_SENSOR,
-		// };
-
-		try {
-			switch (screen.orientation.type) {
-			case 'landscape-primary':
-				return 0; // SCREEN_LANDSCAPE
-			case 'portrait-primary':
-				return 1; // SCREEN_PORTRAIT
-			case 'landscape-secondary':
-				return 2; // SCREEN_REVERSE_LANDSCAPE
-			case 'portrait-secondary':
-				return 3; // SCREEN_REVERSE_PORTRAIT
-			default:
-				return 0;
-			}
-		} catch (_) {
-			// `screen.orientation.type` is not supported.
-			return 0;
+	godot_js_display_screen_orientation_set__proxy: 'sync',
+	godot_js_display_screen_orientation_set__sig: 'vii',
+	godot_js_display_screen_orientation_set: function (p_orientation, p_screen) {
+		if (p_screen > 0) {
+			GodotRuntime.error(`Setting screen orientation for screen ${p_screen}, but only screen 0 is supported on the Web platform.`);
+			return;
 		}
+
+		// `screen.orientation.lock()` and `screen.orientation.unlock()` are not yet widely supported (2024-11-16)
+		GodotDisplay.godotScreenOrientation = p_orientation;
+		GodotDisplay.updateScreen();
 	},
 
 	/*

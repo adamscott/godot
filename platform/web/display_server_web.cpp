@@ -36,6 +36,7 @@
 
 #include "core/config/project_settings.h"
 #include "core/object/callable_method_pointer.h"
+#include "servers/display_server.h"
 #include "servers/rendering/dummy/rasterizer_dummy.h"
 
 #ifdef GLES3_ENABLED
@@ -1128,6 +1129,7 @@ bool DisplayServerWeb::has_feature(Feature p_feature) const {
 		case FEATURE_CUSTOM_CURSOR_SHAPE:
 		case FEATURE_MOUSE:
 		case FEATURE_TOUCHSCREEN:
+		case FEATURE_ORIENTATION:
 			return true;
 		//case FEATURE_MOUSE_WARP:
 		//case FEATURE_NATIVE_DIALOG:
@@ -1137,7 +1139,6 @@ bool DisplayServerWeb::has_feature(Feature p_feature) const {
 		//case FEATURE_NATIVE_ICON:
 		//case FEATURE_WINDOW_TRANSPARENCY:
 		//case FEATURE_KEEP_SCREEN_ON:
-		//case FEATURE_ORIENTATION:
 		case FEATURE_IME:
 			// IME does not work with experimental VK support.
 			return godot_js_display_vk_available() == 0;
@@ -1194,8 +1195,15 @@ float DisplayServerWeb::screen_get_refresh_rate(int p_screen) const {
 	return SCREEN_REFRESH_RATE_FALLBACK; // Web doesn't have much of a need for the screen refresh rate, and there's no native way to do so.
 }
 
+void DisplayServerWeb::screen_set_orientation(DisplayServer::ScreenOrientation p_orientation, int p_screen) {
+	ERR_FAIL_COND_MSG(p_screen > 0, vformat(R"(Screen "%s" is not supported on the Web platform.)", p_screen));
+	orientation = p_orientation;
+	godot_js_display_screen_orientation_set(p_orientation, p_screen);
+}
+
 DisplayServer::ScreenOrientation DisplayServerWeb::screen_get_orientation(int p_screen) const {
-	return (DisplayServer::ScreenOrientation)godot_js_display_screen_orientation_get();
+	ERR_FAIL_COND_V_MSG(p_screen > 0, (DisplayServer::ScreenOrientation)0, vformat(R"(Screen "%s" is not supported on the Web platform.)", p_screen));
+	return orientation;
 }
 
 Vector<DisplayServer::WindowID> DisplayServerWeb::get_window_list() const {

@@ -106,6 +106,8 @@ private:
 	bool tts = false;
 	NativeMenu *native_menu = nullptr;
 
+	DisplayServer::ScreenOrientation orientation;
+
 	// utilities
 	static void dom2godot_mod(Ref<InputEventWithModifiers> ev, int p_mod, Key p_keycode);
 	static const char *godot2dom_cursor(DisplayServer::CursorShape p_shape);
@@ -210,8 +212,8 @@ public:
 	virtual float screen_get_scale(int p_screen = SCREEN_OF_MAIN_WINDOW) const override;
 	virtual float screen_get_refresh_rate(int p_screen = SCREEN_OF_MAIN_WINDOW) const override;
 	virtual void screen_set_keep_on(bool p_enable) override {}
-	virtual void screen_set_orientation(DisplayServer::ScreenOrientation p_orientation, int p_screen) override {}
-	virtual DisplayServer::ScreenOrientation screen_get_orientation(int p_screen) const override;
+	virtual void screen_set_orientation(DisplayServer::ScreenOrientation p_orientation, int p_screen = 0) override;
+	virtual DisplayServer::ScreenOrientation screen_get_orientation(int p_screen = 0) const override;
 
 	virtual void virtual_keyboard_show(const String &p_existing_text, const Rect2 &p_screen_rect = Rect2(), VirtualKeyboardType p_type = KEYBOARD_TYPE_DEFAULT, int p_max_input_length = -1, int p_cursor_start = -1, int p_cursor_end = -1) override;
 	virtual void virtual_keyboard_hide() override;
