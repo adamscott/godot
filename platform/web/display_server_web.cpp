@@ -1194,6 +1194,10 @@ float DisplayServerWeb::screen_get_refresh_rate(int p_screen) const {
 	return SCREEN_REFRESH_RATE_FALLBACK; // Web doesn't have much of a need for the screen refresh rate, and there's no native way to do so.
 }
 
+DisplayServer::ScreenOrientation DisplayServerWeb::screen_get_orientation(int p_screen) const {
+	return (DisplayServer::ScreenOrientation)godot_js_display_screen_orientation_get();
+}
+
 Vector<DisplayServer::WindowID> DisplayServerWeb::get_window_list() const {
 	Vector<WindowID> ret;
 	ret.push_back(MAIN_WINDOW_ID);

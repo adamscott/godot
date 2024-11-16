@@ -757,6 +757,38 @@ const GodotDisplay = {
 		}
 	},
 
+	godot_js_display_screen_orientation_get__proxy: 'sync',
+	godot_js_display_screen_orientation_get__sig: 'i',
+	godot_js_display_screen_orientation_get: function () {
+		// enum ScreenOrientation {
+		//   SCREEN_LANDSCAPE,
+		//   SCREEN_PORTRAIT,
+		//   SCREEN_REVERSE_LANDSCAPE,
+		//   SCREEN_REVERSE_PORTRAIT,
+		//   SCREEN_SENSOR_LANDSCAPE,
+		//   SCREEN_SENSOR_PORTRAIT,
+		//   SCREEN_SENSOR,
+		// };
+
+		try {
+			switch (screen.orientation.type) {
+			case 'landscape-primary':
+				return 0; // SCREEN_LANDSCAPE
+			case 'portrait-primary':
+				return 1; // SCREEN_PORTRAIT
+			case 'landscape-secondary':
+				return 2; // SCREEN_REVERSE_LANDSCAPE
+			case 'portrait-secondary':
+				return 3; // SCREEN_REVERSE_PORTRAIT
+			default:
+				return 0;
+			}
+		} catch (_) {
+			// `screen.orientation.type` is not supported.
+			return 0;
+		}
+	},
+
 	/*
 	 * Virtual Keyboard
 	 */
