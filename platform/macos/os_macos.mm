@@ -276,7 +276,7 @@ String OS_MacOS::get_cache_path() const {
 	return get_config_path();
 }
 
-String OS_MacOS::get_tmp_path() const {
+String OS_MacOS::get_temp_path() const {
 	static String ret;
 	if (ret.is_empty()) {
 		NSURL *url = [NSURL fileURLWithPath:NSTemporaryDirectory()

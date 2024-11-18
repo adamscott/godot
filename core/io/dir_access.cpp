@@ -323,7 +323,7 @@ Ref<DirAccess> DirAccess::create(AccessType p_access) {
 	return da;
 }
 
-Ref<DirAccess> DirAccess::create_tmp(const String &p_prefix, bool p_keep, Error *r_error) {
+Ref<DirAccess> DirAccess::create_temp(const String &p_prefix, bool p_keep, Error *r_error) {
 	const String ERROR_COMMON_PREFIX = "Error while creating temporary directory";
 
 	if (!p_prefix.is_valid_filename()) {
@@ -331,7 +331,7 @@ Ref<DirAccess> DirAccess::create_tmp(const String &p_prefix, bool p_keep, Error 
 		ERR_FAIL_V_MSG(Ref<FileAccess>(), vformat(R"(%s: "%s" is not a valid prefix.)", ERROR_COMMON_PREFIX, p_prefix));
 	}
 
-	Ref<DirAccess> dir_access = DirAccess::open(OS::get_singleton()->get_tmp_path());
+	Ref<DirAccess> dir_access = DirAccess::open(OS::get_singleton()->get_temp_path());
 
 	uint32_t suffix_i = 0;
 	String path;
@@ -361,30 +361,30 @@ Ref<DirAccess> DirAccess::create_tmp(const String &p_prefix, bool p_keep, Error 
 		return Ref<DirAccess>();
 	}
 
-	dir_access->_is_tmp = true;
-	dir_access->_tmp_keep_after_free = p_keep;
-	dir_access->_tmp_path = dir_access->get_current_dir();
+	dir_access->_is_temp = true;
+	dir_access->_temp_keep_after_free = p_keep;
+	dir_access->_temp_path = dir_access->get_current_dir();
 
 	*r_error = OK;
 	return dir_access;
 }
 
-Ref<DirAccess> DirAccess::_create_tmp(const String &p_prefix, bool p_keep) {
-	return create_tmp(p_prefix, p_keep, &last_dir_open_error);
+Ref<DirAccess> DirAccess::_create_temp(const String &p_prefix, bool p_keep) {
+	return create_temp(p_prefix, p_keep, &last_dir_open_error);
 }
 
-void DirAccess::_delete_tmp() {
-	if (!_is_tmp || _tmp_keep_after_free) {
+void DirAccess::_delete_temp() {
+	if (!_is_temp || _temp_keep_after_free) {
 		return;
 	}
 
-	if (!DirAccess::exists(_tmp_path)) {
+	if (!DirAccess::exists(_temp_path)) {
 		return;
 	}
 
 	Error err;
 	{
-		Ref<DirAccess> dir_access = DirAccess::open(_tmp_path, &err);
+		Ref<DirAccess> dir_access = DirAccess::open(_temp_path, &err);
 		if (err != OK) {
 			return;
 		}
@@ -394,7 +394,7 @@ void DirAccess::_delete_tmp() {
 		}
 	}
 
-	DirAccess::remove_absolute(_tmp_path);
+	DirAccess::remove_absolute(_temp_path);
 }
 
 Error DirAccess::get_open_error() {
@@ -629,7 +629,7 @@ bool DirAccess::is_case_sensitive(const String &p_path) const {
 void DirAccess::_bind_methods() {
 	ClassDB::bind_static_method("DirAccess", D_METHOD("open", "path"), &DirAccess::_open);
 	ClassDB::bind_static_method("DirAccess", D_METHOD("get_open_error"), &DirAccess::get_open_error);
-	ClassDB::bind_static_method("DirAccess", D_METHOD("create_tmp", "prefix", "keep"), &DirAccess::_create_tmp, DEFVAL(""), DEFVAL(false));
+	ClassDB::bind_static_method("DirAccess", D_METHOD("create_temp", "prefix", "keep"), &DirAccess::_create_temp, DEFVAL(""), DEFVAL(false));
 
 	ClassDB::bind_method(D_METHOD("list_dir_begin"), &DirAccess::list_dir_begin, DEFVAL(false), DEFVAL(false));
 	ClassDB::bind_method(D_METHOD("get_next"), &DirAccess::_get_next);
@@ -675,5 +675,5 @@ void DirAccess::_bind_methods() {
 }
 
 DirAccess::~DirAccess() {
-	_delete_tmp();
+	_delete_temp();
 }

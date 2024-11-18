@@ -677,15 +677,15 @@ String OS_Android::get_cache_path() const {
 	return ".";
 }
 
-String OS_Android::get_tmp_path() const {
-	if (!tmp_dir_cache.is_empty()) {
-		return tmp_dir_cache;
+String OS_Android::get_temp_path() const {
+	if (!temp_dir_cache.is_empty()) {
+		return temp_dir_cache;
 	}
 
-	String tmp_dir = godot_io_java->get_tmp_dir();
-	if (!tmp_dir.is_empty()) {
-		tmp_dir_cache = _remove_symlink(tmp_dir);
-		return tmp_dir_cache;
+	String temp_dir = godot_io_java->get_temp_dir();
+	if (!temp_dir.is_empty()) {
+		temp_dir_cache = _remove_symlink(temp_dir);
+		return temp_dir_cache;
 	}
 	return ".";
 }

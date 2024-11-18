@@ -537,17 +537,17 @@
 				[b]Note:[/b] This method is implemented on Android, iOS, Linux, macOS and Windows.
 			</description>
 		</method>
+		<method name="get_temp_dir" qualifiers="const">
+			<return type="String" />
+			<description>
+				Returns the [i]global[/i] temporary data directory according to the operating system's standards.
+			</description>
+		</method>
 		<method name="get_thread_caller_id" qualifiers="const">
 			<return type="int" />
 			<description>
 				Returns the ID of the current thread. This can be used in logs to ease debugging of multi-threaded applications.
 				[b]Note:[/b] Thread IDs are not deterministic and may be reused across application restarts.
-			</description>
-		</method>
-		<method name="get_tmp_dir" qualifiers="const">
-			<return type="String" />
-			<description>
-				Returns the [i]global[/i] temporary data directory according to the operating system's standards.
 			</description>
 		</method>
 		<method name="get_unique_id" qualifiers="const">

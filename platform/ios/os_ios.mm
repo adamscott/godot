@@ -336,7 +336,7 @@ String OS_IOS::get_cache_path() const {
 	return ret;
 }
 
-String OS_IOS::get_tmp_path() const {
+String OS_IOS::get_temp_path() const {
 	static String ret;
 	if (ret.is_empty()) {
 		NSURL *url = [NSURL fileURLWithPath:NSTemporaryDirectory()

@@ -105,7 +105,7 @@
 				[b]Note:[/b] This method is implemented on macOS, Linux, and Windows.
 			</description>
 		</method>
-		<method name="create_tmp" qualifiers="static">
+		<method name="create_temp" qualifiers="static">
 			<return type="DirAccess" />
 			<param index="0" name="prefix" type="String" default="&quot;&quot;" />
 			<param index="1" name="keep" type="bool" default="false" />

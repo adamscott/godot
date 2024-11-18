@@ -276,7 +276,7 @@ String OS::get_cache_path() const {
 	return ".";
 }
 
-String OS::get_tmp_path() const {
+String OS::get_temp_path() const {
 	return ".";
 }
 

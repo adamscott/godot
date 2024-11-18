@@ -2069,34 +2069,34 @@ String OS_Windows::get_cache_path() const {
 			cache_path_cache = get_environment("LOCALAPPDATA").replace("\\", "/");
 		}
 		if (cache_path_cache.is_empty()) {
-			cache_path_cache = get_tmp_path();
+			cache_path_cache = get_temp_path();
 		}
 	}
 	return cache_path_cache;
 }
 
-String OS_Windows::get_tmp_path() const {
-	static String tmp_path_cache;
-	if (tmp_path_cache.is_empty()) {
+String OS_Windows::get_temp_path() const {
+	static String temp_path_cache;
+	if (temp_path_cache.is_empty()) {
 		{
-			Vector<WCHAR> tmp_path;
+			Vector<WCHAR> temp_path;
 			// The maximum possible size is MAX_PATH+1 (261) + terminating null character.
-			tmp_path.resize(MAX_PATH + 2);
-			DWORD tmp_path_length = GetTempPathW(tmp_path.size(), tmp_path.ptrw());
-			if (tmp_path_length > 0 && tmp_path_length < tmp_path.size()) {
-				tmp_path_cache = String::utf16((const char16_t *)tmp_path.ptr());
+			temp_path.resize(MAX_PATH + 2);
+			DWORD temp_path_length = GetTempPathW(temp_path.size(), temp_path.ptrw());
+			if (temp_path_length > 0 && temp_path_length < temp_path.size()) {
+				temp_path_cache = String::utf16((const char16_t *)temp_path.ptr());
 				// Let's try to get the long path instead of the short path (with tildes ~).
-				DWORD tmp_path_long_length = GetLongPathNameW(tmp_path.ptr(), tmp_path.ptrw(), tmp_path.size());
-				if (tmp_path_long_length > 0 && tmp_path_long_length < tmp_path.size()) {
-					tmp_path_cache = String::utf16((const char16_t *)tmp_path.ptr());
+				DWORD temp_path_long_length = GetLongPathNameW(temp_path.ptr(), temp_path.ptrw(), temp_path.size());
+				if (temp_path_long_length > 0 && temp_path_long_length < temp_path.size()) {
+					temp_path_cache = String::utf16((const char16_t *)temp_path.ptr());
 				}
 			}
 		}
-		if (tmp_path_cache.is_empty()) {
-			tmp_path_cache = get_config_path();
+		if (temp_path_cache.is_empty()) {
+			temp_path_cache = get_config_path();
 		}
 	}
-	return tmp_path_cache;
+	return temp_path_cache;
 }
 
 // Get properly capitalized engine name for system paths
