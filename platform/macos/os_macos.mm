@@ -283,9 +283,7 @@ String OS_MacOS::get_temp_path() const {
 								isDirectory:YES];
 		if (url) {
 			ret = String::utf8([url.path UTF8String]);
-			if (ret.begins_with("file://")) {
-				ret = ret.replace_first("file://", "");
-			}
+			ret = ret.trim_prefix("file://");
 		}
 	}
 	return ret;

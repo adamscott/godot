@@ -57,10 +57,11 @@
 			<param index="2" name="extension" type="String" default="&quot;&quot;" />
 			<param index="3" name="keep" type="bool" default="false" />
 			<description>
-				Creates a temporary file.
-				If [param prefix] is not empty, the file name will be preceded by the [String] you passed, separated by a [code]-[/code].
+				Creates a temporary file. This file will be freed when the returned [FileAccess] is freed.
+				If [param prefix] is not empty, it will be prefixed to the file name, separated by a [code]-[/code].
 				If [param extension] is not empty, it will be appended to the temporary file name.
-				If [param keep] is [code]true[/code], the file will outlive the [FileAccess] instance.
+				If [param keep] is [code]true[/code], the file is not deleted when the returned [FileAccess] is freed.
+				Returns [code]null[/code] if opening the file failed. You can use [method get_open_error] to check the error that occurred.
 			</description>
 		</method>
 		<method name="eof_reached" qualifiers="const">
