@@ -4,9 +4,9 @@ import importlib
 import sys
 
 from misc.customize.install_dependencies import (
-    are_dependencies_installed,
     install_dependencies,
     query_dependencies_install,
+    query_non_installed_dependencies,
 )
 
 
@@ -14,14 +14,12 @@ def main() -> None:
     parser = parse_args()
 
     if parser.interactive:
-        if not are_dependencies_installed():
-            print("Python package `prompt_toolkit` not detected.")
-            if query_dependencies_install():
-                install_dependencies()
+        non_installed_dependencies = query_non_installed_dependencies()
+        if len(non_installed_dependencies) > 0:
+            if query_dependencies_install(non_installed_dependencies):
+                install_dependencies(non_installed_dependencies)
             else:
-                print(
-                    "`prompt_toolkit` is needed to use customize.py. (you can install it manually using `pip install unicurses`)"
-                )
+                exit(0)
 
         gui = importlib.import_module("misc.customize.gui")
         gui.start()
