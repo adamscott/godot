@@ -1,0 +1,31 @@
+Screen {
+	layout: horizontal;
+}
+
+#main {}
+
+Main {
+	height: 100%;
+	background: $background;
+}
+
+#sidebar {
+	dock: left;
+}
+
+Sidebar {
+	padding: 1;
+	width: 30;
+	height: 100%;
+	background: $primary;
+}
+
+Sidebar .sidebar_button {
+	width: 100%;
+}
+
+#editor {}
+
+Editor {
+	width: auto;
+}

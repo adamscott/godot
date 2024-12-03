@@ -3,6 +3,8 @@ import subprocess
 import sys
 from typing import List
 
+dependencies = [("SCons", "scons"), ("textual", "textual")]
+
 
 def query_non_installed_dependencies() -> List[str]:
     missing_dependencies = []
@@ -13,8 +15,8 @@ def query_non_installed_dependencies() -> List[str]:
             return [dep]
         return []
 
-    missing_dependencies += check_dep("SCons", "scons")
-    missing_dependencies += check_dep("prompt_toolkit", "prompt_toolkit")
+    for dependency in dependencies:
+        missing_dependencies += check_dep(*dependency)
 
     return missing_dependencies
 
