@@ -63,6 +63,7 @@ def get_opts():
             "asyncify",
             ("asyncify", "jspi"),
         ),
+        ("dawn_libs", "Path to the Dawn static libraries", ""),
     ]
 
 
