@@ -924,6 +924,9 @@ Vector<String> DisplayServerWeb::get_rendering_drivers_func() {
 #ifdef GLES3_ENABLED
 	drivers.push_back("opengl3");
 #endif
+#ifdef WEBGPU_ENABLED
+	drivers.push_back("webgpu");
+#endif
 	return drivers;
 }
 
@@ -1035,6 +1038,8 @@ DisplayServer *DisplayServerWeb::create_func(const String &p_rendering_driver, W
 DisplayServerWeb::DisplayServerWeb(const String &p_rendering_driver, WindowMode p_window_mode, VSyncMode p_vsync_mode, uint32_t p_flags, const Point2i *p_position, const Size2i &p_resolution, int p_screen, Context p_context, Error &r_error) {
 	r_error = OK; // Always succeeds for now.
 
+	rendering_driver = p_rendering_driver;
+
 	tts = GLOBAL_GET("audio/general/text_to_speech");
 	native_menu = memnew(NativeMenu); // Dummy native menu.
 
@@ -1050,7 +1055,7 @@ DisplayServerWeb::DisplayServerWeb(const String &p_rendering_driver, WindowMode 
 	// Expose method for requesting quit.
 	godot_js_os_request_quit_cb(request_quit_callback);
 
-#ifdef GLES3_ENABLED
+#if defined(GLES3_ENABLED) || defined(WEBGPU_ENABLED)
 	bool webgl2_inited = false;
 	if (godot_js_display_has_webgl(2)) {
 		EmscriptenWebGLContextAttributes attributes;
@@ -1067,7 +1072,17 @@ DisplayServerWeb::DisplayServerWeb(const String &p_rendering_driver, WindowMode 
 		if (!emscripten_webgl_enable_extension(webgl_ctx, "OVR_multiview2")) {
 			print_verbose("Failed to enable WebXR extension.");
 		}
-		RasterizerGLES3::make_current(false);
+
+#ifdef GLES3_ENABLED
+		if (rendering_driver == "opengl3") {
+			RasterizerGLES3::make_current(false);
+		}
+#endif
+#ifdef WEBGPU_ENABLED
+		if (rendering_driver == "webgpu") {
+			rendering_context = memnew(RenderingContextDriverWebGPU);
+		}
+#endif // WEBGPU_ENABLED
 
 	} else {
 		OS::get_singleton()->alert(
