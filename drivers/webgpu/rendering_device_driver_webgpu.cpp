@@ -29,3 +29,12 @@
 /**************************************************************************/
 
 #include "rendering_device_driver_webgpu.h"
+
+RenderingDeviceDriverWebGPU::RenderingDeviceDriverWebGPU(RenderingContextDriverWebGPU *p_context_driver) {
+	DEV_ASSERT(p_context_driver != nullptr);
+
+	this->context_driver = p_context_driver;
+}
+
+RenderingDeviceDriverWebGPU::~RenderingDeviceDriverWebGPU() {
+}

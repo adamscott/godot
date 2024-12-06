@@ -31,9 +31,22 @@
 #ifndef RENDERING_DEVICE_DRIVER_WEBGPU_H
 #define RENDERING_DEVICE_DRIVER_WEBGPU_H
 
+#include "drivers/webgpu/rendering_context_driver_webgpu.h"
 #include "servers/rendering/rendering_device_driver.h"
 
 class RenderingDeviceDriverWebGPU : public RenderingDeviceDriver {
+	/*****************/
+	/**** GENERIC ****/
+	/*****************/
+
+	RenderingContextDriverWebGPU *context_driver = nullptr;
+	RenderingContextDriver::Device context_device;
+
+	/******************/
+
+public:
+	RenderingDeviceDriverWebGPU(RenderingContextDriverWebGPU *p_context_driver);
+	virtual ~RenderingDeviceDriverWebGPU();
 };
 
 #endif // RENDERING_DEVICE_DRIVER_WEBGPU_H
