@@ -1,0 +1,27 @@
+#!/usr/bin/env python
+from misc.utility.scons_hints import *
+
+Import("env")
+
+env_webgpu_rdd = env.Clone()
+
+thirdparty_obj = []
+
+env.Prepend(CPPPATH=["#thirdparty/dawn_headers/include"])
+env_webgpu_rdd.Prepend(CPPPATH=["#thirdparty/dawn_headers/include"])
+
+if env["dawn_libs"] != "":
+    env_webgpu_rdd.Append(CPPDEFINES=["DAWN_ENABLED"])
+
+# Add all.
+
+env.drivers_sources += thirdparty_obj
+
+# Godot source files.
+
+driver_obj = []
+env_d3d12_rdd.add_source_files(driver_obj, "*.cpp")
+env.drivers_sources += driver_obj
+
+# Needed to force rebuilding the driver files when the thirdparty code is updated.
+env.Depends(driver_obj, thirdparty_obj)

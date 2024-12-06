@@ -310,3 +310,10 @@ def configure(env: "SConsEnvironment"):
     else:
         env.Append(CCFLAGS=["-sSUPPORT_LONGJMP='wasm'"])
         env.Append(LINKFLAGS=["-sSUPPORT_LONGJMP='wasm'"])
+
+    # WebGPU
+    if env["webgpu"]:
+        env.AppendUnique(CPPDEFINES=["WEBGPU_ENABLED", "RD_ENABLED"])
+
+        if env["dawn_libs"] != "":
+            env.Append(LIBPATH=[env["dawn_libs"]])
