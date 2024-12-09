@@ -39,6 +39,7 @@
 #include "editor/plugins/script_editor_plugin.h"
 #include "editor/themes/editor_scale.h"
 #include "editor/themes/editor_theme_manager.h"
+#include "scene/gui/code_edit.h"
 #include "scene/gui/line_edit.h"
 #include "scene/gui/menu_button.h"
 #include "scene/gui/separator.h"
@@ -1093,6 +1094,11 @@ Ref<Texture2D> CodeTextEditor::_get_completion_icon(const ScriptLanguage::CodeCo
 	return tex;
 }
 
+void CodeTextEditor::_refactor_request(int p_refactor_type) {
+	CodeEdit::RefactorType refactor_type = (CodeEdit::RefactorType)p_refactor_type;
+	print_line(vformat("CodeTextEditor::_refactor_request(%s)", refactor_type));
+}
+
 void CodeTextEditor::update_editor_settings() {
 	// Theme: Highlighting
 	completion_font_color = EDITOR_GET("text_editor/theme/highlighting/completion_font_color");
@@ -1949,6 +1955,9 @@ CodeTextEditor::CodeTextEditor() {
 	text_editor->connect("caret_changed", callable_mp(this, &CodeTextEditor::_line_col_changed));
 	text_editor->connect(SceneStringName(text_changed), callable_mp(this, &CodeTextEditor::_text_changed));
 	text_editor->connect("code_completion_requested", callable_mp(this, &CodeTextEditor::_complete_request));
+
+	text_editor->connect("refactor_requested", callable_mp(this, &CodeTextEditor::_refactor_request));
+
 	TypedArray<String> cs;
 	cs.push_back(".");
 	cs.push_back(",");

@@ -43,7 +43,9 @@
 #include "editor/gui/editor_toaster.h"
 #include "editor/plugins/editor_context_menu_plugin.h"
 #include "editor/themes/editor_scale.h"
+#include "scene/gui/code_edit.h"
 #include "scene/gui/menu_button.h"
+#include "scene/gui/popup_menu.h"
 #include "scene/gui/rich_text_label.h"
 #include "scene/gui/split_container.h"
 
@@ -1518,6 +1520,9 @@ void ScriptTextEditor::_edit_option(int p_op) {
 		case EDIT_COMPLETE: {
 			tx->request_code_completion(true);
 		} break;
+		case EDIT_REFACTOR_RENAME: {
+			tx->request_refactor(CodeEdit::REFACTOR_TYPE_RENAME);
+		} break;
 		case EDIT_AUTO_INDENT: {
 			String text = tx->get_text();
 			Ref<Script> scr = script;
@@ -2452,6 +2457,13 @@ void ScriptTextEditor::_enable_code_editor() {
 	}
 	edit_menu->get_popup()->add_separator();
 	edit_menu->get_popup()->add_shortcut(ED_GET_SHORTCUT("ui_text_completion_query"), EDIT_COMPLETE);
+	{
+		PopupMenu *sub_menu = memnew(PopupMenu);
+		sub_menu->add_shortcut(ED_GET_SHORTCUT("script_text_editor/refactor_rename"), EDIT_REFACTOR_RENAME);
+		sub_menu->connect(SceneStringName(id_pressed), callable_mp(this, &ScriptTextEditor::_edit_option));
+		edit_menu->get_popup()->add_submenu_node_item(TTR("Refactor"), sub_menu);
+	}
+	edit_menu->get_popup()->add_separator();
 	edit_menu->get_popup()->add_shortcut(ED_GET_SHORTCUT("script_text_editor/trim_trailing_whitespace"), EDIT_TRIM_TRAILING_WHITESAPCE);
 	edit_menu->get_popup()->add_shortcut(ED_GET_SHORTCUT("script_text_editor/trim_final_newlines"), EDIT_TRIM_FINAL_NEWLINES);
 	{
@@ -2462,8 +2474,6 @@ void ScriptTextEditor::_enable_code_editor() {
 		sub_menu->connect(SceneStringName(id_pressed), callable_mp(this, &ScriptTextEditor::_edit_option));
 		edit_menu->get_popup()->add_submenu_node_item(TTR("Indentation"), sub_menu);
 	}
-	edit_menu->get_popup()->connect(SceneStringName(id_pressed), callable_mp(this, &ScriptTextEditor::_edit_option));
-	edit_menu->get_popup()->add_separator();
 	{
 		PopupMenu *sub_menu = memnew(PopupMenu);
 		sub_menu->add_shortcut(ED_GET_SHORTCUT("script_text_editor/convert_to_uppercase"), EDIT_TO_UPPERCASE);
@@ -2472,7 +2482,10 @@ void ScriptTextEditor::_enable_code_editor() {
 		sub_menu->connect(SceneStringName(id_pressed), callable_mp(this, &ScriptTextEditor::_edit_option));
 		edit_menu->get_popup()->add_submenu_node_item(TTR("Convert Case"), sub_menu);
 	}
+	edit_menu->get_popup()->add_separator();
 	edit_menu->get_popup()->add_submenu_node_item(TTR("Syntax Highlighter"), highlighter_menu);
+
+	edit_menu->get_popup()->connect(SceneStringName(id_pressed), callable_mp(this, &ScriptTextEditor::_edit_option));
 	highlighter_menu->connect(SceneStringName(id_pressed), callable_mp(this, &ScriptTextEditor::_change_syntax_highlighter));
 
 	edit_hb->add_child(search_menu);
@@ -2647,6 +2660,7 @@ void ScriptTextEditor::register_editor() {
 	ED_SHORTCUT("script_text_editor/convert_indent_to_spaces", TTRC("Convert Indent to Spaces"), KeyModifierMask::CMD_OR_CTRL | KeyModifierMask::SHIFT | Key::Y);
 	ED_SHORTCUT("script_text_editor/convert_indent_to_tabs", TTRC("Convert Indent to Tabs"), KeyModifierMask::CMD_OR_CTRL | KeyModifierMask::SHIFT | Key::I);
 	ED_SHORTCUT("script_text_editor/auto_indent", TTRC("Auto Indent"), KeyModifierMask::CMD_OR_CTRL | Key::I);
+	ED_SHORTCUT("script_text_editor/refactor_rename", TTR("Rename"), Key::F2);
 
 	ED_SHORTCUT_AND_COMMAND("script_text_editor/find", TTRC("Find..."), KeyModifierMask::CMD_OR_CTRL | Key::F);
 

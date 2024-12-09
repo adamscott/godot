@@ -61,6 +61,10 @@ public:
 		LOCATION_OTHER = 1 << 10,
 	};
 
+	enum RefactorType {
+		REFACTOR_TYPE_RENAME,
+	};
+
 private:
 	/* Indent management */
 	int indent_size = 4;
@@ -335,6 +339,8 @@ protected:
 	GDVIRTUAL1(_request_code_completion, bool)
 	GDVIRTUAL1RC(TypedArray<Dictionary>, _filter_code_completion_candidates, TypedArray<Dictionary>)
 
+	GDVIRTUAL1(_request_refactor, int)
+
 public:
 	/* General overrides */
 	virtual void gui_input(const Ref<InputEvent> &p_gui_input) override;
@@ -479,6 +485,7 @@ public:
 	String get_text_for_code_completion() const;
 
 	void request_code_completion(bool p_force = false);
+	void request_refactor(RefactorType p_refactor_type);
 
 	void add_code_completion_option(CodeCompletionKind p_type, const String &p_display_text, const String &p_insert_text, const Color &p_text_color = Color(1, 1, 1), const Ref<Resource> &p_icon = Ref<Resource>(), const Variant &p_value = Variant(), int p_location = LOCATION_OTHER);
 	void update_code_completion_options(bool p_forced = false);

@@ -2365,6 +2365,15 @@ void CodeEdit::cancel_code_completion() {
 	queue_redraw();
 }
 
+/* Refactor */
+void CodeEdit::request_refactor(CodeEdit::RefactorType p_refactor_type) {
+	if (GDVIRTUAL_CALL(_request_refactor, p_refactor_type)) {
+		return;
+	}
+
+	emit_signal(SNAME("refactor_requested"), (int)p_refactor_type);
+}
+
 /* Line length guidelines */
 void CodeEdit::set_line_length_guidelines(TypedArray<int> p_guideline_columns) {
 	line_length_guideline_columns = p_guideline_columns;
@@ -2866,6 +2875,9 @@ void CodeEdit::_bind_methods() {
 
 	/* Code Completion */
 	ADD_SIGNAL(MethodInfo("code_completion_requested"));
+
+	/* Refactor */
+	ADD_SIGNAL(MethodInfo("refactor_requested"));
 
 	/* Symbol lookup */
 	ADD_SIGNAL(MethodInfo("symbol_lookup", PropertyInfo(Variant::STRING, "symbol"), PropertyInfo(Variant::INT, "line"), PropertyInfo(Variant::INT, "column")));
