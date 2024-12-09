@@ -296,6 +296,17 @@ def configure(env: "SConsEnvironment"):
     # We also only use WebGL2, and changing context version is not widely supported anyway.
     env.Append(LINKFLAGS=["-sGL_WORKAROUND_SAFARI_GETCONTEXT_BUG=0"])
 
+    # WebGPU
+    if env["webgpu"]:
+        env.AppendUnique(CPPDEFINES=["WEBGPU_ENABLED", "RD_ENABLED"])
+
+        if env["dawn_libs"] != "":
+            env.Append(LIBPATH=[env["dawn_libs"]])
+
+        if not env["async"]:
+            print_warning('"webgpu=yes" support requires "async=yes", enabling async.')
+            env["async"] = True
+
     # Async support.
     if env["async"]:
         env.Append(CPPDEFINES=["ASYNC_ENABLED"])
@@ -310,10 +321,3 @@ def configure(env: "SConsEnvironment"):
     else:
         env.Append(CCFLAGS=["-sSUPPORT_LONGJMP='wasm'"])
         env.Append(LINKFLAGS=["-sSUPPORT_LONGJMP='wasm'"])
-
-    # WebGPU
-    if env["webgpu"]:
-        env.AppendUnique(CPPDEFINES=["WEBGPU_ENABLED", "RD_ENABLED"])
-
-        if env["dawn_libs"] != "":
-            env.Append(LIBPATH=[env["dawn_libs"]])
