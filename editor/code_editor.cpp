@@ -1096,7 +1096,14 @@ Ref<Texture2D> CodeTextEditor::_get_completion_icon(const ScriptLanguage::CodeCo
 
 void CodeTextEditor::_refactor_request(int p_refactor_type) {
 	CodeEdit::RefactorType refactor_type = (CodeEdit::RefactorType)p_refactor_type;
-	print_line(vformat("CodeTextEditor::_refactor_request(%s)", refactor_type));
+	switch (refactor_type) {
+		case CodeEdit::RefactorType::REFACTOR_TYPE_RENAME: {
+			_refactor_rename();
+		} break;
+	}
+}
+
+void CodeTextEditor::_refactor_rename() {
 }
 
 void CodeTextEditor::update_editor_settings() {

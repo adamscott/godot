@@ -196,7 +196,9 @@ class CodeTextEditor : public VBoxContainer {
 	void _update_font_ligatures();
 	void _complete_request();
 	Ref<Texture2D> _get_completion_icon(const ScriptLanguage::CodeCompletionOption &p_option);
+
 	void _refactor_request(int p_refactor_type);
+	void _refactor_rename();
 
 	virtual void input(const Ref<InputEvent> &event) override;
 	void _text_editor_gui_input(const Ref<InputEvent> &p_event);
