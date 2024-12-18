@@ -1104,6 +1104,8 @@ void CodeTextEditor::_refactor_request(int p_refactor_type) {
 }
 
 void CodeTextEditor::_refactor_rename() {
+	Vector2 pos = Vector2(text_editor->get_caret_column(), text_editor->get_caret_line());
+	print_line(vformat("word at pos: %s, pos: %s", text_editor->get_word_under_caret(), pos));
 }
 
 void CodeTextEditor::update_editor_settings() {

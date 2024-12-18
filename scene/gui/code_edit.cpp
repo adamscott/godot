@@ -32,6 +32,7 @@
 #include "code_edit.compat.inc"
 
 #include "core/config/project_settings.h"
+#include "core/object/object.h"
 #include "core/os/keyboard.h"
 #include "core/string/string_builder.h"
 #include "core/string/ustring.h"
@@ -2877,7 +2878,7 @@ void CodeEdit::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("code_completion_requested"));
 
 	/* Refactor */
-	ADD_SIGNAL(MethodInfo("refactor_requested"));
+	ADD_SIGNAL(MethodInfo("refactor_requested", PropertyInfo(Variant::INT, "type")));
 
 	/* Symbol lookup */
 	ADD_SIGNAL(MethodInfo("symbol_lookup", PropertyInfo(Variant::STRING, "symbol"), PropertyInfo(Variant::INT, "line"), PropertyInfo(Variant::INT, "column")));
