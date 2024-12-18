@@ -1537,7 +1537,7 @@ void ScriptTextEditor::_edit_option(int p_op) {
 		case EDIT_COMPLETE: {
 			tx->request_code_completion(true);
 		} break;
-		case EDIT_REFACTOR_RENAME: {
+		case EDIT_REFACTOR_RENAME_SYMBOL: {
 			tx->request_refactor(CodeEdit::RefactorKind::REFACTOR_KIND_RENAME);
 		} break;
 		case EDIT_AUTO_INDENT: {
@@ -2476,7 +2476,7 @@ void ScriptTextEditor::_enable_code_editor() {
 	edit_menu->get_popup()->add_shortcut(ED_GET_SHORTCUT("ui_text_completion_query"), EDIT_COMPLETE);
 	{
 		PopupMenu *sub_menu = memnew(PopupMenu);
-		sub_menu->add_shortcut(ED_GET_SHORTCUT("script_text_editor/refactor_rename"), EDIT_REFACTOR_RENAME);
+		sub_menu->add_shortcut(ED_GET_SHORTCUT("script_text_editor/refactor_rename_symbol"), EDIT_REFACTOR_RENAME_SYMBOL);
 		sub_menu->connect(SceneStringName(id_pressed), callable_mp(this, &ScriptTextEditor::_edit_option));
 		edit_menu->get_popup()->add_submenu_node_item(TTR("Refactor"), sub_menu);
 	}
@@ -2678,7 +2678,7 @@ void ScriptTextEditor::register_editor() {
 	ED_SHORTCUT("script_text_editor/convert_indent_to_spaces", TTRC("Convert Indent to Spaces"), KeyModifierMask::CMD_OR_CTRL | KeyModifierMask::SHIFT | Key::Y);
 	ED_SHORTCUT("script_text_editor/convert_indent_to_tabs", TTRC("Convert Indent to Tabs"), KeyModifierMask::CMD_OR_CTRL | KeyModifierMask::SHIFT | Key::I);
 	ED_SHORTCUT("script_text_editor/auto_indent", TTRC("Auto Indent"), KeyModifierMask::CMD_OR_CTRL | Key::I);
-	ED_SHORTCUT("script_text_editor/refactor_rename", TTR("Rename"), Key::F2);
+	ED_SHORTCUT("script_text_editor/refactor_rename_symbol", TTR("Rename Symbol"), Key::F2);
 
 	ED_SHORTCUT_AND_COMMAND("script_text_editor/find", TTRC("Find..."), KeyModifierMask::CMD_OR_CTRL | Key::F);
 
