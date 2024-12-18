@@ -133,7 +133,7 @@ bool GDScriptLanguage::validate(const String &p_script, const String &p_path, Li
 	GDScriptParser parser;
 	GDScriptAnalyzer analyzer(&parser);
 
-	Error err = parser.parse(p_script, p_path, false);
+	Error err = parser.parse(p_script, p_path);
 	if (err == OK) {
 		err = analyzer.analyze();
 	}
@@ -3207,7 +3207,7 @@ static void _find_call_arguments(GDScriptParser::CompletionContext &p_context, c
 	GDScriptParser parser;
 	GDScriptAnalyzer analyzer(&parser);
 
-	parser.parse(p_code, p_path, true);
+	parser.parse(p_code, p_path, GDScriptParser::ParserContext::PARSER_CONTEXT_COMPLETION);
 	analyzer.analyze();
 
 	r_forced = false;
@@ -3669,6 +3669,17 @@ void GDScriptLanguage::auto_indent_code(String &p_code, int p_from_line, int p_t
 
 #ifdef TOOLS_ENABLED
 
+::Error GDScriptLanguage::refactor_code(const String &p_code, const String &p_path, Object *p_owner, List<ScriptLanguage::RefactorMatch> *r_matches, ScriptLanguage::RefactorKind &p_kind) {
+	GDScriptParser parser;
+	GDScriptAnalyzer analyzer(&parser);
+
+	// We don't mind errors.
+	parser.parse(p_code, p_path, GDScriptParser::ParserContext::PARSER_CONTEXT_REFACTOR);
+	analyzer.analyze();
+
+	return OK;
+}
+
 static Error _lookup_symbol_from_base(const GDScriptParser::DataType &p_base, const String &p_symbol, GDScriptLanguage::LookupResult &r_result) {
 	GDScriptParser::DataType base_type = p_base;
 
@@ -4023,7 +4034,7 @@ static Error _lookup_symbol_from_base(const GDScriptParser::DataType &p_base, co
 	}
 
 	GDScriptParser parser;
-	parser.parse(p_code, p_path, true);
+	parser.parse(p_code, p_path, GDScriptParser::ParserContext::PARSER_CONTEXT_COMPLETION);
 
 	GDScriptParser::CompletionContext context = parser.get_completion_context();
 	context.base = p_owner;

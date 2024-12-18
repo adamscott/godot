@@ -283,6 +283,7 @@ public:
 	virtual bool overrides_external_editor() { return false; }
 	virtual ScriptNameCasing preferred_file_name_casing() const { return SCRIPT_NAME_CASING_SNAKE_CASE; }
 
+	// Code completion.
 	// Keep enums in sync with:
 	// scene/gui/code_edit.h - CodeEdit::CodeCompletionKind
 	enum CodeCompletionKind {
@@ -338,6 +339,19 @@ public:
 	};
 
 	virtual Error complete_code(const String &p_code, const String &p_path, Object *p_owner, List<CodeCompletionOption> *r_options, bool &r_force, String &r_call_hint) { return ERR_UNAVAILABLE; }
+
+	// Refactoring.
+	// Keep enums in sync with:
+	// scene/gui/code_edit.h - CodeEdit::RefactorKind
+	enum RefactorKind {
+		REFACTOR_KIND_RENAME,
+	};
+
+	struct RefactorMatch {
+		RefactorMatch() {}
+	};
+
+	virtual Error refactor_code(const String &p_code, const String &p_path, Object *p_owner, List<RefactorMatch> *r_matches, RefactorKind &p_kind) { return ERR_UNAVAILABLE; }
 
 	enum LookupResultType {
 		LOOKUP_RESULT_SCRIPT_LOCATION, // Use if none of the options below apply.

@@ -889,6 +889,23 @@ void ScriptTextEditor::_code_complete_script(const String &p_code, List<ScriptLa
 	}
 }
 
+void ScriptTextEditor::_refactor_scripts(void *p_ud, const String &p_code, List<ScriptLanguage::RefactorMatch> *r_matches, int &p_kind) {
+	ScriptTextEditor *ste = (ScriptTextEditor *)p_ud;
+	ste->_refactor_script(p_code, r_matches, (ScriptLanguage::RefactorKind &)p_kind);
+}
+
+void ScriptTextEditor::_refactor_script(const String &p_code, List<ScriptLanguage::RefactorMatch> *r_matches, ScriptLanguage::RefactorKind &p_kind) {
+	Node *base = get_tree()->get_edited_scene_root();
+	if (base) {
+		base = _find_node_for_script(base, base, script);
+	}
+	Error err = script->get_language()->refactor_code(p_code, script->get_path(), base, r_matches, p_kind);
+
+	if (err != OK) {
+		print_error(vformat("Error while refactoring script: %s", error_names[err]));
+	}
+}
+
 void ScriptTextEditor::_update_breakpoint_list() {
 	breakpoints_menu->clear();
 	breakpoints_menu->reset_size();
@@ -1521,7 +1538,7 @@ void ScriptTextEditor::_edit_option(int p_op) {
 			tx->request_code_completion(true);
 		} break;
 		case EDIT_REFACTOR_RENAME: {
-			tx->request_refactor(CodeEdit::REFACTOR_TYPE_RENAME);
+			tx->request_refactor(CodeEdit::RefactorKind::REFACTOR_KIND_RENAME);
 		} break;
 		case EDIT_AUTO_INDENT: {
 			String text = tx->get_text();
@@ -2527,6 +2544,7 @@ ScriptTextEditor::ScriptTextEditor() {
 	code_editor->add_theme_constant_override("separation", 2);
 	code_editor->set_anchors_and_offsets_preset(Control::PRESET_FULL_RECT);
 	code_editor->set_code_complete_func(_code_complete_scripts, this);
+	code_editor->set_refactor_func(_refactor_scripts, this);
 	code_editor->set_v_size_flags(SIZE_EXPAND_FILL);
 
 	code_editor->get_text_editor()->set_draw_breakpoints_gutter(true);

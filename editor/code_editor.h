@@ -158,6 +158,7 @@ public:
 };
 
 typedef void (*CodeTextEditorCodeCompleteFunc)(void *p_ud, const String &p_code, List<ScriptLanguage::CodeCompletionOption> *r_options, bool &r_forced);
+typedef void (*CodeTextEditorRefactorFunc)(void *p_ud, const String &p_code, List<ScriptLanguage::RefactorMatch> *r_matches, int &p_kind);
 
 class CodeTextEditor : public VBoxContainer {
 	GDCLASS(CodeTextEditor, VBoxContainer);
@@ -197,8 +198,7 @@ class CodeTextEditor : public VBoxContainer {
 	void _complete_request();
 	Ref<Texture2D> _get_completion_icon(const ScriptLanguage::CodeCompletionOption &p_option);
 
-	void _refactor_request(int p_refactor_type);
-	void _refactor_rename();
+	void _refactor_request(int p_refactor_kind);
 
 	virtual void input(const Ref<InputEvent> &event) override;
 	void _text_editor_gui_input(const Ref<InputEvent> &p_event);
@@ -211,6 +211,9 @@ class CodeTextEditor : public VBoxContainer {
 	Color completion_doc_comment_color;
 	CodeTextEditorCodeCompleteFunc code_complete_func;
 	void *code_complete_ud = nullptr;
+
+	CodeTextEditorRefactorFunc refactor_func;
+	void *refactor_ud = nullptr;
 
 	void _zoom_in();
 	void _zoom_out();
@@ -230,6 +233,7 @@ protected:
 	virtual void _load_theme_settings() {}
 	virtual void _validate_script() {}
 	virtual void _code_complete_script(const String &p_code, List<ScriptLanguage::CodeCompletionOption> *r_options) {}
+	virtual void _refactor_script(const String &p_code, List<ScriptLanguage::RefactorMatch> *r_matches, ScriptLanguage::RefactorKind &p_refactor_kind) {}
 
 	void _text_changed_idle_timeout();
 	void _code_complete_timer_timeout();
@@ -298,6 +302,7 @@ public:
 	float get_zoom_factor();
 
 	void set_code_complete_func(CodeTextEditorCodeCompleteFunc p_code_complete_func, void *p_ud);
+	void set_refactor_func(CodeTextEditorRefactorFunc p_refactor_func, void *p_ud);
 
 	void validate_script();
 

@@ -2367,12 +2367,11 @@ void CodeEdit::cancel_code_completion() {
 }
 
 /* Refactor */
-void CodeEdit::request_refactor(CodeEdit::RefactorType p_refactor_type) {
-	if (GDVIRTUAL_CALL(_request_refactor, p_refactor_type)) {
+void CodeEdit::request_refactor(CodeEdit::RefactorKind p_refactor_kind) {
+	if (GDVIRTUAL_CALL(_request_refactor, p_refactor_kind)) {
 		return;
 	}
-
-	emit_signal(SNAME("refactor_requested"), (int)p_refactor_type);
+	emit_signal(SNAME("refactor_requested"), (int)p_refactor_kind);
 }
 
 /* Line length guidelines */

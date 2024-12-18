@@ -1328,6 +1328,12 @@ public:
 		int argument = -1;
 	};
 
+	enum ParserContext {
+		PARSER_CONTEXT_STANDARD = 1 << 0,
+		PARSER_CONTEXT_COMPLETION = 1 << 1,
+		PARSER_CONTEXT_REFACTOR = 1 << 2,
+	};
+
 private:
 	friend class GDScriptAnalyzer;
 	friend class GDScriptParserRef;
@@ -1335,6 +1341,7 @@ private:
 	bool _is_tool = false;
 	String script_path;
 	bool for_completion = false;
+	bool for_refactor = false;
 	bool parse_body = true;
 	bool panic_mode = false;
 	bool can_break = false;
@@ -1575,7 +1582,7 @@ private:
 #endif // TOOLS_ENABLED
 
 public:
-	Error parse(const String &p_source_code, const String &p_script_path, bool p_for_completion, bool p_parse_body = true);
+	Error parse(const String &p_source_code, const String &p_script_path, ParserContext p_context = ParserContext::PARSER_CONTEXT_STANDARD, bool p_parse_body = true);
 	Error parse_binary(const Vector<uint8_t> &p_binary, const String &p_script_path);
 	ClassNode *get_tree() const { return head; }
 	bool is_tool() const { return _is_tool; }

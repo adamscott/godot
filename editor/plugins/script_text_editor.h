@@ -179,6 +179,9 @@ protected:
 	static void _code_complete_scripts(void *p_ud, const String &p_code, List<ScriptLanguage::CodeCompletionOption> *r_options, bool &r_force);
 	void _code_complete_script(const String &p_code, List<ScriptLanguage::CodeCompletionOption> *r_options, bool &r_force);
 
+	static void _refactor_scripts(void *p_ud, const String &p_code, List<ScriptLanguage::RefactorMatch> *r_matches, int &p_kind);
+	void _refactor_script(const String &p_code, List<ScriptLanguage::RefactorMatch> *r_matches, ScriptLanguage::RefactorKind &p_kind);
+
 	void _load_theme_settings();
 	void _set_theme_for_script();
 	void _show_errors_panel(bool p_show);

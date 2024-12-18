@@ -338,13 +338,14 @@ void GDScriptParser::set_last_completion_call_arg(int p_argument) {
 	completion_call_stack.back()->get().argument = p_argument;
 }
 
-Error GDScriptParser::parse(const String &p_source_code, const String &p_script_path, bool p_for_completion, bool p_parse_body) {
+Error GDScriptParser::parse(const String &p_source_code, const String &p_script_path, ParserContext p_context, bool p_parse_body) {
 	clear();
 
 	String source = p_source_code;
 	int cursor_line = -1;
 	int cursor_column = -1;
-	for_completion = p_for_completion;
+	for_completion = p_context & ParserContext::PARSER_CONTEXT_COMPLETION;
+	for_refactor = p_context & ParserContext::PARSER_CONTEXT_REFACTOR;
 	parse_body = p_parse_body;
 
 	int tab_size = 4;
@@ -354,7 +355,7 @@ Error GDScriptParser::parse(const String &p_source_code, const String &p_script_
 	}
 #endif // TOOLS_ENABLED
 
-	if (p_for_completion) {
+	if (for_completion || for_refactor) {
 		// Remove cursor sentinel char.
 		const Vector<String> lines = p_source_code.split("\n");
 		cursor_line = 1;

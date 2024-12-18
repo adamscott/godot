@@ -1094,18 +1094,17 @@ Ref<Texture2D> CodeTextEditor::_get_completion_icon(const ScriptLanguage::CodeCo
 	return tex;
 }
 
-void CodeTextEditor::_refactor_request(int p_refactor_type) {
-	CodeEdit::RefactorType refactor_type = (CodeEdit::RefactorType)p_refactor_type;
-	switch (refactor_type) {
-		case CodeEdit::RefactorType::REFACTOR_TYPE_RENAME: {
-			_refactor_rename();
-		} break;
+void CodeTextEditor::_refactor_request(int p_refactor_kind) {
+	List<ScriptLanguage::RefactorMatch> matches;
+	String completion_text = text_editor->get_text_for_code_completion();
+	_refactor_script(completion_text, &matches, (ScriptLanguage::RefactorKind &)p_refactor_kind);
+	if (refactor_func) {
+		refactor_func(refactor_ud, completion_text, &matches, p_refactor_kind);
 	}
-}
 
-void CodeTextEditor::_refactor_rename() {
-	Vector2 pos = Vector2(text_editor->get_caret_column(), text_editor->get_caret_line());
-	print_line(vformat("word at pos: %s, pos: %s", text_editor->get_word_under_caret(), pos));
+	for (const ScriptLanguage::RefactorMatch &match : matches) {
+		print_line(vformat("Match pointer: %p", &match));
+	}
 }
 
 void CodeTextEditor::update_editor_settings() {
@@ -1831,6 +1830,11 @@ void CodeTextEditor::set_code_complete_func(CodeTextEditorCodeCompleteFunc p_cod
 	code_complete_ud = p_ud;
 }
 
+void CodeTextEditor::set_refactor_func(CodeTextEditorRefactorFunc p_refactor_func, void *p_ud) {
+	refactor_func = p_refactor_func;
+	refactor_ud = p_ud;
+}
+
 void CodeTextEditor::set_toggle_list_control(Control *p_control) {
 	toggle_scripts_list = p_control;
 }
@@ -1964,7 +1968,6 @@ CodeTextEditor::CodeTextEditor() {
 	text_editor->connect("caret_changed", callable_mp(this, &CodeTextEditor::_line_col_changed));
 	text_editor->connect(SceneStringName(text_changed), callable_mp(this, &CodeTextEditor::_text_changed));
 	text_editor->connect("code_completion_requested", callable_mp(this, &CodeTextEditor::_complete_request));
-
 	text_editor->connect("refactor_requested", callable_mp(this, &CodeTextEditor::_refactor_request));
 
 	TypedArray<String> cs;
