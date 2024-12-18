@@ -61,8 +61,10 @@ public:
 		LOCATION_OTHER = 1 << 10,
 	};
 
-	enum RefactorType {
-		REFACTOR_TYPE_RENAME,
+	// Keep enums in sync with:
+	// core/object/script_language.h - ScriptLanguage::RefactorKind
+	enum RefactorKind {
+		REFACTOR_KIND_RENAME,
 	};
 
 private:
@@ -485,7 +487,6 @@ public:
 	String get_text_for_code_completion() const;
 
 	void request_code_completion(bool p_force = false);
-	void request_refactor(RefactorType p_refactor_type);
 
 	void add_code_completion_option(CodeCompletionKind p_type, const String &p_display_text, const String &p_insert_text, const Color &p_text_color = Color(1, 1, 1), const Ref<Resource> &p_icon = Ref<Resource>(), const Variant &p_value = Variant(), int p_location = LOCATION_OTHER);
 	void update_code_completion_options(bool p_forced = false);
@@ -498,6 +499,9 @@ public:
 
 	void confirm_code_completion(bool p_replace = false);
 	void cancel_code_completion();
+
+	/* Refactoring */
+	void request_refactor(RefactorKind p_refactor_kind);
 
 	/* Line length guidelines */
 	void set_line_length_guidelines(TypedArray<int> p_guideline_columns);
@@ -529,6 +533,7 @@ public:
 
 VARIANT_ENUM_CAST(CodeEdit::CodeCompletionKind);
 VARIANT_ENUM_CAST(CodeEdit::CodeCompletionLocation);
+VARIANT_ENUM_CAST(CodeEdit::RefactorKind);
 
 // The custom comparer which will sort completion options.
 struct CodeCompletionOptionCompare {
