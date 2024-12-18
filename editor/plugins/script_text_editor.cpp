@@ -2678,7 +2678,7 @@ void ScriptTextEditor::register_editor() {
 	ED_SHORTCUT("script_text_editor/convert_indent_to_spaces", TTRC("Convert Indent to Spaces"), KeyModifierMask::CMD_OR_CTRL | KeyModifierMask::SHIFT | Key::Y);
 	ED_SHORTCUT("script_text_editor/convert_indent_to_tabs", TTRC("Convert Indent to Tabs"), KeyModifierMask::CMD_OR_CTRL | KeyModifierMask::SHIFT | Key::I);
 	ED_SHORTCUT("script_text_editor/auto_indent", TTRC("Auto Indent"), KeyModifierMask::CMD_OR_CTRL | Key::I);
-	ED_SHORTCUT("script_text_editor/refactor_rename_symbol", TTR("Rename Symbol"), Key::F2);
+	ED_SHORTCUT_ARRAY("script_text_editor/refactor_rename_symbol", TTR("Rename Symbol"), { int32_t(Key::F2), int32_t(KeyModifierMask::CMD_OR_CTRL | KeyModifierMask::ALT | Key::R) });
 
 	ED_SHORTCUT_AND_COMMAND("script_text_editor/find", TTRC("Find..."), KeyModifierMask::CMD_OR_CTRL | Key::F);
 
