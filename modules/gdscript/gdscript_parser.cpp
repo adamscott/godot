@@ -342,6 +342,26 @@ void GDScriptParser::make_refactor_context(GDScriptParser::RefactorSymbolType p_
 	if (!for_refactor) {
 		return;
 	}
+	if (previous.cursor_place != GDScriptTokenizerText::CURSOR_MIDDLE && previous.cursor_place != GDScriptTokenizerText::CURSOR_END && current.cursor_place == GDScriptTokenizerText::CURSOR_NONE) {
+		return;
+	}
+
+	RefactorContext context;
+	context.type = p_type;
+	context.current_line = tokenizer->get_cursor_line();
+	context.node = p_node;
+	context.parser = this;
+	refactor_context = context;
+}
+
+void GDScriptParser::override_refactor_context(const Node *p_for_node, GDScriptParser::RefactorSymbolType p_type, Node *p_node) {
+	if (!for_refactor) {
+		return;
+	}
+	if (p_for_node == nullptr || completion_context.node != p_for_node) {
+		return;
+	}
+
 	RefactorContext context;
 	context.type = p_type;
 	context.current_line = tokenizer->get_cursor_line();
@@ -1744,6 +1764,7 @@ GDScriptParser::AnnotationNode *GDScriptParser::parse_annotation(uint32_t p_vali
 
 				if (argument->type == Node::LITERAL) {
 					override_completion_context(argument, COMPLETION_ANNOTATION_ARGUMENTS, annotation, argument_index);
+					override_refactor_context(argument, REFACTOR_SYMBOL_ANNOTATION_ARGUMENTS, annotation);
 				}
 			}
 
@@ -3080,6 +3101,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_assignment(ExpressionNode 
 #ifdef TOOLS_ENABLED
 	if (assignment->assigned_value != nullptr && assignment->assigned_value->type == GDScriptParser::Node::IDENTIFIER) {
 		override_completion_context(assignment->assigned_value, COMPLETION_ASSIGN, assignment);
+		override_refactor_context(assignment->assigned_value, REFACTOR_SYMBOL_ASSIGN, assignment);
 	}
 #endif
 	if (assignment->assigned_value == nullptr) {
@@ -3239,7 +3261,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_attribute(ExpressionNode *
 	reset_extents(attribute, p_previous_operand);
 	update_extents(attribute);
 
-	if (for_completion) {
+	if (for_completion || for_refactor) {
 		bool is_builtin = false;
 		if (p_previous_operand && p_previous_operand->type == Node::IDENTIFIER) {
 			const IdentifierNode *id = static_cast<const IdentifierNode *>(p_previous_operand);
@@ -3288,6 +3310,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_subscript(ExpressionNode *
 #ifdef TOOLS_ENABLED
 	if (subscript->index != nullptr && subscript->index->type == Node::LITERAL) {
 		override_completion_context(subscript->index, COMPLETION_SUBSCRIPT, subscript);
+		override_refactor_context(subscript->index, RefactorSymbolType::REFACTOR_SYMBOL_SUBSCRIPT, subscript);
 	}
 #endif
 
@@ -3409,6 +3432,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_call(ExpressionNode *p_pre
 
 			if (argument->type == Node::LITERAL) {
 				override_completion_context(argument, completion_type, call, argument_index);
+				override_refactor_context(argument, symbol_type, call);
 			}
 		}
 

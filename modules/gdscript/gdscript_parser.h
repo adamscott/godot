@@ -1525,6 +1525,7 @@ private:
 	void set_last_completion_call_arg(int p_argument);
 
 	void make_refactor_context(RefactorSymbolType p_type, Node *p_node);
+	void override_refactor_context(const Node *p_for_node, RefactorSymbolType p_type, Node *p_node);
 
 	GDScriptTokenizer::Token advance();
 	bool match(GDScriptTokenizer::Token::Type p_token_type);
