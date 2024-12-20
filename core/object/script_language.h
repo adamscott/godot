@@ -347,19 +347,28 @@ public:
 		REFACTOR_KIND_RENAME_SYMBOL,
 	};
 
-	struct RefactorRenameSymbolContext {
+	enum RefactorRenameSymbolResultType {
+		REFACTOR_RENAME_SYMBOL_RESULT_CLASS_NAME,
+		REFACTOR_RENAME_SYMBOL_RESULT_CLASS_CONSTANT,
+		REFACTOR_RENAME_SYMBOL_RESULT_CLASS_PROPERTY,
+		REFACTOR_RENAME_SYMBOL_RESULT_CLASS_METHOD,
+		REFACTOR_RENAME_SYMBOL_RESULT_CLASS_SIGNAL,
+		REFACTOR_RENAME_SYMBOL_RESULT_CLASS_ENUM,
+		REFACTOR_RENAME_SYMBOL_RESULT_CLASS_ANNOTATION,
+		REFACTOR_RENAME_SYMBOL_RESULT_LOCAL_CONSTANT,
+		REFACTOR_RENAME_SYMBOL_RESULT_LOCAL_VARIABLE,
+		REFACTOR_RENAME_SYMBOL_RESULT_MAX,
+	};
+
+	struct RefactorRenameSymbolResult {
 		struct Match {
 			String path;
-
-			Match() {}
 		};
 
 		List<Match> matches;
-
-		RefactorRenameSymbolContext() {}
 	};
 
-	virtual Error refactor_rename_symbol_code(const String &p_code, const String &p_path, Object *p_owner, RefactorRenameSymbolContext *r_context) { return ERR_UNAVAILABLE; }
+	virtual Error refactor_rename_symbol_code(const String &p_code, const String &p_path, Object *p_owner, RefactorRenameSymbolResult *r_result) { return ERR_UNAVAILABLE; }
 
 	enum LookupResultType {
 		LOOKUP_RESULT_SCRIPT_LOCATION, // Use if none of the options below apply.

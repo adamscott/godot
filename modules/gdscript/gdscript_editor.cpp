@@ -3668,39 +3668,7 @@ void GDScriptLanguage::auto_indent_code(String &p_code, int p_from_line, int p_t
 }
 
 #ifdef TOOLS_ENABLED
-::Error GDScriptLanguage::refactor_rename_symbol_code(const String &p_code, const String &p_path, Object *p_owner, ScriptLanguage::RefactorRenameSymbolContext *r_context) {
-	GDScriptParser parser;
-	GDScriptAnalyzer analyzer(&parser);
-
-	// We don't mind errors.
-	parser.parse(p_code, p_path, GDScriptParser::ParserContext::PARSER_CONTEXT_REFACTOR);
-	analyzer.analyze();
-
-	GDScriptParser::RefactorContext context = parser.get_refactor_context();
-
-	if (context.node == nullptr) {
-		return OK;
-	}
-
-	switch (context.type) {
-		case GDScriptParser::RefactorSymbolType::REFACTOR_SYMBOL_NONE: {
-			// Do nothing.
-		} break;
-
-		case GDScriptParser::RefactorSymbolType::REFACTOR_SYMBOL_IDENTIFIER: {
-			print_line(vformat("Identifier"));
-			// GDScriptParser::IdentifierNode *identifier_node = (GDScriptParser::IdentifierNode *)context.node;
-		} break;
-
-		case GDScriptParser::RefactorSymbolType::REFACTOR_SYMBOL_ATTRIBUTE: {
-			print_line(vformat("Attribute"));
-		} break;
-
-		default: {
-			// Do nothing.
-		}
-	}
-
+::Error GDScriptLanguage::refactor_rename_symbol_code(const String &p_code, const String &p_path, Object *p_owner, ScriptLanguage::RefactorRenameSymbolResult *r_result) {
 	return OK;
 }
 

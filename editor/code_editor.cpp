@@ -1097,14 +1097,14 @@ Ref<Texture2D> CodeTextEditor::_get_completion_icon(const ScriptLanguage::CodeCo
 void CodeTextEditor::_refactor_request(int p_refactor_kind) {
 	switch ((ScriptLanguage::RefactorKind)p_refactor_kind) {
 		case ScriptLanguage::RefactorKind::REFACTOR_KIND_RENAME_SYMBOL: {
-			ScriptLanguage::RefactorRenameSymbolContext context;
+			ScriptLanguage::RefactorRenameSymbolResult result;
 			String completion_text = text_editor->get_text_for_code_completion();
-			_refactor_rename_symbol_script(completion_text, &context);
+			_refactor_rename_symbol_script(completion_text, &result);
 			if (refactor_rename_symbol_func) {
-				refactor_rename_symbol_func(refactor_ud, completion_text, &context);
+				refactor_rename_symbol_func(refactor_ud, completion_text, &result);
 			}
 
-			for (const ScriptLanguage::RefactorRenameSymbolContext::Match &match : context.matches) {
+			for (const ScriptLanguage::RefactorRenameSymbolResult::Match &match : result.matches) {
 				print_line(vformat("Match pointer: %p", &match));
 			}
 		} break;

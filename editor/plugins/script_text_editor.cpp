@@ -889,17 +889,17 @@ void ScriptTextEditor::_code_complete_script(const String &p_code, List<ScriptLa
 	}
 }
 
-void ScriptTextEditor::_refactor_rename_symbol_scripts(void *p_ud, const String &p_code, ScriptLanguage::RefactorRenameSymbolContext *r_context) {
+void ScriptTextEditor::_refactor_rename_symbol_scripts(void *p_ud, const String &p_code, ScriptLanguage::RefactorRenameSymbolResult *r_result) {
 	ScriptTextEditor *ste = (ScriptTextEditor *)p_ud;
-	ste->_refactor_rename_symbol_script(p_code, r_context);
+	ste->_refactor_rename_symbol_script(p_code, r_result);
 }
 
-void ScriptTextEditor::_refactor_rename_symbol_script(const String &p_code, ScriptLanguage::RefactorRenameSymbolContext *r_context) {
+void ScriptTextEditor::_refactor_rename_symbol_script(const String &p_code, ScriptLanguage::RefactorRenameSymbolResult *r_result) {
 	Node *base = get_tree()->get_edited_scene_root();
 	if (base) {
 		base = _find_node_for_script(base, base, script);
 	}
-	Error err = script->get_language()->refactor_rename_symbol_code(p_code, script->get_path(), base, r_context);
+	Error err = script->get_language()->refactor_rename_symbol_code(p_code, script->get_path(), base, r_result);
 
 	if (err != OK) {
 		print_error(vformat("Error while refactoring script: %s", error_names[err]));
