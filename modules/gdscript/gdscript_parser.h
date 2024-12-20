@@ -1284,7 +1284,6 @@ public:
 		}
 	};
 
-	// Completion.
 	enum CompletionType {
 		COMPLETION_NONE,
 		COMPLETION_ANNOTATION, // Annotation (following @).
@@ -1329,52 +1328,6 @@ public:
 		int argument = -1;
 	};
 
-	// Refactor.
-	enum RefactorSymbolType {
-		REFACTOR_SYMBOL_NONE,
-		REFACTOR_SYMBOL_ANNOTATION, // Annotation (following @).
-		REFACTOR_SYMBOL_ANNOTATION_ARGUMENTS, // Annotation arguments hint.
-		REFACTOR_SYMBOL_ASSIGN, // Assignment based on type (e.g. enum values).
-		REFACTOR_SYMBOL_ATTRIBUTE, // After id.| to look for members.
-		REFACTOR_SYMBOL_ATTRIBUTE_METHOD, // After id.| to look for methods.
-		REFACTOR_SYMBOL_BUILT_IN_TYPE_CONSTANT_OR_STATIC_METHOD, // Constants inside a built-in type (e.g. Color.BLUE) or static methods (e.g. Color.html).
-		REFACTOR_SYMBOL_CALL_ARGUMENTS, // Complete with nodes, input actions, enum values (or usual expressions).
-		// TODO: REFACTOR_SYMBOL_DECLARATION, // Potential declaration (var, const, func).
-		REFACTOR_SYMBOL_GET_NODE, // Get node with $ notation.
-		REFACTOR_SYMBOL_IDENTIFIER, // List available identifiers in scope.
-		REFACTOR_SYMBOL_INHERIT_TYPE, // Type after extends. Exclude non-viable types (built-ins, enums, void). Includes subtypes using the argument index.
-		REFACTOR_SYMBOL_METHOD, // List available methods in scope.
-		REFACTOR_SYMBOL_OVERRIDE_METHOD, // Override implementation, also for native virtuals.
-		REFACTOR_SYMBOL_PROPERTY_DECLARATION, // Property declaration (get, set).
-		REFACTOR_SYMBOL_PROPERTY_DECLARATION_OR_TYPE, // Property declaration (get, set) or a type hint.
-		REFACTOR_SYMBOL_PROPERTY_METHOD, // Property setter or getter (list available methods).
-		REFACTOR_SYMBOL_RESOURCE_PATH, // For load/preload.
-		REFACTOR_SYMBOL_SUBSCRIPT, // Inside id[|].
-		REFACTOR_SYMBOL_SUPER_METHOD, // After super.
-		REFACTOR_SYMBOL_TYPE_ATTRIBUTE, // Attribute in type name (Type.|).
-		REFACTOR_SYMBOL_TYPE_NAME, // Name of type (after :).
-		REFACTOR_SYMBOL_TYPE_NAME_OR_VOID, // Same as TYPE_NAME, but allows void (in function return type).
-	};
-
-	struct RefactorContext {
-		RefactorSymbolType type = REFACTOR_SYMBOL_NONE;
-		ClassNode *current_class = nullptr;
-		FunctionNode *current_function = nullptr;
-		SuiteNode *current_suite = nullptr;
-		int current_line = -1;
-		int current_column = -1;
-		Node *node = nullptr;
-		Object *base = nullptr;
-		GDScriptParser *parser = nullptr;
-	};
-
-	// Parser context.
-	enum ParserContext {
-		PARSER_CONTEXT_STANDARD = 1 << 0,
-		PARSER_CONTEXT_COMPLETION = 1 << 1,
-		PARSER_CONTEXT_REFACTOR = 1 << 2,
-	};
-
 private:
 	friend class GDScriptAnalyzer;
 	friend class GDScriptParserRef;
@@ -1382,7 +1335,6 @@ private:
 	bool _is_tool = false;
 	String script_path;
 	bool for_completion = false;
-	bool for_refactor = false;
 	bool parse_body = true;
 	bool panic_mode = false;
 	bool can_break = false;
@@ -1425,8 +1377,6 @@ private:
 	bool passed_cursor = false;
 	bool in_lambda = false;
 	bool lambda_ended = false; // Marker for when a lambda ends, to apply an end of statement if needed.
-
-	RefactorContext refactor_context;
 
 	typedef bool (GDScriptParser::*AnnotationAction)(AnnotationNode *p_annotation, Node *p_target, ClassNode *p_class);
 	struct AnnotationInfo {
@@ -1523,9 +1473,6 @@ private:
 	void push_completion_call(Node *p_call);
 	void pop_completion_call();
 	void set_last_completion_call_arg(int p_argument);
-
-	void make_refactor_context(RefactorSymbolType p_type, Node *p_node);
-	void override_refactor_context(const Node *p_for_node, RefactorSymbolType p_type, Node *p_node);
 
 	GDScriptTokenizer::Token advance();
 	bool match(GDScriptTokenizer::Token::Type p_token_type);
@@ -1628,7 +1575,7 @@ private:
 #endif // TOOLS_ENABLED
 
 public:
-	Error parse(const String &p_source_code, const String &p_script_path, ParserContext p_context = ParserContext::PARSER_CONTEXT_STANDARD, bool p_parse_body = true);
+	Error parse(const String &p_source_code, const String &p_script_path, bool p_for_completion, bool p_parse_body = true);
 	Error parse_binary(const Vector<uint8_t> &p_binary, const String &p_script_path);
 	ClassNode *get_tree() const { return head; }
 	bool is_tool() const { return _is_tool; }
@@ -1642,8 +1589,6 @@ public:
 	CompletionCall get_completion_call() const { return completion_call; }
 	void get_annotation_list(List<MethodInfo> *r_annotations) const;
 	bool annotation_exists(const String &p_annotation_name) const;
-
-	RefactorContext get_refactor_context() const { return refactor_context; }
 
 	const List<ParserError> &get_errors() const { return errors; }
 	const List<String> get_dependencies() const {

@@ -361,6 +361,7 @@ public:
 	};
 
 	struct RefactorRenameSymbolResult {
+		RefactorRenameSymbolResultType type;
 		struct Match {
 			String path;
 		};
@@ -370,6 +371,7 @@ public:
 
 	virtual Error refactor_rename_symbol_code(const String &p_code, const String &p_path, Object *p_owner, RefactorRenameSymbolResult *r_result) { return ERR_UNAVAILABLE; }
 
+	// Lookup.
 	enum LookupResultType {
 		LOOKUP_RESULT_SCRIPT_LOCATION, // Use if none of the options below apply.
 		LOOKUP_RESULT_CLASS,

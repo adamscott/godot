@@ -133,7 +133,7 @@ bool GDScriptLanguage::validate(const String &p_script, const String &p_path, Li
 	GDScriptParser parser;
 	GDScriptAnalyzer analyzer(&parser);
 
-	Error err = parser.parse(p_script, p_path);
+	Error err = parser.parse(p_script, p_path, false);
 	if (err == OK) {
 		err = analyzer.analyze();
 	}
@@ -3207,7 +3207,7 @@ static void _find_call_arguments(GDScriptParser::CompletionContext &p_context, c
 	GDScriptParser parser;
 	GDScriptAnalyzer analyzer(&parser);
 
-	parser.parse(p_code, p_path, GDScriptParser::ParserContext::PARSER_CONTEXT_COMPLETION);
+	parser.parse(p_code, p_path, true);
 	analyzer.analyze();
 
 	r_forced = false;
@@ -4026,7 +4026,7 @@ static Error _lookup_symbol_from_base(const GDScriptParser::DataType &p_base, co
 	}
 
 	GDScriptParser parser;
-	parser.parse(p_code, p_path, GDScriptParser::ParserContext::PARSER_CONTEXT_COMPLETION);
+	parser.parse(p_code, p_path, true);
 
 	GDScriptParser::CompletionContext context = parser.get_completion_context();
 	context.base = p_owner;
