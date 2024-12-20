@@ -344,14 +344,22 @@ public:
 	// Keep enums in sync with:
 	// scene/gui/code_edit.h - CodeEdit::RefactorKind
 	enum RefactorKind {
-		REFACTOR_KIND_RENAME,
+		REFACTOR_KIND_RENAME_SYMBOL,
 	};
 
-	struct RefactorMatch {
-		RefactorMatch() {}
+	struct RefactorRenameSymbolContext {
+		struct Match {
+			String path;
+
+			Match() {}
+		};
+
+		List<Match> matches;
+
+		RefactorRenameSymbolContext() {}
 	};
 
-	virtual Error refactor_code(const String &p_code, const String &p_path, Object *p_owner, List<RefactorMatch> *r_matches, RefactorKind &p_kind) { return ERR_UNAVAILABLE; }
+	virtual Error refactor_rename_symbol_code(const String &p_code, const String &p_path, Object *p_owner, RefactorRenameSymbolContext *r_context) { return ERR_UNAVAILABLE; }
 
 	enum LookupResultType {
 		LOOKUP_RESULT_SCRIPT_LOCATION, // Use if none of the options below apply.

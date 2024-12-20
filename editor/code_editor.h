@@ -158,7 +158,7 @@ public:
 };
 
 typedef void (*CodeTextEditorCodeCompleteFunc)(void *p_ud, const String &p_code, List<ScriptLanguage::CodeCompletionOption> *r_options, bool &r_forced);
-typedef void (*CodeTextEditorRefactorFunc)(void *p_ud, const String &p_code, List<ScriptLanguage::RefactorMatch> *r_matches, int &p_kind);
+typedef void (*CodeTextEditorRefactorRenameSymbolFunc)(void *p_ud, const String &p_code, ScriptLanguage::RefactorRenameSymbolContext *r_context);
 
 class CodeTextEditor : public VBoxContainer {
 	GDCLASS(CodeTextEditor, VBoxContainer);
@@ -212,7 +212,7 @@ class CodeTextEditor : public VBoxContainer {
 	CodeTextEditorCodeCompleteFunc code_complete_func;
 	void *code_complete_ud = nullptr;
 
-	CodeTextEditorRefactorFunc refactor_func;
+	CodeTextEditorRefactorRenameSymbolFunc refactor_rename_symbol_func;
 	void *refactor_ud = nullptr;
 
 	void _zoom_in();
@@ -233,7 +233,7 @@ protected:
 	virtual void _load_theme_settings() {}
 	virtual void _validate_script() {}
 	virtual void _code_complete_script(const String &p_code, List<ScriptLanguage::CodeCompletionOption> *r_options) {}
-	virtual void _refactor_script(const String &p_code, List<ScriptLanguage::RefactorMatch> *r_matches, ScriptLanguage::RefactorKind &p_refactor_kind) {}
+	virtual void _refactor_rename_symbol_script(const String &p_code, ScriptLanguage::RefactorRenameSymbolContext *r_context) {}
 
 	void _text_changed_idle_timeout();
 	void _code_complete_timer_timeout();
@@ -302,7 +302,7 @@ public:
 	float get_zoom_factor();
 
 	void set_code_complete_func(CodeTextEditorCodeCompleteFunc p_code_complete_func, void *p_ud);
-	void set_refactor_func(CodeTextEditorRefactorFunc p_refactor_func, void *p_ud);
+	void set_refactor_rename_symbol_func(CodeTextEditorRefactorRenameSymbolFunc p_refactor_func, void *p_ud);
 
 	void validate_script();
 

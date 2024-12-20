@@ -1095,15 +1095,19 @@ Ref<Texture2D> CodeTextEditor::_get_completion_icon(const ScriptLanguage::CodeCo
 }
 
 void CodeTextEditor::_refactor_request(int p_refactor_kind) {
-	List<ScriptLanguage::RefactorMatch> matches;
-	String completion_text = text_editor->get_text_for_code_completion();
-	_refactor_script(completion_text, &matches, (ScriptLanguage::RefactorKind &)p_refactor_kind);
-	if (refactor_func) {
-		refactor_func(refactor_ud, completion_text, &matches, p_refactor_kind);
-	}
+	switch ((ScriptLanguage::RefactorKind)p_refactor_kind) {
+		case ScriptLanguage::RefactorKind::REFACTOR_KIND_RENAME_SYMBOL: {
+			ScriptLanguage::RefactorRenameSymbolContext context;
+			String completion_text = text_editor->get_text_for_code_completion();
+			_refactor_rename_symbol_script(completion_text, &context);
+			if (refactor_rename_symbol_func) {
+				refactor_rename_symbol_func(refactor_ud, completion_text, &context);
+			}
 
-	for (const ScriptLanguage::RefactorMatch &match : matches) {
-		print_line(vformat("Match pointer: %p", &match));
+			for (const ScriptLanguage::RefactorRenameSymbolContext::Match &match : context.matches) {
+				print_line(vformat("Match pointer: %p", &match));
+			}
+		} break;
 	}
 }
 
@@ -1830,8 +1834,8 @@ void CodeTextEditor::set_code_complete_func(CodeTextEditorCodeCompleteFunc p_cod
 	code_complete_ud = p_ud;
 }
 
-void CodeTextEditor::set_refactor_func(CodeTextEditorRefactorFunc p_refactor_func, void *p_ud) {
-	refactor_func = p_refactor_func;
+void CodeTextEditor::set_refactor_rename_symbol_func(CodeTextEditorRefactorRenameSymbolFunc p_refactor_func, void *p_ud) {
+	refactor_rename_symbol_func = p_refactor_func;
 	refactor_ud = p_ud;
 }
 
