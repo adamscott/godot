@@ -3668,7 +3668,32 @@ void GDScriptLanguage::auto_indent_code(String &p_code, int p_from_line, int p_t
 }
 
 #ifdef TOOLS_ENABLED
-::Error GDScriptLanguage::refactor_rename_symbol_code(const String &p_code, const String &p_path, Object *p_owner, ScriptLanguage::RefactorRenameSymbolResult *r_result) {
+::Error GDScriptLanguage::refactor_rename_symbol_code(const String &p_code, const String &p_symbol, const String &p_path, Object *p_owner, ScriptLanguage::RefactorRenameSymbolResult *r_result) {
+	// if (ClassDB::class_exists(p_symbol)) {
+	// 	r_result.type = ScriptLanguage::LOOKUP_RESULT_CLASS;
+	// 	r_result.class_name = p_symbol;
+	// 	return OK;
+	// }
+
+	// if (Variant::get_type_by_name(p_symbol) < Variant::VARIANT_MAX) {
+	// 	r_result.type = ScriptLanguage::LOOKUP_RESULT_CLASS;
+	// 	r_result.class_name = p_symbol;
+	// 	return OK;
+	// }
+
+	// if (p_symbol == "Variant") {
+	// 	r_result.type = ScriptLanguage::LOOKUP_RESULT_CLASS;
+	// 	r_result.class_name = "Variant";
+	// 	return OK;
+	// }
+
+	// if (p_symbol == "PI" || p_symbol == "TAU" || p_symbol == "INF" || p_symbol == "NAN") {
+	// 	r_result.type = ScriptLanguage::LOOKUP_RESULT_CLASS_CONSTANT;
+	// 	r_result.class_name = "@GDScript";
+	// 	r_result.class_member = p_symbol;
+	// 	return OK;
+	// }
+
 	return OK;
 }
 
