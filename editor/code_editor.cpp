@@ -1100,9 +1100,9 @@ void CodeTextEditor::_refactor_request(int p_refactor_kind) {
 			ScriptLanguage::RefactorRenameSymbolResult result;
 			String completion_text = text_editor->get_text_for_code_completion();
 			String symbol = text_editor->get_text_with_cursor_char(text_editor->get_caret_line(), text_editor->get_caret_column());
-			_refactor_rename_symbol_script(completion_text, symbol, &result);
+			_refactor_rename_symbol_script(completion_text, symbol, result);
 			if (refactor_rename_symbol_func) {
-				refactor_rename_symbol_func(refactor_ud, completion_text, symbol, &result);
+				refactor_rename_symbol_func(refactor_ud, completion_text, symbol, result);
 			}
 
 			for (const ScriptLanguage::RefactorRenameSymbolResult::Match &match : result.matches) {

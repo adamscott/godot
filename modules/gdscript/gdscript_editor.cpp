@@ -3668,33 +3668,310 @@ void GDScriptLanguage::auto_indent_code(String &p_code, int p_from_line, int p_t
 }
 
 #ifdef TOOLS_ENABLED
-::Error GDScriptLanguage::refactor_rename_symbol_code(const String &p_code, const String &p_symbol, const String &p_path, Object *p_owner, ScriptLanguage::RefactorRenameSymbolResult *r_result) {
-	// if (ClassDB::class_exists(p_symbol)) {
-	// 	r_result.type = ScriptLanguage::LOOKUP_RESULT_CLASS;
-	// 	r_result.class_name = p_symbol;
-	// 	return OK;
+// static Error _refactor_rename_symbol_from_base(const GDScriptParser::DataType &p_base, const String &p_symbol, GDScriptLanguage::RefactorRenameSymbolResult &r_result) {
+// 	return ERR_CANT_RESOLVE;
+// }
+
+::Error GDScriptLanguage::refactor_rename_symbol_code(const String &p_code, const String &p_symbol, const String &p_path, Object *p_owner, ScriptLanguage::RefactorRenameSymbolResult &r_result) {
+	r_result.symbol = p_symbol;
+
+	if (ClassDB::class_exists(p_symbol)) {
+		r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NATIVE;
+		return OK;
+	}
+
+	if (Variant::get_type_by_name(p_symbol) < Variant::VARIANT_MAX) {
+		r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NATIVE;
+		return OK;
+	}
+
+	if (p_symbol == "Variant") {
+		r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NATIVE;
+		return OK;
+	}
+
+	if (p_symbol == "PI" || p_symbol == "TAU" || p_symbol == "INF" || p_symbol == "NAN") {
+		r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NATIVE;
+		return OK;
+	}
+
+	GDScriptParser parser;
+	parser.parse(p_code, p_path, true);
+
+	GDScriptParser::CompletionContext context = parser.get_completion_context();
+	context.base = p_owner;
+
+	// Allows class functions with the names like built-ins to be handled properly.
+	if (context.type != GDScriptParser::COMPLETION_ATTRIBUTE) {
+		// Need special checks for `assert` and `preload` as they are technically
+		// keywords, so are not registered in `GDScriptUtilityFunctions`.
+		if (GDScriptUtilityFunctions::function_exists(p_symbol) || p_symbol == "assert" || p_symbol == "preload") {
+			r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NATIVE;
+			return OK;
+		}
+	}
+
+	GDScriptAnalyzer analyzer(&parser);
+	analyzer.analyze();
+
+	if (context.current_class && context.current_class->extends.size() > 0) {
+		StringName class_name = context.current_class->extends[0]->name;
+
+		bool success = false;
+		ClassDB::get_integer_constant(class_name, p_symbol, &success);
+		if (success) {
+			r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NATIVE;
+			return OK;
+		}
+		do {
+			List<StringName> enums;
+			ClassDB::get_enum_list(class_name, &enums, true);
+			for (const StringName &enum_name : enums) {
+				if (enum_name == p_symbol) {
+					r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NATIVE;
+					return OK;
+				}
+			}
+			class_name = ClassDB::get_parent_class_nocheck(class_name);
+		} while (class_name != StringName());
+	}
+
+	const GDScriptParser::TypeNode *type_node = dynamic_cast<const GDScriptParser::TypeNode *>(context.node);
+	if (type_node != nullptr && !type_node->type_chain.is_empty()) {
+		StringName class_name = type_node->type_chain[0]->name;
+		if (ScriptServer::is_global_class(class_name)) {
+			class_name = ScriptServer::get_global_class_native_base(class_name);
+		}
+		do {
+			List<StringName> enums;
+			ClassDB::get_enum_list(class_name, &enums, true);
+			for (const StringName &enum_name : enums) {
+				if (enum_name == p_symbol) {
+					r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NATIVE;
+					return OK;
+				}
+			}
+			class_name = ClassDB::get_parent_class_nocheck(class_name);
+		} while (class_name != StringName());
+	}
+
+	// bool is_function = false;
+
+	// switch (context.type) {
+	// 	case GDScriptParser::COMPLETION_BUILT_IN_TYPE_CONSTANT_OR_STATIC_METHOD: {
+	// 		r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NATIVE;
+	// 		return OK;
+	// 	} break;
+	// 	case GDScriptParser::COMPLETION_SUPER_METHOD:
+	// 	case GDScriptParser::COMPLETION_METHOD:
+	// 	case GDScriptParser::COMPLETION_ASSIGN:
+	// 	case GDScriptParser::COMPLETION_CALL_ARGUMENTS:
+	// 	case GDScriptParser::COMPLETION_IDENTIFIER:
+	// 	case GDScriptParser::COMPLETION_PROPERTY_METHOD:
+	// 	case GDScriptParser::COMPLETION_SUBSCRIPT: {
+	// 		GDScriptParser::DataType base_type;
+	// 		if (context.current_class) {
+	// 			if (context.type != GDScriptParser::COMPLETION_SUPER_METHOD) {
+	// 				base_type = context.current_class->get_datatype();
+	// 			} else {
+	// 				base_type = context.current_class->base_type;
+	// 			}
+	// 		} else {
+	// 			break;
+	// 		}
+
+	// 		if (!is_function && context.current_suite) {
+	// 			// Lookup local variables.
+	// 			const GDScriptParser::SuiteNode *suite = context.current_suite;
+	// 			while (suite) {
+	// 				if (suite->has_local(p_symbol)) {
+	// 					const GDScriptParser::SuiteNode::Local &local = suite->get_local(p_symbol);
+	// 					ScriptLanguage::RefactorRenameSymbolResult::Match match;
+
+	// 					switch (local.type) {
+	// 						case GDScriptParser::SuiteNode::Local::UNDEFINED:
+	// 							return ERR_BUG;
+	// 						case GDScriptParser::SuiteNode::Local::CONSTANT: {
+	// 							r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_LOCAL_CONSTANT;
+	// 						} break;
+	// 						case GDScriptParser::SuiteNode::Local::VARIABLE: {
+	// 							r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_LOCAL_VARIABLE;
+	// 						} break;
+	// 						case GDScriptParser::SuiteNode::Local::PARAMETER:
+	// 						case GDScriptParser::SuiteNode::Local::FOR_VARIABLE:
+	// 						case GDScriptParser::SuiteNode::Local::PATTERN_BIND:
+	// 							r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_LOCAL_VARIABLE;
+	// 							break;
+	// 					}
+
+	// 					match.path = base_type.script_path;
+	// 					match.start_line = local.start_line;
+	// 					match.start_column = local.start_column;
+	// 					match.end_line = local.end_line;
+	// 					match.end_column = local.end_column;
+
+	// 					r_result.matches.push_back(match);
+	// 				}
+	// 				suite = suite->parent_block;
+	// 			}
+	// 		}
+
+	// 		if (_refactor_rename_symbol_from_base(base_type, p_symbol, r_result) == OK) {
+	// 			return OK;
+	// 		}
+
+	// 		if (!is_function) {
+	// 			if (ProjectSettings::get_singleton()->has_autoload(p_symbol)) {
+	// 				const ProjectSettings::AutoloadInfo &autoload = ProjectSettings::get_singleton()->get_autoload(p_symbol);
+	// 				if (autoload.is_singleton) {
+	// 					String scr_path = autoload.path;
+	// 					if (!scr_path.ends_with(".gd")) {
+	// 						// Not a script, try find the script anyway, may have some success.
+	// 						scr_path = scr_path.get_basename() + ".gd";
+	// 					}
+
+	// 					if (FileAccess::exists(scr_path)) {
+	// 						ScriptLanguage::RefactorRenameSymbolResult::Match match;
+	// 						r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_NAME;
+	// 						r_result.script = ResourceLoader::load(scr_path);
+	// 						r_result.script_path = scr_path;
+	// 						r_result.location = 0;
+	// 						return OK;
+	// 					}
+	// 				}
+	// 			}
+
+	// 			if (ScriptServer::is_global_class(p_symbol)) {
+	// 				const String scr_path = ScriptServer::get_global_class_path(p_symbol);
+	// 				const Ref<Script> scr = ResourceLoader::load(scr_path);
+	// 				if (scr.is_null()) {
+	// 					return ERR_BUG;
+	// 				}
+	// 				r_result.type = ScriptLanguage::LOOKUP_RESULT_CLASS;
+	// 				r_result.class_name = scr->get_doc_class_name();
+	// 				r_result.script = scr;
+	// 				r_result.script_path = scr_path;
+	// 				r_result.location = 0;
+	// 				return OK;
+	// 			}
+
+	// 			const HashMap<StringName, int> &global_map = GDScriptLanguage::get_singleton()->get_global_map();
+	// 			if (global_map.has(p_symbol)) {
+	// 				Variant value = GDScriptLanguage::get_singleton()->get_global_array()[global_map[p_symbol]];
+	// 				if (value.get_type() == Variant::OBJECT) {
+	// 					const Object *obj = value;
+	// 					if (obj) {
+	// 						if (Object::cast_to<GDScriptNativeClass>(obj)) {
+	// 							r_result.type = ScriptLanguage::LOOKUP_RESULT_CLASS;
+	// 							r_result.class_name = Object::cast_to<GDScriptNativeClass>(obj)->get_name();
+	// 						} else {
+	// 							r_result.type = ScriptLanguage::LOOKUP_RESULT_CLASS;
+	// 							r_result.class_name = obj->get_class();
+	// 						}
+	// 						return OK;
+	// 					}
+	// 				}
+	// 			}
+
+	// 			if (CoreConstants::is_global_enum(p_symbol)) {
+	// 				r_result.type = ScriptLanguage::LOOKUP_RESULT_CLASS_ENUM;
+	// 				r_result.class_name = "@GlobalScope";
+	// 				r_result.class_member = p_symbol;
+	// 				return OK;
+	// 			}
+
+	// 			if (CoreConstants::is_global_constant(p_symbol)) {
+	// 				r_result.type = ScriptLanguage::LOOKUP_RESULT_CLASS_CONSTANT;
+	// 				r_result.class_name = "@GlobalScope";
+	// 				r_result.class_member = p_symbol;
+	// 				return OK;
+	// 			}
+
+	// 			if (Variant::has_utility_function(p_symbol)) {
+	// 				r_result.type = ScriptLanguage::LOOKUP_RESULT_CLASS_METHOD;
+	// 				r_result.class_name = "@GlobalScope";
+	// 				r_result.class_member = p_symbol;
+	// 				return OK;
+	// 			}
+	// 		}
+	// 	} break;
+	// 	case GDScriptParser::COMPLETION_ATTRIBUTE_METHOD:
+	// 	case GDScriptParser::COMPLETION_ATTRIBUTE: {
+	// 		if (context.node->type != GDScriptParser::Node::SUBSCRIPT) {
+	// 			break;
+	// 		}
+	// 		const GDScriptParser::SubscriptNode *subscript = static_cast<const GDScriptParser::SubscriptNode *>(context.node);
+	// 		if (!subscript->is_attribute) {
+	// 			break;
+	// 		}
+	// 		GDScriptCompletionIdentifier base;
+
+	// 		bool found_type = _get_subscript_type(context, subscript, base.type);
+	// 		if (!found_type && !_guess_expression_type(context, subscript->base, base)) {
+	// 			break;
+	// 		}
+
+	// 		if (_lookup_symbol_from_base(base.type, p_symbol, r_result) == OK) {
+	// 			return OK;
+	// 		}
+	// 	} break;
+	// 	case GDScriptParser::COMPLETION_TYPE_ATTRIBUTE: {
+	// 		if (context.node == nullptr || context.node->type != GDScriptParser::Node::TYPE) {
+	// 			break;
+	// 		}
+	// 		const GDScriptParser::TypeNode *type = static_cast<const GDScriptParser::TypeNode *>(context.node);
+
+	// 		GDScriptParser::DataType base_type;
+	// 		const GDScriptParser::IdentifierNode *prev = nullptr;
+	// 		for (const GDScriptParser::IdentifierNode *E : type->type_chain) {
+	// 			if (E->name == p_symbol && prev != nullptr) {
+	// 				base_type = prev->get_datatype();
+	// 				break;
+	// 			}
+	// 			prev = E;
+	// 		}
+	// 		if (base_type.kind != GDScriptParser::DataType::CLASS) {
+	// 			GDScriptCompletionIdentifier base;
+	// 			if (!_guess_expression_type(context, prev, base)) {
+	// 				break;
+	// 			}
+	// 			base_type = base.type;
+	// 		}
+
+	// 		if (_lookup_symbol_from_base(base_type, p_symbol, r_result) == OK) {
+	// 			return OK;
+	// 		}
+	// 	} break;
+	// 	case GDScriptParser::COMPLETION_OVERRIDE_METHOD: {
+	// 		GDScriptParser::DataType base_type = context.current_class->base_type;
+
+	// 		if (_lookup_symbol_from_base(base_type, p_symbol, r_result) == OK) {
+	// 			return OK;
+	// 		}
+	// 	} break;
+	// 	case GDScriptParser::COMPLETION_PROPERTY_DECLARATION_OR_TYPE:
+	// 	case GDScriptParser::COMPLETION_TYPE_NAME_OR_VOID:
+	// 	case GDScriptParser::COMPLETION_TYPE_NAME: {
+	// 		GDScriptParser::DataType base_type = context.current_class->get_datatype();
+
+	// 		if (_lookup_symbol_from_base(base_type, p_symbol, r_result) == OK) {
+	// 			return OK;
+	// 		}
+	// 	} break;
+	// 	case GDScriptParser::COMPLETION_ANNOTATION: {
+	// 		const String annotation_symbol = "@" + p_symbol;
+	// 		if (parser.annotation_exists(annotation_symbol)) {
+	// 			r_result.type = ScriptLanguage::LOOKUP_RESULT_CLASS_ANNOTATION;
+	// 			r_result.class_name = "@GDScript";
+	// 			r_result.class_member = annotation_symbol;
+	// 			return OK;
+	// 		}
+	// 	} break;
+	// 	default: {
+	// 	}
 	// }
 
-	// if (Variant::get_type_by_name(p_symbol) < Variant::VARIANT_MAX) {
-	// 	r_result.type = ScriptLanguage::LOOKUP_RESULT_CLASS;
-	// 	r_result.class_name = p_symbol;
-	// 	return OK;
-	// }
-
-	// if (p_symbol == "Variant") {
-	// 	r_result.type = ScriptLanguage::LOOKUP_RESULT_CLASS;
-	// 	r_result.class_name = "Variant";
-	// 	return OK;
-	// }
-
-	// if (p_symbol == "PI" || p_symbol == "TAU" || p_symbol == "INF" || p_symbol == "NAN") {
-	// 	r_result.type = ScriptLanguage::LOOKUP_RESULT_CLASS_CONSTANT;
-	// 	r_result.class_name = "@GDScript";
-	// 	r_result.class_member = p_symbol;
-	// 	return OK;
-	// }
-
-	return OK;
+	return ERR_CANT_RESOLVE;
 }
 
 static Error _lookup_symbol_from_base(const GDScriptParser::DataType &p_base, const String &p_symbol, GDScriptLanguage::LookupResult &r_result) {

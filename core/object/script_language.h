@@ -348,6 +348,8 @@ public:
 	};
 
 	enum RefactorRenameSymbolResultType {
+		REFACTOR_RENAME_SYMBOL_RESULT_NONE,
+		REFACTOR_RENAME_SYMBOL_RESULT_NATIVE,
 		REFACTOR_RENAME_SYMBOL_RESULT_CLASS_NAME,
 		REFACTOR_RENAME_SYMBOL_RESULT_CLASS_CONSTANT,
 		REFACTOR_RENAME_SYMBOL_RESULT_CLASS_PROPERTY,
@@ -361,15 +363,20 @@ public:
 	};
 
 	struct RefactorRenameSymbolResult {
+		String symbol;
 		RefactorRenameSymbolResultType type;
 		struct Match {
 			String path;
+			int start_line;
+			int start_column;
+			int end_line;
+			int end_column;
 		};
 
 		List<Match> matches;
 	};
 
-	virtual Error refactor_rename_symbol_code(const String &p_code, const String &p_symbol, const String &p_path, Object *p_owner, RefactorRenameSymbolResult *r_result) { return ERR_UNAVAILABLE; }
+	virtual Error refactor_rename_symbol_code(const String &p_code, const String &p_symbol, const String &p_path, Object *p_owner, RefactorRenameSymbolResult &r_result) { return ERR_UNAVAILABLE; }
 
 	// Lookup.
 	enum LookupResultType {

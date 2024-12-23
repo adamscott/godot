@@ -889,12 +889,12 @@ void ScriptTextEditor::_code_complete_script(const String &p_code, List<ScriptLa
 	}
 }
 
-void ScriptTextEditor::_refactor_rename_symbol_scripts(void *p_ud, const String &p_code, const String &p_symbol, ScriptLanguage::RefactorRenameSymbolResult *r_result) {
+void ScriptTextEditor::_refactor_rename_symbol_scripts(void *p_ud, const String &p_code, const String &p_symbol, ScriptLanguage::RefactorRenameSymbolResult &r_result) {
 	ScriptTextEditor *ste = (ScriptTextEditor *)p_ud;
 	ste->_refactor_rename_symbol_script(p_code, p_symbol, r_result);
 }
 
-void ScriptTextEditor::_refactor_rename_symbol_script(const String &p_code, const String &p_symbol, ScriptLanguage::RefactorRenameSymbolResult *r_result) {
+void ScriptTextEditor::_refactor_rename_symbol_script(const String &p_code, const String &p_symbol, ScriptLanguage::RefactorRenameSymbolResult &r_result) {
 	Node *base = get_tree()->get_edited_scene_root();
 	if (base) {
 		base = _find_node_for_script(base, base, script);
