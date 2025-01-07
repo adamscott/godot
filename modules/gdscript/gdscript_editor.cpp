@@ -3806,11 +3806,11 @@ void GDScriptLanguage::auto_indent_code(String &p_code, int p_from_line, int p_t
 								break;
 						}
 
-						match.path = base_type.script_path;
-						match.start_line = local.start_line;
-						match.start_column = local.start_column;
-						match.end_line = local.end_line;
-						match.end_column = local.end_column;
+						LocalVector<GDScriptParser::Node *> nodes;
+						suite->get_nodes(nodes);
+						for (GDScriptParser::Node *node : nodes) {
+							print_line(vformat("Type: %s", node->type));
+						}
 
 						r_result.matches.push_back(match);
 					}
