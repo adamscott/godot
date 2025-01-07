@@ -1284,6 +1284,12 @@ public:
 		}
 	};
 
+	enum ParsingContext {
+		PARSING_CONTEXT_NONE,
+		PARSING_CONTEXT_COMPLETION,
+		PARSING_CONTEXT_REFACTOR_RENAME,
+	};
+
 	enum CompletionType {
 		COMPLETION_NONE,
 		COMPLETION_ANNOTATION, // Annotation (following @).
@@ -1334,13 +1340,16 @@ private:
 
 	bool _is_tool = false;
 	String script_path;
-	bool for_completion = false;
 	bool parse_body = true;
 	bool panic_mode = false;
 	bool can_break = false;
 	bool can_continue = false;
 	List<bool> multiline_stack;
 	HashMap<String, Ref<GDScriptParserRef>> depended_parsers;
+
+	ParsingContext parsing_context;
+	_FORCE_INLINE_ bool is_for_completion() { return parsing_context == PARSING_CONTEXT_COMPLETION; }
+	_FORCE_INLINE_ bool is_for_refactor_rename() { return parsing_context == PARSING_CONTEXT_REFACTOR_RENAME; }
 
 	ClassNode *head = nullptr;
 	Node *list = nullptr;
@@ -1575,7 +1584,7 @@ private:
 #endif // TOOLS_ENABLED
 
 public:
-	Error parse(const String &p_source_code, const String &p_script_path, bool p_for_completion, bool p_parse_body = true);
+	Error parse(const String &p_source_code, const String &p_script_path, ParsingContext p_context = ParsingContext::PARSING_CONTEXT_NONE, bool p_parse_body = true);
 	Error parse_binary(const Vector<uint8_t> &p_binary, const String &p_script_path);
 	ClassNode *get_tree() const { return head; }
 	bool is_tool() const { return _is_tool; }
