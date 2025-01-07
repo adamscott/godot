@@ -1098,11 +1098,12 @@ void CodeTextEditor::_refactor_request(int p_refactor_kind) {
 	switch ((ScriptLanguage::RefactorKind)p_refactor_kind) {
 		case ScriptLanguage::RefactorKind::REFACTOR_KIND_RENAME_SYMBOL: {
 			ScriptLanguage::RefactorRenameSymbolResult result;
-			String completion_text = text_editor->get_text_for_code_completion();
-			String symbol = text_editor->get_text_with_cursor_char(text_editor->get_caret_line(), text_editor->get_caret_column());
-			_refactor_rename_symbol_script(completion_text, symbol, result);
+			Vector2i pos = { text_editor->get_caret_column(), text_editor->get_caret_line() };
+			String code = text_editor->get_text_with_cursor_char(pos.y, pos.x);
+			String symbol = text_editor->get_word_at_line_column(pos.y, pos.x);
+			_refactor_rename_symbol_script(code, symbol, result);
 			if (refactor_rename_symbol_func) {
-				refactor_rename_symbol_func(refactor_ud, completion_text, symbol, result);
+				refactor_rename_symbol_func(refactor_ud, code, symbol, result);
 			}
 
 			for (const ScriptLanguage::RefactorRenameSymbolResult::Match &match : result.matches) {
