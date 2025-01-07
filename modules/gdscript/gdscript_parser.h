@@ -1343,6 +1343,7 @@ public:
 		REFACTOR_RENAME_TYPE_ATTRIBUTE_METHOD, // After id.| to look for methods.
 		REFACTOR_RENAME_TYPE_BUILT_IN_TYPE_CONSTANT_OR_STATIC_METHOD, // Constants inside a built-in type (e.g. Color.BLUE) or static methods (e.g. Color.html).
 		REFACTOR_RENAME_TYPE_CALL_ARGUMENTS, // Complete with nodes, input actions, enum values (or usual expressions).
+		// REFACTOR_RENAME_TYPE_DECLARATION, // Potential declaration (var, const, func).
 		REFACTOR_RENAME_TYPE_GET_NODE, // Get node with $ notation.
 		REFACTOR_RENAME_TYPE_IDENTIFIER, // List available identifiers in scope.
 		REFACTOR_RENAME_TYPE_INHERIT_TYPE, // Type after extends. Exclude non-viable types (built-ins, enums, void). Includes subtypes using the argument index.
