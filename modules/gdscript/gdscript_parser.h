@@ -1334,6 +1334,45 @@ public:
 		int argument = -1;
 	};
 
+	enum RefactorRenameType {
+		REFACTOR_RENAME_TYPE_NONE,
+		REFACTOR_RENAME_TYPE_ANNOTATION, // Annotation (following @).
+		REFACTOR_RENAME_TYPE_ANNOTATION_ARGUMENTS, // Annotation arguments hint.
+		REFACTOR_RENAME_TYPE_ASSIGN, // Assignment based on type (e.g. enum values).
+		REFACTOR_RENAME_TYPE_ATTRIBUTE, // After id.| to look for members.
+		REFACTOR_RENAME_TYPE_ATTRIBUTE_METHOD, // After id.| to look for methods.
+		REFACTOR_RENAME_TYPE_BUILT_IN_TYPE_CONSTANT_OR_STATIC_METHOD, // Constants inside a built-in type (e.g. Color.BLUE) or static methods (e.g. Color.html).
+		REFACTOR_RENAME_TYPE_CALL_ARGUMENTS, // Complete with nodes, input actions, enum values (or usual expressions).
+		REFACTOR_RENAME_TYPE_GET_NODE, // Get node with $ notation.
+		REFACTOR_RENAME_TYPE_IDENTIFIER, // List available identifiers in scope.
+		REFACTOR_RENAME_TYPE_INHERIT_TYPE, // Type after extends. Exclude non-viable types (built-ins, enums, void). Includes subtypes using the argument index.
+		REFACTOR_RENAME_TYPE_METHOD, // List available methods in scope.
+		REFACTOR_RENAME_TYPE_OVERRIDE_METHOD, // Override implementation, also for native virtuals.
+		REFACTOR_RENAME_TYPE_PROPERTY_DECLARATION, // Property declaration (get, set).
+		REFACTOR_RENAME_TYPE_PROPERTY_DECLARATION_OR_TYPE, // Property declaration (get, set) or a type hint.
+		REFACTOR_RENAME_TYPE_PROPERTY_METHOD, // Property setter or getter (list available methods).
+		REFACTOR_RENAME_TYPE_RESOURCE_PATH, // For load/preload.
+		REFACTOR_RENAME_TYPE_SUBSCRIPT, // Inside id[|].
+		REFACTOR_RENAME_TYPE_SUPER_METHOD, // After super.
+		REFACTOR_RENAME_TYPE_TYPE_ATTRIBUTE, // Attribute in type name (Type.|).
+		REFACTOR_RENAME_TYPE_TYPE_NAME, // Name of type (after :).
+		REFACTOR_RENAME_TYPE_TYPE_NAME_OR_VOID, // Same as TYPE_NAME, but allows void (in function return type).
+		REFACTOR_RENAME_TYPE_LITERAL, // Declared literal (e.g. variable name).
+	};
+
+	struct RefactorRenameContext {
+		RefactorRenameType type = REFACTOR_RENAME_TYPE_NONE;
+		ClassNode *current_class = nullptr;
+		FunctionNode *current_function = nullptr;
+		SuiteNode *current_suite = nullptr;
+		int current_line = -1;
+		int current_argument = -1;
+		Variant::Type builtin_type = Variant::VARIANT_MAX;
+		Node *node = nullptr;
+		Object *base = nullptr;
+		GDScriptParser *parser = nullptr;
+	};
+
 private:
 	friend class GDScriptAnalyzer;
 	friend class GDScriptParserRef;
@@ -1348,8 +1387,12 @@ private:
 	HashMap<String, Ref<GDScriptParserRef>> depended_parsers;
 
 	ParsingContext parsing_context;
-	_FORCE_INLINE_ bool is_for_completion() { return parsing_context == PARSING_CONTEXT_COMPLETION; }
-	_FORCE_INLINE_ bool is_for_refactor_rename() { return parsing_context == PARSING_CONTEXT_REFACTOR_RENAME; }
+	_FORCE_INLINE_ bool is_for_completion() {
+		return parsing_context == PARSING_CONTEXT_COMPLETION;
+	}
+	_FORCE_INLINE_ bool is_for_refactor_rename() {
+		return parsing_context == PARSING_CONTEXT_REFACTOR_RENAME;
+	}
 
 	ClassNode *head = nullptr;
 	Node *list = nullptr;
@@ -1383,6 +1426,9 @@ private:
 	CompletionContext completion_context;
 	CompletionCall completion_call;
 	List<CompletionCall> completion_call_stack;
+
+	RefactorRenameContext refactor_rename_context;
+
 	bool passed_cursor = false;
 	bool in_lambda = false;
 	bool lambda_ended = false; // Marker for when a lambda ends, to apply an end of statement if needed.
@@ -1482,6 +1528,9 @@ private:
 	void push_completion_call(Node *p_call);
 	void pop_completion_call();
 	void set_last_completion_call_arg(int p_argument);
+
+	void make_refactor_rename_context(RefactorRenameType p_type, Node *p_node, int p_argument = -1);
+	void make_refactor_rename_context(RefactorRenameType p_type, Variant::Type p_builtin_type);
 
 	GDScriptTokenizer::Token advance();
 	bool match(GDScriptTokenizer::Token::Type p_token_type);
@@ -1586,28 +1635,49 @@ private:
 public:
 	Error parse(const String &p_source_code, const String &p_script_path, ParsingContext p_context = ParsingContext::PARSING_CONTEXT_NONE, bool p_parse_body = true);
 	Error parse_binary(const Vector<uint8_t> &p_binary, const String &p_script_path);
-	ClassNode *get_tree() const { return head; }
-	bool is_tool() const { return _is_tool; }
+	ClassNode *get_tree() const {
+		return head;
+	}
+	bool is_tool() const {
+		return _is_tool;
+	}
 	Ref<GDScriptParserRef> get_depended_parser_for(const String &p_path);
 	const HashMap<String, Ref<GDScriptParserRef>> &get_depended_parsers();
 	ClassNode *find_class(const String &p_qualified_name) const;
 	bool has_class(const GDScriptParser::ClassNode *p_class) const;
 	static Variant::Type get_builtin_type(const StringName &p_type); // Excluding `Variant::NIL` and `Variant::OBJECT`.
 
-	CompletionContext get_completion_context() const { return completion_context; }
-	CompletionCall get_completion_call() const { return completion_call; }
+	CompletionContext get_completion_context() const {
+		return completion_context;
+	}
+	CompletionCall get_completion_call() const {
+		return completion_call;
+	}
+
+	RefactorRenameContext get_refactor_rename_context() const {
+		return refactor_rename_context;
+	}
+
 	void get_annotation_list(List<MethodInfo> *r_annotations) const;
 	bool annotation_exists(const String &p_annotation_name) const;
 
-	const List<ParserError> &get_errors() const { return errors; }
+	const List<ParserError> &get_errors() const {
+		return errors;
+	}
 	const List<String> get_dependencies() const {
 		// TODO: Keep track of deps.
 		return List<String>();
 	}
 #ifdef DEBUG_ENABLED
-	const List<GDScriptWarning> &get_warnings() const { return warnings; }
-	const HashSet<int> &get_unsafe_lines() const { return unsafe_lines; }
-	int get_last_line_number() const { return current.end_line; }
+	const List<GDScriptWarning> &get_warnings() const {
+		return warnings;
+	}
+	const HashSet<int> &get_unsafe_lines() const {
+		return unsafe_lines;
+	}
+	int get_last_line_number() const {
+		return current.end_line;
+	}
 #endif
 
 #ifdef TOOLS_ENABLED

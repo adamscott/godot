@@ -133,7 +133,7 @@ bool GDScriptLanguage::validate(const String &p_script, const String &p_path, Li
 	GDScriptParser parser;
 	GDScriptAnalyzer analyzer(&parser);
 
-	Error err = parser.parse(p_script, p_path, false);
+	Error err = parser.parse(p_script, p_path);
 	if (err == OK) {
 		err = analyzer.analyze();
 	}
