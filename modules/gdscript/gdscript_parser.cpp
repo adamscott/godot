@@ -254,7 +254,7 @@ void GDScriptParser::apply_pending_warnings() {
 #endif // DEBUG_ENABLED
 
 void GDScriptParser::override_completion_context(const Node *p_for_node, CompletionType p_type, Node *p_node, int p_argument) {
-	if (!is_for_completion()) {
+	if (!for_completion) {
 		return;
 	}
 	if (p_for_node == nullptr || completion_context.node != p_for_node) {
@@ -273,7 +273,7 @@ void GDScriptParser::override_completion_context(const Node *p_for_node, Complet
 }
 
 void GDScriptParser::make_completion_context(CompletionType p_type, Node *p_node, int p_argument, bool p_force) {
-	if (!is_for_completion() || (!p_force && completion_context.type != COMPLETION_NONE)) {
+	if (!for_completion || (!p_force && completion_context.type != COMPLETION_NONE)) {
 		return;
 	}
 	if (previous.cursor_place != GDScriptTokenizerText::CURSOR_MIDDLE && previous.cursor_place != GDScriptTokenizerText::CURSOR_END && current.cursor_place == GDScriptTokenizerText::CURSOR_NONE) {
@@ -292,7 +292,7 @@ void GDScriptParser::make_completion_context(CompletionType p_type, Node *p_node
 }
 
 void GDScriptParser::make_completion_context(CompletionType p_type, Variant::Type p_builtin_type, bool p_force) {
-	if (!is_for_completion() || (!p_force && completion_context.type != COMPLETION_NONE)) {
+	if (!for_completion || (!p_force && completion_context.type != COMPLETION_NONE)) {
 		return;
 	}
 	if (previous.cursor_place != GDScriptTokenizerText::CURSOR_MIDDLE && previous.cursor_place != GDScriptTokenizerText::CURSOR_END && current.cursor_place == GDScriptTokenizerText::CURSOR_NONE) {
@@ -310,7 +310,7 @@ void GDScriptParser::make_completion_context(CompletionType p_type, Variant::Typ
 }
 
 void GDScriptParser::push_completion_call(Node *p_call) {
-	if (!is_for_completion()) {
+	if (!for_completion) {
 		return;
 	}
 	CompletionCall call;
@@ -323,7 +323,7 @@ void GDScriptParser::push_completion_call(Node *p_call) {
 }
 
 void GDScriptParser::pop_completion_call() {
-	if (!is_for_completion()) {
+	if (!for_completion) {
 		return;
 	}
 	ERR_FAIL_COND_MSG(completion_call_stack.is_empty(), "Trying to pop empty completion call stack");
@@ -331,20 +331,20 @@ void GDScriptParser::pop_completion_call() {
 }
 
 void GDScriptParser::set_last_completion_call_arg(int p_argument) {
-	if (!is_for_completion() || passed_cursor) {
+	if (!for_completion || passed_cursor) {
 		return;
 	}
 	ERR_FAIL_COND_MSG(completion_call_stack.is_empty(), "Trying to set argument on empty completion call stack");
 	completion_call_stack.back()->get().argument = p_argument;
 }
 
-Error GDScriptParser::parse(const String &p_source_code, const String &p_script_path, ParsingContext p_context, bool p_parse_body) {
+Error GDScriptParser::parse(const String &p_source_code, const String &p_script_path, bool p_for_completion, bool p_parse_body) {
 	clear();
 
 	String source = p_source_code;
 	int cursor_line = -1;
 	int cursor_column = -1;
-	parsing_context = p_context;
+	for_completion = p_for_completion;
 	parse_body = p_parse_body;
 
 	int tab_size = 4;
@@ -354,7 +354,7 @@ Error GDScriptParser::parse(const String &p_source_code, const String &p_script_
 	}
 #endif // TOOLS_ENABLED
 
-	if (is_for_completion()) {
+	if (p_for_completion) {
 		// Remove cursor sentinel char.
 		const Vector<String> lines = p_source_code.split("\n");
 		cursor_line = 1;
@@ -477,7 +477,7 @@ GDScriptTokenizer::Token GDScriptParser::advance() {
 	if (current.type == GDScriptTokenizer::Token::TK_EOF) {
 		ERR_FAIL_COND_V_MSG(current.type == GDScriptTokenizer::Token::TK_EOF, current, "GDScript parser bug: Trying to advance past the end of stream.");
 	}
-	if (is_for_completion() && !completion_call_stack.is_empty()) {
+	if (for_completion && !completion_call_stack.is_empty()) {
 		if (completion_call.call == nullptr && tokenizer->is_past_cursor()) {
 			completion_call = completion_call_stack.back()->get();
 			passed_cursor = true;
@@ -3194,7 +3194,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_attribute(ExpressionNode *
 	reset_extents(attribute, p_previous_operand);
 	update_extents(attribute);
 
-	if (is_for_completion()) {
+	if (for_completion) {
 		bool is_builtin = false;
 		if (p_previous_operand && p_previous_operand->type == Node::IDENTIFIER) {
 			const IdentifierNode *id = static_cast<const IdentifierNode *>(p_previous_operand);

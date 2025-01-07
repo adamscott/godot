@@ -3207,7 +3207,7 @@ static void _find_call_arguments(GDScriptParser::CompletionContext &p_context, c
 	GDScriptParser parser;
 	GDScriptAnalyzer analyzer(&parser);
 
-	parser.parse(p_code, p_path, GDScriptParser::ParsingContext::PARSING_CONTEXT_COMPLETION);
+	parser.parse(p_code, p_path, true);
 	analyzer.analyze();
 
 	r_forced = false;
@@ -3696,7 +3696,7 @@ void GDScriptLanguage::auto_indent_code(String &p_code, int p_from_line, int p_t
 	}
 
 	GDScriptParser parser;
-	parser.parse(p_code, p_path, GDScriptParser::ParsingContext::PARSING_CONTEXT_REFACTOR_RENAME);
+	parser.parse(p_code, p_path, true);
 
 	GDScriptParser::CompletionContext context = parser.get_completion_context();
 	context.base = p_owner;
@@ -4328,7 +4328,7 @@ static Error _lookup_symbol_from_base(const GDScriptParser::DataType &p_base, co
 	}
 
 	GDScriptParser parser;
-	parser.parse(p_code, p_path, GDScriptParser::ParsingContext::PARSING_CONTEXT_COMPLETION);
+	parser.parse(p_code, p_path, true);
 
 	GDScriptParser::CompletionContext context = parser.get_completion_context();
 	context.base = p_owner;
