@@ -907,10 +907,12 @@ void ScriptTextEditor::_refactor_rename_symbol_script(const String &p_code, cons
 	}
 
 	if (r_result.matches.size() > 0) {
-		print_line(vformat("Results for %s", p_symbol));
-	}
-	for (ScriptLanguage::RefactorRenameSymbolResult::Match &match : r_result.matches) {
-		print_line(vformat("match! (%s, %s) -> (%s, %s)", match.start_line, match.start_column, match.end_line, match.end_column));
+		print_line(vformat("Results for \"%s\"", p_symbol));
+		for (ScriptLanguage::RefactorRenameSymbolResult::Match &match : r_result.matches) {
+			print_line(vformat("(%s, %s) -> (%s, %s) [%s]", match.start_line, match.start_column, match.end_line, match.end_column, match.path));
+		}
+	} else {
+		print_line(vformat("No results for %s", p_symbol));
 	}
 }
 

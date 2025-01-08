@@ -369,10 +369,19 @@ public:
 		RefactorRenameSymbolResultType type;
 		struct Match {
 			String path;
-			int start_line;
-			int start_column;
-			int end_line;
-			int end_column;
+			int start_line = -1;
+			int start_column = -1;
+			int end_line = -1;
+			int end_column = -1;
+
+			Match() {}
+			Match(const String &p_path, int p_start_line, int p_start_column, int p_end_line, int p_end_column) {
+				path = p_path;
+				start_line = p_start_line;
+				start_column = p_start_column;
+				end_line = p_end_line;
+				end_column = p_end_column;
+			}
 		};
 		LocalVector<Match> matches;
 	};

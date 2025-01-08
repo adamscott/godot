@@ -887,9 +887,9 @@ public:
 		virtual void get_nodes(LocalVector<GDScriptParser::Node *> &p_nodes) const override {
 			Node::get_nodes(p_nodes);
 			_get_nodes_push(identifier, p_nodes);
-			// for (Member &member : members) {
-			// 	_push_and_get_nodes(member.get_source_node(), p_nodes);
-			// }
+			for (const Member &member : members) {
+				_get_nodes_push(member.get_source_node(), p_nodes);
+			}
 			_get_nodes_push(outer, p_nodes);
 			_get_nodes_push_iterable(extends, p_nodes);
 		}
