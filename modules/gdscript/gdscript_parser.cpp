@@ -68,6 +68,38 @@ Variant::Type GDScriptParser::get_builtin_type(const StringName &p_type) {
 	return Variant::VARIANT_MAX;
 }
 
+// This functions returns the position of the cursor sentinel from a given source code.
+Vector2i GDScriptParser::get_cursor_sentinel_position(const String &p_source_code, int tab_size) {
+	const Vector<String> lines = p_source_code.split("\n");
+	bool found = false;
+	int cursor_line = 1;
+	int cursor_column = 1;
+
+	for (int i = 0; i < lines.size(); i++) {
+		const String &line = lines[i];
+		for (int j = 0; j < line.size(); j++) {
+			if (line[j] == char32_t(0xFFFF)) {
+				found = true;
+				break;
+			} else if (line[j] == '\t') {
+				cursor_column += tab_size - 1;
+			}
+			cursor_column++;
+		}
+		if (found) {
+			break;
+		}
+		cursor_line++;
+		cursor_column = 1;
+	}
+
+	return Vector2i(cursor_column, cursor_line);
+}
+
+String GDScriptParser::remove_cursor_sentinel(const String &p_source_code) {
+	return p_source_code.replace_first(String::chr(0xFFFF), String());
+}
+
 #ifdef TOOLS_ENABLED
 HashMap<String, String> GDScriptParser::theme_color_names;
 #endif
@@ -392,30 +424,10 @@ Error GDScriptParser::parse(const String &p_source_code, const String &p_script_
 #endif // TOOLS_ENABLED
 
 	if (is_for_completion() || is_for_refactor_rename()) {
-		// Remove cursor sentinel char.
-		const Vector<String> lines = p_source_code.split("\n");
-		cursor_line = 1;
-		cursor_column = 1;
-		for (int i = 0; i < lines.size(); i++) {
-			bool found = false;
-			const String &line = lines[i];
-			for (int j = 0; j < line.size(); j++) {
-				if (line[j] == char32_t(0xFFFF)) {
-					found = true;
-					break;
-				} else if (line[j] == '\t') {
-					cursor_column += tab_size - 1;
-				}
-				cursor_column++;
-			}
-			if (found) {
-				break;
-			}
-			cursor_line++;
-			cursor_column = 1;
-		}
-
-		source = source.replace_first(String::chr(0xFFFF), String());
+		Vector2i cursor_position = get_cursor_sentinel_position(p_source_code, tab_size);
+		cursor_line = cursor_position.y;
+		cursor_column = cursor_position.x;
+		source = remove_cursor_sentinel(source);
 	}
 
 	GDScriptTokenizerText *text_tokenizer = memnew(GDScriptTokenizerText);

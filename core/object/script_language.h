@@ -359,6 +359,8 @@ public:
 		REFACTOR_RENAME_SYMBOL_RESULT_CLASS_ANNOTATION,
 		REFACTOR_RENAME_SYMBOL_RESULT_LOCAL_CONSTANT,
 		REFACTOR_RENAME_SYMBOL_RESULT_LOCAL_VARIABLE,
+		REFACTOR_RENAME_SYMBOL_RESULT_LOCAL_FOR_VARIABLE,
+		REFACTOR_RENAME_SYMBOL_RESULT_LOCAL_PATTERN_BIND,
 		REFACTOR_RENAME_SYMBOL_RESULT_MAX,
 	};
 
@@ -372,8 +374,7 @@ public:
 			int end_line;
 			int end_column;
 		};
-
-		List<Match> matches;
+		LocalVector<Match> matches;
 	};
 
 	virtual Error refactor_rename_symbol_code(const String &p_code, const String &p_symbol, const String &p_path, Object *p_owner, RefactorRenameSymbolResult &r_result) { return ERR_UNAVAILABLE; }

@@ -33,6 +33,7 @@
 #include "core/config/project_settings.h"
 #include "core/io/json.h"
 #include "core/math/expression.h"
+#include "core/object/script_language.h"
 #include "core/os/keyboard.h"
 #include "editor/debugger/editor_debugger_node.h"
 #include "editor/editor_command_palette.h"
@@ -900,9 +901,16 @@ void ScriptTextEditor::_refactor_rename_symbol_script(const String &p_code, cons
 		base = _find_node_for_script(base, base, script);
 	}
 	Error err = script->get_language()->refactor_rename_symbol_code(p_code, p_symbol, script->get_path(), base, r_result);
-
 	if (err != OK) {
 		print_error(vformat("Error while refactoring script: %s", error_names[err]));
+		return;
+	}
+
+	if (r_result.matches.size() > 0) {
+		print_line(vformat("Results for %s", p_symbol));
+	}
+	for (ScriptLanguage::RefactorRenameSymbolResult::Match &match : r_result.matches) {
+		print_line(vformat("match! (%s, %s) -> (%s, %s)", match.start_line, match.start_column, match.end_line, match.end_column));
 	}
 }
 

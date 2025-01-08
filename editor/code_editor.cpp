@@ -1105,10 +1105,6 @@ void CodeTextEditor::_refactor_request(int p_refactor_kind) {
 			if (refactor_rename_symbol_func) {
 				refactor_rename_symbol_func(refactor_ud, code, symbol, result);
 			}
-
-			for (const ScriptLanguage::RefactorRenameSymbolResult::Match &match : result.matches) {
-				print_line(vformat("Match pointer: %p", &match));
-			}
 		} break;
 	}
 }

@@ -44,6 +44,7 @@
 #include "core/core_constants.h"
 #include "core/io/file_access.h"
 #include "core/math/expression.h"
+#include "core/object/script_language.h"
 
 #ifdef TOOLS_ENABLED
 #include "core/config/project_settings.h"
@@ -3695,6 +3696,16 @@ void GDScriptLanguage::auto_indent_code(String &p_code, int p_from_line, int p_t
 		return OK;
 	}
 
+	int tab_size = 4;
+#ifdef TOOLS_ENABLED
+	if (EditorSettings::get_singleton()) {
+		tab_size = EditorSettings::get_singleton()->get_setting("text_editor/behavior/indent/size");
+	}
+#endif // TOOLS_ENABLED
+	Vector2i cursor_position = GDScriptParser::get_cursor_sentinel_position(p_code, tab_size);
+	int start_line = cursor_position.y;
+	int start_column = cursor_position.x;
+
 	GDScriptParser parser;
 	parser.parse(p_code, p_path, GDScriptParser::ParsingContext::PARSING_CONTEXT_REFACTOR_RENAME);
 
@@ -3789,30 +3800,66 @@ void GDScriptLanguage::auto_indent_code(String &p_code, int p_from_line, int p_t
 					if (suite->has_local(p_symbol)) {
 						const GDScriptParser::SuiteNode::Local &local = suite->get_local(p_symbol);
 						ScriptLanguage::RefactorRenameSymbolResult::Match match;
+						GDScriptParser::Node *local_node;
 
 						switch (local.type) {
 							case GDScriptParser::SuiteNode::Local::UNDEFINED:
 								return ERR_BUG;
 							case GDScriptParser::SuiteNode::Local::CONSTANT: {
 								r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_LOCAL_CONSTANT;
+								local_node = local.constant;
 							} break;
 							case GDScriptParser::SuiteNode::Local::VARIABLE: {
 								r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_LOCAL_VARIABLE;
+								local_node = local.variable;
 							} break;
-							case GDScriptParser::SuiteNode::Local::PARAMETER:
-							case GDScriptParser::SuiteNode::Local::FOR_VARIABLE:
-							case GDScriptParser::SuiteNode::Local::PATTERN_BIND:
+							case GDScriptParser::SuiteNode::Local::PARAMETER: {
 								r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_LOCAL_VARIABLE;
-								break;
+								local_node = local.parameter;
+							} break;
+							case GDScriptParser::SuiteNode::Local::FOR_VARIABLE: {
+								r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_LOCAL_FOR_VARIABLE;
+								local_node = local.bind;
+							} break;
+							case GDScriptParser::SuiteNode::Local::PATTERN_BIND:
+								r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_LOCAL_PATTERN_BIND;
+								local_node = local.bind;
 						}
 
-						LocalVector<GDScriptParser::Node *> nodes;
-						suite->get_nodes(nodes);
-						for (GDScriptParser::Node *node : nodes) {
-							print_line(vformat("Type: %s", node->type));
-						}
+						int local_start_line = local_node->start_line;
+						int local_start_column = local_node->start_column;
 
-						r_result.matches.push_back(match);
+						// We need to make sure that the cursor is at least on or after the
+						// local variable definition. (i.e. deal with shadowing)
+						if (start_line >= local_start_line && start_column >= local_start_column) {
+							LocalVector<GDScriptParser::Node *> nodes;
+							suite->get_nodes(nodes);
+							for (GDScriptParser::Node *node : nodes) {
+								switch (node->type) {
+									case GDScriptParser::Node::IDENTIFIER: {
+										GDScriptParser::IdentifierNode *identifier = static_cast<GDScriptParser::IdentifierNode *>(node);
+										if (identifier->name != p_symbol) {
+											break;
+										}
+										if (identifier->start_line < local_start_line || identifier->start_column < local_start_column) {
+											break;
+										}
+										ScriptLanguage::RefactorRenameSymbolResult::Match match;
+										match.start_line = identifier->start_line;
+										match.start_column = identifier->start_column;
+										match.end_line = identifier->end_line;
+										match.end_column = identifier->end_column;
+										r_result.matches.push_back(match);
+									} break;
+
+									default: {
+										// Do nothing.
+									}
+								}
+							}
+
+							return OK;
+						}
 					}
 					suite = suite->parent_block;
 				}
