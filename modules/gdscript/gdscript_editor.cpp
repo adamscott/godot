@@ -3670,6 +3670,7 @@ void GDScriptLanguage::auto_indent_code(String &p_code, int p_from_line, int p_t
 }
 
 #ifdef TOOLS_ENABLED
+// Simple templated helper function that push the current match to the list of matches.
 template <typename NodeType>
 static void _refactor_rename_symbol_match_from_class_push_match(const NodeType *p_node, const String &p_path, GDScriptLanguage::RefactorRenameSymbolResult &r_result) {
 	ScriptLanguage::RefactorRenameSymbolResult::Match match = {
@@ -3717,12 +3718,16 @@ static Error _refactor_rename_symbol_match_from_class(const GDScriptParser::Data
 		}
 	}
 
+	// As we found that the match comes from a class, let's find all the matches in that class.
 	LocalVector<GDScriptParser::Node *> nodes;
 	p_class_node->get_nodes(nodes);
 
+	// For each node in that class...
 	for (const GDScriptParser::Node *node : nodes) {
+		GDScriptParser::Node *member_source_node = p_member.get_source_node();
+
 		// We can skip, we already registered that match.
-		if (node == p_member.get_source_node()) {
+		if (node == member_source_node) {
 			continue;
 		}
 
@@ -3731,18 +3736,64 @@ static Error _refactor_rename_symbol_match_from_class(const GDScriptParser::Data
 			continue;
 		}
 
-		// We matched a member variable. So the source must be a member variable.
+		// We matched an identifier. So the source must be corresponding.
 		const GDScriptParser::IdentifierNode *identifier = static_cast<const GDScriptParser::IdentifierNode *>(node);
-		if (identifier->source != GDScriptParser::IdentifierNode::MEMBER_VARIABLE) {
+		LocalVector<GDScriptParser::IdentifierNode::Source> target_sources;
+		switch (p_member.type) {
+			case GDScriptParser::ClassNode::Member::CLASS: {
+				target_sources.push_back(GDScriptParser::IdentifierNode::Source::MEMBER_CLASS);
+			} break;
+			case GDScriptParser::ClassNode::Member::CONSTANT: {
+				target_sources.push_back(GDScriptParser::IdentifierNode::Source::MEMBER_CONSTANT);
+			} break;
+			case GDScriptParser::ClassNode::Member::FUNCTION: {
+				target_sources.push_back(GDScriptParser::IdentifierNode::Source::MEMBER_FUNCTION);
+			} break;
+			case GDScriptParser::ClassNode::Member::SIGNAL: {
+				target_sources.push_back(GDScriptParser::IdentifierNode::Source::MEMBER_SIGNAL);
+			} break;
+			case GDScriptParser::ClassNode::Member::VARIABLE: {
+				target_sources.push_back(GDScriptParser::IdentifierNode::Source::MEMBER_VARIABLE);
+			} break;
+			case GDScriptParser::ClassNode::Member::ENUM: {
+				target_sources.push_back(GDScriptParser::IdentifierNode::Source::UNDEFINED_SOURCE);
+			} break;
+			case GDScriptParser::ClassNode::Member::ENUM_VALUE: {
+				// The definition.
+				target_sources.push_back(GDScriptParser::IdentifierNode::Source::UNDEFINED_SOURCE);
+				// The use of the enum value.
+				target_sources.push_back(GDScriptParser::IdentifierNode::Source::MEMBER_CONSTANT);
+			} break;
+			default: {
+				return ERR_CANT_RESOLVE;
+			}
+		}
+		if (!target_sources.has(identifier->source)) {
 			continue;
 		}
 
-		// That member variable must be the same as the one we matched.
-		const GDScriptParser::VariableNode *variable_source = identifier->variable_source;
-		if (p_member.get_source_node() != variable_source) {
-			continue;
+		const GDScriptParser::Node *target_source_node = identifier->get_source_node();
+		if (target_source_node == nullptr) {
+			switch (member_source_node->type) {
+				case GDScriptParser::Node::IDENTIFIER: {
+					// We can compare by the identifier name.
+					GDScriptParser::IdentifierNode *member_identifier = static_cast<GDScriptParser::IdentifierNode *>(member_source_node);
+					if (member_identifier->name != identifier->name) {
+						continue;
+					}
+				} break;
+				default: {
+					continue;
+				}
+			}
+		} else {
+			// If the identifier has a source node, we need to compare it the current node.
+			if (member_source_node != target_source_node) {
+				continue;
+			}
 		}
 
+		// We got a match!
 		ScriptLanguage::RefactorRenameSymbolResult::Match match = {
 			p_path,
 			identifier->start_line,
