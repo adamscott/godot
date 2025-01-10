@@ -612,6 +612,18 @@ function startEditor(zip) {
 		});
 	};
 
+	let editorFileSizes = {};
+	{
+		// GODOT_FILE_SIZES will be replaced by a JSON dictionary of file sizes.
+		// If not replaced, it will error out and editorFileSizes will not be modified.
+		const editorFileSizesJson = '___GODOT_FILE_SIZES___';
+		try {
+			editorFileSizes = JSON.parse(editorFileSizesJson);
+		} catch (err) {
+			// Do nothing.
+		}
+	}
+
 	const gameConfig = {
 		'persistentPaths': persistentPaths,
 		'unloadAfterInit': false,
@@ -700,6 +712,7 @@ function startEditor(zip) {
 		},
 		'onExecute': Execute,
 		'persistentPaths': persistentPaths,
+		'fileSizes': editorFileSizes,
 	};
 	editor = new Engine(editorConfig);
 

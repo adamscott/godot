@@ -1,6 +1,8 @@
 import json
 import os
+from functools import partial
 
+from SCons.Script import Copy, Delete
 from SCons.Util import WhereIs
 
 from platform_methods import get_build_version
@@ -53,7 +55,7 @@ def create_template_zip(env, js, wasm, side):
     service_worker = "#misc/dist/html/service-worker.js"
     if env.editor_build:
         # HTML
-        html = "#misc/dist/html/editor.html"
+        html_template = env.File("#misc/dist/html/editor.html")
         cache = [
             "godot.editor.html",
             "offline.html",
@@ -73,8 +75,9 @@ def create_template_zip(env, js, wasm, side):
             "___GODOT_THREADS_ENABLED___": "true" if env["threads"] else "false",
             "___GODOT_ENSURE_CROSSORIGIN_ISOLATION_HEADERS___": "true",
         }
-        html = env.Substfile(target="#bin/godot${PROGSUFFIX}.html", source=html, SUBST_DICT=subst_dict)
-        in_files.append(html)
+        html_target = env.File("#bin/godot${PROGSUFFIX}.html")
+        env.Execute(env.Substfile(target=html_target, source=html_template, SUBST_DICT=subst_dict))
+        in_files.append(html_target)
         out_files.append(zip_dir.File(binary_name + ".html"))
         # And logo/favicon
         in_files.append("#misc/dist/html/logo.svg")
@@ -103,12 +106,25 @@ def create_template_zip(env, js, wasm, side):
         out_files.append(zip_dir.File("godot.offline.html"))
 
     zip_files = env.InstallAs(out_files, in_files)
-    env.Zip(
+    zip_files_command = env.Zip(
         "#bin/godot",
         zip_files,
         ZIPROOT=zip_dir,
         ZIPSUFFIX="${PROGSUFFIX}${ZIPSUFFIX}",
     )
+
+    if env.editor_build:
+        # Make sure to get built files size before zipping them.
+        append_file_sizes_action = partial(append_file_sizes, file_to_inject=html_target)
+        append_file_sizes_action.__name__ = "append_file_sizes"
+        append_file_sizes_command = env.Command(
+            "append_file_sizes",
+            action=append_file_sizes_action,
+            source=zip_files,
+        )
+        env.Depends(zip_files_command, append_file_sizes_command)
+        env.Depends(append_file_sizes_command, html_target)
+        env.Depends(append_file_sizes_command, zip_files)
 
 
 def get_template_zip_path(env):
@@ -125,3 +141,23 @@ def add_js_pre(env, js_pre):
 
 def add_js_externs(env, externs):
     env.Append(JS_EXTERNS=env.File(externs))
+
+
+def append_file_sizes(target, source, env, file_to_inject):
+    file_sizes = {}
+    root_dir_name = env.Dir("#").abspath
+
+    for _source in source:
+        path = os.path.join(root_dir_name, _source.path)
+        stat_result = os.stat(path)
+        file_sizes[os.path.basename(_source.path)] = stat_result.st_size
+
+    subst_dict = {"___GODOT_FILE_SIZES___": json.dumps(file_sizes)}
+    tmp_file = env.File(f"{file_to_inject}.tmp")
+    subst_file = env.Substfile(
+        target=tmp_file,
+        source=file_to_inject,
+        SUBST_DICT=subst_dict,
+    )
+    copy_back = env.Command("Copy back .html", action=Copy(file_to_inject, tmp_file), source=subst_file)
+    env.Command("Delete tmp", action=Delete(tmp_file), source=copy_back)
