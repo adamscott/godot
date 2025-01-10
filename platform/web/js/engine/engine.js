@@ -43,7 +43,7 @@ const Engine = (function () {
 	Engine.load = function (basePath, size) {
 		if (loadPromise == null) {
 			loadPath = basePath;
-			loadPromise = preloader.loadPromise(`${loadPath}.wasm`, size, true);
+			loadPromise = preloader.loadPromise(`${loadPath}.wasm`, size);
 			requestAnimationFrame(preloader.animateProgress);
 		}
 		return loadPromise;
@@ -85,27 +85,29 @@ const Engine = (function () {
 					}
 					Engine.load(basePath, this.config.fileSizes[`${basePath}.wasm`]);
 				}
-				const me = this;
-				function doInit(promise) {
-					// Care! Promise chaining is bogus with old emscripten versions.
-					// This caused a regression with the Mono build (which uses an older emscripten version).
-					// Make sure to test that when refactoring.
-					return new Promise(function (resolve, reject) {
-						promise.then(function (response) {
-							const cloned = new Response(response.clone().body, { 'headers': [['content-type', 'application/wasm']] });
-							Godot(me.config.getModuleConfig(loadPath, cloned)).then(function (module) {
-								const paths = me.config.persistentPaths;
-								module['initFS'](paths).then(function (err) {
-									me.rtenv = module;
-									if (me.config.unloadAfterInit) {
-										Engine.unload();
-									}
-									resolve();
-								});
-							});
-						});
-					});
-				}
+				const doInit = async (responsePromise) => {
+					try {
+						const response = await responsePromise;
+						const module = await Godot(this.config.getModuleConfig(loadPath, response));
+						const paths = this.config.persistentPaths;
+						const err = await module['initFS'](paths);
+						if (err != null) {
+							const newErr = new Error('Error while initializing file system.');
+							newErr.cause = err;
+							throw newErr;
+						}
+						this.rtenv = module;
+						if (this.config.unloadAfterInit) {
+							Engine.unload();
+						}
+					} catch (err) {
+						if (err instanceof Error) {
+							const newErr = new Error('Error while initializing Godot.');
+							newErr.cause = err;
+							throw newErr;
+						}
+					}
+				};
 				preloader.setProgressFunc(this.config.onProgress);
 				initPromise = doInit(loadPromise);
 				return initPromise;

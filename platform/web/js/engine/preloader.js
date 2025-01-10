@@ -1,53 +1,64 @@
 const Preloader = /** @constructor */ function () { // eslint-disable-line no-unused-vars
+	/**
+	 * @param {Response} response
+	 * @param {Object} load_status
+	 * @param {number} load_status.total
+	 * @param {number} load_status.loaded
+	 * @param {boolean} load_status.done
+	 * @returns {Promise<Response>}
+	 */
 	function getTrackedResponse(response, load_status) {
-		function onloadprogress(reader, controller) {
-			return reader.read().then(function (result) {
-				if (load_status.done) {
-					return Promise.resolve();
-				}
-				if (result.value) {
-					controller.enqueue(result.value);
-					load_status.loaded += result.value.length;
-				}
-				if (!result.done) {
-					return onloadprogress(reader, controller);
-				}
-				load_status.done = true;
+		/**
+		 * @param {ReadableStream} reader
+		 * @returns {Promise<typeof consume>|Promise<void>}
+		 */
+		async function consume(reader) {
+			const { done, value } = await reader.read();
+			if (load_status.done) {
 				return Promise.resolve();
-			});
+			}
+			if (load_status.total === -1) {
+				load_status.total = Number(response.headers.get('content-length') ?? 0);
+			}
+			if (value) {
+				load_status.loaded += value.length;
+			}
+			if (!done) {
+				return consume(reader);
+			}
+			load_status.done = true;
+			return Promise.resolve();
 		}
-		const reader = response.body.getReader();
-		return new Response(new ReadableStream({
-			start: function (controller) {
-				onloadprogress(reader, controller).then(function () {
-					controller.close();
-				});
-			},
-		}), { headers: response.headers });
+
+		const responseClone = response.clone();
+		consume(responseClone.body.getReader()).catch((err) => {
+			// Do nothing.
+		});
+
+		// Return the response right away to continue the process,
+		// without binding it to the tracking of the response.
+		return response;
 	}
 
-	function loadFetch(file, tracker, fileSize, raw) {
+	async function loadFetch(file, tracker, fileSize) {
 		tracker[file] = {
-			total: fileSize || 0,
+			total: fileSize || -1,
 			loaded: 0,
 			done: false,
 		};
-		return fetch(file).then(function (response) {
-			if (!response.ok) {
-				return Promise.reject(new Error(`Failed loading file '${file}'`));
-			}
-			const tr = getTrackedResponse(response, tracker[file]);
-			if (raw) {
-				return Promise.resolve(tr);
-			}
-			return tr.arrayBuffer();
-		});
+		const response = await fetch(file);
+		if (!response.ok) {
+			throw new Error(`Failed loading file '${file}'`);
+		}
+		return getTrackedResponse(response, tracker[file]);
 	}
 
-	function retry(func, attempts = 1) {
-		function onerror(err) {
+	async function retry(func, attempts = 1) {
+		function onRetryError(err) {
 			if (attempts <= 1) {
-				return Promise.reject(err);
+				const newErr = new Error('Max retry attempts reached.');
+				newErr.cause = err;
+				throw newErr;
 			}
 			return new Promise(function (resolve, reject) {
 				setTimeout(function () {
@@ -55,7 +66,12 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 				}, 1000);
 			});
 		}
-		return func().catch(onerror);
+
+		try {
+			return await func();
+		} catch (err) {
+			return onRetryError(err);
+		}
 	}
 
 	const DOWNLOAD_ATTEMPTS_MAX = 4;
@@ -69,19 +85,19 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 		let totalIsValid = true;
 		let progressIsFinal = true;
 
-		Object.keys(loadingFiles).forEach(function (file) {
+		for (const file of Object.keys(loadingFiles)) {
 			const stat = loadingFiles[file];
 			if (!stat.done) {
 				progressIsFinal = false;
 			}
-			if (!totalIsValid || stat.total === 0) {
+			if (!totalIsValid || stat.total <= 0) {
 				totalIsValid = false;
 				total = 0;
 			} else {
 				total += stat.total;
 			}
 			loaded += stat.loaded;
-		});
+		}
 		if (loaded !== lastProgress.loaded || total !== lastProgress.total) {
 			lastProgress.loaded = loaded;
 			lastProgress.total = total;
@@ -100,8 +116,8 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 		progressFunc = callback;
 	};
 
-	this.loadPromise = function (file, fileSize, raw = false) {
-		return retry(loadFetch.bind(null, file, loadingFiles, fileSize, raw), DOWNLOAD_ATTEMPTS_MAX);
+	this.loadPromise = function (file, fileSize) {
+		return retry(loadFetch.bind(null, file, loadingFiles, fileSize), DOWNLOAD_ATTEMPTS_MAX);
 	};
 
 	this.preloadedFiles = [];

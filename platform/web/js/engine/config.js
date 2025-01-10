@@ -270,7 +270,6 @@ const InternalConfig = function (initConfig) { // eslint-disable-line no-unused-
 	 * @param {Response} response
 	 */
 	Config.prototype.getModuleConfig = function (loadPath, response) {
-		let r = response;
 		const gdext = this.gdextensionLibs;
 		return {
 			'print': this.onPrint,
@@ -278,18 +277,32 @@ const InternalConfig = function (initConfig) { // eslint-disable-line no-unused-
 			'thisProgram': this.executable,
 			'noExitRuntime': false,
 			'dynamicLibraries': [`${loadPath}.side.wasm`].concat(this.gdextensionLibs),
-			'instantiateWasm': function (imports, onSuccess) {
+			'instantiateWasm': async function (imports, onSuccess) {
+				const wasmImports = {
+					...imports,
+					getaddrinfo: function () {
+						throw new Error('getaddrinfo called on the Web platform.');
+					},
+				};
+
 				function done(result) {
 					onSuccess(result['instance'], result['module']);
 				}
-				if (typeof (WebAssembly.instantiateStreaming) !== 'undefined') {
-					WebAssembly.instantiateStreaming(Promise.resolve(r), imports).then(done);
-				} else {
-					r.arrayBuffer().then(function (buffer) {
-						WebAssembly.instantiate(buffer, imports).then(done);
-					});
+
+				let result;
+				try {
+					if (typeof (WebAssembly.instantiateStreaming) !== 'undefined') {
+						result = await WebAssembly.instantiateStreaming(response, wasmImports);
+					} else {
+						const buffer = await response.arrayBuffer();
+						result = WebAssembly.instantiate(buffer, wasmImports);
+					}
+					done(result);
+				} catch (err) {
+					const newErr = new Error('Error while instantiating Godot WebAssembly.');
+					newErr.cause = err;
+					throw newErr;
 				}
-				r = null;
 				return {};
 			},
 			'locateFile': function (path) {
