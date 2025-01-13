@@ -2013,7 +2013,7 @@ public:
 	int get_last_line_number() const {
 		return current.end_line;
 	}
-	const Node *get_head() const {
+	const ClassNode *get_head() const {
 		return head;
 	}
 #endif

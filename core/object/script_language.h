@@ -350,6 +350,8 @@ public:
 	enum RefactorRenameSymbolResultType {
 		REFACTOR_RENAME_SYMBOL_RESULT_NONE,
 		REFACTOR_RENAME_SYMBOL_RESULT_NATIVE,
+		REFACTOR_RENAME_SYMBOL_RESULT_SCRIPT,
+		REFACTOR_RENAME_SYMBOL_RESULT_GLOBAL_CLASS_NAME,
 		REFACTOR_RENAME_SYMBOL_RESULT_CLASS_NAME,
 		REFACTOR_RENAME_SYMBOL_RESULT_CLASS_CONSTANT,
 		REFACTOR_RENAME_SYMBOL_RESULT_CLASS_PROPERTY,
@@ -368,6 +370,7 @@ public:
 	struct RefactorRenameSymbolResult {
 		String symbol;
 		RefactorRenameSymbolResultType type;
+
 		struct Match {
 			String path;
 			int start_line = -1;
@@ -385,6 +388,14 @@ public:
 			}
 		};
 		LocalVector<Match> matches;
+
+		void add_match(const String &p_path, int p_start_line, int p_start_column, int p_end_line, int p_end_column) {
+			matches.push_back({ p_path,
+					p_start_line,
+					p_start_column,
+					p_end_line,
+					p_end_column });
+		}
 	};
 
 	virtual Error refactor_rename_symbol_code(const String &p_code, const String &p_symbol, const String &p_path, Object *p_owner, RefactorRenameSymbolResult &r_result) { return ERR_UNAVAILABLE; }

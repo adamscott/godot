@@ -28,6 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
+#include "core/error/error_list.h"
 #include "core/string/print_string.h"
 #include "gdscript.h"
 
@@ -3788,8 +3789,10 @@ static Error _refactor_rename_symbol_match_from_class_find_instances_outside(con
 		GDScriptAnalyzer analyzer(&parser);
 		analyzer.analyze();
 
+		const GDScriptParser::ClassNode *parser_head = parser.get_head();
 		LocalVector<GDScriptParser::Node *> nodes;
-		parser.get_head()->get_nodes(nodes);
+		nodes.push_back(const_cast<GDScriptParser::ClassNode *>(parser_head));
+		parser_head->get_nodes(nodes);
 		for (GDScriptParser::Node *node : nodes) {
 			switch (node->type) {
 				case GDScriptParser::Node::Type::SUBSCRIPT: {
@@ -4174,11 +4177,95 @@ static Error _refactor_rename_symbol_from_base(const GDScriptParser::DataType &p
 				if (scr.is_null()) {
 					return ERR_BUG;
 				}
-				// r_result.type = ScriptLanguage::LOOKUP_RESULT_CLASS;
-				// r_result.class_name = scr->get_doc_class_name();
-				// r_result.script = scr;
-				// r_result.script_path = scr_path;
-				// r_result.location = 0;
+				const Ref<GDScript> gdscr = scr;
+				if (gdscr.is_null()) {
+					r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_SCRIPT;
+					return OK;
+				}
+				r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_NAME;
+
+				// Match the global class name.
+				{
+					GDScriptParser parser;
+					parser.parse(gdscr->get_source_code(), gdscr->get_script_path(), GDScriptParser::ParsingContext::PARSING_CONTEXT_REFACTOR_RENAME);
+					GDScriptAnalyzer analyzer(&parser);
+					analyzer.analyze();
+
+					LocalVector<GDScriptParser::Node *> global_class_nodes;
+					const GDScriptParser::ClassNode *global_class_head = parser.get_head();
+					global_class_nodes.push_back(const_cast<GDScriptParser::ClassNode *>(global_class_head));
+					global_class_head->get_nodes(global_class_nodes);
+
+					GDScriptParser::IdentifierNode *global_class_found_identifier = nullptr;
+					for (GDScriptParser::Node *global_class_node : global_class_nodes) {
+						switch (global_class_node->type) {
+							case GDScriptParser::Node::Type::CLASS: {
+								GDScriptParser::ClassNode *global_class_class = static_cast<GDScriptParser::ClassNode *>(global_class_node);
+								if (global_class_class->identifier == nullptr) {
+									// It's hard to know how there could not be an identifier, but it's just to be certain.
+									break;
+								}
+								if (global_class_class->identifier->name != p_symbol) {
+									break;
+								}
+								global_class_found_identifier = global_class_class->identifier;
+							} break;
+							default: {
+								// Do nothing.
+							}
+						}
+						if (global_class_found_identifier != nullptr) {
+							break;
+						}
+					}
+
+					if (global_class_found_identifier == nullptr) {
+						// Not supposed to happen, as ScriptServer did tell us that it was a global class.
+						return ERR_CANT_RESOLVE;
+					}
+
+					r_result.add_match(scr_path, global_class_found_identifier->start_line, global_class_found_identifier->start_column, global_class_found_identifier->end_line, global_class_found_identifier->end_column);
+				}
+
+				// Match every use of the global class name.
+				{
+					LocalVector<Ref<GDScript>> scripts;
+					GDScriptLanguage::get_singleton()->get_script_list(scripts);
+					for (Ref<GDScript> &script : scripts) {
+						String script_path = script->get_script_path();
+						GDScriptParser parser;
+						parser.parse(script->get_source_code(), script_path, GDScriptParser::ParsingContext::PARSING_CONTEXT_REFACTOR_RENAME);
+						GDScriptAnalyzer analyzer(&parser);
+						analyzer.analyze();
+
+						const GDScriptParser::ClassNode *parser_head = parser.get_head();
+						LocalVector<GDScriptParser::Node *> nodes;
+						nodes.push_back(const_cast<GDScriptParser::ClassNode *>(parser_head));
+						parser_head->get_nodes(nodes);
+						for (GDScriptParser::Node *node : nodes) {
+							switch (node->type) {
+								case GDScriptParser::Node::Type::IDENTIFIER: {
+									GDScriptParser::IdentifierNode *identifier = static_cast<GDScriptParser::IdentifierNode *>(node);
+									if (identifier->name != p_symbol) {
+										break;
+									}
+									GDScriptParser::DataType identifier_datatype = identifier->get_datatype();
+									if (identifier_datatype.kind != GDScriptParser::DataType::DataType::CLASS) {
+										break;
+									}
+									if (identifier_datatype.script_path != scr_path) {
+										break;
+									}
+									r_result.add_match(script_path, identifier->start_line, identifier->start_column, identifier->end_line, identifier->end_column);
+								} break;
+								default: {
+									// Do nothing.
+								}
+							}
+						}
+					}
+				}
+
 				return OK;
 			}
 
@@ -4201,17 +4288,17 @@ static Error _refactor_rename_symbol_from_base(const GDScriptParser::DataType &p
 			}
 
 			if (CoreConstants::is_global_enum(p_symbol)) {
-				r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_ENUM;
+				r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NATIVE;
 				return OK;
 			}
 
 			if (CoreConstants::is_global_constant(p_symbol)) {
-				r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_CONSTANT;
+				r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NATIVE;
 				return OK;
 			}
 
 			if (Variant::has_utility_function(p_symbol)) {
-				r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_METHOD;
+				r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NATIVE;
 				return OK;
 			}
 		} break;
