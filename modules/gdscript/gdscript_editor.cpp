@@ -4275,13 +4275,12 @@ static Error _refactor_rename_symbol_from_base(const GDScriptParser::DataType &p
 				if (value.get_type() == Variant::OBJECT) {
 					const Object *obj = value;
 					if (obj) {
-						// if (Object::cast_to<GDScriptNativeClass>(obj)) {
-						// 	r_result.type = ScriptLanguage::LOOKUP_RESULT_CLASS;
-						// 	r_result.class_name = Object::cast_to<GDScriptNativeClass>(obj)->get_name();
-						// } else {
-						// 	r_result.type = ScriptLanguage::LOOKUP_RESULT_CLASS;
-						// 	r_result.class_name = obj->get_class();
-						// }
+						const GDScriptNativeClass *native_class = Object::cast_to<GDScriptNativeClass>(obj);
+						if (native_class) {
+							r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NOT_EXPOSED;
+						} else {
+							r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NATIVE;
+						}
 						return OK;
 					}
 				}
