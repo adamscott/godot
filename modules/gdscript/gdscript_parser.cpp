@@ -2705,10 +2705,6 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_identifier(ExpressionNode 
 	IdentifierNode *identifier = alloc_node<IdentifierNode>();
 	complete_extents(identifier);
 
-	if (is_for_refactor_rename()) {
-		make_refactor_rename_context(REFACTOR_RENAME_TYPE_IDENTIFIER, identifier);
-	}
-
 	identifier->name = previous.get_identifier();
 	if (identifier->name.operator String().is_empty()) {
 		print_line("Empty identifier found.");
@@ -3264,7 +3260,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_attribute(ExpressionNode *
 	reset_extents(attribute, p_previous_operand);
 	update_extents(attribute);
 
-	if (is_for_completion()) {
+	if (is_for_completion() || is_for_refactor_rename()) {
 		bool is_builtin = false;
 		if (p_previous_operand && p_previous_operand->type == Node::IDENTIFIER) {
 			const IdentifierNode *id = static_cast<const IdentifierNode *>(p_previous_operand);
