@@ -4301,79 +4301,97 @@ static Error _refactor_rename_symbol_from_base(const GDScriptParser::DataType &p
 				return OK;
 			}
 		} break;
-		// case GDScriptParser::COMPLETION_ATTRIBUTE_METHOD:
-		// case GDScriptParser::COMPLETION_ATTRIBUTE: {
-		// 	if (context.node->type != GDScriptParser::Node::SUBSCRIPT) {
-		// 		break;
-		// 	}
-		// 	const GDScriptParser::SubscriptNode *subscript = static_cast<const GDScriptParser::SubscriptNode *>(context.node);
-		// 	if (!subscript->is_attribute) {
-		// 		break;
-		// 	}
-		// 	GDScriptCompletionIdentifier base;
+		case GDScriptParser::REFACTOR_RENAME_TYPE_ATTRIBUTE_METHOD:
+		case GDScriptParser::REFACTOR_RENAME_TYPE_ATTRIBUTE: {
+			if (context.node->type != GDScriptParser::Node::SUBSCRIPT) {
+				break;
+			}
+			GDScriptParser::SubscriptNode *subscript = static_cast<GDScriptParser::SubscriptNode *>(context.node);
+			if (!subscript->is_attribute) {
+				break;
+			}
 
-		// 	bool found_type = _get_subscript_type(context, subscript, base.type);
-		// 	if (!found_type && !_guess_expression_type(context, subscript->base, base)) {
-		// 		break;
-		// 	}
+			switch (context.type) {
+				case GDScriptParser::REFACTOR_RENAME_TYPE_ATTRIBUTE_METHOD: {
+					print_line(vformat("REFACTOR_RENAME_TYPE_ATTRIBUTE_METHOD"));
+				} break;
+				case GDScriptParser::REFACTOR_RENAME_TYPE_ATTRIBUTE: {
+					print_line(vformat("REFACTOR_RENAME_TYPE_ATTRIBUTE"));
+				} break;
+				default: {
+					// Do nothing.
+				}
+			}
 
-		// 	if (_lookup_symbol_from_base(base.type, p_symbol, r_result) == OK) {
-		// 		return OK;
-		// 	}
-		// } break;
-		// case GDScriptParser::COMPLETION_TYPE_ATTRIBUTE: {
-		// 	if (context.node == nullptr || context.node->type != GDScriptParser::Node::TYPE) {
-		// 		break;
-		// 	}
-		// 	const GDScriptParser::TypeNode *type = static_cast<const GDScriptParser::TypeNode *>(context.node);
+			// GDScriptCompletionIdentifier base;
 
-		// 	GDScriptParser::DataType base_type;
-		// 	const GDScriptParser::IdentifierNode *prev = nullptr;
-		// 	for (const GDScriptParser::IdentifierNode *E : type->type_chain) {
-		// 		if (E->name == p_symbol && prev != nullptr) {
-		// 			base_type = prev->get_datatype();
-		// 			break;
-		// 		}
-		// 		prev = E;
-		// 	}
-		// 	if (base_type.kind != GDScriptParser::DataType::CLASS) {
-		// 		GDScriptCompletionIdentifier base;
-		// 		if (!_guess_expression_type(context, prev, base)) {
-		// 			break;
-		// 		}
-		// 		base_type = base.type;
-		// 	}
+			// bool found_type = _get_subscript_type(context, subscript, base.type);
+			// if (!found_type && !_guess_expression_type(context, subscript->base, base)) {
+			// 	break;
+			// }
 
-		// 	if (_lookup_symbol_from_base(base_type, p_symbol, r_result) == OK) {
-		// 		return OK;
-		// 	}
-		// } break;
-		// case GDScriptParser::COMPLETION_OVERRIDE_METHOD: {
-		// 	GDScriptParser::DataType base_type = context.current_class->base_type;
+			// if (_lookup_symbol_from_base(base.type, p_symbol, r_result) == OK) {
+			// 	return OK;
+			// }
+		} break;
+		case GDScriptParser::REFACTOR_RENAME_TYPE_TYPE_ATTRIBUTE: {
+			print_line(vformat("REFACTOR_RENAME_TYPE_TYPE_ATTRIBUTE"));
 
-		// 	if (_lookup_symbol_from_base(base_type, p_symbol, r_result) == OK) {
-		// 		return OK;
-		// 	}
-		// } break;
-		// case GDScriptParser::COMPLETION_PROPERTY_DECLARATION_OR_TYPE:
-		// case GDScriptParser::COMPLETION_TYPE_NAME_OR_VOID:
-		// case GDScriptParser::COMPLETION_TYPE_NAME: {
-		// 	GDScriptParser::DataType base_type = context.current_class->get_datatype();
+			// 	if (context.node == nullptr || context.node->type != GDScriptParser::Node::TYPE) {
+			// 		break;
+			// 	}
+			// 	const GDScriptParser::TypeNode *type = static_cast<const GDScriptParser::TypeNode *>(context.node);
 
-		// 	if (_lookup_symbol_from_base(base_type, p_symbol, r_result) == OK) {
-		// 		return OK;
-		// 	}
-		// } break;
-		// case GDScriptParser::COMPLETION_ANNOTATION: {
-		// 	const String annotation_symbol = "@" + p_symbol;
-		// 	if (parser.annotation_exists(annotation_symbol)) {
-		// 		r_result.type = ScriptLanguage::LOOKUP_RESULT_CLASS_ANNOTATION;
-		// 		r_result.class_name = "@GDScript";
-		// 		r_result.class_member = annotation_symbol;
-		// 		return OK;
-		// 	}
-		// } break;
+			// 	GDScriptParser::DataType base_type;
+			// 	const GDScriptParser::IdentifierNode *prev = nullptr;
+			// 	for (const GDScriptParser::IdentifierNode *E : type->type_chain) {
+			// 		if (E->name == p_symbol && prev != nullptr) {
+			// 			base_type = prev->get_datatype();
+			// 			break;
+			// 		}
+			// 		prev = E;
+			// 	}
+			// 	if (base_type.kind != GDScriptParser::DataType::CLASS) {
+			// 		GDScriptCompletionIdentifier base;
+			// 		if (!_guess_expression_type(context, prev, base)) {
+			// 			break;
+			// 		}
+			// 		base_type = base.type;
+			// 	}
+
+			// 	if (_lookup_symbol_from_base(base_type, p_symbol, r_result) == OK) {
+			// 		return OK;
+			// 	}
+		} break;
+		case GDScriptParser::REFACTOR_RENAME_TYPE_OVERRIDE_METHOD: {
+			print_line(vformat("REFACTOR_RENAME_TYPE_OVERRIDE_METHOD"));
+			// 	GDScriptParser::DataType base_type = context.current_class->base_type;
+
+			// 	if (_lookup_symbol_from_base(base_type, p_symbol, r_result) == OK) {
+			// 		return OK;
+			// 	}
+			// } break;
+			// case GDScriptParser::COMPLETION_PROPERTY_DECLARATION_OR_TYPE:
+			// case GDScriptParser::COMPLETION_TYPE_NAME_OR_VOID:
+			// case GDScriptParser::COMPLETION_TYPE_NAME: {
+			// 	GDScriptParser::DataType base_type = context.current_class->get_datatype();
+
+			// 	if (_lookup_symbol_from_base(base_type, p_symbol, r_result) == OK) {
+			// 		return OK;
+			// 	}
+		} break;
+		case GDScriptParser::REFACTOR_RENAME_TYPE_ANNOTATION: {
+			print_line(vformat("REFACTOR_RENAME_TYPE_ANNOTATION"));
+			// 	const String annotation_symbol = "@" + p_symbol;
+			// 	if (parser.annotation_exists(annotation_symbol)) {
+			// 		r_result.type = ScriptLanguage::LOOKUP_RESULT_CLASS_ANNOTATION;
+			// 		r_result.class_name = "@GDScript";
+			// 		r_result.class_member = annotation_symbol;
+			// 		return OK;
+			// 	}
+		} break;
 		default: {
+			print_line("default\?\?!?");
 		}
 	}
 
