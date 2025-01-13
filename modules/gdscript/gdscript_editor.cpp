@@ -4117,11 +4117,13 @@ static Error _refactor_rename_symbol_from_base(const GDScriptParser::DataType &p
 										if (identifier->start_line < local_start_line || identifier->start_column < local_start_column) {
 											break;
 										}
-										ScriptLanguage::RefactorRenameSymbolResult::Match match;
-										match.start_line = identifier->start_line;
-										match.start_column = identifier->start_column;
-										match.end_line = identifier->end_line;
-										match.end_column = identifier->end_column;
+										ScriptLanguage::RefactorRenameSymbolResult::Match match = {
+											p_path,
+											identifier->start_line,
+											identifier->start_column,
+											identifier->end_line,
+											identifier->end_column
+										};
 										r_result.matches.push_back(match);
 									} break;
 
