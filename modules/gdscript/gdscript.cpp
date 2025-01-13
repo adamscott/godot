@@ -30,6 +30,7 @@
 
 #include "gdscript.h"
 
+#include "core/templates/local_vector.h"
 #include "gdscript_analyzer.h"
 #include "gdscript_cache.h"
 #include "gdscript_compiler.h"
@@ -2260,6 +2261,17 @@ Variant GDScriptLanguage::get_any_global_constant(const StringName &p_name) {
 void GDScriptLanguage::remove_named_global_constant(const StringName &p_name) {
 	ERR_FAIL_COND(!named_globals.has(p_name));
 	named_globals.erase(p_name);
+}
+
+void GDScriptLanguage::get_script_list(LocalVector<Ref<GDScript>> &r_script_list) const {
+	MutexLock lock(mutex);
+
+	const SelfList<GDScript> *elem = script_list.first();
+	while (elem) {
+		Ref<GDScript> script = elem->self();
+		r_script_list.push_back(script);
+		elem = elem->next();
+	}
 }
 
 void GDScriptLanguage::init() {

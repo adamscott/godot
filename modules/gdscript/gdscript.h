@@ -601,6 +601,8 @@ public:
 	virtual void add_named_global_constant(const StringName &p_name, const Variant &p_value) override;
 	virtual void remove_named_global_constant(const StringName &p_name) override;
 
+	virtual void get_script_list(LocalVector<Ref<GDScript>> &r_script_list) const;
+
 	/* DEBUGGER FUNCTIONS */
 
 	virtual String debug_get_error() const override;
