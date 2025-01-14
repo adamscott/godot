@@ -1856,6 +1856,7 @@ private:
 	void pop_completion_call();
 	void set_last_completion_call_arg(int p_argument);
 
+	void override_refactor_rename_context(const Node *p_for_node, RefactorRenameType p_type, Node *p_node, int p_argument = -1);
 	void make_refactor_rename_context(RefactorRenameType p_type, Node *p_node, int p_argument = -1);
 	void make_refactor_rename_context(RefactorRenameType p_type, Variant::Type p_builtin_type);
 

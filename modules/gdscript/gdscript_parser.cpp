@@ -370,6 +370,25 @@ void GDScriptParser::set_last_completion_call_arg(int p_argument) {
 	completion_call_stack.back()->get().argument = p_argument;
 }
 
+void GDScriptParser::override_refactor_rename_context(const Node *p_for_node, RefactorRenameType p_type, Node *p_node, int p_argument) {
+	if (!is_for_refactor_rename()) {
+		return;
+	}
+	if (p_for_node == nullptr || completion_context.node != p_for_node) {
+		return;
+	}
+	RefactorRenameContext context;
+	context.type = p_type;
+	context.current_class = current_class;
+	context.current_function = current_function;
+	context.current_suite = current_suite;
+	context.current_line = tokenizer->get_cursor_line();
+	context.current_argument = p_argument;
+	context.node = p_node;
+	context.parser = this;
+	refactor_rename_context = context;
+}
+
 void GDScriptParser::make_refactor_rename_context(RefactorRenameType p_type, Node *p_node, int p_argument) {
 	if (!is_for_refactor_rename()) {
 		return;
@@ -1767,6 +1786,7 @@ GDScriptParser::AnnotationNode *GDScriptParser::parse_annotation(uint32_t p_vali
 
 				if (argument->type == Node::LITERAL) {
 					override_completion_context(argument, COMPLETION_ANNOTATION_ARGUMENTS, annotation, argument_index);
+					override_refactor_rename_context(argument, REFACTOR_RENAME_TYPE_ANNOTATION_ARGUMENTS, annotation, argument_index);
 				}
 			}
 
@@ -3101,6 +3121,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_assignment(ExpressionNode 
 #ifdef TOOLS_ENABLED
 	if (assignment->assigned_value != nullptr && assignment->assigned_value->type == GDScriptParser::Node::IDENTIFIER) {
 		override_completion_context(assignment->assigned_value, COMPLETION_ASSIGN, assignment);
+		override_refactor_rename_context(assignment->assigned_value, REFACTOR_RENAME_TYPE_ASSIGN, assignment);
 	}
 #endif
 	if (assignment->assigned_value == nullptr) {
@@ -3308,6 +3329,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_subscript(ExpressionNode *
 #ifdef TOOLS_ENABLED
 	if (subscript->index != nullptr && subscript->index->type == Node::LITERAL) {
 		override_completion_context(subscript->index, COMPLETION_SUBSCRIPT, subscript);
+		override_refactor_rename_context(subscript->index, REFACTOR_RENAME_TYPE_SUBSCRIPT, subscript);
 	}
 #endif
 
@@ -3401,14 +3423,15 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_call(ExpressionNode *p_pre
 	}
 
 	// Arguments.
-	CompletionType ct = COMPLETION_CALL_ARGUMENTS;
+	CompletionType completion_type = COMPLETION_CALL_ARGUMENTS;
+	RefactorRenameType refactor_rename_type = REFACTOR_RENAME_TYPE_CALL_ARGUMENTS;
 	if (call->function_name == SNAME("load")) {
-		ct = COMPLETION_RESOURCE_PATH;
+		completion_type = COMPLETION_RESOURCE_PATH;
 	}
 	push_completion_call(call);
 	int argument_index = 0;
 	do {
-		make_completion_context(ct, call, argument_index);
+		make_completion_context(completion_type, call, argument_index);
 		if (check(GDScriptTokenizer::Token::PARENTHESIS_CLOSE)) {
 			// Allow for trailing comma.
 			break;
@@ -3420,11 +3443,13 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_call(ExpressionNode *p_pre
 			call->arguments.push_back(argument);
 
 			if (argument->type == Node::LITERAL) {
-				override_completion_context(argument, ct, call, argument_index);
+				override_completion_context(argument, completion_type, call, argument_index);
+				override_refactor_rename_context(argument, refactor_rename_type, call, argument_index);
 			}
 		}
 
-		ct = COMPLETION_CALL_ARGUMENTS;
+		completion_type = COMPLETION_CALL_ARGUMENTS;
+		refactor_rename_type = REFACTOR_RENAME_TYPE_CALL_ARGUMENTS;
 		argument_index++;
 	} while (match(GDScriptTokenizer::Token::COMMA));
 	pop_completion_call();
