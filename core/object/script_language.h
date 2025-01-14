@@ -370,6 +370,7 @@ public:
 
 	struct RefactorRenameSymbolResult {
 		String symbol;
+		bool outside_gdscript = false;
 		RefactorRenameSymbolResultType type;
 
 		struct Match {

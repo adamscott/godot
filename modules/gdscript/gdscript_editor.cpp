@@ -3674,25 +3674,64 @@ void GDScriptLanguage::auto_indent_code(String &p_code, int p_from_line, int p_t
 }
 
 #ifdef TOOLS_ENABLED
+static void _refactor_rename_symbol_set_outside_gdscript(ScriptLanguage::RefactorRenameSymbolResultType p_type, ScriptLanguage::RefactorRenameSymbolResult &r_result) {
+	r_result.type = p_type;
+	r_result.outside_gdscript = true;
+}
+
 static void _refactor_rename_symbol_add_match(const String &p_path, const GDScriptParser::Node *p_node, ScriptLanguage::RefactorRenameSymbolResult &r_result) {
 	r_result.add_match(p_path, p_node->start_line, p_node->start_column, p_node->end_line, p_node->end_column);
 }
 
 // This function finds and match all instances of the symbol inside the class.
 static Error _refactor_rename_symbol_match_from_class_find_instances_inside(const String &p_symbol, const String &p_path, ScriptLanguage::RefactorRenameSymbolResult &r_result, const GDScriptParser::ClassNode *p_class_node, const GDScriptParser::ClassNode::Member &p_member) {
+	LocalVector<GDScriptParser::IdentifierNode::Source> target_sources;
+	GDScriptParser::Node::Type expected_undefined_source_type;
+	switch (p_member.type) {
+		case GDScriptParser::ClassNode::Member::CLASS: {
+			expected_undefined_source_type = GDScriptParser::Node::CLASS;
+			target_sources.push_back(GDScriptParser::IdentifierNode::Source::MEMBER_CLASS);
+		} break;
+		case GDScriptParser::ClassNode::Member::CONSTANT: {
+			expected_undefined_source_type = GDScriptParser::Node::CONSTANT;
+			target_sources.push_back(GDScriptParser::IdentifierNode::Source::MEMBER_CONSTANT);
+		} break;
+		case GDScriptParser::ClassNode::Member::FUNCTION: {
+			expected_undefined_source_type = GDScriptParser::Node::FUNCTION;
+			target_sources.push_back(GDScriptParser::IdentifierNode::Source::MEMBER_FUNCTION);
+		} break;
+		case GDScriptParser::ClassNode::Member::SIGNAL: {
+			expected_undefined_source_type = GDScriptParser::Node::SIGNAL;
+			target_sources.push_back(GDScriptParser::IdentifierNode::Source::MEMBER_SIGNAL);
+		} break;
+		case GDScriptParser::ClassNode::Member::VARIABLE: {
+			expected_undefined_source_type = GDScriptParser::Node::VARIABLE;
+			// The definition.
+			target_sources.push_back(GDScriptParser::IdentifierNode::Source::UNDEFINED_SOURCE);
+			// The use.
+			target_sources.push_back(GDScriptParser::IdentifierNode::Source::MEMBER_VARIABLE);
+		} break;
+		case GDScriptParser::ClassNode::Member::ENUM:
+		case GDScriptParser::ClassNode::Member::ENUM_VALUE: {
+			expected_undefined_source_type = GDScriptParser::Node::ENUM;
+			// The definition.
+			target_sources.push_back(GDScriptParser::IdentifierNode::Source::UNDEFINED_SOURCE);
+			// The use.
+			target_sources.push_back(GDScriptParser::IdentifierNode::Source::MEMBER_CONSTANT);
+		} break;
+		default: {
+			return ERR_CANT_RESOLVE;
+		}
+	}
+	GDScriptParser::Node *member_source_node = p_member.get_source_node();
+
 	// As we found that the match comes from a class, let's find all the matches in that class.
 	LocalVector<GDScriptParser::Node *> nodes;
+	nodes.push_back(const_cast<GDScriptParser::ClassNode *>(p_class_node));
 	p_class_node->get_nodes(nodes);
 
 	// For each node in that class...
 	for (const GDScriptParser::Node *node : nodes) {
-		GDScriptParser::Node *member_source_node = p_member.get_source_node();
-
-		// We can skip, we already registered that match.
-		if (node == member_source_node) {
-			continue;
-		}
-
 		// We only need to refactor identifiers.
 		if (node->type != GDScriptParser::Node::IDENTIFIER) {
 			continue;
@@ -3700,47 +3739,50 @@ static Error _refactor_rename_symbol_match_from_class_find_instances_inside(cons
 
 		// We matched an identifier. So the source must be corresponding.
 		const GDScriptParser::IdentifierNode *identifier = static_cast<const GDScriptParser::IdentifierNode *>(node);
-		LocalVector<GDScriptParser::IdentifierNode::Source> target_sources;
-		switch (p_member.type) {
-			case GDScriptParser::ClassNode::Member::CLASS: {
-				target_sources.push_back(GDScriptParser::IdentifierNode::Source::MEMBER_CLASS);
-			} break;
-			case GDScriptParser::ClassNode::Member::CONSTANT: {
-				target_sources.push_back(GDScriptParser::IdentifierNode::Source::MEMBER_CONSTANT);
-			} break;
-			case GDScriptParser::ClassNode::Member::FUNCTION: {
-				target_sources.push_back(GDScriptParser::IdentifierNode::Source::MEMBER_FUNCTION);
-			} break;
-			case GDScriptParser::ClassNode::Member::SIGNAL: {
-				target_sources.push_back(GDScriptParser::IdentifierNode::Source::MEMBER_SIGNAL);
-			} break;
-			case GDScriptParser::ClassNode::Member::VARIABLE: {
-				target_sources.push_back(GDScriptParser::IdentifierNode::Source::MEMBER_VARIABLE);
-			} break;
-			case GDScriptParser::ClassNode::Member::ENUM: {
-				target_sources.push_back(GDScriptParser::IdentifierNode::Source::UNDEFINED_SOURCE);
-			} break;
-			case GDScriptParser::ClassNode::Member::ENUM_VALUE: {
-				// The definition.
-				target_sources.push_back(GDScriptParser::IdentifierNode::Source::UNDEFINED_SOURCE);
-				// The use of the enum value.
-				target_sources.push_back(GDScriptParser::IdentifierNode::Source::MEMBER_CONSTANT);
-			} break;
-			default: {
-				return ERR_CANT_RESOLVE;
-			}
-		}
 		if (!target_sources.has(identifier->source)) {
 			continue;
 		}
 
 		const GDScriptParser::Node *target_source_node = identifier->get_source_node();
 		if (target_source_node == nullptr) {
+			if (identifier->source != GDScriptParser::IdentifierNode::UNDEFINED_SOURCE) {
+				continue;
+			}
 			switch (member_source_node->type) {
 				case GDScriptParser::Node::IDENTIFIER: {
 					// We can compare by the identifier name.
 					GDScriptParser::IdentifierNode *member_identifier = static_cast<GDScriptParser::IdentifierNode *>(member_source_node);
 					if (member_identifier->name != identifier->name) {
+						continue;
+					}
+				} break;
+				case GDScriptParser::Node::CLASS: {
+					if (expected_undefined_source_type != GDScriptParser::Node::Type::CLASS) {
+						continue;
+					}
+					// We can compare by the variable identifier name.
+					GDScriptParser::ClassNode *member_class = static_cast<GDScriptParser::ClassNode *>(member_source_node);
+					if (member_class->identifier == nullptr || member_class->identifier->name != identifier->name) {
+						continue;
+					}
+				} break;
+				case GDScriptParser::Node::VARIABLE: {
+					if (expected_undefined_source_type != GDScriptParser::Node::Type::VARIABLE) {
+						continue;
+					}
+					// We can compare by the variable identifier name.
+					GDScriptParser::VariableNode *member_variable = static_cast<GDScriptParser::VariableNode *>(member_source_node);
+					if (member_variable->identifier == nullptr || member_variable->identifier->name != identifier->name) {
+						continue;
+					}
+				} break;
+				case GDScriptParser::Node::ENUM: {
+					if (expected_undefined_source_type != GDScriptParser::Node::Type::ENUM) {
+						continue;
+					}
+					// We can compare by the enum identifier name.
+					GDScriptParser::EnumNode *member_enum = static_cast<GDScriptParser::EnumNode *>(member_source_node);
+					if (member_enum->identifier == nullptr || member_enum->identifier->name != identifier->name) {
 						continue;
 					}
 				} break;
@@ -3765,9 +3807,17 @@ static Error _refactor_rename_symbol_match_from_class_find_instances_inside(cons
 // This function finds and match all instances of the symbol outside the class.
 static Error _refactor_rename_symbol_match_from_class_find_instances_outside(GDScriptParser::RefactorRenameContext p_context, const String &p_symbol, const String &p_path, ScriptLanguage::RefactorRenameSymbolResult &r_result, const GDScriptParser::ClassNode *p_class_node, const GDScriptParser::ClassNode::Member &p_member) {
 	LocalVector<Ref<GDScript>> scripts;
+	LocalVector<String> parsed_paths;
 	GDScriptLanguage::get_singleton()->get_script_list(scripts);
+	// Looping through all registered GDScript instances. This includes inner classes, so we must be cautious.
 	for (Ref<GDScript> &script : scripts) {
 		String script_path = script->get_script_path();
+		if (script_path == p_path || parsed_paths.has(script_path)) {
+			// We already parsed this.
+			continue;
+		}
+		parsed_paths.push_back(script_path);
+
 		GDScriptParser parser;
 		parser.parse(script->get_source_code(), script_path, GDScriptParser::ParsingType::PARSING_TYPE_REFACTOR_RENAME);
 		GDScriptAnalyzer analyzer(&parser);
@@ -3811,31 +3861,24 @@ static Error _refactor_rename_symbol_match_from_class(GDScriptParser::RefactorRe
 	switch (p_member.type) {
 		case GDScriptParser::ClassNode::Member::CLASS: {
 			r_result.type = ScriptLanguage::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_NAME;
-			_refactor_rename_symbol_add_match(p_path, p_member.m_class->identifier, r_result);
 		} break;
 		case GDScriptParser::ClassNode::Member::CONSTANT: {
 			r_result.type = ScriptLanguage::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_CONSTANT;
-			_refactor_rename_symbol_add_match(p_path, p_member.constant->identifier, r_result);
 		} break;
 		case GDScriptParser::ClassNode::Member::FUNCTION: {
 			r_result.type = ScriptLanguage::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_METHOD;
-			_refactor_rename_symbol_add_match(p_path, p_member.function->identifier, r_result);
 		} break;
 		case GDScriptParser::ClassNode::Member::SIGNAL: {
 			r_result.type = ScriptLanguage::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_SIGNAL;
-			_refactor_rename_symbol_add_match(p_path, p_member.signal->identifier, r_result);
 		} break;
 		case GDScriptParser::ClassNode::Member::VARIABLE: {
 			r_result.type = ScriptLanguage::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_PROPERTY;
-			_refactor_rename_symbol_add_match(p_path, p_member.variable->identifier, r_result);
 		} break;
 		case GDScriptParser::ClassNode::Member::ENUM: {
 			r_result.type = ScriptLanguage::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_ENUM;
-			_refactor_rename_symbol_add_match(p_path, p_member.m_enum->identifier, r_result);
 		} break;
 		case GDScriptParser::ClassNode::Member::ENUM_VALUE: {
 			r_result.type = ScriptLanguage::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_ENUM_VALUE;
-			_refactor_rename_symbol_add_match(p_path, p_member.enum_value.identifier, r_result);
 		} break;
 		default: {
 			return ERR_CANT_RESOLVE;
@@ -3891,7 +3934,151 @@ static Error _refactor_rename_symbol_from_base(GDScriptParser::RefactorRenameCon
 					} break;
 				}
 			} break;
+			case GDScriptParser::DataType::NATIVE: {
+				const StringName &class_name = base_type.native_type;
 
+				ERR_FAIL_COND_V(!ClassDB::class_exists(class_name), ERR_BUG);
+
+				if (ClassDB::has_method(class_name, p_symbol, true)) {
+					r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_METHOD;
+					r_result.outside_gdscript = true;
+					return OK;
+				}
+
+				List<MethodInfo> virtual_methods;
+				ClassDB::get_virtual_methods(class_name, &virtual_methods, true);
+				for (const MethodInfo &E : virtual_methods) {
+					if (E.name == p_symbol) {
+						r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_METHOD;
+						r_result.outside_gdscript = true;
+						return OK;
+					}
+				}
+
+				if (ClassDB::has_signal(class_name, p_symbol, true)) {
+					r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_SIGNAL;
+					r_result.outside_gdscript = true;
+					return OK;
+				}
+
+				List<StringName> enums;
+				ClassDB::get_enum_list(class_name, &enums);
+				for (const StringName &E : enums) {
+					if (E == p_symbol) {
+						r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_ENUM;
+						r_result.outside_gdscript = true;
+						return OK;
+					}
+				}
+
+				if (!String(ClassDB::get_integer_constant_enum(class_name, p_symbol, true)).is_empty()) {
+					r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_CONSTANT;
+					r_result.outside_gdscript = true;
+					return OK;
+				}
+
+				List<String> constants;
+				ClassDB::get_integer_constant_list(class_name, &constants, true);
+				for (const String &E : constants) {
+					if (E == p_symbol) {
+						r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_CONSTANT;
+						r_result.outside_gdscript = true;
+						return OK;
+					}
+				}
+
+				if (ClassDB::has_property(class_name, p_symbol, true)) {
+					PropertyInfo prop_info;
+					ClassDB::get_property_info(class_name, p_symbol, &prop_info, true);
+					if (prop_info.usage & PROPERTY_USAGE_INTERNAL) {
+						return ERR_CANT_RESOLVE;
+					}
+
+					r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_PROPERTY;
+					r_result.outside_gdscript = true;
+					return OK;
+				}
+
+				const StringName parent_class = ClassDB::get_parent_class(class_name);
+				if (parent_class != StringName()) {
+					base_type.native_type = parent_class;
+				} else {
+					return ERR_CANT_RESOLVE;
+				}
+			} break;
+			case GDScriptParser::DataType::BUILTIN: {
+				if (base_type.is_meta_type) {
+					if (Variant::has_enum(base_type.builtin_type, p_symbol)) {
+						r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_ENUM;
+						r_result.outside_gdscript = true;
+						return OK;
+					}
+
+					if (Variant::has_constant(base_type.builtin_type, p_symbol)) {
+						r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_CONSTANT;
+						r_result.outside_gdscript = true;
+						return OK;
+					}
+				} else {
+					if (Variant::has_member(base_type.builtin_type, p_symbol)) {
+						r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_PROPERTY;
+						r_result.outside_gdscript = true;
+						return OK;
+					}
+				}
+
+				if (Variant::has_builtin_method(base_type.builtin_type, p_symbol)) {
+					r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_METHOD;
+					r_result.outside_gdscript = true;
+					return OK;
+				}
+
+				return ERR_CANT_RESOLVE;
+			} break;
+			case GDScriptParser::DataType::ENUM: {
+				if (base_type.is_meta_type) {
+					if (base_type.enum_values.has(p_symbol)) {
+						String type_name;
+						String enum_name;
+						GDScriptDocGen::doctype_from_gdtype(GDScriptAnalyzer::type_from_metatype(base_type), type_name, enum_name);
+
+						if (CoreConstants::is_global_enum(enum_name)) {
+							r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_CONSTANT;
+							r_result.outside_gdscript = true;
+							return OK;
+						} else {
+							const int dot_pos = enum_name.rfind_char('.');
+							if (dot_pos >= 0) {
+								r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_CONSTANT;
+								r_result.outside_gdscript = true;
+								return OK;
+							}
+						}
+					} else if (Variant::has_builtin_method(Variant::DICTIONARY, p_symbol)) {
+						r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_METHOD;
+						r_result.outside_gdscript = true;
+						return OK;
+					}
+				}
+
+				return ERR_CANT_RESOLVE;
+			} break;
+			case GDScriptParser::DataType::VARIANT: {
+				if (base_type.is_meta_type) {
+					const String enum_name = "Variant." + p_symbol;
+					if (CoreConstants::is_global_enum(enum_name)) {
+						r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_ENUM;
+						r_result.outside_gdscript = true;
+						return OK;
+					}
+				}
+
+				return ERR_CANT_RESOLVE;
+			} break;
+			case GDScriptParser::DataType::RESOLVING:
+			case GDScriptParser::DataType::UNRESOLVED: {
+				return ERR_CANT_RESOLVE;
+			} break;
 			default: {
 				return ERR_CANT_RESOLVE;
 			}
@@ -3905,22 +4092,22 @@ static Error _refactor_rename_symbol_from_base(GDScriptParser::RefactorRenameCon
 	r_result.symbol = p_symbol;
 
 	if (ClassDB::class_exists(p_symbol)) {
-		r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NATIVE;
+		_refactor_rename_symbol_set_outside_gdscript(ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_NAME, r_result);
 		return OK;
 	}
 
 	if (Variant::get_type_by_name(p_symbol) < Variant::VARIANT_MAX) {
-		r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NATIVE;
+		_refactor_rename_symbol_set_outside_gdscript(ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_NAME, r_result);
 		return OK;
 	}
 
 	if (p_symbol == "Variant") {
-		r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NATIVE;
+		_refactor_rename_symbol_set_outside_gdscript(ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_NAME, r_result);
 		return OK;
 	}
 
 	if (p_symbol == "PI" || p_symbol == "TAU" || p_symbol == "INF" || p_symbol == "NAN") {
-		r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NATIVE;
+		_refactor_rename_symbol_set_outside_gdscript(ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_CONSTANT, r_result);
 		return OK;
 	}
 
@@ -3945,7 +4132,7 @@ static Error _refactor_rename_symbol_from_base(GDScriptParser::RefactorRenameCon
 		// Need special checks for `assert` and `preload` as they are technically
 		// keywords, so are not registered in `GDScriptUtilityFunctions`.
 		if (GDScriptUtilityFunctions::function_exists(p_symbol) || p_symbol == "assert" || p_symbol == "preload") {
-			r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NATIVE;
+			_refactor_rename_symbol_set_outside_gdscript(ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_METHOD, r_result);
 			return OK;
 		}
 	}
@@ -3959,7 +4146,7 @@ static Error _refactor_rename_symbol_from_base(GDScriptParser::RefactorRenameCon
 		bool success = false;
 		ClassDB::get_integer_constant(class_name, p_symbol, &success);
 		if (success) {
-			r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NATIVE;
+			_refactor_rename_symbol_set_outside_gdscript(ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_CONSTANT, r_result);
 			return OK;
 		}
 		do {
@@ -3967,7 +4154,7 @@ static Error _refactor_rename_symbol_from_base(GDScriptParser::RefactorRenameCon
 			ClassDB::get_enum_list(class_name, &enums, true);
 			for (const StringName &enum_name : enums) {
 				if (enum_name == p_symbol) {
-					r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NATIVE;
+					_refactor_rename_symbol_set_outside_gdscript(ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_ENUM, r_result);
 					return OK;
 				}
 			}
@@ -3986,7 +4173,7 @@ static Error _refactor_rename_symbol_from_base(GDScriptParser::RefactorRenameCon
 			ClassDB::get_enum_list(class_name, &enums, true);
 			for (const StringName &enum_name : enums) {
 				if (enum_name == p_symbol) {
-					r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NATIVE;
+					_refactor_rename_symbol_set_outside_gdscript(ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_ENUM, r_result);
 					return OK;
 				}
 			}
@@ -4000,7 +4187,7 @@ static Error _refactor_rename_symbol_from_base(GDScriptParser::RefactorRenameCon
 		case GDScriptParser::REFACTOR_RENAME_TYPE_LITERAL: {
 		} break;
 		case GDScriptParser::REFACTOR_RENAME_TYPE_BUILT_IN_TYPE_CONSTANT_OR_STATIC_METHOD: {
-			r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NATIVE;
+			_refactor_rename_symbol_set_outside_gdscript(ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_CONSTANT, r_result);
 			return OK;
 		} break;
 		case GDScriptParser::REFACTOR_RENAME_TYPE_SUPER_METHOD:
@@ -4217,9 +4404,9 @@ static Error _refactor_rename_symbol_from_base(GDScriptParser::RefactorRenameCon
 					if (obj) {
 						const GDScriptNativeClass *native_class = Object::cast_to<GDScriptNativeClass>(obj);
 						if (native_class) {
-							r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NOT_EXPOSED;
+							_refactor_rename_symbol_set_outside_gdscript(ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NOT_EXPOSED, r_result);
 						} else {
-							r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NATIVE;
+							_refactor_rename_symbol_set_outside_gdscript(ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NATIVE, r_result);
 						}
 						return OK;
 					}
@@ -4227,17 +4414,17 @@ static Error _refactor_rename_symbol_from_base(GDScriptParser::RefactorRenameCon
 			}
 
 			if (CoreConstants::is_global_enum(p_symbol)) {
-				r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NATIVE;
+				_refactor_rename_symbol_set_outside_gdscript(ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_ENUM, r_result);
 				return OK;
 			}
 
 			if (CoreConstants::is_global_constant(p_symbol)) {
-				r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NATIVE;
+				_refactor_rename_symbol_set_outside_gdscript(ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_CONSTANT, r_result);
 				return OK;
 			}
 
 			if (Variant::has_utility_function(p_symbol)) {
-				r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NATIVE;
+				_refactor_rename_symbol_set_outside_gdscript(ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_METHOD, r_result);
 				return OK;
 			}
 		} break;
@@ -4310,11 +4497,11 @@ static Error _refactor_rename_symbol_from_base(GDScriptParser::RefactorRenameCon
 			if (!parser.annotation_exists(annotation_symbol)) {
 				break;
 			}
-			r_result.type = REFACTOR_RENAME_SYMBOL_RESULT_NATIVE;
+			_refactor_rename_symbol_set_outside_gdscript(ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_ANNOTATION, r_result);
 			return OK;
 		} break;
 		default: {
-			print_line("default\?\?!?");
+			// Do nothing.
 		}
 	}
 

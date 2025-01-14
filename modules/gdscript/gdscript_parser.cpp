@@ -915,6 +915,8 @@ GDScriptParser::ClassNode *GDScriptParser::parse_class(bool p_is_static) {
 
 	if (consume(GDScriptTokenizer::Token::IDENTIFIER, R"(Expected identifier for the class name after "class".)")) {
 		n_class->identifier = parse_identifier();
+		make_refactor_rename_context(RefactorRenameType::REFACTOR_RENAME_TYPE_IDENTIFIER, n_class->identifier);
+
 		if (n_class->outer) {
 			String fqcn = n_class->outer->fqcn;
 			if (fqcn.is_empty()) {
@@ -963,6 +965,8 @@ void GDScriptParser::parse_class_name() {
 	if (consume(GDScriptTokenizer::Token::IDENTIFIER, R"(Expected identifier for the global class name after "class_name".)")) {
 		current_class->identifier = parse_identifier();
 		current_class->fqcn = String(current_class->identifier->name);
+
+		make_refactor_rename_context(RefactorRenameType::REFACTOR_RENAME_TYPE_IDENTIFIER, current_class->identifier);
 	}
 
 	if (match(GDScriptTokenizer::Token::EXTENDS)) {
@@ -1542,6 +1546,7 @@ GDScriptParser::EnumNode *GDScriptParser::parse_enum(bool p_is_static) {
 
 	if (match(GDScriptTokenizer::Token::IDENTIFIER)) {
 		enum_node->identifier = parse_identifier();
+		make_refactor_rename_context(RefactorRenameType::REFACTOR_RENAME_TYPE_IDENTIFIER, enum_node->identifier);
 		named = true;
 	}
 
@@ -1579,6 +1584,8 @@ GDScriptParser::EnumNode *GDScriptParser::parse_enum(bool p_is_static) {
 					push_error(vformat(R"(Name "%s" is already used as a class %s.)", item.identifier->name, current_class->get_member(item.identifier->name).get_type_name()));
 				}
 			}
+
+			make_refactor_rename_context(RefactorRenameType::REFACTOR_RENAME_TYPE_IDENTIFIER, item.identifier);
 
 			elements[item.identifier->name] = item.line;
 
