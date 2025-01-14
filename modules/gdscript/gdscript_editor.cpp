@@ -3756,14 +3756,7 @@ static Error _refactor_rename_symbol_match_from_class_find_instances_inside(cons
 		}
 
 		// We got a match!
-		ScriptLanguage::RefactorRenameSymbolResult::Match match = {
-			p_path,
-			identifier->start_line,
-			identifier->start_column,
-			identifier->end_line,
-			identifier->end_column
-		};
-		r_result.matches.push_back(match);
+		_refactor_rename_symbol_add_match(p_path, identifier, r_result);
 	}
 
 	return OK;
@@ -3826,14 +3819,7 @@ static Error _refactor_rename_symbol_match_from_class_find_instances_outside(con
 						break;
 					}
 
-					ScriptLanguage::RefactorRenameSymbolResult::Match match = {
-						script_path,
-						subscript->attribute->start_line,
-						subscript->attribute->start_column,
-						subscript->attribute->end_line,
-						subscript->attribute->end_column,
-					};
-					r_result.matches.push_back(match);
+					_refactor_rename_symbol_add_match(script_path, subscript->attribute, r_result);
 				} break;
 				default: {
 					// Do nothing.
@@ -4144,7 +4130,6 @@ static Error _refactor_rename_symbol_from_base(const GDScriptParser::DataType &p
 					}
 
 					if (FileAccess::exists(scr_path)) {
-						ScriptLanguage::RefactorRenameSymbolResult::Match match;
 						r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_NAME;
 						return OK;
 					}
