@@ -4306,33 +4306,31 @@ static Error _refactor_rename_symbol_from_base(const GDScriptParser::DataType &p
 
 		} break;
 		case GDScriptParser::REFACTOR_RENAME_TYPE_TYPE_ATTRIBUTE: {
-			print_line(vformat("REFACTOR_RENAME_TYPE_TYPE_ATTRIBUTE"));
+			if (context.node == nullptr || context.node->type != GDScriptParser::Node::TYPE) {
+				break;
+			}
+			const GDScriptParser::TypeNode *type = static_cast<const GDScriptParser::TypeNode *>(context.node);
 
-			// 	if (context.node == nullptr || context.node->type != GDScriptParser::Node::TYPE) {
-			// 		break;
-			// 	}
-			// 	const GDScriptParser::TypeNode *type = static_cast<const GDScriptParser::TypeNode *>(context.node);
+			GDScriptParser::DataType base_type;
+			const GDScriptParser::IdentifierNode *prev = nullptr;
+			for (const GDScriptParser::IdentifierNode *E : type->type_chain) {
+				if (E->name == p_symbol && prev != nullptr) {
+					base_type = prev->get_datatype();
+					break;
+				}
+				prev = E;
+			}
+			if (base_type.kind != GDScriptParser::DataType::CLASS) {
+				GDScriptParsingIdentifier base;
+				if (!_guess_expression_type(context, prev, base)) {
+					break;
+				}
+				base_type = base.type;
+			}
 
-			// 	GDScriptParser::DataType base_type;
-			// 	const GDScriptParser::IdentifierNode *prev = nullptr;
-			// 	for (const GDScriptParser::IdentifierNode *E : type->type_chain) {
-			// 		if (E->name == p_symbol && prev != nullptr) {
-			// 			base_type = prev->get_datatype();
-			// 			break;
-			// 		}
-			// 		prev = E;
-			// 	}
-			// 	if (base_type.kind != GDScriptParser::DataType::CLASS) {
-			// 		GDScriptCompletionIdentifier base;
-			// 		if (!_guess_expression_type(context, prev, base)) {
-			// 			break;
-			// 		}
-			// 		base_type = base.type;
-			// 	}
-
-			// 	if (_lookup_symbol_from_base(base_type, p_symbol, r_result) == OK) {
-			// 		return OK;
-			// 	}
+			if (_refactor_rename_symbol_from_base(base_type, p_symbol, p_path, p_owner, r_result) == OK) {
+				return OK;
+			}
 		} break;
 		case GDScriptParser::REFACTOR_RENAME_TYPE_OVERRIDE_METHOD: {
 			GDScriptParser::DataType base_type = context.current_class->base_type;
