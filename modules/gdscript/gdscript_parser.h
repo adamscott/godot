@@ -1616,10 +1616,10 @@ public:
 		}
 	};
 
-	enum ParsingContext {
-		PARSING_CONTEXT_NONE,
-		PARSING_CONTEXT_COMPLETION,
-		PARSING_CONTEXT_REFACTOR_RENAME,
+	enum ParsingType {
+		PARSING_TYPE_STANDARD,
+		PARSING_TYPE_COMPLETION,
+		PARSING_TYPE_REFACTOR_RENAME,
 	};
 
 	enum CompletionType {
@@ -1719,12 +1719,12 @@ private:
 	List<bool> multiline_stack;
 	HashMap<String, Ref<GDScriptParserRef>> depended_parsers;
 
-	ParsingContext parsing_context;
+	ParsingType parsing_type;
 	_FORCE_INLINE_ bool is_for_completion() {
-		return parsing_context == PARSING_CONTEXT_COMPLETION;
+		return parsing_type == PARSING_TYPE_COMPLETION;
 	}
 	_FORCE_INLINE_ bool is_for_refactor_rename() {
-		return parsing_context == PARSING_CONTEXT_REFACTOR_RENAME;
+		return parsing_type == PARSING_TYPE_REFACTOR_RENAME;
 	}
 
 	ClassNode *head = nullptr;
@@ -1966,7 +1966,7 @@ private:
 #endif // TOOLS_ENABLED
 
 public:
-	Error parse(const String &p_source_code, const String &p_script_path, ParsingContext p_context = ParsingContext::PARSING_CONTEXT_NONE, bool p_parse_body = true);
+	Error parse(const String &p_source_code, const String &p_script_path, ParsingType p_type = ParsingType::PARSING_TYPE_STANDARD, bool p_parse_body = true);
 	Error parse_binary(const Vector<uint8_t> &p_binary, const String &p_script_path);
 	ClassNode *get_tree() const {
 		return head;

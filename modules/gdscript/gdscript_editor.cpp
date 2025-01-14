@@ -3213,7 +3213,7 @@ static void _find_call_arguments(GDScriptParser::CompletionContext &p_context, c
 	GDScriptParser parser;
 	GDScriptAnalyzer analyzer(&parser);
 
-	parser.parse(p_code, p_path, GDScriptParser::ParsingContext::PARSING_CONTEXT_COMPLETION);
+	parser.parse(p_code, p_path, GDScriptParser::ParsingType::PARSING_TYPE_COMPLETION);
 	analyzer.analyze();
 
 	r_forced = false;
@@ -3785,7 +3785,7 @@ static Error _refactor_rename_symbol_match_from_class_find_instances_outside(con
 	for (Ref<GDScript> &script : scripts) {
 		String script_path = script->get_script_path();
 		GDScriptParser parser;
-		parser.parse(script->get_source_code(), script_path, GDScriptParser::ParsingContext::PARSING_CONTEXT_REFACTOR_RENAME);
+		parser.parse(script->get_source_code(), script_path, GDScriptParser::ParsingType::PARSING_TYPE_REFACTOR_RENAME);
 		GDScriptAnalyzer analyzer(&parser);
 		analyzer.analyze();
 
@@ -3983,7 +3983,7 @@ static Error _refactor_rename_symbol_from_base(const GDScriptParser::DataType &p
 	int start_column = cursor_position.x;
 
 	GDScriptParser parser;
-	parser.parse(p_code, p_path, GDScriptParser::ParsingContext::PARSING_CONTEXT_REFACTOR_RENAME);
+	parser.parse(p_code, p_path, GDScriptParser::ParsingType::PARSING_TYPE_REFACTOR_RENAME);
 
 	GDScriptParser::RefactorRenameContext context = parser.get_refactor_rename_context();
 	context.base = p_owner;
@@ -4187,7 +4187,7 @@ static Error _refactor_rename_symbol_from_base(const GDScriptParser::DataType &p
 				// Match the global class name.
 				{
 					GDScriptParser parser;
-					parser.parse(gdscr->get_source_code(), gdscr->get_script_path(), GDScriptParser::ParsingContext::PARSING_CONTEXT_REFACTOR_RENAME);
+					parser.parse(gdscr->get_source_code(), gdscr->get_script_path(), GDScriptParser::ParsingType::PARSING_TYPE_REFACTOR_RENAME);
 					GDScriptAnalyzer analyzer(&parser);
 					analyzer.analyze();
 
@@ -4234,7 +4234,7 @@ static Error _refactor_rename_symbol_from_base(const GDScriptParser::DataType &p
 					for (Ref<GDScript> &script : scripts) {
 						String script_path = script->get_script_path();
 						GDScriptParser parser;
-						parser.parse(script->get_source_code(), script_path, GDScriptParser::ParsingContext::PARSING_CONTEXT_REFACTOR_RENAME);
+						parser.parse(script->get_source_code(), script_path, GDScriptParser::ParsingType::PARSING_TYPE_REFACTOR_RENAME);
 						GDScriptAnalyzer analyzer(&parser);
 						analyzer.analyze();
 
@@ -4781,7 +4781,7 @@ static Error _lookup_symbol_from_base(const GDScriptParser::DataType &p_base, co
 	}
 
 	GDScriptParser parser;
-	parser.parse(p_code, p_path, GDScriptParser::ParsingContext::PARSING_CONTEXT_COMPLETION);
+	parser.parse(p_code, p_path, GDScriptParser::ParsingType::PARSING_TYPE_COMPLETION);
 
 	GDScriptParser::CompletionContext context = parser.get_completion_context();
 	context.base = p_owner;

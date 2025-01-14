@@ -407,13 +407,13 @@ void GDScriptParser::make_refactor_rename_context(RefactorRenameType p_type, Var
 	refactor_rename_context = context;
 }
 
-Error GDScriptParser::parse(const String &p_source_code, const String &p_script_path, ParsingContext p_context, bool p_parse_body) {
+Error GDScriptParser::parse(const String &p_source_code, const String &p_script_path, ParsingType p_type, bool p_parse_body) {
 	clear();
 
 	String source = p_source_code;
 	int cursor_line = -1;
 	int cursor_column = -1;
-	parsing_context = p_context;
+	parsing_type = p_type;
 	parse_body = p_parse_body;
 
 	int tab_size = 4;
