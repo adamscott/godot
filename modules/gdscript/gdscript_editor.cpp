@@ -4335,21 +4335,18 @@ static Error _refactor_rename_symbol_from_base(const GDScriptParser::DataType &p
 			// 	}
 		} break;
 		case GDScriptParser::REFACTOR_RENAME_TYPE_OVERRIDE_METHOD: {
-			print_line(vformat("REFACTOR_RENAME_TYPE_OVERRIDE_METHOD"));
-			// 	GDScriptParser::DataType base_type = context.current_class->base_type;
-
-			// 	if (_lookup_symbol_from_base(base_type, p_symbol, r_result) == OK) {
-			// 		return OK;
-			// 	}
-			// } break;
-			// case GDScriptParser::COMPLETION_PROPERTY_DECLARATION_OR_TYPE:
-			// case GDScriptParser::COMPLETION_TYPE_NAME_OR_VOID:
-			// case GDScriptParser::COMPLETION_TYPE_NAME: {
-			// 	GDScriptParser::DataType base_type = context.current_class->get_datatype();
-
-			// 	if (_lookup_symbol_from_base(base_type, p_symbol, r_result) == OK) {
-			// 		return OK;
-			// 	}
+			GDScriptParser::DataType base_type = context.current_class->base_type;
+			if (_refactor_rename_symbol_from_base(base_type, p_symbol, p_path, p_owner, r_result) == OK) {
+				return OK;
+			}
+		} break;
+		case GDScriptParser::REFACTOR_RENAME_TYPE_PROPERTY_DECLARATION_OR_TYPE:
+		case GDScriptParser::REFACTOR_RENAME_TYPE_TYPE_NAME_OR_VOID:
+		case GDScriptParser::REFACTOR_RENAME_TYPE_TYPE_NAME: {
+			GDScriptParser::DataType base_type = context.current_class->get_datatype();
+			if (_refactor_rename_symbol_from_base(base_type, p_symbol, p_path, p_owner, r_result) == OK) {
+				return OK;
+			}
 		} break;
 		case GDScriptParser::REFACTOR_RENAME_TYPE_ANNOTATION: {
 			const String annotation_symbol = "@" + p_symbol;
