@@ -1648,8 +1648,7 @@ public:
 		COMPLETION_TYPE_NAME_OR_VOID, // Same as TYPE_NAME, but allows void (in function return type).
 	};
 
-	struct CompletionContext {
-		CompletionType type = COMPLETION_NONE;
+	struct ParsingContext {
 		ClassNode *current_class = nullptr;
 		FunctionNode *current_function = nullptr;
 		SuiteNode *current_suite = nullptr;
@@ -1659,6 +1658,10 @@ public:
 		Node *node = nullptr;
 		Object *base = nullptr;
 		GDScriptParser *parser = nullptr;
+	};
+
+	struct CompletionContext : ParsingContext {
+		CompletionType type = COMPLETION_NONE;
 	};
 
 	struct CompletionCall {
@@ -1693,17 +1696,8 @@ public:
 		REFACTOR_RENAME_TYPE_LITERAL, // Declared literal (e.g. variable name).
 	};
 
-	struct RefactorRenameContext {
+	struct RefactorRenameContext : ParsingContext {
 		RefactorRenameType type = REFACTOR_RENAME_TYPE_NONE;
-		ClassNode *current_class = nullptr;
-		FunctionNode *current_function = nullptr;
-		SuiteNode *current_suite = nullptr;
-		int current_line = -1;
-		int current_argument = -1;
-		Variant::Type builtin_type = Variant::VARIANT_MAX;
-		Node *node = nullptr;
-		Object *base = nullptr;
-		GDScriptParser *parser = nullptr;
 	};
 
 private:
