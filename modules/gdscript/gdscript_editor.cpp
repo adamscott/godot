@@ -4352,14 +4352,12 @@ static Error _refactor_rename_symbol_from_base(const GDScriptParser::DataType &p
 			// 	}
 		} break;
 		case GDScriptParser::REFACTOR_RENAME_TYPE_ANNOTATION: {
-			print_line(vformat("REFACTOR_RENAME_TYPE_ANNOTATION"));
-			// 	const String annotation_symbol = "@" + p_symbol;
-			// 	if (parser.annotation_exists(annotation_symbol)) {
-			// 		r_result.type = ScriptLanguage::LOOKUP_RESULT_CLASS_ANNOTATION;
-			// 		r_result.class_name = "@GDScript";
-			// 		r_result.class_member = annotation_symbol;
-			// 		return OK;
-			// 	}
+			const String annotation_symbol = "@" + p_symbol;
+			if (!parser.annotation_exists(annotation_symbol)) {
+				break;
+			}
+			r_result.type = REFACTOR_RENAME_SYMBOL_RESULT_NATIVE;
+			return OK;
 		} break;
 		default: {
 			print_line("default\?\?!?");
