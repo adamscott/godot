@@ -3763,7 +3763,7 @@ static Error _refactor_rename_symbol_match_from_class_find_instances_inside(cons
 }
 
 // This function finds and match all instances of the symbol outside the class.
-static Error _refactor_rename_symbol_match_from_class_find_instances_outside(const String &p_symbol, const String &p_path, ScriptLanguage::RefactorRenameSymbolResult &r_result, const GDScriptParser::ClassNode *p_class_node, const GDScriptParser::ClassNode::Member &p_member) {
+static Error _refactor_rename_symbol_match_from_class_find_instances_outside(GDScriptParser::RefactorRenameContext p_context, const String &p_symbol, const String &p_path, ScriptLanguage::RefactorRenameSymbolResult &r_result, const GDScriptParser::ClassNode *p_class_node, const GDScriptParser::ClassNode::Member &p_member) {
 	LocalVector<Ref<GDScript>> scripts;
 	GDScriptLanguage::get_singleton()->get_script_list(scripts);
 	for (Ref<GDScript> &script : scripts) {
@@ -3787,35 +3787,10 @@ static Error _refactor_rename_symbol_match_from_class_find_instances_outside(con
 					if (subscript->attribute->name != p_symbol) {
 						break;
 					}
-					bool subscript_match = false;
-					GDScriptParser::DataType subscript_datatype = subscript->get_datatype();
-					switch (subscript_datatype.type_source) {
-						case GDScriptParser::DataType::TypeSource::ANNOTATED_EXPLICIT: {
-							GDScriptParser::SubscriptNode *subscript_base = static_cast<GDScriptParser::SubscriptNode *>(subscript->base);
-							GDScriptParser::DataType subscript_base_datatype = subscript_base->get_datatype();
-							if (subscript_base_datatype.script_path != p_path) {
-								break;
-							}
-							subscript_match = true;
-						} break;
-						case GDScriptParser::DataType::TypeSource::ANNOTATED_INFERRED:
-						case GDScriptParser::DataType::TypeSource::INFERRED: {
-							if (subscript->base->type != GDScriptParser::Node::Type::SUBSCRIPT) {
-								break;
-							}
-							GDScriptParser::SubscriptNode *subscript_base = static_cast<GDScriptParser::SubscriptNode *>(subscript->base);
-							GDScriptParser::DataType subscript_base_datatype = subscript_base->get_datatype();
-							if (subscript_base_datatype.type_source != GDScriptParser::DataType::TypeSource::ANNOTATED_EXPLICIT) {
-								break;
-							}
-							subscript_match = true;
-						} break;
-						default: {
-							// Do nothing.
-						}
-					}
 
-					if (!subscript_match) {
+					GDScriptParsingIdentifier base;
+					bool found_type = _get_subscript_type(p_context, subscript, base.type);
+					if (!found_type && !_guess_expression_type(p_context, subscript->base, base)) {
 						break;
 					}
 
@@ -3832,7 +3807,7 @@ static Error _refactor_rename_symbol_match_from_class_find_instances_outside(con
 }
 
 // This function tests if the symbol is from a class. If so, it will launch matching inside and outside the class.
-static Error _refactor_rename_symbol_match_from_class(const String &p_symbol, const String &p_path, ScriptLanguage::RefactorRenameSymbolResult &r_result, const GDScriptParser::ClassNode *p_class_node, const GDScriptParser::ClassNode::Member &p_member) {
+static Error _refactor_rename_symbol_match_from_class(GDScriptParser::RefactorRenameContext p_context, const String &p_symbol, const String &p_path, ScriptLanguage::RefactorRenameSymbolResult &r_result, const GDScriptParser::ClassNode *p_class_node, const GDScriptParser::ClassNode::Member &p_member) {
 	switch (p_member.type) {
 		case GDScriptParser::ClassNode::Member::CLASS: {
 			r_result.type = ScriptLanguage::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_NAME;
@@ -3873,7 +3848,7 @@ static Error _refactor_rename_symbol_match_from_class(const String &p_symbol, co
 		print_error(vformat(R"(Error while finding instances of "%s" inside "%s".)", p_symbol, p_path));
 		return err;
 	}
-	err = _refactor_rename_symbol_match_from_class_find_instances_outside(p_symbol, p_path, r_result, p_class_node, p_member);
+	err = _refactor_rename_symbol_match_from_class_find_instances_outside(p_context, p_symbol, p_path, r_result, p_class_node, p_member);
 	if (err != OK) {
 		print_error(vformat(R"(Error while finding instances of "%s" outside "%s".)", p_symbol, p_path));
 		return err;
@@ -3882,7 +3857,7 @@ static Error _refactor_rename_symbol_match_from_class(const String &p_symbol, co
 	return OK;
 }
 
-static Error _refactor_rename_symbol_from_base(const GDScriptParser::DataType &p_base, const String &p_symbol, const String &p_path, Object *p_owner, ScriptLanguage::RefactorRenameSymbolResult &r_result) {
+static Error _refactor_rename_symbol_from_base(GDScriptParser::RefactorRenameContext p_context, const GDScriptParser::DataType &p_base, const String &p_symbol, const String &p_path, Object *p_owner, ScriptLanguage::RefactorRenameSymbolResult &r_result) {
 	GDScriptParser::DataType base_type = p_base;
 
 	while (true) {
@@ -3912,7 +3887,7 @@ static Error _refactor_rename_symbol_from_base(const GDScriptParser::DataType &p
 					case GDScriptParser::ClassNode::Member::VARIABLE:
 					case GDScriptParser::ClassNode::Member::ENUM:
 					case GDScriptParser::ClassNode::Member::ENUM_VALUE: {
-						return _refactor_rename_symbol_match_from_class(p_symbol, p_path, r_result, base_type.class_type, member);
+						return _refactor_rename_symbol_match_from_class(p_context, p_symbol, p_path, r_result, base_type.class_type, member);
 					} break;
 				}
 			} break;
@@ -4112,7 +4087,7 @@ static Error _refactor_rename_symbol_from_base(const GDScriptParser::DataType &p
 				}
 			}
 
-			if (_refactor_rename_symbol_from_base(base_type, p_symbol, p_path, p_owner, r_result) == OK) {
+			if (_refactor_rename_symbol_from_base(context, base_type, p_symbol, p_path, p_owner, r_result) == OK) {
 				return OK;
 			}
 
@@ -4277,13 +4252,12 @@ static Error _refactor_rename_symbol_from_base(const GDScriptParser::DataType &p
 			}
 
 			GDScriptParsingIdentifier base;
-
 			bool found_type = _get_subscript_type(context, subscript, base.type);
 			if (!found_type && !_guess_expression_type(context, subscript->base, base)) {
 				break;
 			}
 
-			Error err = _refactor_rename_symbol_from_base(base.type, p_symbol, base.type.script_path, p_owner, r_result);
+			Error err = _refactor_rename_symbol_from_base(context, base.type, p_symbol, base.type.script_path, p_owner, r_result);
 			if (err != OK) {
 				return err;
 			}
@@ -4313,13 +4287,13 @@ static Error _refactor_rename_symbol_from_base(const GDScriptParser::DataType &p
 				base_type = base.type;
 			}
 
-			if (_refactor_rename_symbol_from_base(base_type, p_symbol, p_path, p_owner, r_result) == OK) {
+			if (_refactor_rename_symbol_from_base(context, base_type, p_symbol, p_path, p_owner, r_result) == OK) {
 				return OK;
 			}
 		} break;
 		case GDScriptParser::REFACTOR_RENAME_TYPE_OVERRIDE_METHOD: {
 			GDScriptParser::DataType base_type = context.current_class->base_type;
-			if (_refactor_rename_symbol_from_base(base_type, p_symbol, p_path, p_owner, r_result) == OK) {
+			if (_refactor_rename_symbol_from_base(context, base_type, p_symbol, p_path, p_owner, r_result) == OK) {
 				return OK;
 			}
 		} break;
@@ -4327,7 +4301,7 @@ static Error _refactor_rename_symbol_from_base(const GDScriptParser::DataType &p
 		case GDScriptParser::REFACTOR_RENAME_TYPE_TYPE_NAME_OR_VOID:
 		case GDScriptParser::REFACTOR_RENAME_TYPE_TYPE_NAME: {
 			GDScriptParser::DataType base_type = context.current_class->get_datatype();
-			if (_refactor_rename_symbol_from_base(base_type, p_symbol, p_path, p_owner, r_result) == OK) {
+			if (_refactor_rename_symbol_from_base(context, base_type, p_symbol, p_path, p_owner, r_result) == OK) {
 				return OK;
 			}
 		} break;
