@@ -1187,6 +1187,10 @@ GDScriptParser::VariableNode *GDScriptParser::parse_variable(bool p_is_static, b
 	}
 
 	variable->identifier = parse_identifier();
+	if (is_for_refactor_rename()) {
+		make_refactor_rename_context(REFACTOR_RENAME_TYPE_IDENTIFIER, variable->identifier);
+	}
+
 	variable->export_info.name = variable->identifier->name;
 	variable->is_static = p_is_static;
 
