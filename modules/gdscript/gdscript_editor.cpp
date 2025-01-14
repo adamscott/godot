@@ -3905,7 +3905,7 @@ static Error _refactor_rename_symbol_match_from_class(const String &p_symbol, co
 	return OK;
 }
 
-static Error _refactor_rename_symbol_from_base(const GDScriptParser::DataType &p_base, Vector2i p_cursor_position, const String &p_symbol, const String &p_path, Object *p_owner, GDScriptLanguage::RefactorRenameSymbolResult &r_result) {
+static Error _refactor_rename_symbol_from_base(const GDScriptParser::DataType &p_base, const String &p_symbol, const String &p_path, Object *p_owner, GDScriptLanguage::RefactorRenameSymbolResult &r_result) {
 	GDScriptParser::DataType base_type = p_base;
 
 	while (true) {
@@ -4143,7 +4143,7 @@ static Error _refactor_rename_symbol_from_base(const GDScriptParser::DataType &p
 				}
 			}
 
-			if (_refactor_rename_symbol_from_base(base_type, cursor_position, p_symbol, p_path, p_owner, r_result) == OK) {
+			if (_refactor_rename_symbol_from_base(base_type, p_symbol, p_path, p_owner, r_result) == OK) {
 				return OK;
 			}
 
@@ -4323,7 +4323,36 @@ static Error _refactor_rename_symbol_from_base(const GDScriptParser::DataType &p
 				}
 			}
 
-			// GDScriptCompletionIdentifier base;
+			if (subscript->base->type == GDScriptParser::Node::GET_NODE) {
+				// Parse get_node
+				print_line(vformat("NEED TO PARSE GET_NODE"));
+			}
+
+			GDScriptParser::DataType subscript_datatype = subscript->get_datatype();
+			GDScriptParser::ClassNode *class_node = nullptr;
+			switch (subscript_datatype.type_source) {
+				case GDScriptParser::DataType::ANNOTATED_EXPLICIT: {
+					class_node = subscript_datatype.class_type;
+				} break;
+				case GDScriptParser::DataType::ANNOTATED_INFERRED:
+				case GDScriptParser::DataType::INFERRED: {
+					class_node = subscript->base->get_datatype().class_type;
+				} break;
+				default: {
+					// Do nothing.
+				}
+			}
+
+			if (class_node == nullptr) {
+				break;
+			}
+
+			Error err = _refactor_rename_symbol_from_base(class_node->get_datatype(), p_symbol, class_node->get_datatype().script_path, p_owner, r_result);
+			if (err != OK) {
+				return err;
+			}
+
+			return OK;
 
 			// bool found_type = _get_subscript_type(context, subscript, base.type);
 			// if (!found_type && !_guess_expression_type(context, subscript->base, base)) {
