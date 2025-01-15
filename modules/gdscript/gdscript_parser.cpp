@@ -1701,7 +1701,7 @@ GDScriptParser::FunctionNode *GDScriptParser::parse_function(bool p_is_static) {
 	FunctionNode *function = alloc_node<FunctionNode>();
 
 	make_completion_context(COMPLETION_OVERRIDE_METHOD, function);
-	make_refactor_rename_context(REFACTOR_RENAME_TYPE_OVERRIDE_METHOD, function);
+	make_refactor_rename_context(REFACTOR_RENAME_TYPE_METHOD, function);
 
 	if (!consume(GDScriptTokenizer::Token::IDENTIFIER, R"(Expected function name after "func".)")) {
 		complete_extents(function);

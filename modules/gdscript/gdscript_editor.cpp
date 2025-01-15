@@ -3686,6 +3686,8 @@ static void _refactor_rename_symbol_add_match(const String &p_path, const GDScri
 // This function finds and match all instances of the symbol inside the class.
 static Error _refactor_rename_symbol_match_from_class_find_instances_inside(const String &p_symbol, const String &p_path, ScriptLanguage::RefactorRenameSymbolResult &r_result, const GDScriptParser::ClassNode *p_class_node, const GDScriptParser::ClassNode::Member &p_member) {
 	LocalVector<GDScriptParser::IdentifierNode::Source> target_sources;
+	// The definition.
+	target_sources.push_back(GDScriptParser::IdentifierNode::Source::UNDEFINED_SOURCE);
 	GDScriptParser::Node::Type expected_undefined_source_type;
 	switch (p_member.type) {
 		case GDScriptParser::ClassNode::Member::CLASS: {
@@ -3706,17 +3708,11 @@ static Error _refactor_rename_symbol_match_from_class_find_instances_inside(cons
 		} break;
 		case GDScriptParser::ClassNode::Member::VARIABLE: {
 			expected_undefined_source_type = GDScriptParser::Node::VARIABLE;
-			// The definition.
-			target_sources.push_back(GDScriptParser::IdentifierNode::Source::UNDEFINED_SOURCE);
-			// The use.
 			target_sources.push_back(GDScriptParser::IdentifierNode::Source::MEMBER_VARIABLE);
 		} break;
 		case GDScriptParser::ClassNode::Member::ENUM:
 		case GDScriptParser::ClassNode::Member::ENUM_VALUE: {
 			expected_undefined_source_type = GDScriptParser::Node::ENUM;
-			// The definition.
-			target_sources.push_back(GDScriptParser::IdentifierNode::Source::UNDEFINED_SOURCE);
-			// The use.
 			target_sources.push_back(GDScriptParser::IdentifierNode::Source::MEMBER_CONSTANT);
 		} break;
 		default: {
@@ -3748,47 +3744,43 @@ static Error _refactor_rename_symbol_match_from_class_find_instances_inside(cons
 			if (identifier->source != GDScriptParser::IdentifierNode::UNDEFINED_SOURCE) {
 				continue;
 			}
+
+			GDScriptParser::Node::Type member_type;
+			GDScriptParser::IdentifierNode *member_identifier;
 			switch (member_source_node->type) {
-				case GDScriptParser::Node::IDENTIFIER: {
-					// We can compare by the identifier name.
-					GDScriptParser::IdentifierNode *member_identifier = static_cast<GDScriptParser::IdentifierNode *>(member_source_node);
-					if (member_identifier->name != identifier->name) {
-						continue;
-					}
-				} break;
 				case GDScriptParser::Node::CLASS: {
-					if (expected_undefined_source_type != GDScriptParser::Node::Type::CLASS) {
-						continue;
-					}
-					// We can compare by the variable identifier name.
+					member_type = GDScriptParser::Node::Type::CLASS;
 					GDScriptParser::ClassNode *member_class = static_cast<GDScriptParser::ClassNode *>(member_source_node);
-					if (member_class->identifier == nullptr || member_class->identifier->name != identifier->name) {
-						continue;
-					}
-				} break;
-				case GDScriptParser::Node::VARIABLE: {
-					if (expected_undefined_source_type != GDScriptParser::Node::Type::VARIABLE) {
-						continue;
-					}
-					// We can compare by the variable identifier name.
-					GDScriptParser::VariableNode *member_variable = static_cast<GDScriptParser::VariableNode *>(member_source_node);
-					if (member_variable->identifier == nullptr || member_variable->identifier->name != identifier->name) {
-						continue;
-					}
+					member_identifier = member_class->identifier;
 				} break;
 				case GDScriptParser::Node::ENUM: {
-					if (expected_undefined_source_type != GDScriptParser::Node::Type::ENUM) {
-						continue;
-					}
-					// We can compare by the enum identifier name.
+					member_type = GDScriptParser::Node::Type::ENUM;
 					GDScriptParser::EnumNode *member_enum = static_cast<GDScriptParser::EnumNode *>(member_source_node);
-					if (member_enum->identifier == nullptr || member_enum->identifier->name != identifier->name) {
-						continue;
-					}
+					member_identifier = member_enum->identifier;
+				} break;
+				case GDScriptParser::Node::FUNCTION: {
+					member_type = GDScriptParser::Node::Type::FUNCTION;
+					GDScriptParser::FunctionNode *member_function = static_cast<GDScriptParser::FunctionNode *>(member_source_node);
+					member_identifier = member_function->identifier;
+				} break;
+				case GDScriptParser::Node::IDENTIFIER: {
+					member_type = GDScriptParser::Node::Type::IDENTIFIER;
+					member_identifier = static_cast<GDScriptParser::IdentifierNode *>(member_source_node);
+				} break;
+				case GDScriptParser::Node::VARIABLE: {
+					member_type = GDScriptParser::Node::Type::VARIABLE;
+					GDScriptParser::VariableNode *member_variable = static_cast<GDScriptParser::VariableNode *>(member_source_node);
+					member_identifier = member_variable->identifier;
 				} break;
 				default: {
 					continue;
 				}
+			}
+			if (member_type != GDScriptParser::Node::IDENTIFIER && expected_undefined_source_type != member_type) {
+				continue;
+			}
+			if (identifier->name != member_identifier->name) {
+				continue;
 			}
 		} else {
 			// If the identifier has a source node, we need to compare it the current node.
