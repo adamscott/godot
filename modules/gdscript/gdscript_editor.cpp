@@ -3684,7 +3684,7 @@ static void _refactor_rename_symbol_add_match(const String &p_path, const GDScri
 }
 
 // This function finds and match all instances of the symbol inside the class.
-static Error _refactor_rename_symbol_match_from_class_find_instances_inside(GDScriptParser::ClassNode *p_class_node, const String &p_symbol, const String &p_path, const String &p_class_path, ScriptLanguage::RefactorRenameSymbolResult &r_result, const GDScriptParser::ClassNode::Member &p_member) {
+static Error _refactor_rename_symbol_match_from_class_find_matching_nodes(GDScriptParser::ClassNode *p_class_node, const String &p_symbol, const String &p_path, const String &p_class_path, ScriptLanguage::RefactorRenameSymbolResult &r_result, const GDScriptParser::ClassNode::Member &p_member) {
 	LocalVector<GDScriptParser::IdentifierNode::Source> target_sources;
 	// The definition.
 	target_sources.push_back(GDScriptParser::IdentifierNode::Source::UNDEFINED_SOURCE);
@@ -3797,7 +3797,7 @@ static Error _refactor_rename_symbol_match_from_class_find_instances_inside(GDSc
 }
 
 // This function finds and match all instances of the symbol outside the class.
-static Error _refactor_rename_symbol_match_from_class_find_instances_outside(GDScriptParser::RefactorRenameContext p_context, const String &p_symbol, const String &p_path, const String &p_class_path, ScriptLanguage::RefactorRenameSymbolResult &r_result, const GDScriptParser::ClassNode::Member &p_member) {
+static Error _refactor_rename_symbol_match_from_class_find_matching_subscripts(GDScriptParser::RefactorRenameContext p_context, const String &p_symbol, const String &p_path, const String &p_class_path, ScriptLanguage::RefactorRenameSymbolResult &r_result, const GDScriptParser::ClassNode::Member &p_member) {
 	LocalVector<Ref<GDScript>> scripts;
 	LocalVector<String> parsed_paths;
 	GDScriptLanguage::get_singleton()->get_script_list(scripts);
@@ -3840,8 +3840,7 @@ static Error _refactor_rename_symbol_match_from_class_find_instances_outside(GDS
 			// We are currently in the source of the refactored symbol.
 			// We aren't searching for subscripts referring to the source,
 			// but for actual and concrete types.
-			// We can parse that file as if it was "inside".
-			_refactor_rename_symbol_match_from_class_find_instances_inside(const_cast<GDScriptParser::ClassNode *>(parser.get_head()), p_symbol, p_class_path, p_class_path, r_result, p_member);
+			_refactor_rename_symbol_match_from_class_find_matching_nodes(const_cast<GDScriptParser::ClassNode *>(parser.get_head()), p_symbol, p_class_path, p_class_path, r_result, p_member);
 			continue;
 		}
 
@@ -3908,12 +3907,12 @@ static Error _refactor_rename_symbol_match_from_class(GDScriptParser::RefactorRe
 	}
 
 	Error err;
-	err = _refactor_rename_symbol_match_from_class_find_instances_inside(p_context.current_class, p_symbol, p_path, p_class_path, r_result, p_member);
+	err = _refactor_rename_symbol_match_from_class_find_matching_nodes(p_context.current_class, p_symbol, p_path, p_class_path, r_result, p_member);
 	if (err != OK) {
 		print_error(vformat(R"(Error while finding instances of "%s" inside "%s".)", p_symbol, p_path));
 		return err;
 	}
-	err = _refactor_rename_symbol_match_from_class_find_instances_outside(p_context, p_symbol, p_path, p_class_path, r_result, p_member);
+	err = _refactor_rename_symbol_match_from_class_find_matching_subscripts(p_context, p_symbol, p_path, p_class_path, r_result, p_member);
 	if (err != OK) {
 		print_error(vformat(R"(Error while finding instances of "%s" outside "%s".)", p_symbol, p_path));
 		return err;
