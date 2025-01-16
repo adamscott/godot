@@ -400,7 +400,7 @@ public:
 		}
 	};
 
-	virtual Error refactor_rename_symbol_code(const String &p_code, const String &p_symbol, const String &p_path, Object *p_owner, RefactorRenameSymbolResult &r_result) { return ERR_UNAVAILABLE; }
+	virtual Error refactor_rename_symbol_code(const String &p_code, const String &p_symbol, const String &p_path, Object *p_owner, const HashMap<String, String> &p_unsaved_scripts_source_code, RefactorRenameSymbolResult &r_result) { return ERR_UNAVAILABLE; }
 
 	// Lookup.
 	enum LookupResultType {

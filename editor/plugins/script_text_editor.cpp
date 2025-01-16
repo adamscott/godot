@@ -35,6 +35,7 @@
 #include "core/math/expression.h"
 #include "core/object/script_language.h"
 #include "core/os/keyboard.h"
+#include "core/templates/hash_map.h"
 #include "editor/debugger/editor_debugger_node.h"
 #include "editor/editor_command_palette.h"
 #include "editor/editor_help.h"
@@ -358,6 +359,11 @@ void ScriptTextEditor::reload_text() {
 	if (editor_enabled) {
 		_validate_script();
 	}
+}
+
+String ScriptTextEditor::get_text() {
+	CodeEdit *text_editor = code_editor->get_text_editor();
+	return text_editor->get_text();
 }
 
 void ScriptTextEditor::add_callback(const String &p_function, const PackedStringArray &p_args) {
@@ -900,7 +906,20 @@ void ScriptTextEditor::_refactor_rename_symbol_script(const String &p_code, cons
 	if (base) {
 		base = _find_node_for_script(base, base, script);
 	}
-	Error err = script->get_language()->refactor_rename_symbol_code(p_code, p_symbol, script->get_path(), base, r_result);
+
+	HashMap<String, String> unsaved_scripts_source_code;
+	LocalVector<ScriptEditorBase *> open_script_editors = ScriptEditor::get_singleton()->get_open_script_editors();
+	Vector<Ref<Script>> open_scripts = ScriptEditor::get_singleton()->get_open_scripts();
+	Vector<String> unsaved_scripts = ScriptEditor::get_singleton()->get_unsaved_scripts();
+	for (const String &unsaved_script : unsaved_scripts) {
+		for (ScriptEditorBase *open_script_editor : open_script_editors) {
+			if (open_script_editor->get_edited_resource()->get_path() == unsaved_script) {
+				unsaved_scripts_source_code[unsaved_script] = open_script_editor->get_text();
+			}
+		}
+	}
+
+	Error err = script->get_language()->refactor_rename_symbol_code(p_code, p_symbol, script->get_path(), base, unsaved_scripts_source_code, r_result);
 	if (err != OK) {
 		print_error(vformat("Error while refactoring script: %s", error_names[err]));
 		return;

@@ -228,6 +228,7 @@ public:
 	virtual void enable_editor(Control *p_shortcut_context = nullptr) override;
 	virtual Vector<String> get_functions() override;
 	virtual void reload_text() override;
+	virtual String get_text() override;
 	virtual String get_name() override;
 	virtual Ref<Texture2D> get_theme_icon() override;
 	virtual bool is_unsaved() override;

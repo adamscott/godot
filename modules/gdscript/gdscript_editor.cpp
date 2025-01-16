@@ -4145,7 +4145,7 @@ static Error _refactor_rename_symbol_from_base(GDScriptParser::RefactorRenameCon
 	return ERR_CANT_RESOLVE;
 }
 
-::Error GDScriptLanguage::refactor_rename_symbol_code(const String &p_code, const String &p_symbol, const String &p_path, Object *p_owner, ScriptLanguage::RefactorRenameSymbolResult &r_result) {
+::Error GDScriptLanguage::refactor_rename_symbol_code(const String &p_code, const String &p_symbol, const String &p_path, Object *p_owner, const HashMap<String, String> &p_unsaved_scripts_source_code, ScriptLanguage::RefactorRenameSymbolResult &r_result) {
 	r_result.symbol = p_symbol;
 
 	if (ClassDB::class_exists(p_symbol)) {
@@ -4368,10 +4368,15 @@ static Error _refactor_rename_symbol_from_base(GDScriptParser::RefactorRenameCon
 				}
 				r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_NAME;
 
+				String gdscr_source_code = gdscr->get_source_code();
+				if (p_unsaved_scripts_source_code.has(scr_path)) {
+					gdscr_source_code = p_unsaved_scripts_source_code[scr_path];
+				}
+
 				// Match the global class name.
 				{
 					GDScriptParser parser;
-					parser.parse(gdscr->get_source_code(), gdscr->get_script_path(), GDScriptParser::ParsingType::PARSING_TYPE_REFACTOR_RENAME);
+					parser.parse(gdscr_source_code, gdscr->get_script_path(), GDScriptParser::ParsingType::PARSING_TYPE_REFACTOR_RENAME);
 					GDScriptAnalyzer analyzer(&parser);
 					analyzer.analyze();
 

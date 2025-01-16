@@ -37,6 +37,7 @@
 #include "core/io/resource_loader.h"
 #include "core/os/keyboard.h"
 #include "core/os/os.h"
+#include "core/templates/local_vector.h"
 #include "core/version.h"
 #include "editor/code_editor.h"
 #include "editor/debugger/editor_debugger_node.h"
@@ -3816,8 +3817,8 @@ Vector<Ref<Script>> ScriptEditor::get_open_scripts() const {
 	return out_scripts;
 }
 
-TypedArray<ScriptEditorBase> ScriptEditor::_get_open_script_editors() const {
-	TypedArray<ScriptEditorBase> script_editors;
+LocalVector<ScriptEditorBase *> ScriptEditor::get_open_script_editors() const {
+	LocalVector<ScriptEditorBase *> script_editors;
 	for (int i = 0; i < tab_container->get_tab_count(); i++) {
 		ScriptEditorBase *se = Object::cast_to<ScriptEditorBase>(tab_container->get_tab_control(i));
 		if (!se) {
@@ -3826,6 +3827,15 @@ TypedArray<ScriptEditorBase> ScriptEditor::_get_open_script_editors() const {
 		script_editors.push_back(se);
 	}
 	return script_editors;
+}
+
+TypedArray<ScriptEditorBase> ScriptEditor::_get_open_script_editors() const {
+	LocalVector<ScriptEditorBase *> script_editors = get_open_script_editors();
+	TypedArray<ScriptEditorBase> script_editors_array;
+	for (ScriptEditorBase *script_editor : script_editors) {
+		script_editors_array.push_back(script_editor);
+	}
+	return script_editors_array;
 }
 
 void ScriptEditor::set_scene_root_script(Ref<Script> p_script) {
