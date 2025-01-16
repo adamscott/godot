@@ -3803,21 +3803,20 @@ static Error _refactor_rename_symbol_match_from_class_find_matching_subscripts(G
 	GDScriptLanguage::get_singleton()->get_script_list(scripts);
 	// Looping through all registered GDScript instances. This includes inner classes, so we must be cautious.
 	for (Ref<GDScript> &script : scripts) {
-		String script_path = script->get_script_path();
-		Ref<GDScript> base = script->get_base_script();
-		while (!base.is_null()) {
-			base = base->get_base_script();
+		if (script.is_null() || !script->is_valid()) {
+			continue;
 		}
+		String script_path = script->get_script_path();
 		if (script_path == p_path) {
-			// We don't have to parse this, this is parsed `inside`.
+			// We don't have to parse this, this was already parsed.
 			continue;
 		}
 		if (parsed_paths.has(script_path)) {
 			// We already parsed this.
 			continue;
 		}
-		if (!base.is_null() && base->get_script_path() == p_path) {
-			// We technically already parsed or will parse the base class.
+		if (script->get_fully_qualified_name().split("::").size() > 1) {
+			// It's not a root class, let's skip.
 			continue;
 		}
 		parsed_paths.push_back(script_path);
@@ -3930,10 +3929,6 @@ static Error _refactor_rename_symbol_from_base(GDScriptParser::RefactorRenameCon
 				ERR_FAIL_NULL_V(base_type.class_type, ERR_BUG);
 
 				String name = p_symbol;
-				if (name == "new") {
-					name = "_init";
-				}
-
 				if (!base_type.class_type->has_member(name)) {
 					base_type = base_type.class_type->base_type;
 					break;
