@@ -1044,7 +1044,9 @@ public:
 					return parameter_source;
 				} break;
 				case LOCAL_VARIABLE:
-				case MEMBER_VARIABLE: {
+				case MEMBER_VARIABLE:
+				case INHERITED_VARIABLE:
+				case STATIC_VARIABLE: {
 					return variable_source;
 				} break;
 				case LOCAL_CONSTANT:
@@ -1061,7 +1063,10 @@ public:
 				case MEMBER_SIGNAL: {
 					return signal_source;
 				} break;
-				default: {
+				case MEMBER_CLASS: {
+					return get_datatype().class_type;
+				} break;
+				case UNDEFINED_SOURCE: {
 					return nullptr;
 				}
 			}
