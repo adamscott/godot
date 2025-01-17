@@ -1854,6 +1854,8 @@ void CodeTextEditor::update_toggle_scripts_button() {
 
 CodeTextEditor::CodeTextEditor() {
 	code_complete_func = nullptr;
+	refactor_rename_symbol_func = nullptr;
+
 	ED_SHORTCUT("script_editor/zoom_in", TTRC("Zoom In"), KeyModifierMask::CMD_OR_CTRL | Key::EQUAL);
 	ED_SHORTCUT("script_editor/zoom_out", TTRC("Zoom Out"), KeyModifierMask::CMD_OR_CTRL | Key::MINUS);
 	ED_SHORTCUT_ARRAY("script_editor/reset_zoom", TTRC("Reset Zoom"),
