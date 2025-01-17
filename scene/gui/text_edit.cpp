@@ -4415,6 +4415,20 @@ String TextEdit::get_word_at_line_column(int p_line, int p_column) const {
 	return String();
 }
 
+Point2i TextEdit::get_word_start_at_line_column(int p_line, int p_column) const {
+	String s = text[p_line];
+	if (s.length() == 0) {
+		return Point2i(0, 0);
+	}
+	int beg;
+	int end;
+	if (!select_word(s, p_column, beg, end)) {
+		return Point2i(0, 0);
+	}
+
+	return Point2i(beg + 1, p_line);
+}
+
 Point2i TextEdit::get_line_column_at_pos(const Point2i &p_pos, bool p_allow_out_of_bounds) const {
 	float rows = p_pos.y - theme_cache.style_normal->get_margin(SIDE_TOP);
 	if (!editable) {

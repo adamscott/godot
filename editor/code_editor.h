@@ -31,18 +31,75 @@
 #ifndef CODE_EDITOR_H
 #define CODE_EDITOR_H
 
+#include "core/math/vector2i.h"
+#include "core/object/script_language.h"
 #include "scene/gui/box_container.h"
 #include "scene/gui/button.h"
 #include "scene/gui/check_box.h"
 #include "scene/gui/code_edit.h"
 #include "scene/gui/dialogs.h"
 #include "scene/gui/label.h"
+#include "scene/gui/panel_container.h"
 #include "scene/gui/popup.h"
 #include "scene/main/timer.h"
 
 class MenuButton;
 class CodeTextEditor;
 class LineEdit;
+
+class RefactorRenamePopup : public PanelContainer {
+	GDCLASS(RefactorRenamePopup, PanelContainer);
+
+	enum State {
+		STATE_ERROR,
+		STATE_RENAME,
+	};
+	State state = STATE_RENAME;
+
+	Dictionary refactor_context;
+
+	VBoxContainer *meta_container;
+
+	HBoxContainer *error_container;
+	Label *error_label;
+
+	HBoxContainer *rename_container;
+	LineEdit *symbol_edit;
+	Button *rename_button;
+	Button *preview_button;
+
+	Point2i code_position;
+	Point2i caret_position;
+
+	void _on_focus_exited();
+	void _on_preview_button_pressed();
+	void _on_rename_button_pressed();
+
+	void _emit_preview();
+	void _emit_apply();
+	void _emit_restore_caret();
+
+	void _focus_check();
+	void _update_layout();
+	void _update_refactor_context();
+
+	bool _is_new_symbol_valid();
+
+protected:
+	static void _bind_methods();
+	void _notification(int p_what);
+	virtual void unhandled_input(const Ref<InputEvent> &p_event) override;
+
+public:
+	void set_state(State p_state);
+	Point2i get_code_position();
+
+	void request_refactor(const String &p_symbol, Point2i p_code_position, Point2i p_caret_position, Dictionary &p_refactor_context);
+	void close();
+	void clear();
+
+	RefactorRenamePopup();
+};
 
 class GotoLinePopup : public PopupPanel {
 	GDCLASS(GotoLinePopup, PopupPanel);
@@ -158,7 +215,7 @@ public:
 };
 
 typedef void (*CodeTextEditorCodeCompleteFunc)(void *p_ud, const String &p_code, List<ScriptLanguage::CodeCompletionOption> *r_options, bool &r_forced);
-typedef void (*CodeTextEditorRefactorRenameSymbolFunc)(void *p_ud, const String &p_code, const String &p_symbol, ScriptLanguage::RefactorRenameSymbolResult &r_result);
+typedef void (*CodeTextEditorRefactorRenameSymbolFunc)(void *p_ud, const String &p_code, const String &p_symbol, ScriptLanguage::RefactorRenameSymbolResult &r_result, const String &p_new_symbol);
 
 class CodeTextEditor : public VBoxContainer {
 	GDCLASS(CodeTextEditor, VBoxContainer);
@@ -175,6 +232,8 @@ class CodeTextEditor : public VBoxContainer {
 	MenuButton *zoom_button = nullptr;
 	Label *line_and_col_txt = nullptr;
 	Label *indentation_txt = nullptr;
+
+	RefactorRenamePopup *refactor_rename_popup = nullptr;
 
 	Label *info = nullptr;
 	Timer *idle = nullptr;
@@ -199,6 +258,13 @@ class CodeTextEditor : public VBoxContainer {
 	Ref<Texture2D> _get_completion_icon(const ScriptLanguage::CodeCompletionOption &p_option);
 
 	void _refactor_request(int p_refactor_kind);
+	void _apply_refactor_rename_symbol(const Dictionary &p_refactor_context);
+	void _preview_refactor_rename_symbol(const Dictionary &p_refactor_context);
+	void _on_refactor_rename_popup_opened();
+	void _on_refactor_rename_popup_closed();
+	void _on_refactor_rename_popup_apply(const Dictionary &p_refactor_context);
+	void _on_refactor_rename_popup_preview(const Dictionary &p_refactor_context);
+	void _on_refactor_rename_popup_restore_caret(Point2i p_caret_position);
 
 	virtual void input(const Ref<InputEvent> &event) override;
 	void _text_editor_gui_input(const Ref<InputEvent> &p_event);
@@ -228,6 +294,7 @@ class CodeTextEditor : public VBoxContainer {
 	void _zoom_popup_id_pressed(int p_idx);
 
 	void _toggle_scripts_pressed();
+	void _update_refactor_rename_popup_position();
 
 protected:
 	virtual void _load_theme_settings() {}

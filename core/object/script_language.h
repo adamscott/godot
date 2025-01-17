@@ -369,10 +369,6 @@ public:
 	};
 
 	struct RefactorRenameSymbolResult {
-		String symbol;
-		bool outside_gdscript = false;
-		RefactorRenameSymbolResultType type;
-
 		struct Match {
 			String path;
 			int start_line = -1;
@@ -389,6 +385,10 @@ public:
 				end_column = p_end_column;
 			}
 		};
+
+		String symbol;
+		bool outside_refactor = false;
+		RefactorRenameSymbolResultType type;
 		LocalVector<Match> matches;
 
 		void add_match(const String &p_path, int p_start_line, int p_start_column, int p_end_line, int p_end_column) {
@@ -397,6 +397,16 @@ public:
 					p_start_column,
 					p_end_line,
 					p_end_column });
+		}
+
+		void operator=(const RefactorRenameSymbolResult &p_result) {
+			symbol = p_result.symbol;
+			outside_refactor = p_result.outside_refactor;
+			type = p_result.type;
+
+			for (const Match &match : p_result.matches) {
+				matches.push_back(match);
+			}
 		}
 	};
 

@@ -42,6 +42,7 @@
 #include "editor/editor_node.h"
 #include "editor/editor_settings.h"
 #include "editor/editor_string_names.h"
+#include "editor/editor_undo_redo_manager.h"
 #include "editor/gui/editor_toaster.h"
 #include "editor/plugins/editor_context_menu_plugin.h"
 #include "editor/themes/editor_scale.h"
@@ -896,12 +897,12 @@ void ScriptTextEditor::_code_complete_script(const String &p_code, List<ScriptLa
 	}
 }
 
-void ScriptTextEditor::_refactor_rename_symbol_scripts(void *p_ud, const String &p_code, const String &p_symbol, ScriptLanguage::RefactorRenameSymbolResult &r_result) {
+void ScriptTextEditor::_refactor_rename_symbol_scripts(void *p_ud, const String &p_code, const String &p_symbol, ScriptLanguage::RefactorRenameSymbolResult &r_result, const String &p_new_symbol) {
 	ScriptTextEditor *ste = (ScriptTextEditor *)p_ud;
-	ste->_refactor_rename_symbol_script(p_code, p_symbol, r_result);
+	ste->_refactor_rename_symbol_script(p_code, p_symbol, r_result, p_new_symbol);
 }
 
-void ScriptTextEditor::_refactor_rename_symbol_script(const String &p_code, const String &p_symbol, ScriptLanguage::RefactorRenameSymbolResult &r_result) {
+void ScriptTextEditor::_refactor_rename_symbol_script(const String &p_code, const String &p_symbol, ScriptLanguage::RefactorRenameSymbolResult &r_result, const String &p_new_symbol) {
 	Node *base = get_tree()->get_edited_scene_root();
 	if (base) {
 		base = _find_node_for_script(base, base, script);
@@ -924,15 +925,9 @@ void ScriptTextEditor::_refactor_rename_symbol_script(const String &p_code, cons
 		print_error(vformat("Error while refactoring script: %s", error_names[err]));
 		return;
 	}
+}
 
-	if (r_result.matches.size() > 0) {
-		print_line(vformat("Results for \"%s\"", p_symbol));
-		for (ScriptLanguage::RefactorRenameSymbolResult::Match &match : r_result.matches) {
-			print_line(vformat("(%s, %s) -> (%s, %s) [%s]", match.start_line, match.start_column, match.end_line, match.end_column, match.path));
-		}
-	} else {
-		print_line(vformat("No results for %s", p_symbol));
-	}
+void ScriptTextEditor::_refactor_rename_symbol_script_apply(const String &p_new_symbol, Dictionary p_matches) {
 }
 
 void ScriptTextEditor::_update_breakpoint_list() {
@@ -2565,6 +2560,10 @@ void ScriptTextEditor::_enable_code_editor() {
 	breakpoints_menu->connect("index_pressed", callable_mp(this, &ScriptTextEditor::_breakpoint_item_pressed));
 
 	goto_menu->get_popup()->connect(SceneStringName(id_pressed), callable_mp(this, &ScriptTextEditor::_edit_option));
+}
+
+void ScriptTextEditor::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("_refactor_rename_symbol_script_apply", "new_symbol", "matches"), &ScriptTextEditor::_refactor_rename_symbol_script_apply);
 }
 
 ScriptTextEditor::ScriptTextEditor() {
