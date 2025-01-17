@@ -4267,6 +4267,11 @@ static Error _refactor_rename_symbol_from_base(GDScriptParser::RefactorRenameCon
 		case GDScriptParser::REFACTOR_RENAME_TYPE_IDENTIFIER:
 		case GDScriptParser::REFACTOR_RENAME_TYPE_PROPERTY_METHOD:
 		case GDScriptParser::REFACTOR_RENAME_TYPE_SUBSCRIPT: {
+			if (p_symbol == "self" && context.type == GDScriptParser::RefactorRenameType::REFACTOR_RENAME_TYPE_IDENTIFIER && context.node == nullptr) {
+				_refactor_rename_symbol_set_outside_gdscript(ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NATIVE, r_result);
+				return OK;
+			}
+
 			GDScriptParser::DataType base_type;
 			if (context.current_class) {
 				if (context.type != GDScriptParser::REFACTOR_RENAME_TYPE_SUPER_METHOD) {
