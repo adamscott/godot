@@ -43,6 +43,7 @@
 #include "core/os/memory.h"
 #include "core/string/string_builder.h"
 #include "core/variant/dictionary.h"
+#include "core/variant/typed_array.h"
 #include "core/variant/variant.h"
 #include "editor/editor_node.h"
 #include "editor/editor_settings.h"
@@ -1328,18 +1329,19 @@ void CodeTextEditor::_refactor_request(int p_refactor_kind) {
 			}
 
 			Dictionary refactor_context;
-			Dictionary refactor_context_matches;
+			TypedArray<Dictionary> refactor_context_matches;
 			refactor_context["type"] = result.type;
 			refactor_context["outside_refactor"] = result.outside_refactor;
 			refactor_context["symbol"] = result.symbol;
 			refactor_context["new_symbol"] = "";
 			for (const ScriptLanguage::RefactorRenameSymbolResult::Match &match : result.matches) {
-				Dictionary positions;
-				positions["start_line"] = match.start_line;
-				positions["start_column"] = match.start_column;
-				positions["end_line"] = match.end_line;
-				positions["end_column"] = match.end_column;
-				refactor_context_matches[match.path] = positions;
+				Dictionary match_dict;
+				match_dict["path"] = match.path;
+				match_dict["start_line"] = match.start_line;
+				match_dict["start_column"] = match.start_column;
+				match_dict["end_line"] = match.end_line;
+				match_dict["end_column"] = match.end_column;
+				refactor_context_matches.push_back(match_dict);
 			}
 			refactor_context["matches"] = refactor_context_matches;
 			refactor_rename_popup->request_refactor(symbol, symbol_start, pos, refactor_context);
