@@ -448,7 +448,6 @@ class ScriptEditor : public PanelContainer {
 	void _clear_breakpoints();
 	Array _get_cached_breakpoints_for_script(const String &p_path) const;
 
-	ScriptEditorBase *_get_current_editor() const;
 	TypedArray<ScriptEditorBase> _get_open_script_editors() const;
 
 	Ref<ConfigFile> script_editor_cache;
@@ -568,6 +567,7 @@ public:
 	void get_breakpoints(List<String> *p_breakpoints);
 
 	LocalVector<ScriptEditorBase *> get_open_script_editors() const;
+	ScriptEditorBase *get_current_editor() const;
 
 	PackedStringArray get_unsaved_scripts() const;
 	void save_current_script();
