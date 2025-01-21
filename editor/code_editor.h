@@ -257,6 +257,32 @@ class CodeTextEditor : public VBoxContainer {
 	void _complete_request();
 	Ref<Texture2D> _get_completion_icon(const ScriptLanguage::CodeCompletionOption &p_option);
 
+	struct RefactorRenameSymbolMatch {
+		struct Compare {
+			_FORCE_INLINE_ bool operator()(const RefactorRenameSymbolMatch &l, const RefactorRenameSymbolMatch &r) const {
+				if (l.path.is_empty() && r.path.is_empty()) {
+					return false;
+				}
+				if (l.path != r.path) {
+					return l.path < r.path;
+				}
+				if (l.start_line != r.start_line) {
+					return l.start_line < r.start_line;
+				}
+				if (l.start_column != r.start_column) {
+					return l.start_column < r.start_column;
+				}
+				return false;
+			}
+		};
+
+		String path;
+		int start_line;
+		int start_column;
+		int end_line;
+		int end_column;
+	};
+
 	void _refactor_request(int p_refactor_kind);
 	void _apply_refactor_rename_symbol(const Dictionary &p_refactor_context);
 	void _preview_refactor_rename_symbol(const Dictionary &p_refactor_context);

@@ -34,6 +34,8 @@
 #include "core/error/error_macros.h"
 #include "core/input/input.h"
 #include "core/input/input_event.h"
+#include "core/io/file_access.h"
+#include "core/io/resource_saver.h"
 #include "core/math/vector2i.h"
 #include "core/object/callable_method_pointer.h"
 #include "core/object/class_db.h"
@@ -42,6 +44,7 @@
 #include "core/os/keyboard.h"
 #include "core/os/memory.h"
 #include "core/string/string_builder.h"
+#include "core/templates/local_vector.h"
 #include "core/variant/dictionary.h"
 #include "core/variant/typed_array.h"
 #include "core/variant/variant.h"
@@ -62,19 +65,20 @@
 #include "scene/main/window.h"
 #include "scene/resources/font.h"
 #include "scene/scene_string_names.h"
+#include <cstdint>
 
 void RefactorRenamePopup::_on_focus_exited() {
 	call_deferred(SNAME("_focus_check"));
 }
 
 void RefactorRenamePopup::_on_preview_button_pressed() {
-	close();
 	_emit_preview();
+	close();
 }
 
 void RefactorRenamePopup::_on_rename_button_pressed() {
-	close();
 	_emit_apply();
+	close();
 }
 
 void RefactorRenamePopup::_emit_preview() {
@@ -1365,7 +1369,73 @@ void CodeTextEditor::_refactor_request(int p_refactor_kind) {
 }
 
 void CodeTextEditor::_apply_refactor_rename_symbol(const Dictionary &p_refactor_context) {
-	print_line(vformat("TODO: implement apply refactoring for %s", p_refactor_context));
+	String symbol = p_refactor_context["symbol"];
+	String new_symbol = p_refactor_context["new_symbol"];
+	int tab_size = EditorSettings::get_singleton()->get_setting("text_editor/behavior/indent/size");
+
+	// Let's convert the dictionary to a usable type.
+	TypedArray<Dictionary> refactor_context_matches = p_refactor_context["matches"];
+	HashMap<String, LocalVector<RefactorRenameSymbolMatch>> matches;
+	for (int i = 0; i < refactor_context_matches.size(); i++) {
+		Dictionary refactor_context_match = refactor_context_matches[i];
+
+		RefactorRenameSymbolMatch match;
+		match.path = refactor_context_match["path"];
+		match.start_line = refactor_context_match["start_line"];
+		match.start_column = refactor_context_match["start_column"];
+		match.end_line = refactor_context_match["end_line"];
+		match.end_column = refactor_context_match["end_column"];
+		matches[match.path].push_back(match);
+	}
+	// For each match path.
+	for (KeyValue<String, LocalVector<RefactorRenameSymbolMatch>> &KV : matches) {
+		KV.value.sort_custom<RefactorRenameSymbolMatch::Compare>();
+
+		Ref<Script> script = ScriptEditor::get_singleton()->open_file(KV.key);
+		if (script.is_null()) {
+			continue;
+		}
+		Vector<String> lines = script->get_source_code().split("\n");
+		int last_target_line = 0;
+		int target_line = 0;
+		int target_column = 0;
+		int column_offset = 0;
+
+		for (const RefactorRenameSymbolMatch &match : KV.value) {
+			target_line = match.start_line - 1;
+			target_column = match.start_column - 1;
+			if (target_line > lines.size()) {
+				continue;
+			}
+			if (target_column > lines[target_line].length()) {
+				continue;
+			}
+			if (target_line != last_target_line) {
+				column_offset = 0;
+				last_target_line = target_line;
+			}
+
+			int actual_column = target_column + column_offset;
+			if (lines[target_line].contains_char('\t')) {
+				int i = 0;
+				while (i < actual_column) {
+					String character = lines[target_line].substr(i, 1);
+					if (character == String("\t")) {
+						actual_column -= tab_size - 1;
+					}
+					i += 1;
+				}
+			}
+
+			lines.set(target_line, lines[target_line].erase(actual_column, symbol.length()).insert(actual_column, new_symbol));
+			column_offset += new_symbol.length() - symbol.length();
+		}
+
+		script->set_source_code(String("\n").join(lines));
+		ResourceSaver::save(script);
+	}
+
+	ScriptEditor::get_singleton()->reload_scripts();
 }
 
 void CodeTextEditor::_preview_refactor_rename_symbol(const Dictionary &p_refactor_context) {
