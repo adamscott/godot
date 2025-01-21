@@ -1374,23 +1374,26 @@ void CodeTextEditor::_apply_refactor_rename_symbol(const Dictionary &p_refactor_
 	int tab_size = EditorSettings::get_singleton()->get_setting("text_editor/behavior/indent/size");
 
 	// Let's convert the dictionary to a usable type.
+	// But especially, let's sort the matches by path.
 	TypedArray<Dictionary> refactor_context_matches = p_refactor_context["matches"];
 	HashMap<String, LocalVector<RefactorRenameSymbolMatch>> matches;
 	for (int i = 0; i < refactor_context_matches.size(); i++) {
 		Dictionary refactor_context_match = refactor_context_matches[i];
-
-		RefactorRenameSymbolMatch match;
-		match.path = refactor_context_match["path"];
-		match.start_line = refactor_context_match["start_line"];
-		match.start_column = refactor_context_match["start_column"];
-		match.end_line = refactor_context_match["end_line"];
-		match.end_column = refactor_context_match["end_column"];
-		matches[match.path].push_back(match);
+		String path = refactor_context_match["path"];
+		matches[path].push_back({ path,
+				refactor_context_match["start_line"],
+				refactor_context_match["start_column"],
+				refactor_context_match["end_line"],
+				refactor_context_match["end_column"] });
 	}
+
+	ScriptEditorBase *current_editor = ScriptEditor::get_singleton()->get_current_editor();
+	Ref<Script> opened_script = current_editor->get_edited_resource();
+	ERR_FAIL_COND(opened_script.is_null());
+
 	// For each match path.
 	for (KeyValue<String, LocalVector<RefactorRenameSymbolMatch>> &KV : matches) {
 		KV.value.sort_custom<RefactorRenameSymbolMatch::Compare>();
-
 		Ref<Script> script = ScriptEditor::get_singleton()->open_file(KV.key);
 		if (script.is_null()) {
 			continue;
@@ -1401,33 +1404,41 @@ void CodeTextEditor::_apply_refactor_rename_symbol(const Dictionary &p_refactor_
 		int target_column = 0;
 		int column_offset = 0;
 
+		// For each actual match…
 		for (const RefactorRenameSymbolMatch &match : KV.value) {
+			// `start_line` and `start_column` are 1-based.
 			target_line = match.start_line - 1;
 			target_column = match.start_column - 1;
-			if (target_line > lines.size()) {
+
+			// Simple length checks.
+			if (target_line > lines.size() || target_column > lines[target_line].length()) {
 				continue;
 			}
-			if (target_column > lines[target_line].length()) {
-				continue;
-			}
+
+			// If the target line changed…
 			if (target_line != last_target_line) {
+				// … reset the calculated offset.
 				column_offset = 0;
 				last_target_line = target_line;
 			}
 
-			int actual_column = target_column + column_offset;
+			// We need to calculate the actual position of the symbol,
+			// because tabs count for multiple columns, even if the actual
+			// number of characters don't match.
+			int actual_character_index = target_column + column_offset;
 			if (lines[target_line].contains_char('\t')) {
 				int i = 0;
-				while (i < actual_column) {
+				while (i < actual_character_index) {
 					String character = lines[target_line].substr(i, 1);
 					if (character == String("\t")) {
-						actual_column -= tab_size - 1;
+						actual_character_index -= tab_size - 1;
 					}
 					i += 1;
 				}
 			}
 
-			lines.set(target_line, lines[target_line].erase(actual_column, symbol.length()).insert(actual_column, new_symbol));
+			String new_line = lines[target_line].erase(actual_character_index, symbol.length()).insert(actual_character_index, new_symbol);
+			lines.set(target_line, new_line);
 			column_offset += new_symbol.length() - symbol.length();
 		}
 
@@ -1435,7 +1446,8 @@ void CodeTextEditor::_apply_refactor_rename_symbol(const Dictionary &p_refactor_
 		ResourceSaver::save(script);
 	}
 
-	ScriptEditor::get_singleton()->reload_scripts();
+	ScriptEditor::get_singleton()->reload_scripts(true);
+	ScriptEditor::get_singleton()->open_file(opened_script->get_path());
 }
 
 void CodeTextEditor::_preview_refactor_rename_symbol(const Dictionary &p_refactor_context) {

@@ -3817,6 +3817,10 @@ Vector<Ref<Script>> ScriptEditor::get_open_scripts() const {
 	return out_scripts;
 }
 
+Ref<Script> ScriptEditor::get_current_script() {
+	return _get_current_script();
+}
+
 LocalVector<ScriptEditorBase *> ScriptEditor::get_open_script_editors() const {
 	LocalVector<ScriptEditorBase *> script_editors;
 	for (int i = 0; i < tab_container->get_tab_count(); i++) {
