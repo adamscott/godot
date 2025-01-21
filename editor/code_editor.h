@@ -56,7 +56,7 @@ class RefactorRenamePopup : public PanelContainer {
 	};
 	State state = STATE_RENAME;
 
-	Dictionary refactor_context;
+	ScriptLanguage::RefactorRenameSymbolResult result;
 
 	VBoxContainer *meta_container;
 
@@ -85,6 +85,8 @@ class RefactorRenamePopup : public PanelContainer {
 
 	bool _is_new_symbol_valid();
 
+	Dictionary _get_refactor_context_undo();
+
 protected:
 	static void _bind_methods();
 	void _notification(int p_what);
@@ -93,8 +95,9 @@ protected:
 public:
 	void set_state(State p_state);
 	Point2i get_code_position();
+	ScriptLanguage::RefactorRenameSymbolResult get_refactor_result();
 
-	void request_refactor(const String &p_symbol, Point2i p_code_position, Point2i p_caret_position, Dictionary &p_refactor_context);
+	void request_refactor(const ScriptLanguage::RefactorRenameSymbolResult &p_refactor_result, Point2i p_code_position, Point2i p_caret_position);
 	void close();
 	void clear();
 
@@ -257,39 +260,11 @@ class CodeTextEditor : public VBoxContainer {
 	void _complete_request();
 	Ref<Texture2D> _get_completion_icon(const ScriptLanguage::CodeCompletionOption &p_option);
 
-	struct RefactorRenameSymbolMatch {
-		struct Compare {
-			_FORCE_INLINE_ bool operator()(const RefactorRenameSymbolMatch &l, const RefactorRenameSymbolMatch &r) const {
-				if (l.path.is_empty() && r.path.is_empty()) {
-					return false;
-				}
-				if (l.path != r.path) {
-					return l.path < r.path;
-				}
-				if (l.start_line != r.start_line) {
-					return l.start_line < r.start_line;
-				}
-				if (l.start_column != r.start_column) {
-					return l.start_column < r.start_column;
-				}
-				return false;
-			}
-		};
-
-		String path;
-		int start_line;
-		int start_column;
-		int end_line;
-		int end_column;
-	};
-
 	void _refactor_request(int p_refactor_kind);
-	void _apply_refactor_rename_symbol(const Dictionary &p_refactor_context);
-	void _preview_refactor_rename_symbol(const Dictionary &p_refactor_context);
 	void _on_refactor_rename_popup_opened();
 	void _on_refactor_rename_popup_closed();
-	void _on_refactor_rename_popup_apply(const Dictionary &p_refactor_context);
-	void _on_refactor_rename_popup_preview(const Dictionary &p_refactor_context);
+	void _on_refactor_rename_popup_apply();
+	void _on_refactor_rename_popup_preview();
 	void _on_refactor_rename_popup_restore_caret(Point2i p_caret_position);
 
 	virtual void input(const Ref<InputEvent> &event) override;
@@ -394,6 +369,8 @@ public:
 	void set_zoom_factor(float p_zoom_factor);
 	float get_zoom_factor();
 
+	void apply_refactor_rename_symbol(const Dictionary &p_refactor_result);
+	void preview_refactor_rename_symbol(const Dictionary &p_refactor_result);
 	void set_code_complete_func(CodeTextEditorCodeCompleteFunc p_code_complete_func, void *p_ud);
 	void set_refactor_rename_symbol_func(CodeTextEditorRefactorRenameSymbolFunc p_refactor_func, void *p_ud);
 

@@ -51,6 +51,7 @@
 #include "editor/editor_node.h"
 #include "editor/editor_settings.h"
 #include "editor/editor_string_names.h"
+#include "editor/editor_undo_redo_manager.h"
 #include "editor/plugins/script_editor_plugin.h"
 #include "editor/themes/editor_scale.h"
 #include "editor/themes/editor_theme_manager.h"
@@ -82,13 +83,13 @@ void RefactorRenamePopup::_on_rename_button_pressed() {
 }
 
 void RefactorRenamePopup::_emit_preview() {
-	refactor_context["new_symbol"] = symbol_edit->get_text();
-	emit_signal(SNAME("preview"), refactor_context);
+	result.new_symbol = symbol_edit->get_text();
+	emit_signal(SNAME("preview"));
 }
 
 void RefactorRenamePopup::_emit_apply() {
-	refactor_context["new_symbol"] = symbol_edit->get_text();
-	emit_signal(SNAME("apply"), refactor_context);
+	result.new_symbol = symbol_edit->get_text();
+	emit_signal(SNAME("apply"));
 }
 
 void RefactorRenamePopup::_emit_restore_caret() {
@@ -115,12 +116,12 @@ void RefactorRenamePopup::_update_layout() {
 }
 
 void RefactorRenamePopup::_update_refactor_context() {
-	refactor_context["new_symbol"] = symbol_edit->get_text();
+	result.new_symbol = symbol_edit->get_text();
 }
 
 bool RefactorRenamePopup::_is_new_symbol_valid() {
 	String symbol_edit_text = symbol_edit->get_text();
-	if (symbol_edit_text == (String)refactor_context["symbol"]) {
+	if (symbol_edit_text == result.symbol) {
 		// Didn't change anything. It's not valid.
 		return false;
 	}
@@ -139,15 +140,20 @@ Point2i RefactorRenamePopup::get_code_position() {
 	return code_position;
 }
 
-void RefactorRenamePopup::request_refactor(const String &p_symbol, Point2i p_code_position, Point2i p_caret_position, Dictionary &p_refactor_context) {
-	refactor_context = p_refactor_context.duplicate(true);
+ScriptLanguage::RefactorRenameSymbolResult RefactorRenamePopup::get_refactor_result() {
+	return result;
+}
+
+void RefactorRenamePopup::request_refactor(const ScriptLanguage::RefactorRenameSymbolResult &p_refactor_result, Point2i p_code_position, Point2i p_caret_position) {
+	result = p_refactor_result;
+
 	code_position = p_code_position;
 	caret_position = p_caret_position;
-	symbol_edit->set_text(p_symbol);
+	symbol_edit->set_text(result.symbol);
 	symbol_edit->select_all();
 	symbol_edit->grab_focus();
 
-	set_state((bool)refactor_context["outside_refactor"] ? STATE_ERROR : STATE_RENAME);
+	set_state(result.outside_refactor ? STATE_ERROR : STATE_RENAME);
 	set_visible(true);
 	set_process_unhandled_input(true);
 
@@ -219,8 +225,8 @@ void RefactorRenamePopup::_bind_methods() {
 
 	ADD_SIGNAL(MethodInfo("opened"));
 	ADD_SIGNAL(MethodInfo("closed"));
-	ADD_SIGNAL(MethodInfo("apply", PropertyInfo(Variant::DICTIONARY, "refactor_context")));
-	ADD_SIGNAL(MethodInfo("preview", PropertyInfo(Variant::DICTIONARY, "refactor_context")));
+	ADD_SIGNAL(MethodInfo("apply"));
+	ADD_SIGNAL(MethodInfo("preview"));
 	ADD_SIGNAL(MethodInfo("restore_caret", PropertyInfo(Variant::VECTOR2I, "cursor_position")));
 	ADD_SIGNAL(MethodInfo("unhandled_input", PropertyInfo(Variant::OBJECT, "event")));
 }
@@ -1332,69 +1338,23 @@ void CodeTextEditor::_refactor_request(int p_refactor_kind) {
 				refactor_rename_symbol_func(refactor_ud, code, symbol, result, "");
 			}
 
-			Dictionary refactor_context;
-			TypedArray<Dictionary> refactor_context_matches;
-			refactor_context["type"] = result.type;
-			refactor_context["outside_refactor"] = result.outside_refactor;
-			refactor_context["symbol"] = result.symbol;
-			refactor_context["new_symbol"] = "";
-			for (const ScriptLanguage::RefactorRenameSymbolResult::Match &match : result.matches) {
-				Dictionary match_dict;
-				match_dict["path"] = match.path;
-				match_dict["start_line"] = match.start_line;
-				match_dict["start_column"] = match.start_column;
-				match_dict["end_line"] = match.end_line;
-				match_dict["end_column"] = match.end_column;
-				refactor_context_matches.push_back(match_dict);
-			}
-			refactor_context["matches"] = refactor_context_matches;
-			refactor_rename_popup->request_refactor(symbol, symbol_start, pos, refactor_context);
-
-			// _refactor_rename_symbol_script(code, symbol, result);
-			// if (refactor_rename_symbol_func) {
-			// 	refactor_rename_symbol_func(refactor_ud, code, symbol, result);
-			// }
-
-			// EditorUndoRedoManager *undo_redo = EditorUndoRedoManager::get_singleton();
-			// undo_redo->create_action(TTR(R"(Rename symbol "%s")"));
-			// undo_redo->add_do_method(this, "_refactor_rename_symbol_script_apply", p_symbol, );
-			// undo_redo->add_undo_method(this, "_refactor_rename_symbol_script_apply", name);
-
-			// print_line(vformat("Results for \"%s\"", p_symbol));
-			// for (ScriptLanguage::RefactorRenameSymbolResult::Match &match : r_result.matches) {
-			// 	print_line(vformat("(%s, %s) -> (%s, %s) [%s]", match.start_line, match.start_column, match.end_line, match.end_column, match.path));
-			// }
+			refactor_rename_popup->request_refactor(result, symbol_start, pos);
 		} break;
 	}
 }
 
-void CodeTextEditor::_apply_refactor_rename_symbol(const Dictionary &p_refactor_context) {
-	String symbol = p_refactor_context["symbol"];
-	String new_symbol = p_refactor_context["new_symbol"];
+void CodeTextEditor::apply_refactor_rename_symbol(const Dictionary &p_refactor_result) {
+	ScriptLanguage::RefactorRenameSymbolResult result = ScriptLanguage::RefactorRenameSymbolResult(p_refactor_result);
 	int tab_size = EditorSettings::get_singleton()->get_setting("text_editor/behavior/indent/size");
-
-	// Let's convert the dictionary to a usable type.
-	// But especially, let's sort the matches by path.
-	TypedArray<Dictionary> refactor_context_matches = p_refactor_context["matches"];
-	HashMap<String, LocalVector<RefactorRenameSymbolMatch>> matches;
-	for (int i = 0; i < refactor_context_matches.size(); i++) {
-		Dictionary refactor_context_match = refactor_context_matches[i];
-		String path = refactor_context_match["path"];
-		matches[path].push_back({ path,
-				refactor_context_match["start_line"],
-				refactor_context_match["start_column"],
-				refactor_context_match["end_line"],
-				refactor_context_match["end_column"] });
-	}
 
 	ScriptEditorBase *current_editor = ScriptEditor::get_singleton()->get_current_editor();
 	Ref<Script> opened_script = current_editor->get_edited_resource();
 	ERR_FAIL_COND(opened_script.is_null());
 
 	// For each match path.
-	for (KeyValue<String, LocalVector<RefactorRenameSymbolMatch>> &KV : matches) {
-		KV.value.sort_custom<RefactorRenameSymbolMatch::Compare>();
-		Ref<Script> script = ScriptEditor::get_singleton()->open_file(KV.key);
+	for (KeyValue<String, LocalVector<ScriptLanguage::RefactorRenameSymbolResult::Match>> &KV : result.matches) {
+		KV.value.sort_custom<ScriptLanguage::RefactorRenameSymbolResult::Match::Compare>();
+		Ref<Script> script = ResourceLoader::load(KV.key);
 		if (script.is_null()) {
 			continue;
 		}
@@ -1405,7 +1365,7 @@ void CodeTextEditor::_apply_refactor_rename_symbol(const Dictionary &p_refactor_
 		int column_offset = 0;
 
 		// For each actual match…
-		for (const RefactorRenameSymbolMatch &match : KV.value) {
+		for (const ScriptLanguage::RefactorRenameSymbolResult::Match &match : KV.value) {
 			// `start_line` and `start_column` are 1-based.
 			target_line = match.start_line - 1;
 			target_column = match.start_column - 1;
@@ -1437,20 +1397,18 @@ void CodeTextEditor::_apply_refactor_rename_symbol(const Dictionary &p_refactor_
 				}
 			}
 
-			String new_line = lines[target_line].erase(actual_character_index, symbol.length()).insert(actual_character_index, new_symbol);
+			String new_line = lines[target_line].erase(actual_character_index, result.symbol.length()).insert(actual_character_index, result.new_symbol);
 			lines.set(target_line, new_line);
-			column_offset += new_symbol.length() - symbol.length();
+			column_offset += result.new_symbol.length() - result.symbol.length();
 		}
 
 		script->set_source_code(String("\n").join(lines));
 		ResourceSaver::save(script);
 	}
-
-	ScriptEditor::get_singleton()->reload_scripts(true);
-	ScriptEditor::get_singleton()->open_file(opened_script->get_path());
+	ScriptEditor::get_singleton()->reload_scripts();
 }
 
-void CodeTextEditor::_preview_refactor_rename_symbol(const Dictionary &p_refactor_context) {
+void CodeTextEditor::preview_refactor_rename_symbol(const Dictionary &p_refactor_context) {
 	print_line(vformat("TODO: implement preview refactoring for %s", p_refactor_context));
 }
 
@@ -1462,12 +1420,16 @@ void CodeTextEditor::_on_refactor_rename_popup_closed() {
 	set_process(false);
 }
 
-void CodeTextEditor::_on_refactor_rename_popup_apply(const Dictionary &p_refactor_context) {
-	_apply_refactor_rename_symbol(p_refactor_context);
+void CodeTextEditor::_on_refactor_rename_popup_apply() {
+	EditorUndoRedoManager *undo_redo = EditorUndoRedoManager::get_singleton();
+	undo_redo->create_action(vformat(TTR(R"(Rename symbol "%s")"), refactor_rename_popup->get_refactor_result().symbol));
+	undo_redo->add_do_method(this, "apply_refactor_rename_symbol", refactor_rename_popup->get_refactor_result().to_dictionary());
+	undo_redo->add_undo_method(this, "apply_refactor_rename_symbol", refactor_rename_popup->get_refactor_result().get_undo().to_dictionary());
+	undo_redo->commit_action();
 }
 
-void CodeTextEditor::_on_refactor_rename_popup_preview(const Dictionary &p_refactor_context) {
-	_preview_refactor_rename_symbol(p_refactor_context);
+void CodeTextEditor::_on_refactor_rename_popup_preview() {
+	// preview_refactor_rename_symbol(p_refactor_context);
 }
 
 void CodeTextEditor::_on_refactor_rename_popup_restore_caret(Point2i p_caret_position) {
@@ -2204,11 +2166,8 @@ float CodeTextEditor::get_zoom_factor() {
 }
 
 void CodeTextEditor::_bind_methods() {
-	ClassDB::bind_method("_on_refactor_rename_popup_opened", &CodeTextEditor::_on_refactor_rename_popup_opened);
-	ClassDB::bind_method("_on_refactor_rename_popup_closed", &CodeTextEditor::_on_refactor_rename_popup_closed);
-	ClassDB::bind_method("_on_refactor_rename_popup_apply", &CodeTextEditor::_on_refactor_rename_popup_apply);
-	ClassDB::bind_method("_on_refactor_rename_popup_preview", &CodeTextEditor::_on_refactor_rename_popup_preview);
-	ClassDB::bind_method("_on_refactor_rename_popup_restore_caret", &CodeTextEditor::_on_refactor_rename_popup_restore_caret);
+	ClassDB::bind_method(D_METHOD("apply_refactor_rename_symbol", "rename_result"), &CodeTextEditor::apply_refactor_rename_symbol);
+	ClassDB::bind_method(D_METHOD("preview_refactor_rename_symbol", "rename_result"), &CodeTextEditor::preview_refactor_rename_symbol);
 
 	ADD_SIGNAL(MethodInfo("validate_script"));
 	ADD_SIGNAL(MethodInfo("load_theme_settings"));

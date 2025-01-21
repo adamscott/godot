@@ -370,44 +370,141 @@ public:
 
 	struct RefactorRenameSymbolResult {
 		struct Match {
-			String path;
 			int start_line = -1;
 			int start_column = -1;
 			int end_line = -1;
 			int end_column = -1;
 
 			Match() {}
-			Match(const String &p_path, int p_start_line, int p_start_column, int p_end_line, int p_end_column) {
-				path = p_path;
+			Match(int p_start_line, int p_start_column, int p_end_line, int p_end_column) {
 				start_line = p_start_line;
 				start_column = p_start_column;
 				end_line = p_end_line;
 				end_column = p_end_column;
 			}
+
+			struct Compare {
+				_FORCE_INLINE_ bool operator()(const Match &l, const Match &r) const {
+					if (l.start_line != r.start_line) {
+						return l.start_line < r.start_line;
+					}
+					if (l.start_column != r.start_column) {
+						return l.start_column < r.start_column;
+					}
+					return false;
+				}
+			};
 		};
 
 		String symbol;
+		String new_symbol;
 		bool outside_refactor = false;
-		RefactorRenameSymbolResultType type;
-		LocalVector<Match> matches;
+		RefactorRenameSymbolResultType type = RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NONE;
+		HashMap<String, LocalVector<Match>> matches;
 
 		void add_match(const String &p_path, int p_start_line, int p_start_column, int p_end_line, int p_end_column) {
-			matches.push_back({ p_path,
-					p_start_line,
+			matches[p_path].push_back({ p_start_line,
 					p_start_column,
 					p_end_line,
 					p_end_column });
+			matches[p_path].sort_custom<RefactorRenameSymbolResult::Match::Compare>();
 		}
 
-		void operator=(const RefactorRenameSymbolResult &p_result) {
+		Dictionary to_dictionary() {
+			Dictionary result;
+			result["symbol"] = symbol;
+			result["new_symbol"] = new_symbol;
+			result["outside_refactor"] = outside_refactor;
+			result["type"] = type;
+
+			Dictionary dictionary_matches;
+			for (KeyValue<String, LocalVector<Match>> &KV : matches) {
+				TypedArray<Dictionary> dictionary_matches_entries;
+				for (Match &match : KV.value) {
+					Dictionary dictionary_match;
+					dictionary_match["start_line"] = match.start_line;
+					dictionary_match["start_column"] = match.start_column;
+					dictionary_match["end_line"] = match.end_line;
+					dictionary_match["end_column"] = match.end_column;
+					dictionary_matches_entries.push_back(dictionary_match);
+				}
+				dictionary_matches[KV.key] = dictionary_matches_entries;
+			}
+			result["matches"] = dictionary_matches;
+
+			return result;
+		}
+
+		RefactorRenameSymbolResult get_undo() {
+			RefactorRenameSymbolResult undo_result;
+			undo_result.symbol = new_symbol;
+			undo_result.new_symbol = symbol;
+			undo_result.outside_refactor = outside_refactor;
+			undo_result.type = type;
+
+			for (const KeyValue<String, LocalVector<Match>> &KV : matches) {
+				int last_line = 0;
+				int offset = 0;
+				for (const Match &match : KV.value) {
+					if (last_line < match.start_line) {
+						offset = 0;
+					}
+					Match new_match = {
+						match.start_line,
+						match.start_column + offset,
+						match.end_line,
+						match.end_column,
+					};
+					offset += new_symbol.length() - symbol.length();
+					undo_result.matches[KV.key].push_back(new_match);
+				}
+			}
+
+			return undo_result;
+		}
+
+	private:
+		void _deep_copy(const RefactorRenameSymbolResult &p_result) {
 			symbol = p_result.symbol;
+			new_symbol = p_result.new_symbol;
 			outside_refactor = p_result.outside_refactor;
 			type = p_result.type;
-
-			for (const Match &match : p_result.matches) {
-				matches.push_back(match);
+			for (const KeyValue<String, LocalVector<Match>> &KV : p_result.matches) {
+				for (const Match &match : KV.value) {
+					matches[KV.key].push_back(match);
+				}
 			}
 		}
+
+	public:
+		void operator=(const RefactorRenameSymbolResult &p_result) {
+			_deep_copy(p_result);
+		}
+
+		RefactorRenameSymbolResult(const RefactorRenameSymbolResult &p_result) {
+			_deep_copy(p_result);
+		}
+
+		RefactorRenameSymbolResult(const Dictionary &p_result) {
+			ERR_FAIL_COND(!p_result.has("symbol") || !p_result.has("new_symbol") || !p_result.has("outside_refactor") || !p_result.has("type") || !p_result.has("matches"));
+			symbol = p_result["symbol"];
+			new_symbol = p_result["new_symbol"];
+			outside_refactor = p_result["outside_refactor"];
+			type = (RefactorRenameSymbolResultType)(int)p_result["type"];
+			Dictionary dictionary_matches = p_result["matches"];
+			for (const String key : dictionary_matches.keys()) {
+				TypedArray<Dictionary> dictionary_match_entries = dictionary_matches[key];
+				for (int i = 0; i < dictionary_match_entries.size(); i++) {
+					Dictionary dictionar_match_entry = dictionary_match_entries[i];
+					matches[key].push_back({ dictionar_match_entry["start_line"],
+							dictionar_match_entry["start_column"],
+							dictionar_match_entry["end_line"],
+							dictionar_match_entry["end_column"] });
+				}
+			}
+		}
+
+		RefactorRenameSymbolResult() = default;
 	};
 
 	virtual Error refactor_rename_symbol_code(const String &p_code, const String &p_symbol, const String &p_path, Object *p_owner, const HashMap<String, String> &p_unsaved_scripts_source_code, RefactorRenameSymbolResult &r_result) { return ERR_UNAVAILABLE; }
