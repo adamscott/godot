@@ -383,6 +383,10 @@ public:
 				end_column = p_end_column;
 			}
 
+			String to_string() const {
+				return vformat("Match{(%s,%s)=>(%s,%s)}", start_line, start_column, end_line, end_column);
+			}
+
 			struct Compare {
 				_FORCE_INLINE_ bool operator()(const Match &l, const Match &r) const {
 					if (l.start_line != r.start_line) {
@@ -401,6 +405,41 @@ public:
 		bool outside_refactor = false;
 		RefactorRenameSymbolResultType type = RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NONE;
 		HashMap<String, LocalVector<Match>> matches;
+
+	private:
+		void _deep_copy(const RefactorRenameSymbolResult &p_result) {
+			symbol = p_result.symbol;
+			new_symbol = p_result.new_symbol;
+			outside_refactor = p_result.outside_refactor;
+			type = p_result.type;
+			matches.clear();
+			for (const KeyValue<String, LocalVector<Match>> &KV : p_result.matches) {
+				for (const Match &match : KV.value) {
+					matches[KV.key].push_back(match);
+				}
+			}
+		}
+
+	public:
+		String to_string() const {
+			String matches_string;
+			for (const KeyValue<String, LocalVector<Match>> &KV : matches) {
+				LocalVector<String> match_entries;
+				for (const Match &match : KV.value) {
+					match_entries.push_back(match.to_string());
+				}
+				matches_string += vformat("\t\t%s: %s,\n", KV.key, String(", ").join(match_entries));
+			}
+			matches_string = matches_string.trim_suffix("\n");
+
+			return vformat(R"(RefactorRenameSymbolResult{
+	"%s" -> "%s",
+	(
+%s
+	)
+})",
+					symbol, new_symbol, matches_string);
+		}
 
 		void add_match(const String &p_path, int p_start_line, int p_start_column, int p_end_line, int p_end_column) {
 			matches[p_path].push_back({ p_start_line,
@@ -464,21 +503,6 @@ public:
 			return undo_result;
 		}
 
-	private:
-		void _deep_copy(const RefactorRenameSymbolResult &p_result) {
-			symbol = p_result.symbol;
-			new_symbol = p_result.new_symbol;
-			outside_refactor = p_result.outside_refactor;
-			type = p_result.type;
-			matches.clear();
-			for (const KeyValue<String, LocalVector<Match>> &KV : p_result.matches) {
-				for (const Match &match : KV.value) {
-					matches[KV.key].push_back(match);
-				}
-			}
-		}
-
-	public:
 		void operator=(const RefactorRenameSymbolResult &p_result) {
 			_deep_copy(p_result);
 		}

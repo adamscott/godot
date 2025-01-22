@@ -1345,6 +1345,8 @@ void CodeTextEditor::_refactor_request(int p_refactor_kind) {
 
 void CodeTextEditor::apply_refactor_rename_symbol(const Dictionary &p_refactor_result) {
 	ScriptLanguage::RefactorRenameSymbolResult result = ScriptLanguage::RefactorRenameSymbolResult(p_refactor_result);
+	print_line(vformat("%s", result.to_string()));
+
 	int tab_size = EditorSettings::get_singleton()->get_setting("text_editor/behavior/indent/size");
 
 	LocalVector<ScriptEditorBase *> open_editors = ScriptEditor::get_singleton()->get_open_script_editors();
