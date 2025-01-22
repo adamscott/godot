@@ -3841,6 +3841,8 @@ static Error _refactor_rename_symbol_match_from_class_find_matching_nodes(GDScri
 static Error _refactor_rename_symbol_match_from_class_find_matching_subscripts(GDScriptParser::RefactorRenameContext p_context, const String &p_symbol, const String &p_path, const String &p_class_path, const HashMap<String, String> &p_unsaved_scripts_source_code, ScriptLanguage::RefactorRenameSymbolResult &r_result, RefactorRenameSymbolDefinintionType p_expected_definition_type, GDScriptParser::Node *p_source_node) {
 	LocalVector<Ref<GDScript>> scripts;
 	LocalVector<String> parsed_paths;
+	// Reloading all scripts because otherwise, some scripts are missing from the script list.
+	GDScriptLanguage::get_singleton()->reload_all_scripts();
 	GDScriptLanguage::get_singleton()->get_script_list(scripts);
 	// Looping through all registered GDScript instances. This includes inner classes, so we must be cautious.
 	for (Ref<GDScript> &script : scripts) {
