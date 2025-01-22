@@ -448,6 +448,7 @@ public:
 				for (const Match &match : KV.value) {
 					if (last_line < match.start_line) {
 						offset = 0;
+						last_line = match.start_line;
 					}
 					Match new_match = {
 						match.start_line,
@@ -469,6 +470,7 @@ public:
 			new_symbol = p_result.new_symbol;
 			outside_refactor = p_result.outside_refactor;
 			type = p_result.type;
+			matches.clear();
 			for (const KeyValue<String, LocalVector<Match>> &KV : p_result.matches) {
 				for (const Match &match : KV.value) {
 					matches[KV.key].push_back(match);
@@ -491,6 +493,7 @@ public:
 			new_symbol = p_result["new_symbol"];
 			outside_refactor = p_result["outside_refactor"];
 			type = (RefactorRenameSymbolResultType)(int)p_result["type"];
+			matches.clear();
 			Dictionary dictionary_matches = p_result["matches"];
 			for (const String key : dictionary_matches.keys()) {
 				TypedArray<Dictionary> dictionary_match_entries = dictionary_matches[key];

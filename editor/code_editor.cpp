@@ -1347,6 +1347,7 @@ void CodeTextEditor::apply_refactor_rename_symbol(const Dictionary &p_refactor_r
 	ScriptLanguage::RefactorRenameSymbolResult result = ScriptLanguage::RefactorRenameSymbolResult(p_refactor_result);
 	int tab_size = EditorSettings::get_singleton()->get_setting("text_editor/behavior/indent/size");
 
+	LocalVector<ScriptEditorBase *> open_editors = ScriptEditor::get_singleton()->get_open_script_editors();
 	ScriptEditorBase *current_editor = ScriptEditor::get_singleton()->get_current_editor();
 	Ref<Script> opened_script = current_editor->get_edited_resource();
 	ERR_FAIL_COND(opened_script.is_null());
@@ -1376,7 +1377,7 @@ void CodeTextEditor::apply_refactor_rename_symbol(const Dictionary &p_refactor_r
 			}
 
 			// If the target line changed…
-			if (target_line != last_target_line) {
+			if (last_target_line < target_line) {
 				// … reset the calculated offset.
 				column_offset = 0;
 				last_target_line = target_line;
@@ -1402,10 +1403,24 @@ void CodeTextEditor::apply_refactor_rename_symbol(const Dictionary &p_refactor_r
 			column_offset += result.new_symbol.length() - result.symbol.length();
 		}
 
-		script->set_source_code(String("\n").join(lines));
-		ResourceSaver::save(script);
+		String new_script_content = String("\n").join(lines);
+		bool opened_in_an_editor = false;
+		for (ScriptEditorBase *open_editor : open_editors) {
+			if (open_editor->get_edited_resource()->get_path() == script->get_path()) {
+				opened_in_an_editor = true;
+				open_editor->get_code_editor()->get_text_editor()->set_text(new_script_content);
+				break;
+			}
+		}
+		if (!opened_in_an_editor) {
+			// Manually save the script as it's not opened.
+			script->set_source_code(new_script_content);
+			ResourceSaver::save(script);
+		}
 	}
-	ScriptEditor::get_singleton()->reload_scripts();
+	// Save all the opened scripts.
+	ScriptEditor::get_singleton()->save_all_scripts();
+	ScriptEditor::get_singleton()->reload_scripts(true);
 }
 
 void CodeTextEditor::preview_refactor_rename_symbol(const Dictionary &p_refactor_context) {
