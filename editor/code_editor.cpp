@@ -1349,6 +1349,7 @@ void CodeTextEditor::apply_refactor_rename_symbol(const Dictionary &p_refactor_r
 
 	int tab_size = EditorSettings::get_singleton()->get_setting("text_editor/behavior/indent/size");
 
+	LocalVector<Ref<Resource>> scripts_not_opened_in_editor;
 	LocalVector<ScriptEditorBase *> open_editors = ScriptEditor::get_singleton()->get_open_script_editors();
 	ScriptEditorBase *current_editor = ScriptEditor::get_singleton()->get_current_editor();
 	Ref<Script> opened_script = current_editor->get_edited_resource();
@@ -1417,9 +1418,12 @@ void CodeTextEditor::apply_refactor_rename_symbol(const Dictionary &p_refactor_r
 		if (!opened_in_an_editor) {
 			// Manually save the script as it's not opened.
 			script->set_source_code(new_script_content);
-			ResourceSaver::save(script);
+			scripts_not_opened_in_editor.push_back(script);
 		}
 	}
+
+	EditorNode::get_singleton()->save_resource_bulk(scripts_not_opened_in_editor);
+
 	// Save all the opened scripts.
 	ScriptEditor::get_singleton()->save_all_scripts();
 	ScriptEditor::get_singleton()->reload_scripts(true);
