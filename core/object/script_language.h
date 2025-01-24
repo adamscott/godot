@@ -536,7 +536,7 @@ public:
 		}
 
 		RefactorRenameSymbolResult(const Dictionary &p_result) {
-			ERR_FAIL_COND(!p_result.has("symbol") || !p_result.has("new_symbol") || !p_result.has("code") || !p_result.has("outside_refactor") || !p_result.has("could_resolve") || !p_result.has("type") || !p_result.has("matches"));
+			ERR_FAIL_COND(!p_result.has("symbol") || !p_result.has("new_symbol") || !p_result.has("code") || !p_result.has("error") || !p_result.has("outside_refactor") || !p_result.has("type") || !p_result.has("matches"));
 			symbol = p_result["symbol"];
 			new_symbol = p_result["new_symbol"];
 			code = p_result["code"];
