@@ -3849,17 +3849,17 @@ static Error _refactor_rename_symbol_match_from_class_find_matching_subscripts(G
 		if (script.is_null() || !script->is_valid()) {
 			continue;
 		}
-		String script_path = script->get_script_path();
+		String script_path = script->get_path();
+		if (script_path.is_empty()) {
+			// This script must be an inner class. Parsing the root class suffice.
+			continue;
+		}
 		if (script_path == p_path) {
 			// We don't have to parse this, this was already parsed for matching nodes.
 			continue;
 		}
 		if (parsed_paths.has(script_path)) {
 			// We already parsed this.
-			continue;
-		}
-		if (script->get_fully_qualified_name().split("::").size() > 1) {
-			// It's not a root class, let's skip.
 			continue;
 		}
 		parsed_paths.push_back(script_path);
