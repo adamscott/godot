@@ -1393,27 +1393,40 @@ void CodeTextEditor::_refactor_rename_request() {
 	String new_symbol = "";
 	Point2i word_start = text_editor->get_word_start_at_line_column(caret_position.y, caret_position.x);
 
+	// No symbol selected.
 	if (symbol.is_empty()) {
 		return;
 	}
 
-	if (symbol_at_selection_origin != symbol || selection_origin.y != caret_position.y) {
-		result.symbol = symbol;
-		result.error = ERR_CANT_RESOLVE;
-		refactor_rename_popup->request_refactor(result, selection_origin, caret_position);
-		return;
-	}
-
+	// First try.
 	_refactor_rename_symbol_script(code, symbol, new_symbol, result);
 	if (refactor_rename_symbol_func) {
 		refactor_rename_symbol_func(refactor_ud, code, symbol, new_symbol, result);
 	}
 
+	if (result.has_failed() && caret_position.x > 0) {
+		// If it has failed, let's retry moving the caret position.
+		// Maybe the caret is at the end of the selected word, and that it is not a refactorable symbol.
+		result.reset(true);
+		Point2i temporary_caret_position = caret_position;
+		temporary_caret_position.x -= 1;
+		code = text_editor->get_text_with_cursor_char(temporary_caret_position.y, temporary_caret_position.x);
+		symbol = text_editor->get_word_at_line_column(temporary_caret_position.y, temporary_caret_position.x);
+		word_start = text_editor->get_word_start_at_line_column(temporary_caret_position.y, temporary_caret_position.x);
+
+		_refactor_rename_symbol_script(code, symbol, new_symbol, result);
+		if (refactor_rename_symbol_func) {
+			refactor_rename_symbol_func(refactor_ud, code, symbol, new_symbol, result);
+		}
+	}
+
 	if (selected_text.is_empty()) {
+		// If there's no selected text, let's select the entire word.
 		refactor_rename_popup->request_refactor(result, word_start, caret_position);
 		return;
 	}
 
+	// Select the range selected.
 	refactor_rename_popup->request_refactor(result, word_start, caret_position, selection_origin);
 }
 
