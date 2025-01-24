@@ -30,12 +30,11 @@
 
 #include "code_editor.h"
 
-#include "core/error/error_list.h"
 #include "core/error/error_macros.h"
 #include "core/input/input.h"
 #include "core/input/input_event.h"
-#include "core/io/file_access.h"
-#include "core/io/resource_saver.h"
+#include "core/io/dir_access.h"
+#include "core/io/resource_loader.h"
 #include "core/math/vector2i.h"
 #include "core/object/callable_method_pointer.h"
 #include "core/object/class_db.h"
@@ -1321,9 +1320,51 @@ Ref<Texture2D> CodeTextEditor::_get_completion_icon(const ScriptLanguage::CodeCo
 	return tex;
 }
 
+void scan_dir(Ref<DirAccess> p_root, LocalVector<String> &p_paths) {
+	p_root->list_dir_begin();
+
+	String current_directory_path = p_root->get_current_dir();
+
+	while (true) {
+		String file_path = p_root->get_next();
+		if (file_path.is_empty()) {
+			break;
+		}
+
+		if (p_root->current_is_hidden()) {
+			continue;
+		}
+
+		if (p_root->current_is_dir()) {
+			if (file_path.begins_with(".")) { // Ignore special and . / ..
+				continue;
+			}
+
+			scan_dir(DirAccess::open(current_directory_path.path_join(file_path)), p_paths);
+		} else {
+			p_paths.push_back(current_directory_path.path_join(file_path));
+		}
+	}
+
+	p_root->list_dir_end();
+}
+
 void CodeTextEditor::_refactor_request(int p_refactor_kind) {
 	switch ((ScriptLanguage::RefactorKind)p_refactor_kind) {
 		case ScriptLanguage::RefactorKind::REFACTOR_KIND_RENAME_SYMBOL: {
+			LocalVector<String> paths;
+			scan_dir(DirAccess::open("res://"), paths);
+			for (String &path : paths) {
+				if (path.ends_with(".uid")) {
+					continue;
+				}
+				if (path.ends_with(".gd") || path.ends_with(".tscn")) {
+					if (!ResourceLoader::is_imported(path)) {
+						ResourceLoader::load(path);
+					}
+				}
+			}
+
 			ScriptLanguage::RefactorRenameSymbolResult result;
 			Point2i pos = { text_editor->get_caret_column(), text_editor->get_caret_line() };
 			String code = text_editor->get_text_with_cursor_char(pos.y, pos.x);
@@ -1337,6 +1378,8 @@ void CodeTextEditor::_refactor_request(int p_refactor_kind) {
 			if (refactor_rename_symbol_func) {
 				refactor_rename_symbol_func(refactor_ud, code, symbol, result, "");
 			}
+
+			print_line(vformat("%s", result.to_string()));
 
 			refactor_rename_popup->request_refactor(result, symbol_start, pos);
 		} break;

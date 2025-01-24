@@ -1518,6 +1518,9 @@ void EditorNode::save_resource_bulk(const LocalVector<Ref<Resource>> &p_resource
 
 	for (const Ref<Resource> &resource : p_resource_bulk) {
 		resource->remove_meta("__resource_saved_in_bulk");
+		singleton->editor_folding.save_resource_folding(resource, resource->get_path());
+		emit_signal(SNAME("resource_saved"), resource);
+		editor_data.notify_resource_saved(resource);
 	}
 
 	EditorFileSystem::get_singleton()->update_files(paths);
@@ -6694,6 +6697,7 @@ void EditorNode::_set_renderer_name_save_and_restart() {
 
 void EditorNode::_resource_saved(Ref<Resource> p_resource, const String &p_path) {
 	if (p_resource->has_meta("__resource_saved_in_bulk")) {
+		singleton->saving_resources_in_path.erase(p_resource);
 		return;
 	}
 
