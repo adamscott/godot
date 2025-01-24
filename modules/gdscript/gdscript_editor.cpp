@@ -4389,7 +4389,7 @@ static Error _refactor_rename_symbol_from_base(GDScriptParser::RefactorRenameCon
 				}
 				const Ref<GDScript> gdscr = scr;
 				if (gdscr.is_null()) {
-					r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_SCRIPT;
+					_refactor_rename_symbol_set_outside_gdscript(ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_SCRIPT, r_result);
 					return OK;
 				}
 				r_result.type = ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_NAME;
