@@ -511,6 +511,22 @@ public:
 			return undo_result;
 		}
 
+		bool has_failed() const {
+			return error != OK || outside_refactor == true;
+		}
+
+		void reset(bool p_keep_context = false) {
+			matches.clear();
+			outside_refactor = false;
+			error = FAILED;
+			type = REFACTOR_RENAME_SYMBOL_RESULT_NONE;
+			if (!p_keep_context) {
+				symbol = "";
+				new_symbol = "";
+				code = "";
+			}
+		}
+
 		void operator=(const RefactorRenameSymbolResult &p_result) {
 			_deep_copy(p_result);
 		}

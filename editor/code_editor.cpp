@@ -147,7 +147,7 @@ ScriptLanguage::RefactorRenameSymbolResult RefactorRenamePopup::get_refactor_res
 void RefactorRenamePopup::request_refactor(const ScriptLanguage::RefactorRenameSymbolResult &p_refactor_result, Point2i p_code_position, Point2i p_caret_position, Point2i p_selection_start_position) {
 	result = p_refactor_result;
 
-	state = (result.outside_refactor || result.error != OK) ? STATE_ERROR : STATE_RENAME;
+	state = result.has_failed() ? STATE_ERROR : STATE_RENAME;
 	_update_layout();
 
 	code_position = p_code_position;
