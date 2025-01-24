@@ -261,6 +261,8 @@ class CodeTextEditor : public VBoxContainer {
 	Ref<Texture2D> _get_completion_icon(const ScriptLanguage::CodeCompletionOption &p_option);
 
 	void _refactor_request(int p_refactor_kind);
+	void _refactor_rename_request();
+	void _refactor_rename_load_scripts_in_memory(const LocalVector<String> &p_paths);
 	void _on_refactor_rename_popup_opened();
 	void _on_refactor_rename_popup_closed();
 	void _on_refactor_rename_popup_apply();

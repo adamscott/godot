@@ -64,6 +64,7 @@
 #include "scene/main/node.h"
 #include "scene/main/window.h"
 #include "scene/resources/font.h"
+#include "scene/resources/packed_scene.h"
 #include "scene/scene_string_names.h"
 #include <cstdint>
 
@@ -152,7 +153,9 @@ void RefactorRenamePopup::request_refactor(const ScriptLanguage::RefactorRenameS
 	symbol_edit->select_all();
 	symbol_edit->grab_focus();
 
-	set_state(result.outside_refactor ? STATE_ERROR : STATE_RENAME);
+	state = (result.outside_refactor || result.error != OK) ? STATE_ERROR : STATE_RENAME;
+	_update_layout();
+
 	set_visible(true);
 	set_process_unhandled_input(true);
 
@@ -1320,7 +1323,7 @@ Ref<Texture2D> CodeTextEditor::_get_completion_icon(const ScriptLanguage::CodeCo
 	return tex;
 }
 
-void scan_dir(Ref<DirAccess> p_root, LocalVector<String> &p_paths) {
+void _scan_dir(Ref<DirAccess> p_root, LocalVector<String> &p_paths) {
 	p_root->list_dir_begin();
 
 	String current_directory_path = p_root->get_current_dir();
@@ -1339,8 +1342,7 @@ void scan_dir(Ref<DirAccess> p_root, LocalVector<String> &p_paths) {
 			if (file_path.begins_with(".")) { // Ignore special and . / ..
 				continue;
 			}
-
-			scan_dir(DirAccess::open(current_directory_path.path_join(file_path)), p_paths);
+			_scan_dir(DirAccess::open(current_directory_path.path_join(file_path)), p_paths);
 		} else {
 			p_paths.push_back(current_directory_path.path_join(file_path));
 		}
@@ -1352,43 +1354,82 @@ void scan_dir(Ref<DirAccess> p_root, LocalVector<String> &p_paths) {
 void CodeTextEditor::_refactor_request(int p_refactor_kind) {
 	switch ((ScriptLanguage::RefactorKind)p_refactor_kind) {
 		case ScriptLanguage::RefactorKind::REFACTOR_KIND_RENAME_SYMBOL: {
-			LocalVector<String> paths;
-			scan_dir(DirAccess::open("res://"), paths);
-			for (String &path : paths) {
-				if (path.ends_with(".uid")) {
-					continue;
-				}
-				if (path.ends_with(".gd") || path.ends_with(".tscn")) {
-					if (!ResourceLoader::is_imported(path)) {
-						ResourceLoader::load(path);
-					}
-				}
-			}
-
-			ScriptLanguage::RefactorRenameSymbolResult result;
-			Point2i pos = { text_editor->get_caret_column(), text_editor->get_caret_line() };
-			String code = text_editor->get_text_with_cursor_char(pos.y, pos.x);
-			String symbol = text_editor->get_word_at_line_column(pos.y, pos.x);
-			if (symbol.is_empty()) {
-				return;
-			}
-			Point2i symbol_start = text_editor->get_word_start_at_line_column(pos.y, pos.x);
-
-			_refactor_rename_symbol_script(code, symbol, result);
-			if (refactor_rename_symbol_func) {
-				refactor_rename_symbol_func(refactor_ud, code, symbol, result, "");
-			}
-
-			print_line(vformat("%s", result.to_string()));
-
-			refactor_rename_popup->request_refactor(result, symbol_start, pos);
+			_refactor_rename_request();
 		} break;
+	}
+}
+
+void CodeTextEditor::_refactor_rename_request() {
+	LocalVector<String> paths;
+	_scan_dir(DirAccess::open("res://"), paths);
+	_refactor_rename_load_scripts_in_memory(paths);
+
+	ScriptLanguage::RefactorRenameSymbolResult result;
+	Point2i pos = { text_editor->get_caret_column(), text_editor->get_caret_line() };
+	String code = text_editor->get_text_with_cursor_char(pos.y, pos.x);
+	String symbol = text_editor->get_word_at_line_column(pos.y, pos.x);
+	if (symbol.is_empty()) {
+		return;
+	}
+	Point2i symbol_start = text_editor->get_word_start_at_line_column(pos.y, pos.x);
+
+	_refactor_rename_symbol_script(code, symbol, result);
+	if (refactor_rename_symbol_func) {
+		refactor_rename_symbol_func(refactor_ud, code, symbol, result, "");
+	}
+	print_verbose(vformat("Refactor rename request: %s", result.to_string()));
+
+	refactor_rename_popup->request_refactor(result, symbol_start, pos);
+}
+
+void CodeTextEditor::_refactor_rename_load_scripts_in_memory(const LocalVector<String> &p_paths) {
+	for (const String &path : p_paths) {
+		if (path.ends_with(".uid")) {
+			continue;
+		}
+
+		bool is_scene_resource = path.ends_with(".tscn");
+		bool is_script_resource = false;
+		if (!is_scene_resource) {
+			int language_count = ScriptServer::get_language_count();
+			for (int i = 0; i < language_count; i++) {
+				ScriptLanguage *language = ScriptServer::get_language(i);
+				if (path.ends_with("." + language->get_extension())) {
+					is_script_resource = true;
+					break;
+				}
+			}
+		}
+
+		if (!is_scene_resource && !is_script_resource) {
+			continue;
+		}
+
+		if (ResourceLoader::is_imported(path)) {
+			continue;
+		}
+
+		Ref<Resource> resource = ResourceLoader::load(path);
+		if (resource.is_null()) {
+			continue;
+		}
+
+		Ref<Script> script = resource;
+		if (script.is_valid()) {
+			// Loading the script is enough.
+			continue;
+		}
+		Ref<PackedScene> scene = resource;
+		if (scene.is_valid()) {
+			Node *scene_instance = scene->instantiate();
+			scene_instance->queue_free();
+			continue;
+		}
 	}
 }
 
 void CodeTextEditor::apply_refactor_rename_symbol(const Dictionary &p_refactor_result) {
 	ScriptLanguage::RefactorRenameSymbolResult result = ScriptLanguage::RefactorRenameSymbolResult(p_refactor_result);
-	print_line(vformat("%s", result.to_string()));
 
 	int tab_size = EditorSettings::get_singleton()->get_setting("text_editor/behavior/indent/size");
 
