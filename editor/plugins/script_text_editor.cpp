@@ -920,11 +920,7 @@ void ScriptTextEditor::_refactor_rename_symbol_script(const String &p_code, cons
 		}
 	}
 
-	Error err = script->get_language()->refactor_rename_symbol_code(p_code, p_symbol, script->get_path(), base, unsaved_scripts_source_code, r_result);
-	if (err != OK) {
-		print_error(vformat("Error while refactoring script: %s", error_names[err]));
-		return;
-	}
+	script->get_language()->refactor_rename_symbol_code(p_code, p_symbol, script->get_path(), base, unsaved_scripts_source_code, r_result);
 }
 
 void ScriptTextEditor::_update_breakpoint_list() {
