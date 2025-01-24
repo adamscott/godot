@@ -402,6 +402,7 @@ public:
 
 		String symbol;
 		String new_symbol;
+		String code;
 		Error error = FAILED;
 		bool outside_refactor = false;
 		RefactorRenameSymbolResultType type = RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_NONE;
@@ -411,6 +412,7 @@ public:
 		void _deep_copy(const RefactorRenameSymbolResult &p_result) {
 			symbol = p_result.symbol;
 			new_symbol = p_result.new_symbol;
+			code = p_result.code;
 			outside_refactor = p_result.outside_refactor;
 			error = p_result.error;
 			type = p_result.type;
@@ -455,6 +457,7 @@ public:
 			Dictionary result;
 			result["symbol"] = symbol;
 			result["new_symbol"] = new_symbol;
+			result["code"] = code;
 			result["outside_refactor"] = outside_refactor;
 			result["error"] = error;
 			result["type"] = type;
@@ -481,6 +484,7 @@ public:
 			RefactorRenameSymbolResult undo_result;
 			undo_result.symbol = new_symbol;
 			undo_result.new_symbol = symbol;
+			undo_result.code = code;
 			undo_result.outside_refactor = outside_refactor;
 			undo_result.error = error;
 			undo_result.type = type;
@@ -516,9 +520,10 @@ public:
 		}
 
 		RefactorRenameSymbolResult(const Dictionary &p_result) {
-			ERR_FAIL_COND(!p_result.has("symbol") || !p_result.has("new_symbol") || !p_result.has("outside_refactor") || !p_result.has("could_resolve") || !p_result.has("type") || !p_result.has("matches"));
+			ERR_FAIL_COND(!p_result.has("symbol") || !p_result.has("new_symbol") || !p_result.has("code") || !p_result.has("outside_refactor") || !p_result.has("could_resolve") || !p_result.has("type") || !p_result.has("matches"));
 			symbol = p_result["symbol"];
 			new_symbol = p_result["new_symbol"];
+			code = p_result["code"];
 			outside_refactor = p_result["outside_refactor"];
 			error = (Error)(int)p_result["error"];
 			type = (RefactorRenameSymbolResultType)(int)p_result["type"];

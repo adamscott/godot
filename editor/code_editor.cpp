@@ -144,17 +144,34 @@ ScriptLanguage::RefactorRenameSymbolResult RefactorRenamePopup::get_refactor_res
 	return result;
 }
 
-void RefactorRenamePopup::request_refactor(const ScriptLanguage::RefactorRenameSymbolResult &p_refactor_result, Point2i p_code_position, Point2i p_caret_position) {
+void RefactorRenamePopup::request_refactor(const ScriptLanguage::RefactorRenameSymbolResult &p_refactor_result, Point2i p_code_position, Point2i p_caret_position, Point2i p_selection_start_position) {
 	result = p_refactor_result;
+
+	state = (result.outside_refactor || result.error != OK) ? STATE_ERROR : STATE_RENAME;
+	_update_layout();
 
 	code_position = p_code_position;
 	caret_position = p_caret_position;
 	symbol_edit->set_text(result.symbol);
-	symbol_edit->select_all();
+	if (p_selection_start_position.x == -1) {
+		int caret_column = result.symbol.length();
+		symbol_edit->select_all();
+		symbol_edit->set_caret_column(caret_column);
+	} else {
+		int leftmost_column;
+		int rightmost_column;
+		if (p_selection_start_position.x < p_caret_position.x) {
+			leftmost_column = p_selection_start_position.x - p_code_position.x + 1;
+			rightmost_column = p_caret_position.x - p_code_position.x + 1;
+		} else {
+			leftmost_column = p_caret_position.x - p_code_position.x + 1;
+			rightmost_column = p_selection_start_position.x - p_code_position.x + 1;
+		}
+		int caret_column = p_caret_position.x - p_code_position.x + 1;
+		symbol_edit->select(leftmost_column, rightmost_column);
+		symbol_edit->set_caret_column(caret_column);
+	}
 	symbol_edit->grab_focus();
-
-	state = (result.outside_refactor || result.error != OK) ? STATE_ERROR : STATE_RENAME;
-	_update_layout();
 
 	set_visible(true);
 	set_process_unhandled_input(true);
@@ -1360,26 +1377,44 @@ void CodeTextEditor::_refactor_request(int p_refactor_kind) {
 }
 
 void CodeTextEditor::_refactor_rename_request() {
-	LocalVector<String> paths;
-	_scan_dir(DirAccess::open("res://"), paths);
-	_refactor_rename_load_scripts_in_memory(paths);
-
 	ScriptLanguage::RefactorRenameSymbolResult result;
-	Point2i pos = { text_editor->get_caret_column(), text_editor->get_caret_line() };
-	String code = text_editor->get_text_with_cursor_char(pos.y, pos.x);
-	String symbol = text_editor->get_word_at_line_column(pos.y, pos.x);
+	Point2i caret_position = {
+		text_editor->get_caret_column(0),
+		text_editor->get_caret_line(0)
+	};
+	String code = text_editor->get_text_with_cursor_char(caret_position.y, caret_position.x);
+	Point2i selection_origin = {
+		text_editor->get_selection_origin_column(0),
+		text_editor->get_selection_origin_line(0)
+	};
+	String symbol_at_selection_origin = text_editor->get_word_at_line_column(selection_origin.y, selection_origin.x);
+	String selected_text = text_editor->get_selected_text(0);
+	String symbol = text_editor->get_word_at_line_column(caret_position.y, caret_position.x);
+	String new_symbol = "";
+	Point2i word_start = text_editor->get_word_start_at_line_column(caret_position.y, caret_position.x);
+
 	if (symbol.is_empty()) {
 		return;
 	}
-	Point2i symbol_start = text_editor->get_word_start_at_line_column(pos.y, pos.x);
 
-	_refactor_rename_symbol_script(code, symbol, result);
-	if (refactor_rename_symbol_func) {
-		refactor_rename_symbol_func(refactor_ud, code, symbol, result, "");
+	if (symbol_at_selection_origin != symbol || selection_origin.y != caret_position.y) {
+		result.symbol = symbol;
+		result.error = ERR_CANT_RESOLVE;
+		refactor_rename_popup->request_refactor(result, selection_origin, caret_position);
+		return;
 	}
-	print_verbose(vformat("Refactor rename request: %s", result.to_string()));
 
-	refactor_rename_popup->request_refactor(result, symbol_start, pos);
+	_refactor_rename_symbol_script(code, symbol, new_symbol, result);
+	if (refactor_rename_symbol_func) {
+		refactor_rename_symbol_func(refactor_ud, code, symbol, new_symbol, result);
+	}
+
+	if (selected_text.is_empty()) {
+		refactor_rename_popup->request_refactor(result, word_start, caret_position);
+		return;
+	}
+
+	refactor_rename_popup->request_refactor(result, word_start, caret_position, selection_origin);
 }
 
 void CodeTextEditor::_refactor_rename_load_scripts_in_memory(const LocalVector<String> &p_paths) {
@@ -1426,6 +1461,23 @@ void CodeTextEditor::_refactor_rename_load_scripts_in_memory(const LocalVector<S
 			continue;
 		}
 	}
+}
+
+void CodeTextEditor::_refactor_rename_update_result(ScriptLanguage::RefactorRenameSymbolResult &p_refactor_result) {
+	// Scan again, but with every scripts in memory.
+	LocalVector<String> paths;
+	_scan_dir(DirAccess::open("res://"), paths);
+	_refactor_rename_load_scripts_in_memory(paths);
+
+	String code = p_refactor_result.code;
+	String symbol = p_refactor_result.symbol;
+	String new_symbol = p_refactor_result.new_symbol;
+
+	_refactor_rename_symbol_script(code, symbol, new_symbol, p_refactor_result);
+	if (refactor_rename_symbol_func) {
+		refactor_rename_symbol_func(refactor_ud, code, symbol, new_symbol, p_refactor_result);
+	}
+	print_verbose(vformat("Refactor rename request: %s", p_refactor_result.to_string()));
 }
 
 void CodeTextEditor::apply_refactor_rename_symbol(const Dictionary &p_refactor_result) {
@@ -1526,6 +1578,9 @@ void CodeTextEditor::_on_refactor_rename_popup_closed() {
 }
 
 void CodeTextEditor::_on_refactor_rename_popup_apply() {
+	ScriptLanguage::RefactorRenameSymbolResult result = refactor_rename_popup->get_refactor_result();
+	_refactor_rename_update_result(result);
+
 	EditorUndoRedoManager *undo_redo = EditorUndoRedoManager::get_singleton();
 	undo_redo->create_action(vformat(TTR(R"(Rename symbol "%s")"), refactor_rename_popup->get_refactor_result().symbol));
 	undo_redo->add_do_method(this, "apply_refactor_rename_symbol", refactor_rename_popup->get_refactor_result().to_dictionary());

@@ -164,8 +164,6 @@ class ScriptTextEditor : public ScriptEditorBase {
 	void _enable_code_editor();
 
 protected:
-	static void _bind_methods();
-
 	void _update_breakpoint_list();
 	void _breakpoint_item_pressed(int p_idx);
 	void _breakpoint_toggled(int p_row);
@@ -181,9 +179,8 @@ protected:
 	static void _code_complete_scripts(void *p_ud, const String &p_code, List<ScriptLanguage::CodeCompletionOption> *r_options, bool &r_force);
 	void _code_complete_script(const String &p_code, List<ScriptLanguage::CodeCompletionOption> *r_options, bool &r_force);
 
-	static void _refactor_rename_symbol_scripts(void *p_ud, const String &p_code, const String &p_symbol, ScriptLanguage::RefactorRenameSymbolResult &r_result, const String &p_new_symbol = "");
-	void _refactor_rename_symbol_script(const String &p_code, const String &p_symbol, ScriptLanguage::RefactorRenameSymbolResult &r_result, const String &p_new_symbol = "");
-	void _refactor_rename_symbol_script_apply(const String &p_new_symbol, Dictionary p_matches);
+	static void _refactor_rename_symbol_scripts(void *p_ud, const String &p_code, const String &p_symbol, const String &p_new_symbol, ScriptLanguage::RefactorRenameSymbolResult &r_result);
+	void _refactor_rename_symbol_script(const String &p_code, const String &p_symbol, const String &p_new_symbol, ScriptLanguage::RefactorRenameSymbolResult &r_result);
 
 	void _load_theme_settings();
 	void _set_theme_for_script();

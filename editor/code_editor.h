@@ -97,7 +97,7 @@ public:
 	Point2i get_code_position();
 	ScriptLanguage::RefactorRenameSymbolResult get_refactor_result();
 
-	void request_refactor(const ScriptLanguage::RefactorRenameSymbolResult &p_refactor_result, Point2i p_code_position, Point2i p_caret_position);
+	void request_refactor(const ScriptLanguage::RefactorRenameSymbolResult &p_refactor_result, Point2i p_code_position, Point2i p_caret_position, Point2i p_selection_start_position = Point2i(-1, -1));
 	void close();
 	void clear();
 
@@ -218,7 +218,7 @@ public:
 };
 
 typedef void (*CodeTextEditorCodeCompleteFunc)(void *p_ud, const String &p_code, List<ScriptLanguage::CodeCompletionOption> *r_options, bool &r_forced);
-typedef void (*CodeTextEditorRefactorRenameSymbolFunc)(void *p_ud, const String &p_code, const String &p_symbol, ScriptLanguage::RefactorRenameSymbolResult &r_result, const String &p_new_symbol);
+typedef void (*CodeTextEditorRefactorRenameSymbolFunc)(void *p_ud, const String &p_code, const String &p_symbol, const String &p_new_symbol, ScriptLanguage::RefactorRenameSymbolResult &r_result);
 
 class CodeTextEditor : public VBoxContainer {
 	GDCLASS(CodeTextEditor, VBoxContainer);
@@ -263,6 +263,7 @@ class CodeTextEditor : public VBoxContainer {
 	void _refactor_request(int p_refactor_kind);
 	void _refactor_rename_request();
 	void _refactor_rename_load_scripts_in_memory(const LocalVector<String> &p_paths);
+	void _refactor_rename_update_result(ScriptLanguage::RefactorRenameSymbolResult &p_refactor_result);
 	void _on_refactor_rename_popup_opened();
 	void _on_refactor_rename_popup_closed();
 	void _on_refactor_rename_popup_apply();
@@ -303,7 +304,7 @@ protected:
 	virtual void _load_theme_settings() {}
 	virtual void _validate_script() {}
 	virtual void _code_complete_script(const String &p_code, List<ScriptLanguage::CodeCompletionOption> *r_options) {}
-	virtual void _refactor_rename_symbol_script(const String &p_code, const String &p_symbol, ScriptLanguage::RefactorRenameSymbolResult &r_result) {}
+	virtual void _refactor_rename_symbol_script(const String &p_code, const String &p_symbol, const String &p_new_symbol, ScriptLanguage::RefactorRenameSymbolResult &r_result) {}
 
 	void _text_changed_idle_timeout();
 	void _code_complete_timer_timeout();
