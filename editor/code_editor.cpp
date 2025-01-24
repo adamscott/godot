@@ -1558,7 +1558,7 @@ void CodeTextEditor::apply_refactor_rename_symbol(const Dictionary &p_refactor_r
 		String new_script_content = String("\n").join(lines);
 		bool opened_in_an_editor = false;
 		for (ScriptEditorBase *open_editor : open_editors) {
-			if (open_editor->get_edited_resource()->get_path() == script->get_path()) {
+			if (open_editor->get_edited_resource() == script) {
 				opened_in_an_editor = true;
 				open_editor->get_code_editor()->get_text_editor()->set_text(new_script_content);
 				break;
@@ -1595,9 +1595,9 @@ void CodeTextEditor::_on_refactor_rename_popup_apply() {
 	_refactor_rename_update_result(result);
 
 	EditorUndoRedoManager *undo_redo = EditorUndoRedoManager::get_singleton();
-	undo_redo->create_action(vformat(TTR(R"(Rename symbol "%s")"), refactor_rename_popup->get_refactor_result().symbol));
-	undo_redo->add_do_method(this, "apply_refactor_rename_symbol", refactor_rename_popup->get_refactor_result().to_dictionary());
-	undo_redo->add_undo_method(this, "apply_refactor_rename_symbol", refactor_rename_popup->get_refactor_result().get_undo().to_dictionary());
+	undo_redo->create_action(vformat(TTR(R"(Rename symbol "%s")"), result.symbol));
+	undo_redo->add_do_method(this, "apply_refactor_rename_symbol", result.to_dictionary());
+	undo_redo->add_undo_method(this, "apply_refactor_rename_symbol", result.get_undo().to_dictionary());
 	undo_redo->commit_action();
 }
 

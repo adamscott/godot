@@ -4164,6 +4164,7 @@ static Error _refactor_rename_symbol_from_base(GDScriptParser::RefactorRenameCon
 	return err;
 
 	r_result.symbol = p_symbol;
+	r_result.code = p_code;
 
 	if (ClassDB::class_exists(p_symbol)) {
 		REFACTOR_RENAME_OUTSIDE_GDSCRIPT(ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_NAME);
