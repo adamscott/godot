@@ -2224,17 +2224,24 @@ void ScriptTextEditor::_text_edit_gui_input(const Ref<InputEvent> &ev) {
 		bool foldable = tx->can_fold_line(mouse_line) || tx->is_line_folded(mouse_line);
 		bool open_docs = false;
 		bool goto_definition = false;
+		bool can_rename = false;
 
 		if (ScriptServer::is_global_class(word_at_pos) || word_at_pos.is_resource_file()) {
 			open_docs = true;
+			can_rename = true;
 		} else {
 			Node *base = get_tree()->get_edited_scene_root();
 			if (base) {
 				base = _find_node_for_script(base, base, script);
 			}
-			ScriptLanguage::LookupResult result;
-			if (script->get_language()->lookup_code(tx->get_text_for_symbol_lookup(), word_at_pos, script->get_path(), base, result) == OK) {
+			ScriptLanguage::LookupResult lookup_result;
+			if (script->get_language()->lookup_code(tx->get_text_for_symbol_lookup(), word_at_pos, script->get_path(), base, lookup_result) == OK) {
 				open_docs = true;
+			}
+			ScriptLanguage::RefactorRenameSymbolResult rename_result;
+			_refactor_rename_symbol_script(tx->get_text_for_code_completion(), word_at_pos, "", rename_result);
+			if (!rename_result.has_failed()) {
+				can_rename = true;
 			}
 		}
 
@@ -2311,7 +2318,7 @@ void ScriptTextEditor::_text_edit_gui_input(const Ref<InputEvent> &ev) {
 				color_panel->set_position(get_screen_position() + local_pos);
 			}
 		}
-		_make_context_menu(tx->has_selection(), has_color, foldable, open_docs, goto_definition, local_pos);
+		_make_context_menu(tx->has_selection(), has_color, foldable, open_docs, goto_definition, can_rename, local_pos);
 	}
 }
 
@@ -2340,7 +2347,7 @@ void ScriptTextEditor::_prepare_edit_menu() {
 	popup->set_item_disabled(popup->get_item_index(EDIT_REDO), !tx->has_redo());
 }
 
-void ScriptTextEditor::_make_context_menu(bool p_selection, bool p_color, bool p_foldable, bool p_open_docs, bool p_goto_definition, Vector2 p_pos) {
+void ScriptTextEditor::_make_context_menu(bool p_selection, bool p_color, bool p_foldable, bool p_open_docs, bool p_goto_definition, bool p_can_rename, Vector2 p_pos) {
 	context_menu->clear();
 	if (DisplayServer::get_singleton()->has_feature(DisplayServer::FEATURE_EMOJI_AND_SYMBOL_PICKER)) {
 		context_menu->add_item(TTR("Emoji & Symbols"), EDIT_EMOJI_AND_SYMBOL);
@@ -2374,10 +2381,13 @@ void ScriptTextEditor::_make_context_menu(bool p_selection, bool p_color, bool p
 		context_menu->add_shortcut(ED_GET_SHORTCUT("script_text_editor/toggle_fold_line"), EDIT_TOGGLE_FOLD_LINE);
 	}
 
-	if (p_color || p_open_docs || p_goto_definition) {
+	if (p_color || p_open_docs || p_goto_definition || p_can_rename) {
 		context_menu->add_separator();
 		if (p_open_docs) {
 			context_menu->add_shortcut(ED_GET_SHORTCUT("script_text_editor/goto_symbol"), LOOKUP_SYMBOL);
+		}
+		if (p_can_rename) {
+			context_menu->add_shortcut(ED_GET_SHORTCUT("script_text_editor/refactor_rename_symbol"), EDIT_REFACTOR_RENAME_SYMBOL);
 		}
 		if (p_color) {
 			context_menu->add_item(TTR("Pick Color"), EDIT_PICK_COLOR);
@@ -2491,12 +2501,7 @@ void ScriptTextEditor::_enable_code_editor() {
 	}
 	edit_menu->get_popup()->add_separator();
 	edit_menu->get_popup()->add_shortcut(ED_GET_SHORTCUT("ui_text_completion_query"), EDIT_COMPLETE);
-	{
-		PopupMenu *sub_menu = memnew(PopupMenu);
-		sub_menu->add_shortcut(ED_GET_SHORTCUT("script_text_editor/refactor_rename_symbol"), EDIT_REFACTOR_RENAME_SYMBOL);
-		sub_menu->connect(SceneStringName(id_pressed), callable_mp(this, &ScriptTextEditor::_edit_option));
-		edit_menu->get_popup()->add_submenu_node_item(TTR("Refactor"), sub_menu);
-	}
+	edit_menu->get_popup()->add_shortcut(ED_GET_SHORTCUT("script_text_editor/refactor_rename_symbol"), EDIT_REFACTOR_RENAME_SYMBOL);
 	edit_menu->get_popup()->add_separator();
 	edit_menu->get_popup()->add_shortcut(ED_GET_SHORTCUT("script_text_editor/trim_trailing_whitespace"), EDIT_TRIM_TRAILING_WHITESAPCE);
 	edit_menu->get_popup()->add_shortcut(ED_GET_SHORTCUT("script_text_editor/trim_final_newlines"), EDIT_TRIM_FINAL_NEWLINES);
