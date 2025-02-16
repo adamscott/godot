@@ -600,7 +600,7 @@ void register_scene_types() {
 	GDREGISTER_CLASS(CPUParticles3D);
 	GDREGISTER_CLASS(Marker3D);
 	GDREGISTER_CLASS(RootMotionView);
-	GDREGISTER_VIRTUAL_CLASS(SkeletonModifier3D);
+	GDREGISTER_CLASS(SkeletonModifier3D);
 	GDREGISTER_CLASS(RetargetModifier3D);
 	GDREGISTER_CLASS(SpringBoneSimulator3D);
 	GDREGISTER_VIRTUAL_CLASS(SpringBoneCollision3D);
