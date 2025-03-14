@@ -1,0 +1,12 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Comment:
+ See /COPYRIGHT.txt for more details.
+
+Files:
+ *
+Comment:
+ AMD FidelityFX Super Resolution 2
+Copyright:
+ 2022-2023, Advanced Micro Devices, Inc.
+License:
+ Expat

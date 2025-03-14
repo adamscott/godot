@@ -1,0 +1,15 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Comment:
+ See /COPYRIGHT.txt for more details.
+
+Files:
+ *
+Comment:
+ Wayland core protocol
+Copyright:
+ 2008-2012, Kristian Høgsberg
+ 2010-2012, Intel Corporation
+ 2011, Benjamin Franzke
+ 2012, Collabora, Ltd.
+License:
+ Expat

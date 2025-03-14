@@ -1,0 +1,14 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Comment:
+ See /COPYRIGHT.txt for more details.
+
+Files:
+ easing_equations.h
+Comment:
+ Robert Penner's Easing Functions
+Copyright:
+ 2001, Robert Penner
+ 2014-present, Godot Engine contributors
+ 2007-2014, Juan Linietsky, Ariel Manzur
+License:
+ Expat

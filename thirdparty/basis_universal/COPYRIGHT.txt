@@ -1,0 +1,12 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Comment:
+ See /COPYRIGHT.txt for more details.
+
+Files:
+ *
+Comment:
+ Basis Universal
+Copyright:
+ 2019-2024, Binomial LLC.
+License:
+ Apache-2.0

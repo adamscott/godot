@@ -1,0 +1,15 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Comment:
+ See /COPYRIGHT.txt for more details.
+
+Files:
+ convex_hull.cpp
+ convex_hull.h
+Comment:
+ Bullet Continuous Collision Detection and Physics Library
+Copyright:
+ 2011, Ole Kniemeyer, MAXON, www.maxon.net
+ 2014-present, Godot Engine contributors
+ 2007-2014, Juan Linietsky, Ariel Manzur
+License:
+ Expat and Zlib

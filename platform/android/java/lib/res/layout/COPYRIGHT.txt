@@ -1,0 +1,13 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Comment:
+ See /COPYRIGHT.txt for more details.
+
+Files:
+ status_bar_ongoing_event_progress_bar.xml
+Comment:
+ The Android Open Source Project
+Copyright:
+ 2008-2016, The Android Open Source Project
+ 2002, Google, Inc.
+License:
+ Apache-2.0

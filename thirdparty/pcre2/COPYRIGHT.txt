@@ -1,0 +1,13 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Comment:
+ See /COPYRIGHT.txt for more details.
+
+Files:
+ *
+Comment:
+ PCRE2
+Copyright:
+ 1997-2024, University of Cambridge
+ 2009-2024, Zoltan Herczeg
+License:
+ BSD-3-clause

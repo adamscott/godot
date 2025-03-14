@@ -1,0 +1,16 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Comment:
+ See /COPYRIGHT.txt for more details.
+
+Files:
+ *
+Comment:
+ libpng
+Copyright:
+ 1995-2025, The PNG Reference Library Authors.
+ 2018-2025, Cosmin Truta.
+ 2000-2002, 2004, 2006-2018 Glenn Randers-Pehrson.
+ 1996-1997, Andreas Dilger.
+ 1995-1996, Guy Eric Schalnat, Group 42, Inc.
+License:
+ Zlib

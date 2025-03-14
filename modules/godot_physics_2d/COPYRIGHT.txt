@@ -1,0 +1,12 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Comment:
+ See /COPYRIGHT.txt for more details.
+
+Files:
+ modules/godot_physics_2d/godot_joints_2d.cpp
+Comment:
+ Chipmunk2D Joint Constraints
+Copyright:
+ 2007, Scott Lembcke
+License:
+ Expat

@@ -1,0 +1,13 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Comment:
+ See /COPYRIGHT.txt for more details.
+
+Files:
+ *
+Comment:
+ glad
+Copyright:
+ 2013-2022, David Herberth
+ 2013-2020, The Khronos Group Inc.
+License:
+ CC0-1.0 and Apache-2.0

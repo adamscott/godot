@@ -1,0 +1,13 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Comment:
+ See /COPYRIGHT.txt for more details.
+
+Files:
+ *
+Comment:
+ V-HACD
+Copyright:
+ 2011, Khaled Mamou
+ 2003-2009, Erwin Coumans
+License:
+ BSD-3-clause

@@ -1,0 +1,13 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Comment:
+ See /COPYRIGHT.txt for more details.
+
+Files:
+ *
+Comment:
+ KTX
+Copyright:
+ 2013-2020, Mark Callow
+ 2010-2020 The Khronos Group, Inc.
+License:
+ Apache-2.0

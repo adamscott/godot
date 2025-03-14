@@ -1,0 +1,20 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Comment:
+ See /COPYRIGHT.txt for more details.
+
+Files:
+ ss_effects_downsample.glsl
+ ssao_blur.glsl
+ ssao_importance_map.glsl
+ ssao_interleave.glsl
+ ssao.glsl
+ ssil_blur.glsl
+ ssil_importance_map.glsl
+ ssil_interleave.glsl
+ ssil.glsl
+Comment:
+ Intel ASSAO and related files
+Copyright:
+ 2016, Intel Corporation
+License:
+ Expat

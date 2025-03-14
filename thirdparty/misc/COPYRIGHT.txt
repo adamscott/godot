@@ -1,0 +1,156 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Comment:
+ See /COPYRIGHT.txt for more details.
+
+Files:
+ bcdec.h
+Comment:
+ bcdec
+Copyright:
+ 2022, Sergii Kudlai
+License:
+ Expat
+
+Files:
+ cubemap_coeffs.h
+Comment:
+ Fast Filtering of Reflection Probes
+Copyright:
+ 2016, Activision Publishing, Inc.
+License:
+ Expat
+
+Files:
+ fastlz.c
+ fastlz.h
+Comment:
+ FastLZ
+Copyright:
+ 2005-2020, Ariya Hidayat
+License:
+ Expat
+
+Files:
+ FastNoiseLite.h
+Comment:
+ FastNoise Lite
+Copyright:
+ 2023, Jordan Peck and contributors
+License:
+ Expat
+
+Files:
+ ifaddrs-android.cc
+ ifaddrs-android.h
+Comment:
+ libjingle
+Copyright:
+ 2012-2013, Google Inc.
+License:
+ BSD-3-clause
+
+Files:
+ mikktspace.c
+ mikktspace.h
+Comment:
+ Tangent Space Normal Maps implementation
+Copyright:
+ 2011, Morten S. Mikkelsen
+License:
+ Zlib
+
+Files:
+ nvapi_minimal.h
+Comment:
+ NVIDIA NVAPI (minimal excerpt)
+Copyright:
+ 2019-2022, NVIDIA Corporation
+License:
+ Expat
+
+Files:
+ ok_color.h
+ ok_color_shader.h
+Comment:
+ OK Lab color space
+Copyright:
+ 2021, Björn Ottosson
+License:
+ Expat
+
+Files:
+ pcg.cpp
+ pcg.h
+Comment:
+ Minimal PCG32 implementation
+Copyright:
+ 2014, M.E. O'Neill
+License:
+ Apache-2.0
+
+Files:
+ polypartition.cpp
+ polypartition.h
+Comment:
+ PolyPartition / Triangulator
+Copyright:
+ 2011-2021, Ivan Fratric and contributors
+License:
+ Expat
+
+Files:
+ qoa.h
+Comment:
+ Quite OK Audio Format
+Copyright:
+ 2023, Dominic Szablewski
+License:
+ Expat
+
+Files:
+ r128.c
+ r128.h
+Comment:
+ r128 library
+Copyright:
+ Alan Hickman
+License:
+ public-domain or Unlicense
+
+Files:
+ smaz.c
+ smaz.h
+Comment:
+ SMAZ
+Copyright:
+ 2006-2009, Salvatore Sanfilippo
+License:
+ BSD-3-clause
+
+Files:
+ smolv.cpp
+ smolv.h
+Comment:
+ SMOL-V
+Copyright:
+ 2016-2024, Aras Pranckevicius
+License:
+ public-domain or Unlicense or Expat
+
+Files:
+ stb_rect_pack.h
+Comment:
+ stb libraries
+Copyright:
+ Sean Barrett
+License:
+ public-domain or Unlicense or Expat
+
+Files:
+ yuv2rgb.h
+Comment:
+ YUV2RGB
+Copyright:
+ 2008-2011, Robin Watts
+License:
+ BSD-2-clause

@@ -1,0 +1,19 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Comment:
+ See /COPYRIGHT.txt for more details.
+
+Files:
+ *
+Comment:
+ Wayland protocols that add functionality not available in the core protocol
+Copyright:
+ 2008-2013, Kristian Høgsberg
+ 2010-2013, Intel Corporation
+ 2013,      Rafael Antognolli
+ 2013,      Jasper St. Pierre
+ 2014,      Jonas Ådahl
+ 2014,      Jason Ekstrand
+ 2014-2015, Collabora, Ltd.
+ 2015,      Red Hat Inc.
+License:
+ Expat

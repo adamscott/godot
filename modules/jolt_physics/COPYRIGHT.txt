@@ -1,0 +1,14 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Comment:
+ See /COPYRIGHT.txt for more details.
+
+Files:
+ spaces/jolt_temp_allocator.cpp
+Comment:
+ Jolt Physics
+Copyright:
+ 2021, Jorrit Rouwe
+ 2014-present, Godot Engine contributors
+ 2007-2014, Juan Linietsky, Ariel Manzur
+License:
+ Expat

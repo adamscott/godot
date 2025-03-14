@@ -1,0 +1,12 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Comment:
+ See /COPYRIGHT.txt for more details.
+
+Files:
+ *
+Comment:
+ Wslay
+Copyright:
+ 2011, 2012, 2015, Tatsuhiro Tsujikawa
+License:
+ Expat

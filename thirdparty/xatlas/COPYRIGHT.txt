@@ -1,0 +1,14 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Comment:
+ See /COPYRIGHT.txt for more details.
+
+Files:
+ *
+Comment:
+ xatlas
+Copyright:
+ 2018-2020, Jonathan Young
+ 2013, Thekla, Inc
+ 2006, NVIDIA Corporation, Ignacio Castano
+License:
+ Expat
