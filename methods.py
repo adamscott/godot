@@ -86,11 +86,11 @@ def add_source_files(self, sources, files, allow_gen=False):
 # Copyright files
 def add_copyright_files(self, files):
     if isinstance(files, str):
-        self.copyright_files.append(self.Glob(files))
+        self.copyright_files.extend(self.Glob(files))
         return
 
     for file in files:
-        self.copyright_files.append(self.Glob(file))
+        self.copyright_files.extend(self.Glob(file))
 
 
 def disable_warnings(self):

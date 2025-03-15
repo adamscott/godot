@@ -1066,8 +1066,6 @@ if env["threads"]:
 # Build subdirs, the build order is dependent on link order.
 Export("env")
 
-env.add_copyright_files("COPYRIGHT.txt")
-
 SConscript("core/SCsub")
 SConscript("servers/SCsub")
 SConscript("scene/SCsub")
@@ -1082,6 +1080,9 @@ if env["tests"]:
 SConscript("main/SCsub")
 
 SConscript("platform/" + env["platform"] + "/SCsub")  # Build selected platform.
+
+env.add_copyright_files("COPYRIGHT.txt")
+env.COPYRIGHT("COPYRIGHT.build.txt", env.copyright_files)
 
 # Microsoft Visual Studio Project Generation
 if env["vsproj"]:
