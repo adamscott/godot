@@ -1,0 +1,13 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Comment:
+ See /COPYRIGHT.txt for more details.
+
+Files:
+ polypartition.cpp
+ polypartition.h
+Comment:
+ PolyPartition / Triangulator
+Copyright:
+ 2011-2021, Ivan Fratric and contributors
+License:
+ Expat

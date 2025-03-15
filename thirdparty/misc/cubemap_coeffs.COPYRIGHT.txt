@@ -1,0 +1,12 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Comment:
+ See /COPYRIGHT.txt for more details.
+
+Files:
+ cubemap_coeffs.h
+Comment:
+ Fast Filtering of Reflection Probes
+Copyright:
+ 2016, Activision Publishing, Inc.
+License:
+ Expat

@@ -1,0 +1,13 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Comment:
+ See /COPYRIGHT.txt for more details.
+
+Files:
+ r128.c
+ r128.h
+Comment:
+ r128 library
+Copyright:
+ Alan Hickman
+License:
+ public-domain or Unlicense

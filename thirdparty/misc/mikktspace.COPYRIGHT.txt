@@ -1,0 +1,13 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Comment:
+ See /COPYRIGHT.txt for more details.
+
+Files:
+ mikktspace.c
+ mikktspace.h
+Comment:
+ Tangent Space Normal Maps implementation
+Copyright:
+ 2011, Morten S. Mikkelsen
+License:
+ Zlib

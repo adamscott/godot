@@ -1,0 +1,13 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Comment:
+ See /COPYRIGHT.txt for more details.
+
+Files:
+ pcg.cpp
+ pcg.h
+Comment:
+ Minimal PCG32 implementation
+Copyright:
+ 2014, M.E. O'Neill
+License:
+ Apache-2.0

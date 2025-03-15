@@ -1,0 +1,13 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Comment:
+ See /COPYRIGHT.txt for more details.
+
+Files:
+ ok_color.h
+ ok_color_shader.h
+Comment:
+ OK Lab color space
+Copyright:
+ 2021, Björn Ottosson
+License:
+ Expat
