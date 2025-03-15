@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 from misc.utility.scons_hints import *
 
 Import("env")
@@ -53,6 +54,9 @@ elif is_builtin:
     env_crypto.Append(CPPDEFINES=[("MBEDTLS_CONFIG_FILE", config_path)])
     # Needed to force rebuilding the core files when the configuration file is updated.
     thirdparty_obj = ["#thirdparty/mbedtls/include/godot_module_mbedtls_config.h"]
+
+# mbedtls copyright
+env_crypto.add_copyright_files("#thirdparty/mbedtls/COPYRIGHT.txt")
 
 # Godot source files
 

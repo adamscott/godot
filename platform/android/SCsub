@@ -42,6 +42,7 @@ for x in android_files:
 env_thirdparty = env_android.Clone()
 env_thirdparty.disable_warnings()
 thirdparty_obj = env_thirdparty.SharedObject("#thirdparty/misc/ifaddrs-android.cc")
+env_thirdparty.add_copyright_files("#thirdparty/misc/COPYRIGHT.ifaddrs-android.txt")
 android_objects.append(thirdparty_obj)
 
 lib = env_android.add_shared_library("#bin/libgodot", [android_objects], SHLIBSUFFIX=env["SHLIBSUFFIX"])

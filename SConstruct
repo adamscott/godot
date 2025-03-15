@@ -45,6 +45,7 @@ def _helper_module(name, path):
 
 _helper_module("gles3_builders", "gles3_builders.py")
 _helper_module("glsl_builders", "glsl_builders.py")
+_helper_module("copyright_builders", "copyright_builders.py")
 _helper_module("methods", "methods.py")
 _helper_module("platform_methods", "platform_methods.py")
 _helper_module("version", "version.py")
@@ -53,6 +54,7 @@ _helper_module("main.main_builders", "main/main_builders.py")
 _helper_module("misc.utility.color", "misc/utility/color.py")
 
 # Local
+import copyright_builders
 import gles3_builders
 import glsl_builders
 import methods
@@ -125,6 +127,7 @@ env.scons_version = env._get_major_minor_revision(scons_raw_version)
 env.__class__.add_module_version_string = methods.add_module_version_string
 
 env.__class__.add_source_files = methods.add_source_files
+env.__class__.add_copyright_files = methods.add_copyright_files
 env.__class__.use_windows_spawn_fix = methods.use_windows_spawn_fix
 
 env.__class__.add_shared_library = methods.add_shared_library
@@ -1031,6 +1034,14 @@ GLSL_BUILDERS = {
 }
 env.Append(BUILDERS=GLSL_BUILDERS)
 
+COPYRIGHT_BUILDERS = {
+    "COPYRIGHT": env.Builder(
+        action=env.Run(copyright_builders.build_copyright_header), suffix="COPYRIGHT.gen.h", src_suffix="COPYRIGHT.txt"
+    )
+}
+env.Append(BUILDERS=COPYRIGHT_BUILDERS)
+env.copyright_files = []
+
 if env["compiledb"]:
     env.Tool("compilation_db")
     env.Alias("compiledb", env.CompilationDatabase())
@@ -1054,6 +1065,8 @@ if env["threads"]:
 
 # Build subdirs, the build order is dependent on link order.
 Export("env")
+
+env.add_copyright_files("COPYRIGHT.txt")
 
 SConscript("core/SCsub")
 SConscript("servers/SCsub")

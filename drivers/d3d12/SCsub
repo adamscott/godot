@@ -18,12 +18,14 @@ thirdparty_obj = []
 env.Prepend(CPPPATH=["#thirdparty/directx_headers/include/directx"])
 env_d3d12_rdd.Prepend(CPPPATH=["#thirdparty/directx_headers/include/directx"])
 env_d3d12_rdd.Prepend(CPPPATH=["#thirdparty/directx_headers/include/dxguids"])
+env.add_copyright_files("#thirdparty/directx_headers/COPYRIGHT.txt")
 
 
 # Direct3D 12 Memory Allocator.
 
 env.Append(CPPPATH=["#thirdparty/d3d12ma"])
 env_d3d12_rdd.Append(CPPPATH=["#thirdparty/d3d12ma"])
+env.add_copyright_files("#thirdparty/d3d12ma/COPYRIGHT.txt")
 
 
 # Agility SDK.

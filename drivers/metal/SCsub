@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 from misc.utility.scons_hints import *
 
+import os
+
 Import("env")
 
 env_metal = env.Clone()
@@ -32,6 +34,7 @@ env_metal.Append(CXXFLAGS=["-fexceptions"])
 env_thirdparty = env_metal.Clone()
 env_thirdparty.disable_warnings()
 env_thirdparty.add_source_files(thirdparty_obj, thirdparty_sources)
+env_thirdparty.add_copyright_files(os.path.join(thirdparty_dir, "COPYRIGHT.txt"))
 env_metal.drivers_sources += thirdparty_obj
 
 # Enable C++20 for the Objective-C++ Metal code, which uses C++20 concepts.

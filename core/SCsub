@@ -11,6 +11,8 @@ import methods
 
 env.core_sources = []
 
+copyright_file = "COPYRIGHT.txt"
+
 # Add required thirdparty code.
 
 thirdparty_obj = []
@@ -33,6 +35,8 @@ thirdparty_misc_sources = [
 ]
 thirdparty_misc_sources = [thirdparty_misc_dir + file for file in thirdparty_misc_sources]
 env_thirdparty.add_source_files(thirdparty_obj, thirdparty_misc_sources)
+env_thirdparty.add_copyright_files([f"COPYRIGHT.{'.'.split(x)[0]}.txt" for x in thirdparty_misc_sources])
+
 
 # Brotli
 if env["brotli"] and env["builtin_brotli"]:
@@ -58,6 +62,7 @@ if env["brotli"] and env["builtin_brotli"]:
         env_thirdparty.Append(CPPDEFINES=["BROTLI_BUILD_PORTABLE"])
 
     env_thirdparty.add_source_files(thirdparty_obj, thirdparty_brotli_sources)
+    env_thirdparty.add_copyright_files(os.path.join(thirdparty_brotli_dir, copyright_file))
 
 # Clipper2 Thirdparty source files used for polygon and polyline boolean operations.
 if env["builtin_clipper2"]:
@@ -76,6 +81,7 @@ if env["builtin_clipper2"]:
     env.Append(CPPDEFINES=["CLIPPER2_ENABLED"])
 
     env_thirdparty.add_source_files(thirdparty_obj, thirdparty_clipper_sources)
+    env_thirdparty.add_copyright_files(os.path.join(thirdparty_clipper_dir, copyright_file))
 
 # Zlib library, can be unbundled
 if env["builtin_zlib"]:
@@ -103,6 +109,7 @@ if env["builtin_zlib"]:
         env.Append(CPPDEFINES=["ZLIB_DEBUG"])
 
     env_thirdparty.add_source_files(thirdparty_obj, thirdparty_zlib_sources)
+    env_thirdparty.add_copyright_files(os.path.join(thirdparty_zlib_dir, copyright_file))
 
 # Minizip library, could be unbundled in theory
 # However, our version has some custom modifications, so it won't compile with the system one
@@ -110,6 +117,7 @@ thirdparty_minizip_dir = "#thirdparty/minizip/"
 thirdparty_minizip_sources = ["ioapi.c", "unzip.c", "zip.c"]
 thirdparty_minizip_sources = [thirdparty_minizip_dir + file for file in thirdparty_minizip_sources]
 env_thirdparty.add_source_files(thirdparty_obj, thirdparty_minizip_sources)
+env_thirdparty.add_copyright_files(os.path.join(thirdparty_minizip_dir, copyright_file))
 
 # Zstd library, can be unbundled in theory
 # though we currently use some private symbols
@@ -155,6 +163,7 @@ if env["builtin_zstd"]:
     env.Append(CPPDEFINES=["ZSTD_STATIC_LINKING_ONLY"])
 
     env_thirdparty.add_source_files(thirdparty_obj, thirdparty_zstd_sources)
+    env_thirdparty.add_copyright_files(os.path.join(thirdparty_zstd_dir, copyright_file))
 
 
 env.core_sources += thirdparty_obj
@@ -257,6 +266,7 @@ env.CommandNoCache(
     ["#thirdparty/certs/ca-certificates.crt", env.Value(env["builtin_certs"]), env.Value(env["system_certs_path"])],
     env.Run(core_builders.make_certs_header),
 )
+env.add_copyright_files("#thirdparty/certs/COPYRIGHT.txt")
 
 # Authors
 env.CommandNoCache("#core/authors.gen.h", "#AUTHORS.md", env.Run(core_builders.make_authors_header))

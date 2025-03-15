@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 from misc.utility.scons_hints import *
 
+import os
+
 Import("env")
 
 env_png = env.Clone()
@@ -37,6 +39,7 @@ if env["builtin_libpng"]:
     env_thirdparty = env_png.Clone()
     env_thirdparty.disable_warnings()
     env_thirdparty.add_source_files(thirdparty_obj, thirdparty_sources)
+    env_thirdparty.add_copyright_files(os.path.join(thirdparty_dir, "COPYRIGHT.txt"))
 
     if env["arch"].startswith("arm"):
         if env.msvc:  # Can't compile assembly files with MSVC.

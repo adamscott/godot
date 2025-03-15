@@ -18,5 +18,8 @@ scene_obj = []
 env.add_source_files(scene_obj, "*.cpp")
 env.scene_sources += scene_obj
 
+# Godot copyright files
+env.add_copyright_files("COPYRIGHT.txt")
+
 # Needed to force rebuilding the scene files when the thirdparty code is updated.
 env.Depends(scene_obj, thirdparty_obj)

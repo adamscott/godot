@@ -83,6 +83,16 @@ def add_source_files(self, sources, files, allow_gen=False):
     return True
 
 
+# Copyright files
+def add_copyright_files(self, files):
+    if isinstance(files, str):
+        self.copyright_files.append(self.Glob(files))
+        return
+
+    for file in files:
+        self.copyright_files.append(self.Glob(file))
+
+
 def disable_warnings(self):
     # 'self' is the environment
     if self.msvc and not using_clang(self):
