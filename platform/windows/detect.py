@@ -460,6 +460,7 @@ def configure_msvc(env: "SConsEnvironment"):
             ]
             LIBS += ["dxgi", "d3d9", "d3d11"]
         env.Prepend(CPPPATH=["#thirdparty/angle/include"])
+        env.add_copyright_files("#thirdparty/angle/COPYRIGHT.txt")
 
     if env["target"] in ["editor", "template_debug"]:
         LIBS += ["psapi", "dbghelp"]

@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 from misc.utility.scons_hints import *
 
+import os
+
 Import("env")
 Import("env_modules")
 
@@ -38,9 +40,9 @@ if basisu_encoder:
         "basisu_uastc_enc.cpp",
         "pvpngreader.cpp",
     ]
-    encoder_sources = [thirdparty_dir + "encoder/" + file for file in encoder_sources]
+    encoder_sources = [os.path.join(thirdparty_dir, "encoder", file) for file in encoder_sources]
 
-transcoder_sources = [thirdparty_dir + "transcoder/basisu_transcoder.cpp"]
+transcoder_sources = [os.path.join(thirdparty_dir, "transcoder", "basisu_transcoder.cpp")]
 
 # Treat Basis headers as system headers to avoid raising warnings. Not supported on MSVC.
 if not env.msvc:
@@ -80,8 +82,12 @@ env_thirdparty.Append(
 if basisu_encoder:
     env_thirdparty.add_source_files(thirdparty_obj, encoder_sources)
 
+
 env_thirdparty.add_source_files(thirdparty_obj, transcoder_sources)
 env.modules_sources += thirdparty_obj
+
+# Copyright files
+env_thirdparty.add_copyright_files(os.path.join(thirdparty_dir, "COPYRIGHT.txt"))
 
 # Godot source files
 

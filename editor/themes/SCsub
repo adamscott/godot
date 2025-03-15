@@ -1,15 +1,27 @@
 #!/usr/bin/env python
 from misc.utility.scons_hints import *
 
+import os
+
 Import("env")
 
 import editor_theme_builders
 
+font_families = [
+    "DroidSans",
+    "JetBrainsMono",
+    "Noto",
+    "Vazirmatn",
+]
+font_families_joined = ",".join(font_families)
+
 # Fonts
-flist = Glob("#thirdparty/fonts/*.ttf")
-flist.extend(Glob("#thirdparty/fonts/*.otf"))
-flist.extend(Glob("#thirdparty/fonts/*.woff"))
-flist.extend(Glob("#thirdparty/fonts/*.woff2"))
+flist = []
+for font_family in font_families:
+    flist.extend(Glob("#thirdparty/fonts/%s*.ttf" % font_family))
+    flist.extend(Glob("#thirdparty/fonts/%s*.otf" % font_family))
+    flist.extend(Glob("#thirdparty/fonts/%s*.woff" % font_family))
+    flist.extend(Glob("#thirdparty/fonts/%s*.woff2" % font_family))
 flist.sort()
 env.CommandNoCache(
     "#editor/themes/builtin_fonts.gen.h",
@@ -18,3 +30,6 @@ env.CommandNoCache(
 )
 
 env.add_source_files(env.editor_sources, "*.cpp")
+env.add_copyright_files(
+    [os.path.join("#thirdparty", "fonts", f"COPYRIGHT.{font_family}.txt") for font_family in font_families]
+)

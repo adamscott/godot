@@ -14,3 +14,5 @@ env.CommandNoCache(
     "#thirdparty/fonts/OpenSans_SemiBold.woff2",
     env.Run(default_theme_builders.make_fonts_header),
 )
+
+env.add_copyright_files("#thirdparty/fonts/COPYRIGHT.OpenSans.txt")

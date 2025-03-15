@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 from misc.utility.scons_hints import *
 
+import os
+
 Import("env")
 
 env_backtrace = env.Clone()
@@ -24,7 +26,7 @@ thirdparty_sources = [
     "read.c",
     "alloc.c",
 ]
-thirdparty_sources = [thirdparty_dir + file for file in thirdparty_sources]
+thirdparty_sources = [os.path.join(thirdparty_dir, file) for file in thirdparty_sources]
 
 env_backtrace.Prepend(CPPPATH=[thirdparty_dir])
 
@@ -40,6 +42,9 @@ driver_obj = []
 
 env_backtrace.add_source_files(driver_obj, "*.cpp")
 env.drivers_sources += driver_obj
+
+# Copyright files
+env_backtrace.add_copyright_files(os.path.join(thirdparty_dir, "COPYRIGHT.txt"))
 
 # Needed to force rebuilding the driver files when the thirdparty library is updated.
 env.Depends(driver_obj, thirdparty_obj)
