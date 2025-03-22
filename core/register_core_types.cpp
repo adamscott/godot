@@ -43,6 +43,7 @@
 #include "core/input/input_map.h"
 #include "core/input/shortcut.h"
 #include "core/io/config_file.h"
+#include "core/io/css.h"
 #include "core/io/dir_access.h"
 #include "core/io/dtls_server.h"
 #include "core/io/file_access_encrypted.h"
@@ -91,6 +92,8 @@ static Ref<ResourceFormatLoaderCrypto> resource_format_loader_crypto;
 static Ref<GDExtensionResourceLoader> resource_loader_gdextension;
 static Ref<ResourceFormatSaverJSON> resource_saver_json;
 static Ref<ResourceFormatLoaderJSON> resource_loader_json;
+static Ref<ResourceFormatSaverCSS> resource_saver_css;
+static Ref<ResourceFormatLoaderCSS> resource_loader_css;
 
 static core_bind::ResourceLoader *_resource_loader = nullptr;
 static core_bind::ResourceSaver *_resource_saver = nullptr;
@@ -230,6 +233,11 @@ void register_core_types() {
 	resource_saver_json.instantiate();
 	ResourceSaver::add_resource_format_saver(resource_saver_json);
 
+	resource_saver_css.instantiate();
+	ResourceSaver::add_resource_format_saver(resource_saver_css);
+	resource_loader_css.instantiate();
+	ResourceLoader::add_resource_format_loader(resource_loader_css);
+
 	GDREGISTER_CLASS(MainLoop);
 	GDREGISTER_CLASS(Translation);
 	GDREGISTER_CLASS(TranslationDomain);
@@ -248,6 +256,7 @@ void register_core_types() {
 
 	GDREGISTER_CLASS(XMLParser);
 	GDREGISTER_CLASS(JSON);
+	GDREGISTER_CLASS(CSS);
 
 	GDREGISTER_CLASS(ConfigFile);
 

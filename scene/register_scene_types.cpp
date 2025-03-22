@@ -54,6 +54,7 @@
 #include "scene/gui/color_picker.h"
 #include "scene/gui/color_rect.h"
 #include "scene/gui/control.h"
+#include "scene/gui/css_container.h"
 #include "scene/gui/dialogs.h"
 #include "scene/gui/file_dialog.h"
 #include "scene/gui/flow_container.h"
@@ -445,6 +446,7 @@ void register_scene_types() {
 	GDREGISTER_CLASS(HFlowContainer);
 	GDREGISTER_CLASS(VFlowContainer);
 	GDREGISTER_CLASS(MarginContainer);
+	GDREGISTER_CLASS(CSSContainer);
 
 	OS::get_singleton()->yield(); // may take time to init
 
