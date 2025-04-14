@@ -1,9 +1,14 @@
 import json
 import os
+import subprocess
 
-from SCons.Util import WhereIs
+from SCons.Errors import UserError
+from SCons.Util import WhereIs, splitext
 
+from misc.utility.color import print_info, print_warning
 from platform_methods import get_build_version
+
+text_file_extensions = [".js", ".html"]
 
 
 def run_closure_compiler(target, source, env, for_signature):
@@ -23,32 +28,76 @@ def run_closure_compiler(target, source, env, for_signature):
     return " ".join(cmd)
 
 
-def create_engine_file(env, target, source, externs, threads_enabled):
+def create_engine_file(env, target, source, externs, subst_values):
     if env["use_closure_compiler"]:
         return env.BuildJS(target, source, JSEXTERNS=externs)
-    subst_dict = {"___GODOT_THREADS_ENABLED": "true" if threads_enabled else "false"}
-    return env.Substfile(target=target, source=[env.File(s) for s in source], SUBST_DICT=subst_dict)
+    subst_dict = {
+        "___GODOT_THREADS_ENABLED___": "true" if subst_values["threads_enabled"] else "false",
+    }
+    return env.Substfile(target=target, source=[str(s) for s in source], SUBST_DICT=subst_dict)
 
 
-def create_template_zip(env, js, wasm, side):
+def create_template_zip(env, js, main_wasm, side_wasm=None, modules={}, import_map=None):
     binary_name = "godot.editor" if env.editor_build else "godot"
     zip_dir = env.Dir(env.GetTemplateZipPath())
-    in_files = [
-        js,
-        wasm,
-        "#platform/web/js/libs/audio.worklet.js",
-        "#platform/web/js/libs/audio.position.worklet.js",
-    ]
-    out_files = [
-        zip_dir.File(binary_name + ".js"),
-        zip_dir.File(binary_name + ".wasm"),
-        zip_dir.File(binary_name + ".audio.worklet.js"),
-        zip_dir.File(binary_name + ".audio.position.worklet.js"),
-    ]
+
+    in_files = []
+    out_files = []
+
+    def add_zstd_file(in_file, out_file):
+        file_zst = env.CompressZstd(in_file)
+        in_files.append(file_zst)
+        out_files.append(str(out_file) + ".zst")
+
+    def add_gzip_file(in_file, out_file):
+        file_gz = env.CompressGZip(in_file)
+        in_files.append(file_gz)
+        out_files.append(str(out_file) + ".gz")
+
+    def add_brotli_file(in_file, out_file):
+        file_br = env.CompressBrotli(in_file)
+        in_files.append(file_br)
+        out_files.append(str(out_file) + ".br")
+
+    def compress_file(in_file, out_file):
+        if "zstd" in env["compress_for_servers"]:
+            add_zstd_file(in_file, out_file)
+        if "gzip" in env["compress_for_servers"]:
+            add_gzip_file(in_file, out_file)
+        if "brotli" in env["compress_for_servers"]:
+            add_brotli_file(in_file, out_file)
+
+    def add_to_template(in_file, zip_file, skip_compression=False):
+        out_file = zip_dir.File(zip_file)
+        in_files.append(in_file)
+        out_files.append(out_file)
+        if not skip_compression:
+            compress_file(in_file, out_file)
+
+    add_to_template(js, binary_name + ".js")
+    add_to_template(main_wasm, binary_name + ".wasm")
+    add_to_template("#platform/web/js/libs/audio.worklet.js", binary_name + ".audio.worklet.js")
+    add_to_template("#platform/web/js/libs/audio.position.worklet.js", binary_name + ".audio.position.worklet.js")
+
+    add_to_template(
+        env.Textfile(
+            target="#platform/web/js/importmap/importmap.json",
+            source=json.dumps(import_map, indent=True, sort_keys=True),
+        ),
+        "template/js/importmap/importmap.json",
+        skip_compression=True,
+    )
+
+    # JavaScript modules
+    for module_name in modules.keys():
+        if modules[module_name] is None or len(modules[module_name]) == 0:
+            continue
+        for module_file_entry in modules[module_name]:
+            add_to_template(module_file_entry["file"], f"template/js/modules/{module_name}/{module_file_entry['path']}")
+
     # Dynamic linking (extensions) specific.
     if env["dlink_enabled"]:
-        in_files.append(side)  # Side wasm (contains the actual Godot code).
-        out_files.append(zip_dir.File(binary_name + ".side.wasm"))
+        add_to_template(side_wasm, binary_name + "side.wasm")  # Side wasm (contains the actual Godot code).
 
     service_worker = "#misc/dist/html/service-worker.js"
     if env.editor_build:
@@ -72,35 +121,27 @@ def create_template_zip(env, js, wasm, side):
             "___GODOT_OFFLINE_PAGE___": "offline.html",
             "___GODOT_THREADS_ENABLED___": "true" if env["threads"] else "false",
             "___GODOT_ENSURE_CROSSORIGIN_ISOLATION_HEADERS___": "true",
+            "___GODOT_JS_IMPORT_MAP___": json.dumps(import_map, sort_keys=True),
         }
         html = env.Substfile(target="#bin/godot${PROGSUFFIX}.html", source=html, SUBST_DICT=subst_dict)
-        in_files.append(html)
-        out_files.append(zip_dir.File(binary_name + ".html"))
+        add_to_template(html, binary_name + ".html")
         # And logo/favicon
-        in_files.append("#misc/dist/html/logo.svg")
-        out_files.append(zip_dir.File("logo.svg"))
-        in_files.append("#icon.png")
-        out_files.append(zip_dir.File("favicon.png"))
+        add_to_template("#misc/dist/html/logo.svg", "logo.svg")
+        add_to_template("#icon.png", "favicon.png")
         # PWA
         service_worker = env.Substfile(
             target="#bin/godot${PROGSUFFIX}.service.worker.js",
             source=service_worker,
             SUBST_DICT=subst_dict,
         )
-        in_files.append(service_worker)
-        out_files.append(zip_dir.File("service.worker.js"))
-        in_files.append("#misc/dist/html/manifest.json")
-        out_files.append(zip_dir.File("manifest.json"))
-        in_files.append("#misc/dist/html/offline.html")
-        out_files.append(zip_dir.File("offline.html"))
+        add_to_template(service_worker, "service.worker.js")
+        add_to_template("#misc/dist/html/manifest.json", "manifest.json")
+        add_to_template("#misc/dist/html/offline.html", "offline.html")
     else:
         # HTML
-        in_files.append("#misc/dist/html/full-size.html")
-        out_files.append(zip_dir.File(binary_name + ".html"))
-        in_files.append(service_worker)
-        out_files.append(zip_dir.File(binary_name + ".service.worker.js"))
-        in_files.append("#misc/dist/html/offline-export.html")
-        out_files.append(zip_dir.File("godot.offline.html"))
+        add_to_template("#misc/dist/html/full-size.html", binary_name + ".html")
+        add_to_template(service_worker, binary_name + ".service.worker.js")
+        add_to_template("#misc/dist/html/offline-export.html", "godot.offline.html")
 
     zip_files = env.NoCache(env.InstallAs(out_files, in_files))
     env.NoCache(
@@ -127,3 +168,77 @@ def add_js_pre(env, js_pre):
 
 def add_js_externs(env, externs):
     env.Append(JS_EXTERNS=env.File(externs))
+
+
+def run_zstd_compression(target, source, env):
+    zstd_path = WhereIs("zstd")
+    if zstd_path is None:
+        raise UserError("[Zstd] Could not find `zstd` command line utility.")
+
+    for t in target:
+        target_path = str(t)
+        source_path = splitext(target_path)[0]
+
+        if source_path in [str(p) for p in source]:
+            absolute_source_path = env.File(source_path).get_abspath()
+            source_stat = os.stat(absolute_source_path)
+            human_size = human_readable_size(source_stat.st_size)
+            print_info(f'[Zstd] Compressing "{source_path}" ({human_size}) to "{target_path}" ')
+            tar_cmd = [zstd_path, source_path, "-o", target_path, "--quiet"]
+            subprocess.run(tar_cmd)
+
+
+def run_gzip_compression(target, source, env):
+    try:
+        import gzip
+    except ImportError as exc:
+        msg = f"Cannot import 'gzip' module.\n{exc}"
+        raise UserError(msg) from exc
+
+    for t in target:
+        target_path = str(t)
+        source_path = splitext(target_path)[0]
+
+        if source_path in [str(p) for p in source]:
+            with gzip.open(target_path, "wb") as tf:
+                with open(source_path, "rb") as sf:
+                    print_info(f'[gzip] Reading "{source_path}"')
+                    source_bytes = sf.read()
+                    source_bytes_len = len(source_bytes)
+                    human_size = human_readable_size(source_bytes_len)
+                    print_info(f'[gzip] Compressing "{source_path}" ({human_size}) / Writing "{target_path}"')
+                    tf.write(source_bytes)
+
+
+def run_brotli_compression(target, source, env):
+    brotli_path = WhereIs("brotli")
+    if brotli_path is None:
+        raise UserError("[Brotli] Could not find `brotli` command line utility.")
+
+    for t in target:
+        target_path = str(t)
+        source_path = splitext(target_path)[0]
+
+        if source_path in [str(p) for p in source]:
+            absolute_source_path = env.File(source_path).get_abspath()
+            source_stat = os.stat(absolute_source_path)
+            one_megabyte = 1024 * 1024
+            is_bigger_than_one_megabyte = source_stat.st_size > one_megabyte
+            human_size = human_readable_size(source_stat.st_size)
+
+            print_info(f'[brotli] Compressing "{source_path}" ({human_size}) to "{target_path}" ')
+            if is_bigger_than_one_megabyte:
+                print_warning(
+                    f'[brotli] As "{source_path}" is more than 1MiB ({human_size}), it may take a while. Brotli is notoriously slow when compiling important files.'
+                )
+
+            brotli_cmd = [brotli_path, source_path, "-o", target_path, "--force"]
+            subprocess.run(brotli_cmd)
+
+
+def human_readable_size(size: float) -> str:
+    for unit in ("", "Ki", "Mi", "Gi"):
+        if abs(size) < 1024:
+            return f"{size:3.1f}{unit}B"
+        size = size / 1024
+    return f"{size:3.1f}TiB"

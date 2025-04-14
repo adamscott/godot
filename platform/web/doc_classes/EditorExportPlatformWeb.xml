@@ -12,6 +12,25 @@
 		<link title="Web documentation index">$DOCS_URL/tutorials/platform/web/index.html</link>
 	</tutorials>
 	<members>
+		<member name="bandwidth_saver/brotli_precompress" type="bool" setter="" getter="">
+			If [code]true[/code], each exported file will be individually precompressed into ".br" files.
+			Some servers can serve these files instead of the uncompressed ones in order to save bandwidth. For servers that don't, Godot will try to load precompressed files automatically.
+			See the [url=https://en.wikipedia.org/wiki/Brotli]Brotli Wikipedia article[/url] for more information on the compression algorithm.
+			[b]Note:[/b] If you're using custom templates, the process can take more time if they don't already include precompressed files.
+			[b]Note:[/b] Brotli compression is really efficient, but is known to take a lot of time (proportionally to the file size).
+		</member>
+		<member name="bandwidth_saver/gzip_precompress" type="bool" setter="" getter="">
+			If [code]true[/code], each exported file will be individually precompressed into ".gz" files.
+			Some servers can serve these files instead of the uncompressed ones in order to save bandwidth. For servers that don't, Godot will try to load precompressed files automatically.
+			See the [url=https://en.wikipedia.org/wiki/Gzip]gzip Wikipedia article[/url] for more information on the compression algorithm.
+			[b]Note:[/b] If you're using custom templates, the process can take more time if they don't already include precompressed files.
+		</member>
+		<member name="bandwidth_saver/zstd_precompress" type="bool" setter="" getter="">
+			If [code]true[/code], each exported file will be individually precompressed into ".zst" files.
+			Some servers can serve these files instead of the uncompressed ones in order to save bandwidth. For servers that don't, Godot will try to load precompressed files automatically.
+			See the [url=https://en.wikipedia.org/wiki/Zstd]Zstd Wikipedia article[/url] for more information on the compression algorithm.
+			[b]Note:[/b] If you're using custom templates, the process can take more time if they don't already include precompressed files.
+		</member>
 		<member name="custom_template/debug" type="String" setter="" getter="">
 			File path to the custom export template used for debug builds. If left empty, the default template is used.
 		</member>
