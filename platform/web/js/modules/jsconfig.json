@@ -1,0 +1,15 @@
+{
+	"compilerOptions": {
+		"baseUrl": ".",
+		"paths": {
+			"@godotengine/brotli": ["./brotli/index.mjs"],
+			"@godotengine/brotli/*": ["./brotli/*"],
+			"@godotengine/common": ["./common/index.mjs"],
+			"@godotengine/common/*": ["./common/*"],
+			"@godotengine/common/wasm": ["./common/wasm/index.mjs"],
+			"@godotengine/common/wasm/*": ["./common/wasm/*"],
+			"@godotengine/zstd": ["./zstd/index.mjs"],
+			"@godotengine/zstd/*": ["./zstd/*"]
+		}
+	}
+}

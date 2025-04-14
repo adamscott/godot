@@ -128,10 +128,14 @@ module.exports = [
 		languageOptions: {
 			globals: {
 				...globals.browser,
+				'Engine': true,
+                'engine': true,
 				'Features': true,
 				'Godot': true,
 				'InternalConfig': true,
 				'Preloader': true,
+				'___GODOT_COMPRESSION_FORMATS___': true,
+				'___GODOT_JS_MODULES___': true,
 			},
 		},
 	},

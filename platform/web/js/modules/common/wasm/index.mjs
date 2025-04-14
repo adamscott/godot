@@ -1,0 +1,695 @@
+export const NULLPTR = 0;
+
+/**
+ * @typedef {Int8Array|Int16Array|Int32Array|BigInt64Array|Uint8Array|Uint16Array|Uint32Array|BigUint64Array|Float32Array|Float64Array} TypedArray
+ * @typedef {("char"|"i8"|"int8_t")|("i16"|"int16_t")|("i32"|"int32_t")|("i64"|"int64_t")|("u8"|"uint8_t")|("u16"|"uint16_t")|("u32"|"uint32_t")|("u64"|"uint64_t")|("f32"|"float32_t"|"float")|("f64"|"float64_t"|"double")|("size_t")} BaseType
+ * @typedef {"*"|"**"|"***"|"****"|"*****"} PtrIndicator
+ * @typedef {`${BaseType}${PtrIndicator}`} PtrType
+ * @typedef {`void${PtrIndicator}`} VoidType
+ * @typedef {BaseType|PtrType|VoidType} Type
+ * @typedef {Uint8Array} HEAPU8
+ * @typedef {() => HEAPU8} GetHEAPU8
+ * @typedef {(size: number) => number} Malloc
+ * @typedef {(ptr: number) => void} Free
+ * @typedef {(type: Type) => number} SizeOf
+ * @typedef {WasmStructMember} WasmStructMember
+ * @typedef {WasmStruct} WasmStruct
+ * @typedef {WasmValue} WasmValue
+ * @typedef {ReturnType<initWasmUtils>} WasmUtils
+ * @typedef {{ name: string, type: Type, size?: number, offset: number }} WasmStructMemberDefinition
+ * @typedef {{ HEAPU8: HEAPU8, _malloc: Malloc, _free: Free }} WasmImport
+ */
+
+/**
+ * Returns utilities given a `malloc` and a `free`.
+ * @param {WasmImport} wasmImport
+ * @param {boolean} isMemory64
+ */
+export function initWasmUtils(wasmImport, isMemory64 = false) {
+	const { _malloc: malloc, _free: free } = wasmImport;
+	if (wasmImport.HEAPU8 == null) {
+		throw new Error("HEAPU8 is null.");
+	}
+	if (malloc == null) {
+		throw new Error("malloc is null.");
+	}
+	if (free == null) {
+		throw new Error("free is null.");
+	}
+
+	/**
+	 * `malloc`, but with sanity checks.
+	 * @param {number} size Desired size of the buffer.
+	 * @throws {Error} When the size is not a number.
+	 * @throws {Error} When it cannot malloc successfully.
+	 * @returns {number} Heap pointer.
+	 */
+	const mallocOrDie = (size) => {
+		if (typeof size !== "number") {
+			throw new Error(`size is not a number (${typeof size})`);
+		}
+		const heapPtr = malloc(size);
+		if (heapPtr === NULLPTR) {
+			throw new Error("Could not malloc successfully.");
+		}
+		return heapPtr;
+	};
+
+	/**
+	 * `free`, but with sanity checks.
+	 * @param {number} ptr
+	 * @throws {Error} When the ptr isn't a number.
+	 */
+	const freeOrDie = (ptr) => {
+		if (typeof ptr !== "number") {
+			throw new Error(`ptr is not a number (${typeof size})`);
+		}
+		free(ptr);
+	};
+
+	/**
+	 * Returns the byte length of supplied type.
+	 * @param {Type} type
+	 * @throws {TypeError} When the type is unknown.
+	 * @returns {number} Byte length
+	 */
+	const sizeOf = (type) => {
+		if (type.endsWith("*")) {
+			if (isMemory64) {
+				return BigUint64Array.BYTES_PER_ELEMENT;
+			}
+			return Uint32Array.BYTES_PER_ELEMENT;
+		}
+
+		switch (type) {
+			case "char":
+			case "i8":
+			case "int8_t":
+				return Int8Array.BYTES_PER_ELEMENT;
+			case "i16":
+			case "int16_t":
+				return Int16Array.BYTES_PER_ELEMENT;
+			case "i32":
+			case "int32_t":
+				return Int32Array.BYTES_PER_ELEMENT;
+			case "i64":
+			case "int64_t":
+				return BigInt64Array.BYTES_PER_ELEMENT;
+			case "u8":
+			case "uint8_t":
+				return Uint8Array.BYTES_PER_ELEMENT;
+			case "u16":
+			case "uint16_t":
+				return Uint16Array.BYTES_PER_ELEMENT;
+			case "u32":
+			case "uint32_t":
+				return Uint32Array.BYTES_PER_ELEMENT;
+			case "u64":
+			case "uint64_t":
+				return BigUint64Array.BYTES_PER_ELEMENT;
+			case "float":
+			case "f32":
+			case "float32_t":
+				return Float32Array.BYTES_PER_ELEMENT;
+			case "double":
+			case "f64":
+			case "float64_t":
+				return Float64Array.BYTES_PER_ELEMENT;
+			case "size_t":
+				if (isMemory64) {
+					return BigUint64Array.BYTES_PER_ELEMENT;
+				}
+				return Uint32Array.BYTES_PER_ELEMENT;
+			default:
+				throw new TypeError(`Unknown type: "${type}"`);
+		}
+	};
+
+	/**
+	 * An interface between a WASM instance and JavaScript native values.
+	 */
+	class WasmValue {
+		/**
+		 * Returns the pointer of the value.
+		 * @type {typeof this._ptr}
+		 */
+		get ptr() {
+			return this._ptr;
+		}
+
+		/**
+		 * Returns the value size.
+		 * @type {typeof this._size}
+		 */
+		get size() {
+			return this._size;
+		}
+
+		/**
+		 * Returns the value in memory.
+		 * @returns {typeof this._type extends Type ? number : DataView}
+		 */
+		get value() {
+			return this.getOffset(0);
+		}
+
+		/**
+		 * Sets the value in memory.
+		 * @param {typeof this._type extends Type ? number : TypedArray}
+		 */
+		set value(value) {
+			return this.setOffset(value, 0);
+		}
+
+		/**
+		 * Returns the DataView of the value.
+		 * @returns {DataView}
+		 */
+		get view() {
+			try {
+				return new DataView(wasmImport.HEAPU8.buffer, this._ptr, this._size);
+			} catch (err) {
+				const newErr = new Error("???");
+				newErr.cause = err;
+				throw newErr;
+			}
+		}
+
+		/**
+		 * Returns the buffer of the value.
+		 * @returns {Uint8Array}
+		 */
+		get buffer() {
+			return this.view.buffer.slice(this.view.byteOffset, this.view.byteOffset + this.view.byteLength);
+		}
+
+		/**
+		 * @constructor
+		 * @param {{ type?: Type, size?: number }} params
+		 */
+		constructor(params) {
+			const { type, size } = params;
+			if (type != null && size != null) {
+				throw new Error("Cannot define both type and size.");
+			} else if (type == null && size == null) {
+				throw new Error("Type and size not set.");
+			}
+
+			/** @type {Type|null} */
+			this._type;
+			if (type == null) {
+				this._type = null;
+				this._size = size;
+			} else {
+				this._type = type;
+				this._size = sizeOf(this._type);
+			}
+
+			/** @type {number} */
+			this._ptr = NULLPTR;
+
+			this._init();
+		}
+
+		_init() {
+			this._ptr = malloc(this._size);
+		}
+
+		/**
+		 * Sets a value at a given offset. Useful for arrays.
+		 * @param {number} value
+		 * @param {number} offset
+		 */
+		setOffset(value, offset) {
+			if (offset >= this.view.byteLength) {
+				throw new Error("Out-of-bounds offset.");
+			}
+
+			if (this._type == null) {
+				new Uint8Array(this.view.buffer).set(value, this.view.byteOffset + offset);
+				return;
+			}
+
+			if (this._type.endsWith("*")) {
+				if (sizeOf("size_t") === sizeOf("uint32_t")) {
+					return this.view.setUint32(offset, value, true);
+				}
+				return this.view.setBigUint64(offset, value, true);
+			}
+
+			switch (this._type) {
+				case "char":
+				case "i8":
+				case "int8_t":
+					return this.view.setInt8(offset, value);
+				case "i16":
+				case "int16_t":
+					return this.view.setInt16(offset, value, true);
+				case "i32":
+				case "int32_t":
+					return this.view.setInt32(offset, value, true);
+				case "i64":
+				case "int64_t":
+					return this.view.setBigInt64(offset, value, true);
+				case "u8":
+				case "uint8_t":
+					return this.view.setUint8(offset, value, true);
+				case "u16":
+				case "uint16_t":
+					return this.view.setUint16(offset, value, true);
+				case "u32":
+				case "uint32_t":
+					return this.view.setUint32(offset, value, true);
+				case "u64":
+				case "uint64_t":
+					return this.view.setBigUint64(offset, value, true);
+				case "float":
+				case "f32":
+				case "float32_t":
+					return this.view.setFloat32(offset, value, true);
+				case "double":
+				case "f64":
+				case "float64_t":
+					return this.view.setFloat64(offset, value, true);
+				case "size_t":
+					if (sizeOf("size_t") === sizeOf("uint32_t")) {
+						return this.view.setUint32(offset, value, true);
+					}
+					return this.view.setBigUint64(offset, value, true);
+				default:
+					throw new TypeError(`Unknown type: "${this._type}"`);
+			}
+		}
+
+		/**
+		 * Gets a value at a given offset. Useful for arrays.
+		 * @param {number} offset
+		 * @returns {typeof this._type extends Type ? number : DataView}
+		 */
+		getOffset(offset) {
+			if (offset >= this.view.byteLength) {
+				throw new Error("Out-of-bounds offset.");
+			}
+
+			if (this._type == null) {
+				return new Uint8Array(this.view.buffer).slice(
+					this.view.byteOffset + offset,
+					this.view.byteOffset + this.view.byteLength,
+				);
+			}
+
+			if (this._type.endsWith("*")) {
+				if (sizeOf("size_t") === sizeOf("uint32_t")) {
+					return this.view.getUint32(offset, true);
+				}
+				return this.view.getBigUint64(offset, true);
+			}
+
+			switch (this._type) {
+				case "char":
+				case "i8":
+				case "int8_t":
+					return this.view.getInt8(offset);
+				case "i16":
+				case "int16_t":
+					return this.view.getInt16(offset, true);
+				case "i32":
+				case "int32_t":
+					return this.view.getInt32(offset, true);
+				case "i64":
+				case "int64_t":
+					return this.view.getBigInt64(offset, true);
+				case "u8":
+				case "uint8_t":
+					return this.view.getUint8(offset);
+				case "u16":
+				case "uint16_t":
+					return this.view.getUint16(offset, true);
+				case "u32":
+				case "uint32_t":
+					return this.view.getUint32(offset, true);
+				case "u64":
+				case "uint64_t":
+					return this.view.getBigUint64(offset, true);
+				case "float":
+				case "f32":
+				case "float32_t":
+					return this.view.getFloat32(offset, true);
+				case "double":
+				case "f64":
+				case "float64_t":
+					return this.view.getFloat64(offset, true);
+				case "size_t":
+					if (sizeOf("size_t") === sizeOf("uint32_t")) {
+						return this.view.getUint32(offset, true);
+					}
+					return this.view.getBigUint64(offset, true);
+				default:
+					throw new TypeError(`Unknown type: "${this._type}"`);
+			}
+		}
+
+		destroy() {
+			free(this._ptr);
+		}
+	}
+
+	class WasmStructMember {
+		/**
+		 * Returns the pointer of the struct member.
+		 */
+		get ptr() {
+			return this._struct._ptr + this._offset;
+		}
+
+		/**
+		 * Returns a view to a buffer.
+		 * @throws {Error} When `buffer` is null.
+		 * @returns {DataView}
+		 */
+		get view() {
+			return new DataView(wasmImport.HEAPU8.buffer, this.ptr, this._size);
+		}
+
+		/**
+		 * Returns the buffer of the struct member.
+		 * @returns {Uint8Array}
+		 */
+		get buffer() {
+			return this.view.buffer.slice(this.view.byteOffset, this.view.byteOffset + this.view.byteLength);
+		}
+
+		/**
+		 * Returns the value of the struct member.
+		 * If the struct member is an array, it will return only the first item.
+		 * @returns {number}
+		 */
+		get value() {
+			return this.getOffset(0);
+		}
+
+		/**
+		 * Sets the value of the struct member.
+		 * If the struct member is an array, it will set only the first item.
+		 * @param {number} value
+		 */
+		set value(value) {
+			this.setOffset(value, 0);
+		}
+
+		/**
+		 * Gets the member name.
+		 * @returns {typeof this._name}
+		 */
+		get name() {
+			return this._name;
+		}
+
+		/**
+		 * Gets the member type.
+		 * @returns {typeof this._type}
+		 */
+		get type() {
+			return this._type;
+		}
+
+		/**
+		 * Gets the member size.
+		 * @returns {typeof this._size}
+		 */
+		get size() {
+			return this._size;
+		}
+
+		/**
+		 * Gets the member offset.
+		 * @returns {typeof this._offset}
+		 */
+		get offset() {
+			return this._offset;
+		}
+
+		/**
+		 * @constructor
+		 * @param {WasmStructMemberDefinition} signature
+		 * @param {WasmStruct} struct
+		 */
+		constructor(signature, struct) {
+			/** @type {NonNullable<typeof signature.size>!} */
+			this._size;
+			if (signature.size == null) {
+				this._size = sizeOf(signature.type);
+			} else {
+				this._size = signature.size;
+			}
+
+			/** @type {typeof signature.name} */
+			this._name = signature.name;
+			/** @type {typeof signature.type} */
+			this._type = signature.type;
+			/** @type {typeof signature.offset} */
+			this._offset = signature.offset;
+
+			/** @type {typeof struct} */
+			this._struct = struct;
+		}
+
+		/**
+		 * Sets a value at a given offset. Useful for arrays.
+		 * @param {number} value
+		 * @param {number} offset
+		 */
+		setOffset(value, offset) {
+			if (offset >= this.view.byteLength) {
+				throw new Error("Out-of-bounds offset.");
+			}
+
+			if (this._type.endsWith("*")) {
+				if (sizeOf("size_t") === sizeOf("uint32_t")) {
+					return this.view.setUint32(offset, value, true);
+				}
+				return this.view.setBigUint64(offset, value, true);
+			}
+
+			switch (this._type) {
+				case "char":
+				case "i8":
+				case "int8_t":
+					return this.view.setInt8(offset, value);
+				case "i16":
+				case "int16_t":
+					return this.view.setInt16(offset, value, true);
+				case "i32":
+				case "int32_t":
+					return this.view.setInt32(offset, value, true);
+				case "i64":
+				case "int64_t":
+					return this.view.setBigInt64(offset, value, true);
+				case "u8":
+				case "uint8_t":
+					return this.view.setUint8(offset, value, true);
+				case "u16":
+				case "uint16_t":
+					return this.view.setUint16(offset, value, true);
+				case "u32":
+				case "uint32_t":
+					return this.view.setUint32(offset, value, true);
+				case "u64":
+				case "uint64_t":
+					return this.view.setBigUint64(offset, value, true);
+				case "float":
+				case "f32":
+				case "float32_t":
+					return this.view.setFloat32(offset, value, true);
+				case "double":
+				case "f64":
+				case "float64_t":
+					return this.view.setFloat64(offset, value, true);
+				case "size_t":
+					if (sizeOf("size_t") === sizeOf("uint32_t")) {
+						return this.view.setUint32(offset, value, true);
+					}
+					return this.view.setBigUint64(offset, value, true);
+				default:
+					throw new TypeError(`Unknown type: "${this._type}"`);
+			}
+		}
+
+		/**
+		 * Gets a value at a given offset. Useful for arrays.
+		 * @param {number} offset
+		 * @returns {number}
+		 */
+		getOffset(offset) {
+			if (offset >= this.view.byteLength) {
+				throw new Error("Out-of-bounds offset.");
+			}
+
+			if (this._type.endsWith("*")) {
+				if (sizeOf("size_t") === sizeOf("uint32_t")) {
+					return this.view.getUint32(offset, true);
+				}
+				return this.view.getBigUint64(offset, true);
+			}
+
+			switch (this._type) {
+				case "char":
+				case "i8":
+				case "int8_t":
+					return this.view.getInt8(offset);
+				case "i16":
+				case "int16_t":
+					return this.view.getInt16(offset, true);
+				case "i32":
+				case "int32_t":
+					return this.view.getInt32(offset, true);
+				case "i64":
+				case "int64_t":
+					return this.view.getBigInt64(offset, true);
+				case "u8":
+				case "uint8_t":
+					return this.view.getUint8(offset);
+				case "u16":
+				case "uint16_t":
+					return this.view.getUint16(offset, true);
+				case "u32":
+				case "uint32_t":
+					return this.view.getUint32(offset, true);
+				case "u64":
+				case "uint64_t":
+					return this.view.getBigUint64(offset, true);
+				case "float":
+				case "f32":
+				case "float32_t":
+					return this.view.getFloat32(offset, true);
+				case "double":
+				case "f64":
+				case "float64_t":
+					return this.view.getFloat64(offset, true);
+				case "size_t":
+					if (sizeOf("size_t") === sizeOf("uint32_t")) {
+						return this.view.getUint32(offset, true);
+					}
+					return this.view.getBigUint64(offset, true);
+				default:
+					throw new TypeError(`Unknown type: "${this._type}"`);
+			}
+		}
+	}
+
+	/**
+	 * Framework to manage memory of a defined struct.
+	 */
+	class WasmStruct {
+		/**
+		 * Returns the pointer of the struct.
+		 * @returns {number}
+		 */
+		get ptr() {
+			return this._ptr;
+		}
+
+		/**
+		 * Returns a view of the entire struct buffer.
+		 * @returns {DataView}
+		 */
+		get view() {
+			return new DataView(wasmImport.HEAPU8.buffer, this._ptr, this._size);
+		}
+
+		/**
+		 * Returns the buffer of the entire struct buffer.
+		 * @returns {Uint8Array}
+		 */
+		get buffer() {
+			return this.view.buffer.slice(this.view.byteOffset, this.view.byteOffset + this.view.byteLength);
+		}
+
+		/**
+		 * @constructor
+		 * @param {Array<WasmStructMemberDefinition|WasmStructMember>} signatures
+		 */
+		constructor(signatures) {
+			/** @type {typeof signatures} */
+			this._signatures = signatures;
+
+			/** @type {Record<string, WasmStructMember>} */
+			this._members = {};
+
+			/** @type {number} */
+			this._size = 0;
+			/** @type {number} */
+			this._ptr = NULLPTR;
+
+			this._init();
+		}
+
+		_init() {
+			let structSize = 0;
+
+			for (const signature of this._signatures) {
+				if (this.hasMember(signature.name)) {
+					throw new Error(`WasmStructMember defined twice: "${signature.name}"`);
+				}
+				/** @type {WasmStructMember!} */
+				let member;
+				if (signature instanceof WasmStructMember) {
+					member = signature;
+					member._struct = this;
+				} else {
+					member = new WasmStructMember(signature, this);
+				}
+				this._members[signature.name] = member;
+
+				// We create a property for each member, so that we can
+				// actually access each member directly, instead of using
+				// a proxy function.
+				Object.defineProperty(this, signature.name, {
+					// Important to bind each member to the get function,
+					// as otherwise, the member don't have access to its data.
+					get: function (member) {
+						return this;
+					}.bind(this._members[signature.name]),
+				});
+
+				structSize = Math.max(structSize, member.offset + member.size);
+			}
+
+			this._size = structSize;
+			this._ptr = mallocOrDie(this._size);
+		}
+
+		/**
+		 * Returns if submitted member name is part of this struct.
+		 * @param {string} memberName
+		 * @returns {boolean}
+		 */
+		hasMember(memberName) {
+			return Object.keys(this._members).includes(memberName);
+		}
+
+		/**
+		 * Use to destroy instance.
+		 */
+		destroy() {
+			freeOrDie(this._ptr);
+		}
+	}
+
+	const wasmUtils = {
+		malloc: mallocOrDie,
+		free: freeOrDie,
+		sizeOf,
+		WasmValue,
+		WasmStruct,
+		WasmStructMember,
+	};
+	Object.defineProperty(wasmUtils, "HEAPU8", {
+		get() {
+			// Needed as we need the direct reference,
+			// as if we pass it, we actually copy the Uint8Array.
+			return wasmImport.HEAPU8;
+		},
+	});
+	return Object.freeze(wasmUtils);
+}
