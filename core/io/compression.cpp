@@ -30,16 +30,22 @@
 
 #include "compression.h"
 
-#include "core/config/project_settings.h"
+#include "core/config/engine.h"
+#include "core/error/error_list.h"
+#include "core/error/error_macros.h"
 #include "core/io/zip_io.h"
 
+#include "core/variant/variant.h"
 #include "thirdparty/misc/fastlz.h"
 
 #include <zstd.h>
 
 #ifdef BROTLI_ENABLED
 #include <brotli/decode.h>
-#endif
+#ifdef TOOLS_ENABLED
+#include <brotli/encode.h>
+#endif // TOOLS_ENABLED
+#endif // BROTLI_ENABLED
 
 // Caches for zstd.
 static BinaryMutex mutex;
@@ -47,10 +53,37 @@ static ZSTD_DCtx *current_zstd_d_ctx = nullptr;
 static bool current_zstd_long_distance_matching;
 static int current_zstd_window_log_size;
 
-int Compression::compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, Mode p_mode) {
-	switch (p_mode) {
+int Compression::compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, const Settings &p_settings) {
+	switch (p_settings.get_mode()) {
 		case MODE_BROTLI: {
-			ERR_FAIL_V_MSG(-1, "Only brotli decompression is supported.");
+#ifdef BROTLI_ENABLED
+#ifdef TOOLS_ENABLED
+			if (!Engine::get_singleton()->is_editor_hint()) {
+				ERR_FAIL_V_MSG(-1, "Cowardly refusing to compress. Brotli compression is only supported for editor-use.");
+			}
+			BrotliEncoderMode mode = BROTLI_MODE_GENERIC;
+			switch (p_settings.brotli->encoder_mode) {
+				case Settings::Brotli::BROTLI_ENCODER_MODE_FONT: {
+					mode = BROTLI_MODE_FONT;
+				} break;
+				case Settings::Brotli::BROTLI_ENCODER_MODE_GENERIC: {
+					mode = BROTLI_MODE_GENERIC;
+				} break;
+				case Settings::Brotli::BROTLI_ENCODER_MODE_TEXT: {
+					mode = BROTLI_MODE_TEXT;
+				} break;
+			}
+			size_t encoded_size;
+			if (BrotliEncoderCompress(p_settings.brotli->quality, 24, mode, p_src_size, p_src, &encoded_size, p_dst)) {
+				return encoded_size;
+			}
+			return -1;
+#else // !TOOLS_ENABLED
+			ERR_FAIL_V_MSG(-1, "Brotli compression only supported in editor builds.");
+#endif // TOOLS_ENABLED
+#else // !BROTLI_ENABLED
+			ERR_FAIL_V_MSG(-1, "Godot was compiled without Brotli support.");
+#endif // BROTLI_ENABLED
 		} break;
 		case MODE_FASTLZ: {
 			if (p_src_size < 16) {
@@ -65,13 +98,13 @@ int Compression::compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, 
 		} break;
 		case MODE_DEFLATE:
 		case MODE_GZIP: {
-			int window_bits = p_mode == MODE_DEFLATE ? 15 : 15 + 16;
+			int window_bits = p_settings.get_mode() == MODE_DEFLATE ? 15 : 15 + 16;
 
 			z_stream strm;
 			strm.zalloc = zipio_alloc;
 			strm.zfree = zipio_free;
 			strm.opaque = Z_NULL;
-			int level = p_mode == MODE_DEFLATE ? zlib_level : gzip_level;
+			int level = p_settings.get_mode() == MODE_DEFLATE ? p_settings.deflate->level : p_settings.gzip->level;
 			int err = deflateInit2(&strm, level, Z_DEFLATED, window_bits, 8, Z_DEFAULT_STRATEGY);
 			if (err != Z_OK) {
 				return -1;
@@ -90,13 +123,13 @@ int Compression::compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, 
 		} break;
 		case MODE_ZSTD: {
 			ZSTD_CCtx *cctx = ZSTD_createCCtx();
-			ZSTD_CCtx_setParameter(cctx, ZSTD_c_compressionLevel, zstd_level);
-			if (zstd_long_distance_matching) {
+			ZSTD_CCtx_setParameter(cctx, ZSTD_c_compressionLevel, p_settings.zstd->level);
+			if (p_settings.zstd->long_distance_matching) {
 				ZSTD_CCtx_setParameter(cctx, ZSTD_c_enableLongDistanceMatching, 1);
-				ZSTD_CCtx_setParameter(cctx, ZSTD_c_windowLog, zstd_window_log_size);
+				ZSTD_CCtx_setParameter(cctx, ZSTD_c_windowLog, p_settings.zstd->window_log_size);
 			}
-			int max_dst_size = get_max_compressed_buffer_size(p_src_size, MODE_ZSTD);
-			int ret = ZSTD_compressCCtx(cctx, p_dst, max_dst_size, p_src, p_src_size, zstd_level);
+			int max_dst_size = get_max_compressed_buffer_size(p_src_size, p_settings);
+			int ret = ZSTD_compressCCtx(cctx, p_dst, max_dst_size, p_src, p_src_size, p_settings.zstd->level);
 			ZSTD_freeCCtx(cctx);
 			return ret;
 		} break;
@@ -105,10 +138,21 @@ int Compression::compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, 
 	ERR_FAIL_V(-1);
 }
 
-int Compression::get_max_compressed_buffer_size(int p_src_size, Mode p_mode) {
-	switch (p_mode) {
+int Compression::get_max_compressed_buffer_size(int p_src_size, const Settings &p_settings) {
+	switch (p_settings.get_mode()) {
 		case MODE_BROTLI: {
-			ERR_FAIL_V_MSG(-1, "Only brotli decompression is supported.");
+#ifdef BROTLI_ENABLED
+#ifdef TOOLS_ENABLED
+			if (!Engine::get_singleton()->is_editor_hint()) {
+				ERR_FAIL_V_MSG(-1, "Cowardly refusing to return max compressed buffer size. Brotli compression is only supported for editor-use.");
+			}
+			return BrotliEncoderMaxCompressedSize(p_src_size);
+#else // !TOOLS_ENABLED
+			ERR_FAIL_V_MSG(-1, "Brotli compression only supported in editor builds.");
+#endif // TOOLS_ENABLED
+#else // !BROTLI_ENABLED
+			ERR_FAIL_V_MSG(-1, "Godot was compiled without Brotli support.");
+#endif // BROTLI_ENABLED
 		} break;
 		case MODE_FASTLZ: {
 			int ss = p_src_size + p_src_size * 6 / 100;
@@ -120,7 +164,7 @@ int Compression::get_max_compressed_buffer_size(int p_src_size, Mode p_mode) {
 		} break;
 		case MODE_DEFLATE:
 		case MODE_GZIP: {
-			int window_bits = p_mode == MODE_DEFLATE ? 15 : 15 + 16;
+			int window_bits = p_settings.get_mode() == MODE_DEFLATE ? 15 : 15 + 16;
 
 			z_stream strm;
 			strm.zalloc = zipio_alloc;
@@ -142,17 +186,17 @@ int Compression::get_max_compressed_buffer_size(int p_src_size, Mode p_mode) {
 	ERR_FAIL_V(-1);
 }
 
-int Compression::decompress(uint8_t *p_dst, int p_dst_max_size, const uint8_t *p_src, int p_src_size, Mode p_mode) {
-	switch (p_mode) {
+int Compression::decompress(uint8_t *p_dst, int p_dst_max_size, const uint8_t *p_src, int p_src_size, const Settings &p_settings) {
+	switch (p_settings.get_mode()) {
 		case MODE_BROTLI: {
 #ifdef BROTLI_ENABLED
 			size_t ret_size = p_dst_max_size;
 			BrotliDecoderResult res = BrotliDecoderDecompress(p_src_size, p_src, &ret_size, p_dst);
 			ERR_FAIL_COND_V(res != BROTLI_DECODER_RESULT_SUCCESS, -1);
 			return ret_size;
-#else
-			ERR_FAIL_V_MSG(-1, "Godot was compiled without brotli support.");
-#endif
+#else // !BROTLI_ENABLED
+			ERR_FAIL_V_MSG(-1, "Godot was compiled without Brotli support.");
+#endif // BROTLI_ENABLED
 		} break;
 		case MODE_FASTLZ: {
 			int ret_size = 0;
@@ -169,7 +213,7 @@ int Compression::decompress(uint8_t *p_dst, int p_dst_max_size, const uint8_t *p
 		} break;
 		case MODE_DEFLATE:
 		case MODE_GZIP: {
-			int window_bits = p_mode == MODE_DEFLATE ? 15 : 15 + 16;
+			int window_bits = p_settings.get_mode() == MODE_DEFLATE ? 15 : 15 + 16;
 
 			z_stream strm;
 			strm.zalloc = zipio_alloc;
@@ -194,17 +238,17 @@ int Compression::decompress(uint8_t *p_dst, int p_dst_max_size, const uint8_t *p
 		case MODE_ZSTD: {
 			MutexLock lock(mutex);
 
-			if (!current_zstd_d_ctx || current_zstd_long_distance_matching != zstd_long_distance_matching || current_zstd_window_log_size != zstd_window_log_size) {
+			if (!current_zstd_d_ctx || current_zstd_long_distance_matching != p_settings.zstd->long_distance_matching || current_zstd_window_log_size != p_settings.zstd->window_log_size) {
 				if (current_zstd_d_ctx) {
 					ZSTD_freeDCtx(current_zstd_d_ctx);
 				}
 
 				current_zstd_d_ctx = ZSTD_createDCtx();
-				if (zstd_long_distance_matching) {
-					ZSTD_DCtx_setParameter(current_zstd_d_ctx, ZSTD_d_windowLogMax, zstd_window_log_size);
+				if (p_settings.zstd->long_distance_matching) {
+					ZSTD_DCtx_setParameter(current_zstd_d_ctx, ZSTD_d_windowLogMax, p_settings.zstd->window_log_size);
 				}
-				current_zstd_long_distance_matching = zstd_long_distance_matching;
-				current_zstd_window_log_size = zstd_window_log_size;
+				current_zstd_long_distance_matching = p_settings.zstd->long_distance_matching;
+				current_zstd_window_log_size = p_settings.zstd->window_log_size;
 			}
 
 			int ret = ZSTD_decompressDCtx(current_zstd_d_ctx, p_dst, p_dst_max_size, p_src, p_src_size);
@@ -220,13 +264,13 @@ int Compression::decompress(uint8_t *p_dst, int p_dst_max_size, const uint8_t *p
 	This is required for compressed data whose final uncompressed size is unknown, as is the case for HTTP response bodies.
 	This is much slower however than using Compression::decompress because it may result in multiple full copies of the output buffer.
 */
-int Compression::decompress_dynamic(Vector<uint8_t> *p_dst_vect, int p_max_dst_size, const uint8_t *p_src, int p_src_size, Mode p_mode) {
+int Compression::decompress_dynamic(Vector<uint8_t> *p_dst_vect, int p_max_dst_size, const uint8_t *p_src, int p_src_size, const Settings &p_settings) {
 	uint8_t *dst = nullptr;
 	int out_mark = 0;
 
 	ERR_FAIL_COND_V(p_src_size <= 0, Z_DATA_ERROR);
 
-	if (p_mode == MODE_BROTLI) {
+	if (p_settings.get_mode() == MODE_BROTLI) {
 #ifdef BROTLI_ENABLED
 		BrotliDecoderResult ret;
 		BrotliDecoderState *state = BrotliDecoderCreateInstance(nullptr, nullptr, nullptr);
@@ -246,14 +290,14 @@ int Compression::decompress_dynamic(Vector<uint8_t> *p_dst_vect, int p_max_dst_s
 		do {
 			// Add another chunk size to the output buffer.
 			// This forces a copy of the whole buffer.
-			p_dst_vect->resize(p_dst_vect->size() + gzip_chunk);
+			p_dst_vect->resize(p_dst_vect->size() + p_settings.brotli->chunk_size);
 			// Get pointer to the actual output buffer.
 			dst = p_dst_vect->ptrw();
 
 			// Set the stream to the new output stream.
 			// Since it was copied, we need to reset the stream to the new buffer.
 			next_out = &(dst[out_mark]);
-			avail_out += gzip_chunk;
+			avail_out += p_settings.brotli->chunk_size;
 
 			ret = BrotliDecoderDecompressStream(state, &avail_in, &next_in, &avail_out, &next_out, &total_out);
 			if (ret == BROTLI_DECODER_RESULT_ERROR) {
@@ -263,7 +307,7 @@ int Compression::decompress_dynamic(Vector<uint8_t> *p_dst_vect, int p_max_dst_s
 				return Z_DATA_ERROR;
 			}
 
-			out_mark += gzip_chunk - avail_out;
+			out_mark += p_settings.brotli->chunk_size - avail_out;
 
 			// Enforce max output size.
 			if (p_max_dst_size > -1 && total_out > (uint64_t)p_max_dst_size) {
@@ -281,16 +325,16 @@ int Compression::decompress_dynamic(Vector<uint8_t> *p_dst_vect, int p_max_dst_s
 		// Clean up and return.
 		BrotliDecoderDestroyInstance(state);
 		return Z_OK;
-#else
-		ERR_FAIL_V_MSG(Z_ERRNO, "Godot was compiled without brotli support.");
-#endif
+#else // !BROTLI_ENABLED
+		ERR_FAIL_V_MSG(Z_ERRNO, "Godot was compiled without Brotli support.");
+#endif // BROTLI_ENABLED
 	} else {
 		// This function only supports GZip and Deflate.
-		ERR_FAIL_COND_V(p_mode != MODE_DEFLATE && p_mode != MODE_GZIP, Z_ERRNO);
+		ERR_FAIL_COND_V(p_settings.get_mode() != MODE_DEFLATE && p_settings.get_mode() != MODE_GZIP, Z_ERRNO);
 
 		int ret;
 		z_stream strm;
-		int window_bits = p_mode == MODE_DEFLATE ? 15 : 15 + 16;
+		int window_bits = p_settings.get_mode() == MODE_DEFLATE ? 15 : 15 + 16;
 
 		// Initialize the stream.
 		strm.zalloc = Z_NULL;
@@ -310,17 +354,24 @@ int Compression::decompress_dynamic(Vector<uint8_t> *p_dst_vect, int p_max_dst_s
 		p_dst_vect->clear();
 
 		// Decompress until deflate stream ends or end of file.
+		int chunk_size;
+		if (p_settings.get_mode() == MODE_DEFLATE) {
+			chunk_size = p_settings.deflate->chunk_size;
+		} else {
+			chunk_size = p_settings.gzip->chunk_size;
+		}
+
 		do {
 			// Add another chunk size to the output buffer.
 			// This forces a copy of the whole buffer.
-			p_dst_vect->resize(p_dst_vect->size() + gzip_chunk);
+			p_dst_vect->resize(p_dst_vect->size() + chunk_size);
 			// Get pointer to the actual output buffer.
 			dst = p_dst_vect->ptrw();
 
 			// Set the stream to the new output stream.
 			// Since it was copied, we need to reset the stream to the new buffer.
 			strm.next_out = &(dst[out_mark]);
-			strm.avail_out = gzip_chunk;
+			strm.avail_out = chunk_size;
 
 			// Run inflate() on input until output buffer is full and needs to be resized or input runs out.
 			do {
@@ -343,7 +394,7 @@ int Compression::decompress_dynamic(Vector<uint8_t> *p_dst_vect, int p_max_dst_s
 				}
 			} while (strm.avail_out > 0 && strm.avail_in > 0);
 
-			out_mark += gzip_chunk;
+			out_mark += chunk_size;
 
 			// Enforce max output size.
 			if (p_max_dst_size > -1 && strm.total_out > (uint64_t)p_max_dst_size) {
@@ -362,4 +413,115 @@ int Compression::decompress_dynamic(Vector<uint8_t> *p_dst_vect, int p_max_dst_s
 		(void)inflateEnd(&strm);
 		return Z_OK;
 	}
+}
+
+Error Compression::stream_decompress(Stream &p_stream) {
+	switch (p_stream.get_mode()) {
+		case MODE_BROTLI: {
+#ifdef BROTLI_ENABLED
+			if (p_stream.done) {
+				return FAILED;
+			}
+			if (!p_stream.initialized) {
+				p_stream.initialize();
+			}
+
+			// Chunk assignment.
+			const uint32_t BUFFER_SIZE = p_stream.settings.brotli->chunk_size;
+			PackedByteArray chunk = p_stream.load_chunk(BUFFER_SIZE);
+
+			// If the chunk is empty, it means that we loaded all the file.
+			if (chunk.size() == 0) {
+				if (p_stream.brotli->next_out != p_stream.brotli->out_buffer.ptrw()) {
+					const uint32_t offset = p_stream.brotli->next_out - p_stream.brotli->out_buffer.ptrw();
+					p_stream.save_chunk(p_stream.brotli->out_buffer.slice(0, offset));
+				}
+				if (p_stream.brotli->result == BROTLI_DECODER_RESULT_NEEDS_MORE_OUTPUT) {
+					return ERR_FILE_CANT_WRITE;
+				} else if (p_stream.brotli->result == BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT) {
+					return ERR_FILE_CORRUPT;
+				}
+
+				p_stream.finalize();
+			}
+
+			while (true) {
+				switch (static_cast<BrotliDecoderResult>(p_stream.brotli->result)) {
+					case BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT: {
+						memcpy(p_stream.brotli->in_buffer.ptrw(), chunk.ptr(), chunk.size());
+						p_stream.brotli->available_in = chunk.size();
+						p_stream.brotli->next_in = p_stream.brotli->in_buffer.ptr();
+					} break;
+					case BROTLI_DECODER_RESULT_NEEDS_MORE_OUTPUT: {
+						p_stream.save_chunk(p_stream.brotli->out_buffer);
+						p_stream.brotli->available_out = BUFFER_SIZE;
+						p_stream.brotli->next_out = p_stream.brotli->out_buffer.ptrw();
+					} break;
+					default: {
+						ERR_FAIL_V_MSG(FAILED, "This is a bug. This should not happen.");
+					}
+				}
+
+				{
+					BrotliDecoderState *state = static_cast<BrotliDecoderState *>(p_stream.brotli->brotli_decoder_instance);
+					size_t *available_in = &p_stream.brotli->available_in;
+					const uint8_t **next_in = &p_stream.brotli->next_in;
+					size_t *available_out = &p_stream.brotli->available_out;
+					uint8_t **next_out = &p_stream.brotli->next_out;
+					size_t *total_out = &p_stream.brotli->total_out;
+					p_stream.brotli->result = BrotliDecoderDecompressStream(state, available_in, next_in, available_out, next_out, total_out);
+				}
+			}
+#else // !BROTLI_ENABLED
+			ERR_FAIL_V_MSG(Z_ERRNO, "Godot was compiled without Brotli support.");
+#endif // BROTLI_ENABLED
+		} break;
+		default: {
+			return FAILED;
+		}
+	}
+}
+
+PackedByteArray Compression::Stream::load_chunk(uint32_t p_chunk_size) {
+	ERR_FAIL_NULL_V(src, PackedByteArray());
+
+	PackedByteArray loaded_chunk;
+
+	uint32_t chunk_size = MIN(src_size - src_offset, p_chunk_size);
+	loaded_chunk.resize(chunk_size);
+	memcpy(loaded_chunk.ptrw(), src + src_offset, chunk_size);
+	src_offset += chunk_size;
+
+	return loaded_chunk;
+}
+
+void Compression::Stream::save_chunk(PackedByteArray p_chunk) {
+	ERR_FAIL_NULL(dst);
+	ERR_FAIL_INDEX(*dst + dst_offset, dst_max_size);
+
+	const uint32_t chunk_size = p_chunk.size();
+	memcpy(dst + dst_offset, p_chunk.ptr(), chunk_size);
+	dst_offset += chunk_size;
+}
+
+void Compression::Stream::Brotli::initialize(const Stream &p_stream) {
+#ifdef BROTLI_ENABLED
+	in_buffer.resize(p_stream.settings.brotli->chunk_size);
+	out_buffer.resize(p_stream.settings.brotli->chunk_size);
+
+	brotli_decoder_instance = BrotliDecoderCreateInstance(nullptr, nullptr, nullptr);
+
+	available_in = 0;
+	next_in = nullptr;
+	available_out = p_stream.brotli->in_buffer.size();
+	next_out = p_stream.brotli->out_buffer.ptrw();
+
+	result = BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT;
+#endif // BROTLI_ENABLED
+}
+
+void Compression::Stream::Brotli::finalize(const Stream &p_stream) {
+#ifdef BROTLI_ENABLED
+	BrotliDecoderDestroyInstance(static_cast<BrotliDecoderState *>(brotli_decoder_instance));
+#endif // BROTLI_ENABLED
 }

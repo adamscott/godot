@@ -79,8 +79,12 @@ void EditorHTTPServer::_send_response() {
 	ERR_FAIL_COND_MSG(req.size() < 2, "Invalid protocol or status code.");
 
 	// Wrong protocol
-	ERR_FAIL_COND_MSG(req[0] != "GET" || req[2] != "HTTP/1.1", "Invalid method or HTTP version.");
+	ERR_FAIL_COND_MSG(req[2] != "HTTP/1.1", "Invalid HTTP version.");
 
+	// Wrong method.
+	ERR_FAIL_COND_MSG(req[0] != "GET" && req[0] != "HEAD", "Invalid HTTP method.");
+
+	String method = req[0];
 	const int query_index = req[1].find_char('?');
 	const String path = (query_index == -1) ? req[1] : req[1].substr(0, query_index);
 
@@ -113,6 +117,11 @@ void EditorHTTPServer::_send_response() {
 	Error err = peer->put_data((const uint8_t *)cs.get_data(), cs.size() - 1);
 	if (err != OK) {
 		ERR_FAIL();
+	}
+
+	// We return early as it is a HEAD request.
+	if (method == "HEAD") {
+		return;
 	}
 
 	while (true) {

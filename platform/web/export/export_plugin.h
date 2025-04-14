@@ -30,6 +30,8 @@
 
 #pragma once
 
+#include "core/io/file_access_compressed.h"
+#include "core/object/worker_thread_pool.h"
 #include "editor_http_server.h"
 
 #include "core/config/project_settings.h"
@@ -51,6 +53,12 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		REMOTE_DEBUG_STATE_SERVING,
 	};
 
+	struct TemplateFileInfos {
+		String file_name;
+		uint32_t compressed_size;
+		uint32_t uncompressed_size;
+	};
+
 	Ref<ImageTexture> logo;
 	Ref<ImageTexture> run_icon;
 	Ref<ImageTexture> stop_icon;
@@ -58,6 +66,20 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 	RemoteDebugState remote_debug_state = REMOTE_DEBUG_STATE_UNAVAILABLE;
 
 	Ref<EditorHTTPServer> server;
+
+	const LocalVector<String> text_file_extensions = {
+		".txt",
+		".html",
+		".json",
+		".js",
+		".mjs",
+	};
+	const LocalVector<String> font_file_extensions = {
+		".otf",
+		".ttf",
+		".woff",
+		".woff2",
+	};
 
 	String _get_template_name(bool p_extension, bool p_thread_support, bool p_debug) const {
 		String name = "web";
@@ -103,9 +125,12 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		return splash;
 	}
 
-	Error _extract_template(const String &p_template, const String &p_dir, const String &p_name, bool pwa);
+	String _get_template_path(const Ref<EditorExportPreset> &p_preset, bool p_debug) const;
+	LocalVector<TemplateFileInfos> _get_template_file_infos(const String &p_template, Error *r_error = nullptr) const;
+	Error _extract_template(const String &p_template, const String &p_dir, const String &p_name, bool pwa, LocalVector<String> &p_template_files);
+	Error _compress_template_files(const Ref<EditorExportPreset> &p_preset, LocalVector<String> &p_template_files);
 	void _replace_strings(const HashMap<String, String> &p_replaces, Vector<uint8_t> &r_template);
-	void _fix_html(Vector<uint8_t> &p_html, const Ref<EditorExportPreset> &p_preset, const String &p_name, bool p_debug, BitField<EditorExportPlatform::DebugFlags> p_flags, const Vector<SharedObject> p_shared_objects, const Dictionary &p_file_sizes);
+	void _fix_html(Vector<uint8_t> &p_html, const Ref<EditorExportPreset> &p_preset, const String &p_name, bool p_debug, BitField<EditorExportPlatform::DebugFlags> p_flags, const Vector<SharedObject> p_shared_objects, const Dictionary &p_file_sizes, const String &p_js_import_map);
 	Error _add_manifest_icon(const Ref<EditorExportPreset> &p_preset, const String &p_path, const String &p_icon, int p_size, Array &r_arr);
 	Error _build_pwa(const Ref<EditorExportPreset> &p_preset, const String p_path, const Vector<SharedObject> &p_shared_objects);
 	Error _write_or_error(const uint8_t *p_content, int p_len, String p_path);
@@ -115,10 +140,15 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 	Error _start_server(const String &p_bind_host, uint16_t p_bind_port, bool p_use_tls);
 	Error _stop_server();
 
+	Error _compress_file_to_formats_if_applicable(const String &p_path, const Ref<EditorExportPreset> &p_preset);
+	Error _compress_file_to_format(const String &p_path, const String &p_compressed_path, Compression::Mode p_mode);
+	String _get_compress_file_format_path(const String &p_path, Compression::Mode p_mode);
+
 public:
 	virtual void get_preset_features(const Ref<EditorExportPreset> &p_preset, List<String> *r_features) const override;
 
 	virtual void get_export_options(List<ExportOption> *r_options) const override;
+	virtual String get_export_option_warning(const EditorExportPreset *p_preset, const StringName &p_name) const override;
 	virtual bool get_export_option_visibility(const EditorExportPreset *p_preset, const String &p_option) const override;
 
 	virtual String get_name() const override;
