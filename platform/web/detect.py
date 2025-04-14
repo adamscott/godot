@@ -11,7 +11,10 @@ from emscripten_helpers import (
     create_engine_file,
     create_template_zip,
     get_template_zip_path,
+    run_brotli_compression,
     run_closure_compiler,
+    run_gzip_compression,
+    run_zstd_compression,
 )
 from SCons.Util import WhereIs
 
@@ -36,7 +39,7 @@ def get_tools(env: "SConsEnvironment"):
 
 
 def get_opts():
-    from SCons.Variables import BoolVariable
+    from SCons.Variables import BoolVariable, ListVariable
 
     return [
         ("initial_memory", "Initial WASM memory (in MiB)", 32),
@@ -60,6 +63,19 @@ def get_opts():
             False,
         ),
         BoolVariable("wasm_simd", "Use WebAssembly SIMD to improve CPU performance", True),
+        ListVariable(
+            "compress_for_servers",
+            help="Compress ahead files for compatible servers to reduce download size. Compression can take some time",
+            default="none",
+            names=["zstd", "gzip", "brotli"],
+            map={"zst": "zstd", "gz": "gzip", "br": "brotli"},
+        ),
+        ListVariable(
+            "js_modules",
+            help="JS modules to build. They don't take bandwidth; they are loaded on-demand. (browsers are shipped with gzip decompression tools)",
+            default="all",
+            names=["zstd", "brotli"],
+        ),
     ]
 
 
@@ -350,3 +366,26 @@ def configure(env: "SConsEnvironment"):
 
     # Disable GDScript LSP (as the Web platform is not compatible with TCP).
     env.Append(CPPDEFINES=["GDSCRIPT_NO_LSP"])
+
+    def generate_compress_emitter(suffix):
+        from SCons.Util import splitext
+
+        def emitter(target, source, env):
+            return [p.target_from_source("", f"{splitext(p.name)[1]}.{suffix}") for p in source], source
+
+        return emitter
+
+    if "zstd" in env["compress_for_servers"]:
+        zstd_action = env.Action(run_zstd_compression)
+        zstd_builder = env.Builder(action=zstd_action, emitter=generate_compress_emitter("zst"))
+        env.Append(BUILDERS={"CompressZstd": zstd_builder})
+
+    if "gzip" in env["compress_for_servers"]:
+        gzip_action = env.Action(run_gzip_compression)
+        gzip_builder = env.Builder(action=gzip_action, emitter=generate_compress_emitter("gz"))
+        env.Append(BUILDERS={"CompressGZip": gzip_builder})
+
+    if "brotli" in env["compress_for_servers"]:
+        brotli_action = env.Action(run_brotli_compression)
+        brotli_builder = env.Builder(action=brotli_action, emitter=generate_compress_emitter("br"))
+        env.Append(BUILDERS={"CompressBrotli": brotli_builder})
