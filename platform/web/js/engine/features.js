@@ -103,4 +103,24 @@ const Features = {
 		// Audio is normally optional since we have a dummy fallback.
 		return missing;
 	},
+
+	/**
+	 * Return an array of compression formats that were used during the engine build.
+	 *
+	 * @returns {Array<string>} A list of compression formats.
+	 * @function Engine.getEngineFilePreCompressionFormats
+	 */
+	getEngineFilePreCompressionFormats() {
+		return ___GODOT_COMPRESSION_FORMATS___;
+	},
+
+	/**
+	 * Return an array of modules installed with the template.
+	 *
+	 * @returns {Array<string>} A list of available modules.
+	 * @function Engine.getJSModules
+	 */
+	getJSModules: function () {
+		return ___GODOT_JS_MODULES___;
+	},
 };

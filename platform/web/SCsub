@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 from misc.utility.scons_hints import *
 
+import os.path
+
 from methods import print_error
 
 Import("env")
@@ -100,6 +102,26 @@ sys_env.Depends(build[0], sys_env["JS_LIBS"])
 sys_env.Depends(build[0], sys_env["JS_PRE"])
 sys_env.Depends(build[0], sys_env["JS_EXTERNS"])
 
+modules = {}
+if env["include_client_compression_libraries"]:
+    if "gzip" in env["compress_for_servers"]:
+        modules["pako"] = []
+        pako_version = "2.1.0"
+        pako_files = env.UnTar(f"js/modules/pako-{pako_version}.tgz", one_top_level=True)
+        pako_dist_dir = f"js/modules/pako-{pako_version}/package/dist/"
+        for f in pako_files:
+            if os.path.commonprefix([pako_dist_dir, str(f)]) == pako_dist_dir:
+                modules["pako"].append(f)
+
+    if "brotli" in env["compress_for_servers"]:
+        modules["brotli-wasm"] = []
+        brotli_wasm_version = "3.0.1"
+        brotli_wasm_files = env.UnTar(f"js/modules/brotli-wasm-{brotli_wasm_version}.tgz", one_top_level=True)
+        brotli_wasm_dist_dir = f"js/modules/brotli-wasm-{brotli_wasm_version}/package/pkg.web/"
+        for f in brotli_wasm_files:
+            if os.path.commonprefix([brotli_wasm_dist_dir, str(f)]) == brotli_wasm_dist_dir:
+                modules["brotli-wasm"].append(f)
+
 engine = [
     "js/engine/features.js",
     "js/engine/preloader.js",
@@ -107,7 +129,16 @@ engine = [
     "js/engine/engine.js",
 ]
 externs = [env.File("#platform/web/js/engine/engine.externs.js")]
-js_engine = env.CreateEngineFile("#bin/godot${PROGSUFFIX}.engine.js", engine, externs, env["threads"])
+js_engine = env.CreateEngineFile(
+    "#bin/godot${PROGSUFFIX}.engine.js",
+    engine,
+    externs,
+    {
+        "threads_enabled": env["threads"],
+        "js_modules": list(modules.keys()),
+        "compression_formats": env["compress_for_servers"].data,
+    },
+)
 env.Depends(js_engine, externs)
 
 wrap_list = [
@@ -118,7 +149,6 @@ js_wrapped = env.NoCache(
     env.Textfile("#bin/godot", [env.File(f) for f in wrap_list], TEXTFILESUFFIX="${PROGSUFFIX}.wrapped.js")
 )
 
-# 0 - unwrapped js file (use wrapped one instead)
-# 1 - wasm file
-# 2 - wasm side (when dlink is enabled).
-env.CreateTemplateZip(js_wrapped, build[1], build[2] if len(build) > 2 else None)
+env.CreateTemplateZip(
+    js=js_wrapped, main_wasm=build[1], side_wasm=build[2] if len(build) > 2 else None, modules=modules
+)

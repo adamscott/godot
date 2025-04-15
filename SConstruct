@@ -52,6 +52,7 @@ _helper_module("version", "version.py")
 _helper_module("core.core_builders", "core/core_builders.py")
 _helper_module("main.main_builders", "main/main_builders.py")
 _helper_module("misc.utility.color", "misc/utility/color.py")
+_helper_module("misc.utility.scons_builders", "misc/utility/scons_builders.py")
 
 # Local
 import gles3_builders
@@ -59,6 +60,7 @@ import glsl_builders
 import methods
 import scu_builders
 from misc.utility.color import is_stderr_color, print_error, print_info, print_warning
+from misc.utility.scons_builders import install_builders as install_general_builders
 from platform_methods import architecture_aliases, architectures, compatibility_platform_aliases
 
 if ARGUMENTS.get("target", "editor") == "editor":
@@ -140,6 +142,8 @@ env.__class__.module_check_dependencies = methods.module_check_dependencies
 
 env["x86_libtheora_opt_gcc"] = False
 env["x86_libtheora_opt_vc"] = False
+
+install_general_builders(env)
 
 # avoid issues when building with different versions of python out of the same directory
 env.SConsignFile(File("#.sconsign{0}.dblite".format(pickle.HIGHEST_PROTOCOL)).abspath)
