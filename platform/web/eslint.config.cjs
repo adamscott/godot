@@ -132,6 +132,8 @@ module.exports = [
 				'Godot': true,
 				'InternalConfig': true,
 				'Preloader': true,
+				'___GODOT_COMPRESSION_FORMATS___': true,
+				'___GODOT_JS_MODULES___': true,
 			},
 		},
 	},

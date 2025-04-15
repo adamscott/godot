@@ -28,14 +28,18 @@ def run_closure_compiler(target, source, env, for_signature):
     return " ".join(cmd)
 
 
-def create_engine_file(env, target, source, externs, threads_enabled):
+def create_engine_file(env, target, source, externs, subst_values):
     if env["use_closure_compiler"]:
         return env.BuildJS(target, source, JSEXTERNS=externs)
-    subst_dict = {"___GODOT_THREADS_ENABLED": "true" if threads_enabled else "false"}
-    return env.Substfile(target=target, source=[env.File(s) for s in source], SUBST_DICT=subst_dict)
+    subst_dict = {
+        "___GODOT_THREADS_ENABLED___": "true" if subst_values["threads_enabled"] else "false",
+        "___GODOT_JS_MODULES___": json.dumps(subst_values["js_modules"]),
+        "___GODOT_COMPRESSION_FORMATS___": json.dumps(subst_values["compression_formats"]),
+    }
+    return env.Substfile(target=target, source=[str(s) for s in source], SUBST_DICT=subst_dict)
 
 
-def create_template_zip(env, js, wasm, side):
+def create_template_zip(env, js, main_wasm, side_wasm=None, modules={}):
     binary_name = "godot.editor" if env.editor_build else "godot"
     zip_dir = env.Dir(env.GetTemplateZipPath())
 
@@ -65,13 +69,21 @@ def create_template_zip(env, js, wasm, side):
         compress_file(in_file, out_file)
 
     add_to_template(js, binary_name + ".js")
-    add_to_template(wasm, binary_name + ".wasm")
+    add_to_template(main_wasm, binary_name + ".wasm")
     add_to_template("#platform/web/js/libs/audio.worklet.js", binary_name + ".audio.worklet.js")
     add_to_template("#platform/web/js/libs/audio.position.worklet.js", binary_name + ".audio.position.worklet.js")
 
+    # JavaScript modules
+    for module_name in modules.keys():
+        if modules[module_name] is None or len(modules[module_name]) == 0:
+            continue
+        for module_file in modules[module_name]:
+            module_file_basename = os.path.basename(str(module_file))
+            add_to_template(module_file, f"modules/{module_name}/{module_file_basename}")
+
     # Dynamic linking (extensions) specific.
     if env["dlink_enabled"]:
-        add_to_template(side, binary_name + "side.wasm")  # Side wasm (contains the actual Godot code).
+        add_to_template(side_wasm, binary_name + "side.wasm")  # Side wasm (contains the actual Godot code).
 
     service_worker = "#misc/dist/html/service-worker.js"
     if env.editor_build:

@@ -66,6 +66,11 @@ def get_opts():
             names=["gzip", "brotli"],
             map={"gz": "gzip", "br": "brotli"},
         ),
+        BoolVariable(
+            "include_client_compression_libraries",
+            "Include client-side libraries to handle precompressed files",
+            False,
+        ),
     ]
 
 
