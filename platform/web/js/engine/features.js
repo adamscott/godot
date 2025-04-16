@@ -105,16 +105,6 @@ const Features = {
 	},
 
 	/**
-	 * Return an array of compression formats that were used during the engine build.
-	 *
-	 * @returns {Array<string>} A list of compression formats.
-	 * @function Engine.getEngineFilePreCompressionFormats
-	 */
-	getEngineFilePreCompressionFormats() {
-		return ___GODOT_COMPRESSION_FORMATS___;
-	},
-
-	/**
 	 * Return an array of modules installed with the template.
 	 *
 	 * @returns {Array<string>} A list of available modules.
@@ -122,5 +112,50 @@ const Features = {
 	 */
 	getJSModules: function () {
 		return ___GODOT_JS_MODULES___;
+	},
+
+	/**
+	 * Returns the promise of a module.
+	 *
+	 * @returns {Promise} Module's promise
+	 * @throws {Error}
+	 * @function Engine.getJSModule
+	 */
+	getJSModule: function (moduleName) {
+		if (!Engine.getJSModules().includes(moduleName)) {
+			throw new Error(`Cannot get non-bundled "${moduleName}" module.`);
+		}
+		if (Object.keys(Engine.modules).includes(moduleName)) {
+			return Engine.modules[moduleName];
+		}
+
+		let module = null;
+		switch (moduleName) {
+		case 'pako':
+			module = import('./modules/pako/pako.esm.mjs');
+			break;
+		case 'brotli-wasm':
+			module = import('./modules/brotli-wasm/brotli_wasm.js');
+			break;
+		default:
+			throw new Error(`Module "${moduleName}" import not defined.`);
+		}
+
+		Engine.modules[moduleName] = module.catch((err) => {
+			const newError = new Error(`Error while importing module "${moduleName}"`);
+			newError.cause = err;
+			throw newError;
+		});
+		return Engine.modules[moduleName];
+	},
+
+	/**
+	 * Return an array of compression formats that were used during the engine build.
+	 *
+	 * @returns {Array<string>} A list of compression formats.
+	 * @function Engine.getEngineFileCompressionFormats
+	 */
+	getEngineFileCompressionFormats() {
+		return ___GODOT_COMPRESSION_FORMATS___;
 	},
 };
