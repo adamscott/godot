@@ -111,7 +111,8 @@ if env["include_client_compression_libraries"]:
         pako_dist_dir = f"js/modules/pako-{pako_version}/package/dist/"
         for f in pako_files:
             if os.path.commonprefix([pako_dist_dir, str(f)]) == pako_dist_dir:
-                modules["pako"].append(f)
+                if ".esm" in str(f):
+                    modules["pako"].append(f)
 
     if "brotli" in env["compress_for_servers"]:
         modules["brotli-wasm"] = []
