@@ -279,7 +279,7 @@ const Engine = (function () {
 	SafeEngine['isAudioWorkletAvailable'] = Features.isAudioWorkletAvailable;
 	SafeEngine['getMissingFeatures'] = Features.getMissingFeatures;
 	SafeEngine['getEngineFileCompressionFormats'] = Features.getEngineFileCompressionFormats;
-	SafeEngine['getJSModules'] = Features.getJSModules;
+	SafeEngine['getJSModuleNames'] = Features.getJSModuleNames;
 	SafeEngine['getJSModule'] = Features.getJSModule;
 
 	SafeEngine['modules'] = {};
