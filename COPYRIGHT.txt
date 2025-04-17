@@ -145,7 +145,8 @@ License: Apache-2.0
 
 Files: platform/web/js/modules/pako-2.1.0.tgz
 Comment: pako
-Copyright: 2014-2017, Vitaly Puzrin, Andrei Tuputcyn
+Copyright: 1995-2013 Jean-loup Gailly, Mark Adler
+ 2014-2017, Vitaly Puzrin, Andrei Tuputcyn
 License: Expat
 
 Files: scene/animation/easing_equations.h
