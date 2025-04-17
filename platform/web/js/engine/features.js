@@ -108,9 +108,9 @@ const Features = {
 	 * Return an array of modules installed with the template.
 	 *
 	 * @returns {Array<string>} A list of available modules.
-	 * @function Engine.getJSModules
+	 * @function Engine.getJSModuleNames
 	 */
-	getJSModules: function () {
+	getJSModuleNames: function () {
 		return ___GODOT_JS_MODULES___;
 	},
 
@@ -122,7 +122,7 @@ const Features = {
 	 * @function Engine.getJSModule
 	 */
 	getJSModule: function (moduleName) {
-		if (!Engine.getJSModules().includes(moduleName)) {
+		if (!Engine.getJSModuleNames().includes(moduleName)) {
 			throw new Error(`Cannot get non-bundled "${moduleName}" module.`);
 		}
 		if (Object.keys(Engine.modules).includes(moduleName)) {
