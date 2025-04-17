@@ -102,26 +102,29 @@ sys_env.Depends(build[0], sys_env["JS_LIBS"])
 sys_env.Depends(build[0], sys_env["JS_PRE"])
 sys_env.Depends(build[0], sys_env["JS_EXTERNS"])
 
-modules = {}
+js_modules = {}
 if env["include_client_compression_libraries"]:
     if "gzip" in env["compress_for_servers"]:
-        modules["pako"] = []
+        js_modules["pako"] = []
         pako_version = "2.1.0"
         pako_files = env.UnTar(f"js/modules/pako-{pako_version}.tgz", one_top_level=True)
         pako_dist_dir = f"js/modules/pako-{pako_version}/package/dist/"
         for f in pako_files:
             if os.path.commonprefix([pako_dist_dir, str(f)]) == pako_dist_dir:
-                if ".esm" in str(f):
-                    modules["pako"].append(f)
+                # Remove non-module files
+                if ".esm" in f.name:
+                    js_modules["pako"].append(f)
 
     if "brotli" in env["compress_for_servers"]:
-        modules["brotli-wasm"] = []
+        js_modules["brotli-wasm"] = []
         brotli_wasm_version = "3.0.1"
         brotli_wasm_files = env.UnTar(f"js/modules/brotli-wasm-{brotli_wasm_version}.tgz", one_top_level=True)
         brotli_wasm_dist_dir = f"js/modules/brotli-wasm-{brotli_wasm_version}/package/pkg.web/"
         for f in brotli_wasm_files:
             if os.path.commonprefix([brotli_wasm_dist_dir, str(f)]) == brotli_wasm_dist_dir:
-                modules["brotli-wasm"].append(f)
+                # Remove Typescript definition files
+                if ".d.ts" not in f.name:
+                    js_modules["brotli-wasm"].append(f)
 
 engine = [
     "js/engine/features.js",
@@ -136,7 +139,7 @@ js_engine = env.CreateEngineFile(
     externs,
     {
         "threads_enabled": env["threads"],
-        "js_modules": list(modules.keys()),
+        "js_modules": list(js_modules.keys()),
         "compression_formats": env["compress_for_servers"].data,
     },
 )
@@ -151,5 +154,5 @@ js_wrapped = env.NoCache(
 )
 
 env.CreateTemplateZip(
-    js=js_wrapped, main_wasm=build[1], side_wasm=build[2] if len(build) > 2 else None, modules=modules
+    js=js_wrapped, main_wasm=build[1], side_wasm=build[2] if len(build) > 2 else None, modules=js_modules
 )
