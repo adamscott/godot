@@ -78,8 +78,7 @@ def create_template_zip(env, js, main_wasm, side_wasm=None, modules={}):
         if modules[module_name] is None or len(modules[module_name]) == 0:
             continue
         for module_file in modules[module_name]:
-            module_file_basename = os.path.basename(str(module_file))
-            add_to_template(module_file, f"tempate_assets/js/modules/{module_name}/{module_file_basename}")
+            add_to_template(module_file, f"template/js/modules/{module_name}/{module_file.name}")
 
     # Dynamic linking (extensions) specific.
     if env["dlink_enabled"]:

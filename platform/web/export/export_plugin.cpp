@@ -34,6 +34,7 @@
 #include "run_icon_svg.gen.h"
 
 #include "core/config/project_settings.h"
+#include "core/io/dir_access.h"
 #include "editor/editor_settings.h"
 #include "editor/editor_string_names.h"
 #include "editor/export/editor_export.h"
@@ -87,6 +88,11 @@ Error EditorExportPlatformWeb::_extract_template(const String &p_template, const
 
 		//write
 		String dst = p_dir.path_join(file.replace("godot", p_name));
+		String dst_dir = dst.get_base_dir();
+		if (!DirAccess::exists(dst_dir)) {
+			Ref<DirAccess> d = DirAccess::create_for_path(dst_dir);
+			d->make_dir_recursive(dst_dir);
+		}
 		Ref<FileAccess> f = FileAccess::open(dst, FileAccess::WRITE);
 		if (f.is_null()) {
 			add_message(EXPORT_MESSAGE_ERROR, TTR("Prepare Templates"), vformat(TTR("Could not write file: \"%s\"."), dst));
