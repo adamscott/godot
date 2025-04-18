@@ -282,6 +282,7 @@ const Engine = (function () {
 	SafeEngine['getJSModuleNames'] = Features.getJSModuleNames;
 	SafeEngine['getJSModule'] = Features.getJSModule;
 
+	// Loaded JavaScript modules.
 	SafeEngine['modules'] = {};
 
 	return SafeEngine;

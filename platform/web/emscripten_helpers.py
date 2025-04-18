@@ -77,8 +77,8 @@ def create_template_zip(env, js, main_wasm, side_wasm=None, modules={}):
     for module_name in modules.keys():
         if modules[module_name] is None or len(modules[module_name]) == 0:
             continue
-        for module_file in modules[module_name]:
-            add_to_template(module_file, f"template/js/modules/{module_name}/{module_file.name}")
+        for module_file_entry in modules[module_name]:
+            add_to_template(module_file_entry["file"], f"template/js/modules/{module_name}/{module_file_entry['path']}")
 
     # Dynamic linking (extensions) specific.
     if env["dlink_enabled"]:
@@ -207,4 +207,4 @@ def human_readable_size(size: float) -> str:
         if abs(size) < 1024:
             return f"{size:3.1f}{unit}B"
         size = size / 1024
-    return f"{size}B"
+    return f"{size:3.1f}TiB"

@@ -129,6 +129,7 @@ module.exports = [
 			globals: {
 				...globals.browser,
                 'Engine': true,
+                'engine': true,
 				'Features': true,
 				'Godot': true,
 				'InternalConfig': true,

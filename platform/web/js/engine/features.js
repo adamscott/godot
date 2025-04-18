@@ -129,16 +129,17 @@ const Features = {
 			return Engine.modules[moduleName];
 		}
 
+		const moduleDir = './template/js/modules';
 		let module = null;
 		switch (moduleName) {
 		case 'pako':
-			module = import('./modules/pako/pako.esm.mjs');
+			module = import(`${moduleDir}/pako/pako.esm.mjs`);
 			break;
-		case 'brotli-wasm':
-			module = import('./modules/brotli-wasm/brotli_wasm.js');
+		case 'brotli-dec-wasm':
+			module = import(`${moduleDir}/brotli-dec-wasm/index.js`);
 			break;
 		default:
-			throw new Error(`Module "${moduleName}" import not defined.`);
+			throw new Error(`Module "${moduleName}" import not defined. This is a bug.`);
 		}
 
 		Engine.modules[moduleName] = module.catch((err) => {

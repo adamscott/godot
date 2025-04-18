@@ -113,18 +113,36 @@ if env["include_client_compression_libraries"]:
             if os.path.commonprefix([pako_dist_dir, str(f)]) == pako_dist_dir:
                 # Remove non-module files
                 if ".esm" in f.name:
-                    js_modules["pako"].append(f)
+                    js_modules["pako"].append(
+                        {
+                            "path": f.name,
+                            "file": f,
+                        }
+                    )
 
     if "brotli" in env["compress_for_servers"]:
-        js_modules["brotli-wasm"] = []
-        brotli_wasm_version = "3.0.1"
-        brotli_wasm_files = env.UnTar(f"js/modules/brotli-wasm-{brotli_wasm_version}.tgz", one_top_level=True)
-        brotli_wasm_dist_dir = f"js/modules/brotli-wasm-{brotli_wasm_version}/package/pkg.web/"
+        js_modules["brotli-dec-wasm"] = []
+        brotli_wasm_version = "2.3.0"
+        brotli_wasm_files = env.UnTar(f"js/modules/brotli-dec-wasm-{brotli_wasm_version}.tgz", one_top_level=True)
+        brotli_wasm_dist_dir = f"js/modules/brotli-dec-wasm-{brotli_wasm_version}/package/"
+        brotli_wasm_dist_pkgweb_dir = brotli_wasm_dist_dir + "pkg/"
         for f in brotli_wasm_files:
-            if os.path.commonprefix([brotli_wasm_dist_dir, str(f)]) == brotli_wasm_dist_dir:
+            if str(f) == brotli_wasm_dist_dir + "index.js":
+                js_modules["brotli-dec-wasm"].append(
+                    {
+                        "path": f.name,
+                        "file": f,
+                    }
+                )
+            elif os.path.commonprefix([brotli_wasm_dist_pkgweb_dir, str(f)]) == brotli_wasm_dist_pkgweb_dir:
                 # Remove Typescript definition files
                 if ".d.ts" not in f.name:
-                    js_modules["brotli-wasm"].append(f)
+                    js_modules["brotli-dec-wasm"].append(
+                        {
+                            "path": f"pkg/{f.name}",
+                            "file": f,
+                        }
+                    )
 
 engine = [
     "js/engine/features.js",
