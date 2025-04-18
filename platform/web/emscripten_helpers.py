@@ -46,6 +46,11 @@ def create_template_zip(env, js, main_wasm, side_wasm=None, modules={}):
     in_files = []
     out_files = []
 
+    def add_zstd_file(in_file, out_file):
+        file_zst = env.CompressZstd(in_file)
+        in_files.append(file_zst)
+        out_files.append(str(out_file) + ".zst")
+
     def add_gzip_file(in_file, out_file):
         file_gz = env.CompressGZip(in_file)
         in_files.append(file_gz)
@@ -57,6 +62,8 @@ def create_template_zip(env, js, main_wasm, side_wasm=None, modules={}):
         out_files.append(str(out_file) + ".br")
 
     def compress_file(in_file, out_file):
+        if "zstd" in env["compress_for_servers"]:
+            add_zstd_file(in_file, out_file)
         if "gzip" in env["compress_for_servers"]:
             add_gzip_file(in_file, out_file)
         if "brotli" in env["compress_for_servers"]:
@@ -152,6 +159,24 @@ def add_js_pre(env, js_pre):
 
 def add_js_externs(env, externs):
     env.Append(JS_EXTERNS=env.File(externs))
+
+
+def run_zstd_compression(target, source, env):
+    tar_path = WhereIs("tar")
+    if tar_path is None:
+        raise UserError("[Zstd] Could not find `tar` command line utility.")
+
+    for t in target:
+        target_path = str(t)
+        source_path = splitext(target_path)[0]
+
+        if source_path in [str(p) for p in source]:
+            absolute_source_path = env.File(source_path).get_abspath()
+            source_stat = os.stat(absolute_source_path)
+            human_size = human_readable_size(source_stat.st_size)
+            print_info(f'[brotli] Compressing "{source_path}" ({human_size}) to "{target_path}" ')
+            tar_cmd = [tar_path, "--zstd", "-cf", target_path, source_path]
+            subprocess.run(tar_cmd)
 
 
 def run_gzip_compression(target, source, env):

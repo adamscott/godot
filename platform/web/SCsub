@@ -104,16 +104,34 @@ sys_env.Depends(build[0], sys_env["JS_EXTERNS"])
 
 js_modules = {}
 if env["include_client_compression_libraries"]:
+    if "zstd" in env["compress_for_servers"]:
+        module_name = "oneidentity-zstd-js"
+        js_modules[module_name] = []
+        module_version = "1.0.3"
+        module_files = env.UnTar(f"js/modules/{module_name}-{module_version}.tgz", one_top_level=True)
+        module_dist_dir = f"js/modules/{module_name}-{module_version}/package/wasm/decompress/"
+        for f in module_files:
+            if os.path.commonprefix([module_dist_dir, str(f)]) == module_dist_dir:
+                # Remove non-module files
+                if ".d.ts" not in f.name and ".cjs" not in f.name and ".umd" not in f.name:
+                    js_modules[module_name].append(
+                        {
+                            "path": f"wasm/decompress/{f.name}",
+                            "file": f,
+                        }
+                    )
+
     if "gzip" in env["compress_for_servers"]:
-        js_modules["pako"] = []
-        pako_version = "2.1.0"
-        pako_files = env.UnTar(f"js/modules/pako-{pako_version}.tgz", one_top_level=True)
-        pako_dist_dir = f"js/modules/pako-{pako_version}/package/dist/"
+        module_name = "pako"
+        js_modules[module_name] = []
+        module_version = "2.1.0"
+        pako_files = env.UnTar(f"js/modules/{module_name}-{module_version}.tgz", one_top_level=True)
+        pako_dist_dir = f"js/modules/{module_name}-{module_version}/package/dist/"
         for f in pako_files:
             if os.path.commonprefix([pako_dist_dir, str(f)]) == pako_dist_dir:
                 # Remove non-module files
                 if ".esm" in f.name:
-                    js_modules["pako"].append(
+                    js_modules[module_name].append(
                         {
                             "path": f.name,
                             "file": f,
@@ -121,14 +139,15 @@ if env["include_client_compression_libraries"]:
                     )
 
     if "brotli" in env["compress_for_servers"]:
-        js_modules["brotli-dec-wasm"] = []
-        brotli_wasm_version = "2.3.0"
-        brotli_wasm_files = env.UnTar(f"js/modules/brotli-dec-wasm-{brotli_wasm_version}.tgz", one_top_level=True)
-        brotli_wasm_dist_dir = f"js/modules/brotli-dec-wasm-{brotli_wasm_version}/package/"
+        module_name = "brotli-dec-wasm"
+        js_modules[module_name] = []
+        module_version = "2.3.0"
+        brotli_wasm_files = env.UnTar(f"js/modules/{module_name}-{module_version}.tgz", one_top_level=True)
+        brotli_wasm_dist_dir = f"js/modules/{module_name}-{module_version}/package/"
         brotli_wasm_dist_pkgweb_dir = brotli_wasm_dist_dir + "pkg/"
         for f in brotli_wasm_files:
             if str(f) == brotli_wasm_dist_dir + "index.js":
-                js_modules["brotli-dec-wasm"].append(
+                js_modules[module_name].append(
                     {
                         "path": f.name,
                         "file": f,
@@ -137,7 +156,7 @@ if env["include_client_compression_libraries"]:
             elif os.path.commonprefix([brotli_wasm_dist_pkgweb_dir, str(f)]) == brotli_wasm_dist_pkgweb_dir:
                 # Remove Typescript definition files
                 if ".d.ts" not in f.name:
-                    js_modules["brotli-dec-wasm"].append(
+                    js_modules[module_name].append(
                         {
                             "path": f"pkg/{f.name}",
                             "file": f,

@@ -144,6 +144,11 @@ Copyright: 2021, brotli-wasm authors (presumed)
  myl7
 License: Apache-2.0, Expat
 
+Files: platform/web/js/modules/oneidentity-zstd-js-1.0.3.tgz
+Comment: zstd-js
+Copyright: 2022, One Identity
+License: Expat
+
 Files: platform/web/js/modules/pako-2.1.0.tgz
 Comment: pako
 Copyright: 1995-2013 Jean-loup Gailly, Mark Adler
