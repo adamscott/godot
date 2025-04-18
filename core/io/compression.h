@@ -58,19 +58,44 @@ public:
 				BROTLI_ENCODER_MODE_TEXT,
 			};
 
-			EncoderMode encoder_mode = BROTLI_ENCODER_MODE_GENERIC;
+		private:
+			EncoderMode _encoder_mode = BROTLI_ENCODER_MODE_GENERIC;
+
+		public:
+			EncoderMode get_encoder_mode() const {
+				return _encoder_mode;
+			}
+
+			void set_encoder_mode(EncoderMode p_encoder_mode) {
+				_encoder_mode = p_encoder_mode;
+			}
 		};
 
-		Mode mode;
+	private:
+		Mode _mode = MODE_ZSTD;
+		bool _mode_set = false;
+
 		union {
-			Brotli *brotli = nullptr;
+			Brotli *_brotli = nullptr;
 		};
 
-		Settings(Mode p_mode = MODE_ZSTD) {
-			mode = p_mode;
-			switch (mode) {
+	public:
+		Mode get_mode() const {
+			if (!_mode_set) {
+				ERR_FAIL_V_MSG(_mode, "Trying to get mode when none has been set yet");
+			}
+			return _mode;
+		}
+
+		void set_mode(Mode p_mode) {
+			if (_mode_set) {
+				ERR_FAIL_MSG("Cannot set mode twice.");
+			}
+			_mode_set = true;
+			_mode = p_mode;
+			switch (_mode) {
 				case MODE_BROTLI: {
-					brotli = memnew(Brotli);
+					_brotli = memnew(Brotli);
 				} break;
 				default: {
 					// Do nothing.
@@ -78,9 +103,31 @@ public:
 			}
 		}
 
+		Brotli *get_brotli() const {
+			return _brotli;
+		}
+
+		Settings() {
+			_mode = MODE_ZSTD;
+			_mode_set = false;
+			_brotli = nullptr;
+		}
+
+		Settings(Mode p_mode) {
+			set_mode(p_mode);
+		}
+
 		~Settings() {
-			if (brotli != nullptr) {
-				memfree(brotli);
+			if (!_mode_set) {
+				return;
+			}
+			switch (_mode) {
+				case MODE_BROTLI: {
+					memfree(_brotli);
+				} break;
+				default: {
+					// Do nothing.
+				}
 			}
 		}
 	};
