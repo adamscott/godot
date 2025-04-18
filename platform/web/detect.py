@@ -12,6 +12,7 @@ from emscripten_helpers import (
     run_brotli_compression,
     run_closure_compiler,
     run_gzip_compression,
+    run_zstd_compression,
 )
 from SCons.Util import WhereIs
 
@@ -63,8 +64,8 @@ def get_opts():
             "compress_for_servers",
             help="Compress ahead files for compatible servers to reduce download size. Compression can take some time",
             default="none",
-            names=["gzip", "brotli"],
-            map={"gz": "gzip", "br": "brotli"},
+            names=["zstd", "gzip", "brotli"],
+            map={"zst": "zstd", "gz": "gzip", "br": "brotli"},
         ),
         BoolVariable(
             "include_client_compression_libraries",
@@ -325,6 +326,11 @@ def configure(env: "SConsEnvironment"):
             return [p.target_from_source("", f"{splitext(p.name)[1]}.{suffix}") for p in source], source
 
         return emitter
+
+    if "zstd" in env["compress_for_servers"]:
+        zstd_action = env.Action(run_zstd_compression)
+        zstd_builder = env.Builder(action=zstd_action, emitter=generate_compress_emitter("zst"))
+        env.Append(BUILDERS={"CompressZstd": zstd_builder})
 
     if "gzip" in env["compress_for_servers"]:
         gzip_action = env.Action(run_gzip_compression)
