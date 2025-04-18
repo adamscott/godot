@@ -40,6 +40,7 @@
 
 #ifdef BROTLI_ENABLED
 #include <brotli/decode.h>
+#include <brotli/encode.h>
 #endif
 
 // Caches for zstd.
@@ -48,10 +49,23 @@ static ZSTD_DCtx *current_zstd_d_ctx = nullptr;
 static bool current_zstd_long_distance_matching;
 static int current_zstd_window_log_size;
 
-int Compression::compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, Mode p_mode) {
-	switch (p_mode) {
+int Compression::compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, const Settings &p_settings) {
+	switch (p_settings.mode) {
 		case MODE_BROTLI: {
-			ERR_FAIL_V_MSG(-1, "Only brotli decompression is supported.");
+			BrotliEncoderMode mode = BROTLI_MODE_GENERIC;
+			switch (p_settings.brotli->encoder_mode) {
+				case Settings::Brotli::BROTLI_ENCODER_MODE_FONT: {
+					mode = BROTLI_MODE_FONT;
+				} break;
+				case Settings::Brotli::BROTLI_ENCODER_MODE_GENERIC: {
+					mode = BROTLI_MODE_GENERIC;
+				} break;
+				case Settings::Brotli::BROTLI_ENCODER_MODE_TEXT: {
+					mode = BROTLI_MODE_TEXT;
+				} break;
+			}
+			size_t encoded_size;
+			return BrotliEncoderCompress(9, 0, mode, p_src_size, p_src, &encoded_size, p_dst);
 		} break;
 		case MODE_FASTLZ: {
 			if (p_src_size < 16) {
@@ -66,13 +80,13 @@ int Compression::compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, 
 		} break;
 		case MODE_DEFLATE:
 		case MODE_GZIP: {
-			int window_bits = p_mode == MODE_DEFLATE ? 15 : 15 + 16;
+			int window_bits = p_settings.mode == MODE_DEFLATE ? 15 : 15 + 16;
 
 			z_stream strm;
 			strm.zalloc = zipio_alloc;
 			strm.zfree = zipio_free;
 			strm.opaque = Z_NULL;
-			int level = p_mode == MODE_DEFLATE ? zlib_level : gzip_level;
+			int level = p_settings.mode == MODE_DEFLATE ? zlib_level : gzip_level;
 			int err = deflateInit2(&strm, level, Z_DEFLATED, window_bits, 8, Z_DEFAULT_STRATEGY);
 			if (err != Z_OK) {
 				return -1;
@@ -96,7 +110,7 @@ int Compression::compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, 
 				ZSTD_CCtx_setParameter(cctx, ZSTD_c_enableLongDistanceMatching, 1);
 				ZSTD_CCtx_setParameter(cctx, ZSTD_c_windowLog, zstd_window_log_size);
 			}
-			int max_dst_size = get_max_compressed_buffer_size(p_src_size, MODE_ZSTD);
+			int max_dst_size = get_max_compressed_buffer_size(p_src_size, p_settings);
 			int ret = ZSTD_compressCCtx(cctx, p_dst, max_dst_size, p_src, p_src_size, zstd_level);
 			ZSTD_freeCCtx(cctx);
 			return ret;
@@ -106,10 +120,10 @@ int Compression::compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, 
 	ERR_FAIL_V(-1);
 }
 
-int Compression::get_max_compressed_buffer_size(int p_src_size, Mode p_mode) {
-	switch (p_mode) {
+int Compression::get_max_compressed_buffer_size(int p_src_size, const Settings &p_settings) {
+	switch (p_settings.mode) {
 		case MODE_BROTLI: {
-			ERR_FAIL_V_MSG(-1, "Only brotli decompression is supported.");
+			return BrotliEncoderMaxCompressedSize(p_src_size);
 		} break;
 		case MODE_FASTLZ: {
 			int ss = p_src_size + p_src_size * 6 / 100;
@@ -121,7 +135,7 @@ int Compression::get_max_compressed_buffer_size(int p_src_size, Mode p_mode) {
 		} break;
 		case MODE_DEFLATE:
 		case MODE_GZIP: {
-			int window_bits = p_mode == MODE_DEFLATE ? 15 : 15 + 16;
+			int window_bits = p_settings.mode == MODE_DEFLATE ? 15 : 15 + 16;
 
 			z_stream strm;
 			strm.zalloc = zipio_alloc;
@@ -143,8 +157,8 @@ int Compression::get_max_compressed_buffer_size(int p_src_size, Mode p_mode) {
 	ERR_FAIL_V(-1);
 }
 
-int Compression::decompress(uint8_t *p_dst, int p_dst_max_size, const uint8_t *p_src, int p_src_size, Mode p_mode) {
-	switch (p_mode) {
+int Compression::decompress(uint8_t *p_dst, int p_dst_max_size, const uint8_t *p_src, int p_src_size, const Settings &p_settings) {
+	switch (p_settings.mode) {
 		case MODE_BROTLI: {
 #ifdef BROTLI_ENABLED
 			size_t ret_size = p_dst_max_size;
@@ -170,7 +184,7 @@ int Compression::decompress(uint8_t *p_dst, int p_dst_max_size, const uint8_t *p
 		} break;
 		case MODE_DEFLATE:
 		case MODE_GZIP: {
-			int window_bits = p_mode == MODE_DEFLATE ? 15 : 15 + 16;
+			int window_bits = p_settings.mode == MODE_DEFLATE ? 15 : 15 + 16;
 
 			z_stream strm;
 			strm.zalloc = zipio_alloc;
@@ -221,13 +235,13 @@ int Compression::decompress(uint8_t *p_dst, int p_dst_max_size, const uint8_t *p
 	This is required for compressed data whose final uncompressed size is unknown, as is the case for HTTP response bodies.
 	This is much slower however than using Compression::decompress because it may result in multiple full copies of the output buffer.
 */
-int Compression::decompress_dynamic(Vector<uint8_t> *p_dst_vect, int p_max_dst_size, const uint8_t *p_src, int p_src_size, Mode p_mode) {
+int Compression::decompress_dynamic(Vector<uint8_t> *p_dst_vect, int p_max_dst_size, const uint8_t *p_src, int p_src_size, const Settings &p_settings) {
 	uint8_t *dst = nullptr;
 	int out_mark = 0;
 
 	ERR_FAIL_COND_V(p_src_size <= 0, Z_DATA_ERROR);
 
-	if (p_mode == MODE_BROTLI) {
+	if (p_settings.mode == MODE_BROTLI) {
 #ifdef BROTLI_ENABLED
 		BrotliDecoderResult ret;
 		BrotliDecoderState *state = BrotliDecoderCreateInstance(nullptr, nullptr, nullptr);
@@ -287,11 +301,11 @@ int Compression::decompress_dynamic(Vector<uint8_t> *p_dst_vect, int p_max_dst_s
 #endif
 	} else {
 		// This function only supports GZip and Deflate.
-		ERR_FAIL_COND_V(p_mode != MODE_DEFLATE && p_mode != MODE_GZIP, Z_ERRNO);
+		ERR_FAIL_COND_V(p_settings.mode != MODE_DEFLATE && p_settings.mode != MODE_GZIP, Z_ERRNO);
 
 		int ret;
 		z_stream strm;
-		int window_bits = p_mode == MODE_DEFLATE ? 15 : 15 + 16;
+		int window_bits = p_settings.mode == MODE_DEFLATE ? 15 : 15 + 16;
 
 		// Initialize the stream.
 		strm.zalloc = Z_NULL;
