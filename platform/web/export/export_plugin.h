@@ -30,6 +30,7 @@
 
 #pragma once
 
+#include "core/io/file_access_compressed.h"
 #include "editor_http_server.h"
 
 #include "core/config/project_settings.h"
@@ -114,6 +115,9 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 	Error _launch_browser(const String &p_bind_host, uint16_t p_bind_port, bool p_use_tls);
 	Error _start_server(const String &p_bind_host, uint16_t p_bind_port, bool p_use_tls);
 	Error _stop_server();
+
+	Error _compress_file_to_formats_if_applicable(const String &p_path, const Ref<EditorExportPreset> &p_preset);
+	String _compress_file_to_format(const String &p_path, FileAccessCompressed::CompressionMode p_mode, Error *r_error);
 
 public:
 	virtual void get_preset_features(const Ref<EditorExportPreset> &p_preset, List<String> *r_features) const override;

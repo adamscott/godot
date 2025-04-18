@@ -50,10 +50,10 @@ static bool current_zstd_long_distance_matching;
 static int current_zstd_window_log_size;
 
 int Compression::compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, const Settings &p_settings) {
-	switch (p_settings.mode) {
+	switch (p_settings.get_mode()) {
 		case MODE_BROTLI: {
 			BrotliEncoderMode mode = BROTLI_MODE_GENERIC;
-			switch (p_settings.brotli->encoder_mode) {
+			switch (p_settings.get_brotli()->get_encoder_mode()) {
 				case Settings::Brotli::BROTLI_ENCODER_MODE_FONT: {
 					mode = BROTLI_MODE_FONT;
 				} break;
@@ -65,7 +65,10 @@ int Compression::compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, 
 				} break;
 			}
 			size_t encoded_size;
-			return BrotliEncoderCompress(9, 0, mode, p_src_size, p_src, &encoded_size, p_dst);
+			if (BrotliEncoderCompress(9, 0, mode, p_src_size, p_src, &encoded_size, p_dst)) {
+				return encoded_size;
+			}
+			return -1;
 		} break;
 		case MODE_FASTLZ: {
 			if (p_src_size < 16) {
@@ -80,13 +83,13 @@ int Compression::compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, 
 		} break;
 		case MODE_DEFLATE:
 		case MODE_GZIP: {
-			int window_bits = p_settings.mode == MODE_DEFLATE ? 15 : 15 + 16;
+			int window_bits = p_settings.get_mode() == MODE_DEFLATE ? 15 : 15 + 16;
 
 			z_stream strm;
 			strm.zalloc = zipio_alloc;
 			strm.zfree = zipio_free;
 			strm.opaque = Z_NULL;
-			int level = p_settings.mode == MODE_DEFLATE ? zlib_level : gzip_level;
+			int level = p_settings.get_mode() == MODE_DEFLATE ? zlib_level : gzip_level;
 			int err = deflateInit2(&strm, level, Z_DEFLATED, window_bits, 8, Z_DEFAULT_STRATEGY);
 			if (err != Z_OK) {
 				return -1;
@@ -121,7 +124,7 @@ int Compression::compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, 
 }
 
 int Compression::get_max_compressed_buffer_size(int p_src_size, const Settings &p_settings) {
-	switch (p_settings.mode) {
+	switch (p_settings.get_mode()) {
 		case MODE_BROTLI: {
 			return BrotliEncoderMaxCompressedSize(p_src_size);
 		} break;
@@ -135,7 +138,7 @@ int Compression::get_max_compressed_buffer_size(int p_src_size, const Settings &
 		} break;
 		case MODE_DEFLATE:
 		case MODE_GZIP: {
-			int window_bits = p_settings.mode == MODE_DEFLATE ? 15 : 15 + 16;
+			int window_bits = p_settings.get_mode() == MODE_DEFLATE ? 15 : 15 + 16;
 
 			z_stream strm;
 			strm.zalloc = zipio_alloc;
@@ -158,7 +161,7 @@ int Compression::get_max_compressed_buffer_size(int p_src_size, const Settings &
 }
 
 int Compression::decompress(uint8_t *p_dst, int p_dst_max_size, const uint8_t *p_src, int p_src_size, const Settings &p_settings) {
-	switch (p_settings.mode) {
+	switch (p_settings.get_mode()) {
 		case MODE_BROTLI: {
 #ifdef BROTLI_ENABLED
 			size_t ret_size = p_dst_max_size;
@@ -184,7 +187,7 @@ int Compression::decompress(uint8_t *p_dst, int p_dst_max_size, const uint8_t *p
 		} break;
 		case MODE_DEFLATE:
 		case MODE_GZIP: {
-			int window_bits = p_settings.mode == MODE_DEFLATE ? 15 : 15 + 16;
+			int window_bits = p_settings.get_mode() == MODE_DEFLATE ? 15 : 15 + 16;
 
 			z_stream strm;
 			strm.zalloc = zipio_alloc;
@@ -241,7 +244,7 @@ int Compression::decompress_dynamic(Vector<uint8_t> *p_dst_vect, int p_max_dst_s
 
 	ERR_FAIL_COND_V(p_src_size <= 0, Z_DATA_ERROR);
 
-	if (p_settings.mode == MODE_BROTLI) {
+	if (p_settings.get_mode() == MODE_BROTLI) {
 #ifdef BROTLI_ENABLED
 		BrotliDecoderResult ret;
 		BrotliDecoderState *state = BrotliDecoderCreateInstance(nullptr, nullptr, nullptr);
@@ -301,11 +304,11 @@ int Compression::decompress_dynamic(Vector<uint8_t> *p_dst_vect, int p_max_dst_s
 #endif
 	} else {
 		// This function only supports GZip and Deflate.
-		ERR_FAIL_COND_V(p_settings.mode != MODE_DEFLATE && p_settings.mode != MODE_GZIP, Z_ERRNO);
+		ERR_FAIL_COND_V(p_settings.get_mode() != MODE_DEFLATE && p_settings.get_mode() != MODE_GZIP, Z_ERRNO);
 
 		int ret;
 		z_stream strm;
-		int window_bits = p_settings.mode == MODE_DEFLATE ? 15 : 15 + 16;
+		int window_bits = p_settings.get_mode() == MODE_DEFLATE ? 15 : 15 + 16;
 
 		// Initialize the stream.
 		strm.zalloc = Z_NULL;

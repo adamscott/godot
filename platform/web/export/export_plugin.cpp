@@ -30,6 +30,10 @@
 
 #include "export_plugin.h"
 
+#include "core/error/error_list.h"
+#include "core/io/file_access.h"
+#include "core/io/file_access_compressed.h"
+#include "core/variant/variant.h"
 #include "logo_svg.gen.h"
 #include "run_icon_svg.gen.h"
 
@@ -225,6 +229,8 @@ Error EditorExportPlatformWeb::_add_manifest_icon(const Ref<EditorExportPreset> 
 }
 
 Error EditorExportPlatformWeb::_build_pwa(const Ref<EditorExportPreset> &p_preset, const String p_path, const Vector<SharedObject> &p_shared_objects) {
+	Error err;
+
 	String proj_name = get_project_setting(p_preset, "application/config/name");
 	if (proj_name.is_empty()) {
 		proj_name = "Godot Game";
@@ -241,6 +247,27 @@ Error EditorExportPlatformWeb::_build_pwa(const Ref<EditorExportPreset> &p_prese
 	replaces["___GODOT_OFFLINE_PAGE___"] = name + ".offline.html";
 	replaces["___GODOT_ENSURE_CROSSORIGIN_ISOLATION_HEADERS___"] = ensure_crossorigin_isolation_headers ? "true" : "false";
 
+	auto add_compressed_cache_files = [&](Array &p_files) {
+		Array files_to_add;
+		auto loop_and_add = [&](const String &p_preset_key, const String &p_extension) {
+			if (p_preset->get(p_preset_key).operator bool()) {
+				for (const Variant &file : p_files) {
+					files_to_add.push_back(String(file) + p_extension);
+				}
+			}
+		};
+		loop_and_add("bandwidth_saver/zstd_compress", ".zst");
+		loop_and_add("bandwidth_saver/gzip_compress", ".gz");
+#ifdef BROTLI_ENABLED
+		loop_and_add("bandwidth_saver/brotli_compress", ".br");
+#endif
+
+		if (files_to_add.is_empty()) {
+			return;
+		}
+		p_files.append_array(files_to_add);
+	};
+
 	// Files cached during worker install.
 	Array cache_files = {
 		name + ".html",
@@ -251,9 +278,9 @@ Error EditorExportPlatformWeb::_build_pwa(const Ref<EditorExportPreset> &p_prese
 		cache_files.push_back(name + ".icon.png");
 		cache_files.push_back(name + ".apple-touch-icon.png");
 	}
-
 	cache_files.push_back(name + ".audio.worklet.js");
 	cache_files.push_back(name + ".audio.position.worklet.js");
+	add_compressed_cache_files(cache_files);
 	replaces["___GODOT_CACHE___"] = Variant(cache_files).to_json_string();
 
 	// Heavy files that are cached on demand.
@@ -267,6 +294,7 @@ Error EditorExportPlatformWeb::_build_pwa(const Ref<EditorExportPreset> &p_prese
 			opt_cache_files.push_back(p_shared_objects[i].path.get_file());
 		}
 	}
+	add_compressed_cache_files(opt_cache_files);
 	replaces["___GODOT_OPT_CACHE___"] = Variant(opt_cache_files).to_json_string();
 
 	const String sw_path = dir.path_join(name + ".service.worker.js");
@@ -281,7 +309,12 @@ Error EditorExportPlatformWeb::_build_pwa(const Ref<EditorExportPreset> &p_prese
 		f->get_buffer(sw.ptrw(), sw.size());
 	}
 	_replace_strings(replaces, sw);
-	Error err = _write_or_error(sw.ptr(), sw.size(), dir.path_join(name + ".service.worker.js"));
+	err = _write_or_error(sw.ptr(), sw.size(), sw_path);
+	if (err != OK) {
+		// Message is supplied by the subroutine method.
+		return err;
+	}
+	err = _compress_file_to_formats_if_applicable(sw_path, p_preset);
 	if (err != OK) {
 		// Message is supplied by the subroutine method.
 		return err;
@@ -295,6 +328,11 @@ Error EditorExportPlatformWeb::_build_pwa(const Ref<EditorExportPreset> &p_prese
 		err = da->copy(ProjectSettings::get_singleton()->globalize_path(offline_page), offline_dest);
 		if (err != OK) {
 			add_message(EXPORT_MESSAGE_ERROR, TTR("PWA"), vformat(TTR("Could not read file: \"%s\"."), offline_dest));
+			return err;
+		}
+		err = _compress_file_to_formats_if_applicable(offline_dest, p_preset);
+		if (err != OK) {
+			// Message is supplied by the subroutine method.
 			return err;
 		}
 	}
@@ -334,7 +372,13 @@ Error EditorExportPlatformWeb::_build_pwa(const Ref<EditorExportPreset> &p_prese
 	manifest["icons"] = icons_arr;
 
 	CharString cs = Variant(manifest).to_json_string().utf8();
-	err = _write_or_error((const uint8_t *)cs.get_data(), cs.length(), dir.path_join(name + ".manifest.json"));
+	const String manifest_path = dir.path_join(name + ".manifest.json");
+	err = _write_or_error((const uint8_t *)cs.get_data(), cs.length(), manifest_path);
+	if (err != OK) {
+		// Message is supplied by the subroutine method.
+		return err;
+	}
+	err = _compress_file_to_formats_if_applicable(manifest_path, p_preset);
 	if (err != OK) {
 		// Message is supplied by the subroutine method.
 		return err;
@@ -366,6 +410,13 @@ void EditorExportPlatformWeb::get_export_options(List<ExportOption> *r_options) 
 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "variant/extensions_support"), false)); // GDExtension support.
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "variant/thread_support"), false)); // Thread support (i.e. run with or without COEP/COOP headers).
+
+	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "bandwidth_saver/zstd_compress"), false));
+	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "bandwidth_saver/gzip_compress"), false));
+#ifdef BROTLI_ENABLED
+	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "bandwidth_saver/brotli_compress"), false));
+#endif
+
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "vram_texture_compression/for_desktop"), true)); // S3TC
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "vram_texture_compression/for_mobile"), false)); // ETC or ETC2, depending on renderer
 
@@ -477,6 +528,8 @@ List<String> EditorExportPlatformWeb::get_binary_extensions(const Ref<EditorExpo
 Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, BitField<EditorExportPlatform::DebugFlags> p_flags) {
 	ExportNotifier notifier(*this, p_preset, p_debug, p_path, p_flags);
 
+	Error error;
+
 	const String custom_debug = p_preset->get("custom_template/debug");
 	const String custom_release = p_preset->get("custom_template/release");
 	const String custom_html = p_preset->get("html/custom_html_shell");
@@ -509,9 +562,14 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 	// Export pck and shared objects
 	Vector<SharedObject> shared_objects;
 	String pck_path = base_path + ".pck";
-	Error error = save_pack(p_preset, p_debug, pck_path, &shared_objects);
+	error = save_pack(p_preset, p_debug, pck_path, &shared_objects);
 	if (error != OK) {
 		add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), pck_path));
+		return error;
+	}
+	error = _compress_file_to_formats_if_applicable(pck_path, p_preset);
+	if (error != OK) {
+		// Message is supplied by the subroutine method.
 		return error;
 	}
 
@@ -524,6 +582,11 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 				add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), shared_objects[i].path.get_file()));
 				return error;
 			}
+			error = _compress_file_to_formats_if_applicable(dst, p_preset);
+			if (error != OK) {
+				// Message is supplied by the subroutine method.
+				return error;
+			}
 		}
 	}
 
@@ -533,22 +596,35 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 		// Message is supplied by the subroutine method.
 		return error;
 	}
+	// Hopefully, the template will include itself compressed files.
 
 	// Parse generated file sizes (pck and wasm, to help show a meaningful loading bar).
 	Dictionary file_sizes;
-	Ref<FileAccess> f = FileAccess::open(pck_path, FileAccess::READ);
-	if (f.is_valid()) {
-		file_sizes[pck_path.get_file()] = (uint64_t)f->get_length();
-	}
-	f = FileAccess::open(base_path + ".wasm", FileAccess::READ);
-	if (f.is_valid()) {
-		file_sizes[base_name + ".wasm"] = (uint64_t)f->get_length();
-	}
+
+	auto add_file_size = [&](String file_path) {
+		Ref<FileAccess> file = FileAccess::open(file_path, FileAccess::READ);
+		if (file.is_null()) {
+			return;
+		}
+		file_sizes[file_path.get_file()] = static_cast<uint64_t>(file->get_length());
+	};
+
+	add_file_size(pck_path);
+#ifdef BROTLI_ENABLED
+	add_file_size(pck_path + ".br");
+#endif
+	add_file_size(pck_path + ".gz");
+
+	String wasm_path = base_path + ".wasm";
+	add_file_size(wasm_path);
+	// No need for an #ifdef here, as the template may have been brotli compressed.
+	add_file_size(wasm_path + ".br");
+	add_file_size(wasm_path + ".gz");
 
 	// Read the HTML shell file (custom or from template).
 	const String html_path = custom_html.is_empty() ? base_path + ".html" : custom_html;
 	Vector<uint8_t> html;
-	f = FileAccess::open(html_path, FileAccess::READ);
+	Ref<FileAccess> f = FileAccess::open(html_path, FileAccess::READ);
 	if (f.is_null()) {
 		add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not read HTML shell: \"%s\"."), html_path));
 		return ERR_FILE_CANT_READ;
@@ -573,6 +649,11 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 		add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), splash_png_path));
 		return ERR_FILE_CANT_WRITE;
 	}
+	error = _compress_file_to_formats_if_applicable(splash_png_path, p_preset);
+	if (error != OK) {
+		// Message is supplied by the subroutine method.
+		return error;
+	}
 
 	// Save a favicon that can be accessed without waiting for the project to finish loading.
 	// This way, the favicon can be displayed immediately when loading the page.
@@ -583,11 +664,21 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 			add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), favicon_png_path));
 			return ERR_FILE_CANT_WRITE;
 		}
+		error = _compress_file_to_formats_if_applicable(favicon_png_path, p_preset);
+		if (error != OK) {
+			// Message is supplied by the subroutine method.
+			return error;
+		}
 		favicon->resize(180, 180);
 		const String apple_icon_png_path = base_path + ".apple-touch-icon.png";
 		if (favicon->save_png(apple_icon_png_path) != OK) {
 			add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), apple_icon_png_path));
 			return ERR_FILE_CANT_WRITE;
+		}
+		error = _compress_file_to_formats_if_applicable(apple_icon_png_path, p_preset);
+		if (error != OK) {
+			// Message is supplied by the subroutine method.
+			return error;
 		}
 	}
 
@@ -854,19 +945,30 @@ Error EditorExportPlatformWeb::_export_project(const Ref<EditorExportPreset> &p_
 	const String basepath = dest.path_join("tmp_js_export");
 	Error err = export_project(p_preset, true, basepath + ".html", p_debug_flags);
 	if (err != OK) {
+		auto remove_file = [](const String &path) {
+			DirAccess::remove_absolute(path);
+			DirAccess::remove_absolute(path + ".br");
+			DirAccess::remove_absolute(path + ".gz");
+		};
+
 		// Export generates several files, clean them up on failure.
-		DirAccess::remove_file_or_error(basepath + ".html");
-		DirAccess::remove_file_or_error(basepath + ".offline.html");
-		DirAccess::remove_file_or_error(basepath + ".js");
-		DirAccess::remove_file_or_error(basepath + ".audio.worklet.js");
-		DirAccess::remove_file_or_error(basepath + ".audio.position.worklet.js");
-		DirAccess::remove_file_or_error(basepath + ".service.worker.js");
-		DirAccess::remove_file_or_error(basepath + ".pck");
-		DirAccess::remove_file_or_error(basepath + ".png");
-		DirAccess::remove_file_or_error(basepath + ".side.wasm");
-		DirAccess::remove_file_or_error(basepath + ".wasm");
-		DirAccess::remove_file_or_error(basepath + ".icon.png");
-		DirAccess::remove_file_or_error(basepath + ".apple-touch-icon.png");
+		remove_file(basepath + ".html");
+		remove_file(basepath + ".offline.html");
+		remove_file(basepath + ".js");
+		remove_file(basepath + ".audio.worklet.js");
+		remove_file(basepath + ".audio.position.worklet.js");
+		remove_file(basepath + ".service.worker.js");
+		remove_file(basepath + ".pck");
+		remove_file(basepath + ".png");
+		remove_file(basepath + ".side.wasm");
+		remove_file(basepath + ".wasm");
+		remove_file(basepath + ".icon.png");
+		remove_file(basepath + ".apple-touch-icon.png");
+
+		Ref<DirAccess> template_dir = DirAccess::open(basepath.path_join("template"));
+		if (template_dir->exists(".")) {
+			template_dir->erase_contents_recursive();
+		}
 	}
 	return err;
 }
@@ -902,6 +1004,102 @@ Error EditorExportPlatformWeb::_start_server(const String &p_bind_host, const ui
 Error EditorExportPlatformWeb::_stop_server() {
 	server->stop();
 	return OK;
+}
+
+Error EditorExportPlatformWeb::_compress_file_to_formats_if_applicable(const String &p_path, const Ref<EditorExportPreset> &p_preset) {
+	Error err;
+	if (p_preset->get("bandwidth_saver/zstd_compress").operator bool()) {
+		String compressed_path = _compress_file_to_format(p_path, FileAccessCompressed::COMPRESSION_ZSTD, &err);
+		if (err != OK) {
+			add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), compressed_path));
+			ERR_FAIL_V_MSG(err, "Error while zstd compressing an exported file");
+		}
+	}
+	if (p_preset->get("bandwidth_saver/gzip_compress").operator bool()) {
+		String compressed_path = _compress_file_to_format(p_path, FileAccessCompressed::COMPRESSION_GZIP, &err);
+		if (err != OK) {
+			add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), compressed_path));
+			ERR_FAIL_V_MSG(err, "Error while gzip compressing an exported file");
+		}
+	}
+#ifdef BROTLI_ENABLED
+	if (p_preset->get("bandwidth_saver/brotli_compress").operator bool()) {
+		String compressed_path = _compress_file_to_format(p_path, FileAccessCompressed::COMPRESSION_BROTLI, &err);
+		if (err != OK) {
+			add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), compressed_path));
+			ERR_FAIL_V_MSG(err, "Error while brotli compressing an exported file");
+		}
+	}
+#endif
+	return OK;
+}
+
+String EditorExportPlatformWeb::_compress_file_to_format(const String &p_path, FileAccessCompressed::CompressionMode p_mode, Error *r_error) {
+	String compressed_path;
+	Compression::Settings compression_settings;
+
+	switch (p_mode) {
+		case FileAccessCompressed::COMPRESSION_ZSTD: {
+			compressed_path = p_path + ".zst";
+			compression_settings.set_mode(Compression::MODE_ZSTD);
+		} break;
+		case FileAccessCompressed::COMPRESSION_GZIP: {
+			compressed_path = p_path + ".gz";
+			compression_settings.set_mode(Compression::MODE_GZIP);
+		} break;
+#ifdef BROTLI_ENABLED
+		case FileAccessCompressed::COMPRESSION_BROTLI: {
+			compressed_path = p_path + ".br";
+			const String path_extension = p_path.get_extension();
+			compression_settings.set_mode(Compression::MODE_BROTLI);
+			const PackedStringArray text_files = {
+				".txt",
+				".js",
+			};
+			const PackedStringArray font_files = {
+				".otf",
+				".ttf",
+				".woff",
+				".woff2",
+			};
+			if (text_files.has(path_extension)) {
+				compression_settings.get_brotli()->set_encoder_mode(Compression::Settings::Brotli::BROTLI_ENCODER_MODE_TEXT);
+			} else if (font_files.has(path_extension)) {
+				compression_settings.get_brotli()->set_encoder_mode(Compression::Settings::Brotli::BROTLI_ENCODER_MODE_FONT);
+			} else {
+				compression_settings.get_brotli()->set_encoder_mode(Compression::Settings::Brotli::BROTLI_ENCODER_MODE_GENERIC);
+			}
+		} break;
+#endif
+		default: {
+			*r_error = ERR_INVALID_PARAMETER;
+			return "";
+		}
+	}
+
+	PackedByteArray src_file_bytes;
+	PackedByteArray dst_file_bytes;
+	{
+		// Read.
+		Ref<FileAccess> file = FileAccess::open(p_path, FileAccess::READ);
+		src_file_bytes.resize(file->get_length());
+		file->get_buffer(src_file_bytes.ptrw(), file->get_length());
+	}
+	{
+		// Write.
+		dst_file_bytes.resize(Compression::get_max_compressed_buffer_size(src_file_bytes.size(), compression_settings));
+		int compressed_size = Compression::compress(dst_file_bytes.ptrw(), src_file_bytes.ptr(), src_file_bytes.size(), compression_settings);
+		if (compressed_size < 0) {
+			*r_error = FAILED;
+			return compressed_path;
+		}
+		Ref<FileAccess> file_compressed = FileAccess::open(compressed_path, FileAccess::WRITE);
+		file_compressed->store_buffer(dst_file_bytes.ptr(), compressed_size);
+		file_compressed->close();
+	}
+
+	*r_error = OK;
+	return compressed_path;
 }
 
 Ref<Texture2D> EditorExportPlatformWeb::get_run_icon() const {
