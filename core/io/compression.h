@@ -50,8 +50,56 @@ public:
 		MODE_BROTLI
 	};
 
-	static int compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, Mode p_mode = MODE_ZSTD);
-	static int get_max_compressed_buffer_size(int p_src_size, Mode p_mode = MODE_ZSTD);
-	static int decompress(uint8_t *p_dst, int p_dst_max_size, const uint8_t *p_src, int p_src_size, Mode p_mode = MODE_ZSTD);
-	static int decompress_dynamic(Vector<uint8_t> *p_dst_vect, int p_max_dst_size, const uint8_t *p_src, int p_src_size, Mode p_mode);
+	struct Settings {
+		struct Brotli {
+			enum EncoderMode {
+				BROTLI_ENCODER_MODE_FONT,
+				BROTLI_ENCODER_MODE_GENERIC,
+				BROTLI_ENCODER_MODE_TEXT,
+			};
+
+			EncoderMode encoder_mode = BROTLI_ENCODER_MODE_GENERIC;
+		};
+
+		Mode mode;
+		union {
+			Brotli *brotli = nullptr;
+		};
+
+		Settings(Mode p_mode = MODE_ZSTD) {
+			mode = p_mode;
+			switch (mode) {
+				case MODE_BROTLI: {
+					brotli = memnew(Brotli);
+				} break;
+				default: {
+					// Do nothing.
+				}
+			}
+		}
+
+		~Settings() {
+			if (brotli != nullptr) {
+				memfree(brotli);
+			}
+		}
+	};
+
+public:
+	static int compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, Mode p_mode = MODE_ZSTD) {
+		return compress(p_dst, p_src, p_src_size, Settings(p_mode));
+	}
+	static int compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, const Settings &p_settings = {});
+	static int get_max_compressed_buffer_size(int p_src_size, Mode p_mode = MODE_ZSTD) {
+		return get_max_compressed_buffer_size(p_src_size, Settings(p_mode));
+	}
+	static int get_max_compressed_buffer_size(int p_src_size, const Settings &p_settings = {});
+	static int decompress(uint8_t *p_dst, int p_dst_max_size, const uint8_t *p_src, int p_src_size, Mode p_mode = MODE_ZSTD) {
+		return decompress(p_dst, p_dst_max_size, p_src, p_src_size, Settings(p_mode));
+	}
+	static int decompress(uint8_t *p_dst, int p_dst_max_size, const uint8_t *p_src, int p_src_size, const Settings &p_settings = {});
+	static int decompress_dynamic(Vector<uint8_t> *p_dst_vect, int p_max_dst_size, const uint8_t *p_src, int p_src_size, Mode p_mode = MODE_ZSTD) {
+		return decompress_dynamic(p_dst_vect, p_max_dst_size, p_src, p_src_size, Settings(p_mode));
+	}
+	static int decompress_dynamic(Vector<uint8_t> *p_dst_vect, int p_max_dst_size, const uint8_t *p_src, int p_src_size, const Settings &p_settings = {});
 };
