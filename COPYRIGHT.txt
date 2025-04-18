@@ -138,10 +138,11 @@ Comment: ProcessPhoenix
 Copyright: 2015, Jake Wharton
 License: Apache-2.0
 
-Files: platform/web/js/modules/brotli-wasm-3.0.1.tgz
-Comment: brotli-wasm
+Files: platform/web/js/modules/brotli-wasm-dec-2.3.0.tgz
+Comment: brotli-wasm-dec
 Copyright: 2021, brotli-wasm authors (presumed)
-License: Apache-2.0
+ myl7
+License: Apache-2.0, Expat
 
 Files: platform/web/js/modules/pako-2.1.0.tgz
 Comment: pako
