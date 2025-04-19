@@ -132,11 +132,14 @@ const Features = {
 		const moduleDir = './template/js/modules';
 		let module = null;
 		switch (moduleName) {
+		case '_zstd':
+			module = import(`${moduleDir}/${moduleName}/index.mjs`);
+			break;
 		case 'pako':
-			module = import(`${moduleDir}/pako/pako.esm.mjs`);
+			module = import(`${moduleDir}/${moduleName}/pako.esm.mjs`);
 			break;
 		case 'brotli-dec-wasm':
-			module = import(`${moduleDir}/brotli-dec-wasm/index.js`);
+			module = import(`${moduleDir}/${moduleName}/index.js`);
 			break;
 		default:
 			throw new Error(`Module "${moduleName}" import not defined. This is a bug.`);

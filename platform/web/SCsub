@@ -3,6 +3,8 @@ from misc.utility.scons_hints import *
 
 import os.path
 
+from SCons.Util import splitext
+
 from methods import print_error
 
 Import("env")
@@ -105,21 +107,123 @@ sys_env.Depends(build[0], sys_env["JS_EXTERNS"])
 js_modules = {}
 if env["include_client_compression_libraries"]:
     if "zstd" in env["compress_for_servers"]:
-        module_name = "oneidentity-zstd-js"
-        js_modules[module_name] = []
-        module_version = "1.0.3"
-        module_files = env.UnTar(f"js/modules/{module_name}-{module_version}.tgz", one_top_level=True)
-        module_dist_dir = f"js/modules/{module_name}-{module_version}/package/wasm/decompress/"
-        for f in module_files:
-            if os.path.commonprefix([module_dist_dir, str(f)]) == module_dist_dir:
-                # Remove non-module files
-                if ".d.ts" not in f.name and ".cjs" not in f.name and ".umd" not in f.name:
-                    js_modules[module_name].append(
-                        {
-                            "path": f"wasm/decompress/{f.name}",
-                            "file": f,
-                        }
-                    )
+        module_name = "_zstd"
+
+        # Compiling Zstd module directly as existing JavaScript projects
+        # such as @oneidentity/zstd-js didn't work properly.
+        env_thirdparty_zstd = env.Clone()
+        thirdparty_zstd_dir = "#thirdparty/zstd/"
+        thirdparty_zstd_sources = [
+            "common/debug.c",
+            "common/entropy_common.c",
+            "common/error_private.c",
+            "common/fse_decompress.c",
+            "common/pool.c",
+            "common/threading.c",
+            "common/xxhash.c",
+            "common/zstd_common.c",
+            # "compress/fse_compress.c",
+            # "compress/hist.c",
+            # "compress/huf_compress.c",
+            # "compress/zstd_compress.c",
+            # "compress/zstd_double_fast.c",
+            # "compress/zstd_fast.c",
+            # "compress/zstd_lazy.c",
+            # "compress/zstd_ldm.c",
+            # "compress/zstd_opt.c",
+            # "compress/zstdmt_compress.c",
+            # "compress/zstd_compress_literals.c",
+            # "compress/zstd_compress_sequences.c",
+            # "compress/zstd_compress_superblock.c",
+            "decompress/huf_decompress.c",
+            "decompress/zstd_ddict.c",
+            "decompress/zstd_decompress_block.c",
+            "decompress/zstd_decompress.c",
+        ]
+        thirdparty_zstd_sources = [env.File(thirdparty_zstd_dir + file) for file in thirdparty_zstd_sources]
+        thirdparty_zstd_sources = [
+            env.Object(
+                target=f"{os.path.dirname(str(file))}/{splitext(os.path.basename(str(file)))[0]}.js_module.o",
+                source=file,
+            )
+            for file in thirdparty_zstd_sources
+        ]
+        env_thirdparty_zstd.Prepend(CPPEXTPATH=[thirdparty_zstd_dir, thirdparty_zstd_dir + "common"])
+        env_thirdparty_zstd.Append(CPPDEFINES=["ZSTD_LIB_COMPRESSION=0"])
+        new_linkflags = []
+        banned_flags = [
+            "EXPORT_NAME",
+            "INITIAL_MEMORY",
+            "MAX_WEBGL_VERSION",
+            "OFFSCREEN_FRAMEBUFFER",
+            "GL_ENABLE_GET_PROC_ADDRESS",
+            "ENVIRONMENT",
+            "MODULARIZE",
+            "INVOKE_RUN",
+            "EXPORTED_FUNCTIONS",
+            "EXPORTED_RUNTIME_METHODS",
+            "EXIT_RUNTIME",
+            "GL_WORKAROUND_SAFARI_GETCONTEXT_BUG",
+        ]
+        for linkflag in env_thirdparty_zstd["LINKFLAGS"]:
+            include_linkflag = True
+            for banned_flag in banned_flags:
+                if banned_flag in str(linkflag):
+                    include_linkflag = False
+                    break
+            if include_linkflag:
+                new_linkflags.append(linkflag)
+        env_thirdparty_zstd["LINKFLAGS"] = new_linkflags
+        exported_functions = [
+            "malloc",
+            "free",
+            "ZSTD_initDStream",
+            "ZSTD_freeDStream",
+            "ZSTD_decompressStream",
+            "ZSTD_DStreamInSize",
+            "ZSTD_DStreamOutSize",
+        ]
+        exported_functions = ",".join([f"'_{func}'" for func in exported_functions])
+        runtime_functions = [
+            "ccall",
+            "cwrap",
+            "getValue",
+            "setValue",
+            "writeArrayToMemory",
+        ]
+        runtime_functions = ",".join([f"'{func}'" for func in runtime_functions])
+        env_thirdparty_zstd.Append(
+            LINKFLAGS=[
+                "-sEXPORT_NAME='Zstd'",
+                "-sENVIRONMENT=web",
+                "-sEXPORT_ES6",
+                "-sMODULARIZE",
+                f"-sEXPORTED_FUNCTIONS=[{exported_functions}]",
+                f"-sEXPORTED_RUNTIME_METHODS=[{runtime_functions}]",
+            ]
+        )
+        zstd_module = env_thirdparty_zstd.add_program(
+            f"js/modules/{module_name}/zstd.mjs", sources=thirdparty_zstd_sources
+        )
+        zstd_module = env_thirdparty_zstd.NoCache(zstd_module)
+
+        zstd_index = env.File(f"js/modules/{module_name}/index.mjs")
+        zstd_wasm = env.File(f"js/modules/{module_name}/zstd.wasm")
+        js_modules[module_name] = [
+            {
+                "path": "index.mjs",
+                "file": zstd_index,
+            },
+            {
+                "path": "zstd.mjs",
+                "file": zstd_module,
+            },
+            {
+                "path": "zstd.wasm",
+                "file": zstd_wasm,
+            },
+        ]
+        env.Depends(zstd_wasm, zstd_module)
 
     if "gzip" in env["compress_for_servers"]:
         module_name = "pako"
