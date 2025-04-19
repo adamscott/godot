@@ -152,6 +152,7 @@ if env["include_client_compression_libraries"]:
         env_thirdparty_zstd.Append(CPPDEFINES=["ZSTD_LIB_COMPRESSION=0"])
         new_linkflags = []
         banned_flags = [
+            "STACK_SIZE",
             "EXPORT_NAME",
             "INITIAL_MEMORY",
             "MAX_WEBGL_VERSION",
@@ -177,19 +178,22 @@ if env["include_client_compression_libraries"]:
         exported_functions = [
             "malloc",
             "free",
-            "ZSTD_initDStream",
-            "ZSTD_freeDStream",
+            "ZSTD_createDCtx",
+            "ZSTD_freeDCtx",
+            "ZSTD_DCtx_setMaxWindowSize",
             "ZSTD_decompressStream",
             "ZSTD_DStreamInSize",
             "ZSTD_DStreamOutSize",
+            "ZSTD_isError",
+            "ZSTD_getErrorName",
         ]
         exported_functions = ",".join([f"'_{func}'" for func in exported_functions])
         runtime_functions = [
             "ccall",
             "cwrap",
-            "getValue",
-            "setValue",
-            "writeArrayToMemory",
+            "stackAlloc",
+            "stringToNewUTF8",
+            "UTF8ToString",
         ]
         runtime_functions = ",".join([f"'{func}'" for func in runtime_functions])
         env_thirdparty_zstd.Append(
