@@ -162,9 +162,9 @@ def add_js_externs(env, externs):
 
 
 def run_zstd_compression(target, source, env):
-    tar_path = WhereIs("tar")
-    if tar_path is None:
-        raise UserError("[Zstd] Could not find `tar` command line utility.")
+    zstd_path = WhereIs("zstd")
+    if zstd_path is None:
+        raise UserError("[Zstd] Could not find `zstd` command line utility.")
 
     for t in target:
         target_path = str(t)
@@ -174,8 +174,8 @@ def run_zstd_compression(target, source, env):
             absolute_source_path = env.File(source_path).get_abspath()
             source_stat = os.stat(absolute_source_path)
             human_size = human_readable_size(source_stat.st_size)
-            print_info(f'[brotli] Compressing "{source_path}" ({human_size}) to "{target_path}" ')
-            tar_cmd = [tar_path, "--zstd", "-cf", target_path, source_path]
+            print_info(f'[Zstd] Compressing "{source_path}" ({human_size}) to "{target_path}" ')
+            tar_cmd = [zstd_path, source_path, "-o", target_path, "--quiet"]
             subprocess.run(tar_cmd)
 
 
