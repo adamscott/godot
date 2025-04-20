@@ -265,8 +265,8 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 		if (!bandwidthSaver.checked) {
 			bandwidthSaver.checked = true;
 
-			const compressionFormats = Engine.getEngineFileCompressionFormats();
-			const availableModules = Engine.getJSModuleNames();
+			const availableModules = [];
+			const compressionFormats = [];
 			if (!headResponse.headers.has('content-encoding') && compressionFormats.length > 0) {
 				if (compressionFormats.includes('brotli') && availableModules.includes('brotli-dec-wasm')) {
 					bandwidthSaver.enabled = true;

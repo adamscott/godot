@@ -278,12 +278,6 @@ const Engine = (function () {
 	SafeEngine['isSharedArrayBufferAvailable'] = Features.isSharedArrayBufferAvailable;
 	SafeEngine['isAudioWorkletAvailable'] = Features.isAudioWorkletAvailable;
 	SafeEngine['getMissingFeatures'] = Features.getMissingFeatures;
-	SafeEngine['getEngineFileCompressionFormats'] = Features.getEngineFileCompressionFormats;
-	SafeEngine['getJSModuleNames'] = Features.getJSModuleNames;
-	SafeEngine['getJSModule'] = Features.getJSModule;
-
-	// Loaded JavaScript modules.
-	SafeEngine['modules'] = {};
 
 	return SafeEngine;
 }());

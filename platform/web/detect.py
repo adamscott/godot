@@ -67,10 +67,11 @@ def get_opts():
             names=["zstd", "gzip", "brotli"],
             map={"zst": "zstd", "gz": "gzip", "br": "brotli"},
         ),
-        BoolVariable(
-            "include_client_compression_libraries",
-            "Include client-side libraries to handle precompressed files",
-            False,
+        ListVariable(
+            "js_modules",
+            help="JS modules to build. They don't take bandwidth; they are loaded on-demand",
+            default="all",
+            names=["zstd", "gzip", "brotli"],
         ),
     ]
 

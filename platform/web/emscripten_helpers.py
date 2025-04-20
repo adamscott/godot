@@ -33,13 +33,11 @@ def create_engine_file(env, target, source, externs, subst_values):
         return env.BuildJS(target, source, JSEXTERNS=externs)
     subst_dict = {
         "___GODOT_THREADS_ENABLED___": "true" if subst_values["threads_enabled"] else "false",
-        "___GODOT_JS_MODULES___": json.dumps(subst_values["js_modules"]),
-        "___GODOT_COMPRESSION_FORMATS___": json.dumps(subst_values["compression_formats"]),
     }
     return env.Substfile(target=target, source=[str(s) for s in source], SUBST_DICT=subst_dict)
 
 
-def create_template_zip(env, js, main_wasm, side_wasm=None, modules={}):
+def create_template_zip(env, js, main_wasm, side_wasm=None, modules={}, import_map=None):
     binary_name = "godot.editor" if env.editor_build else "godot"
     zip_dir = env.Dir(env.GetTemplateZipPath())
 
@@ -69,16 +67,26 @@ def create_template_zip(env, js, main_wasm, side_wasm=None, modules={}):
         if "brotli" in env["compress_for_servers"]:
             add_brotli_file(in_file, out_file)
 
-    def add_to_template(in_file, zip_file):
+    def add_to_template(in_file, zip_file, skip_compression=False):
         out_file = zip_dir.File(zip_file)
         in_files.append(in_file)
         out_files.append(out_file)
-        compress_file(in_file, out_file)
+        if not skip_compression:
+            compress_file(in_file, out_file)
 
     add_to_template(js, binary_name + ".js")
     add_to_template(main_wasm, binary_name + ".wasm")
     add_to_template("#platform/web/js/libs/audio.worklet.js", binary_name + ".audio.worklet.js")
     add_to_template("#platform/web/js/libs/audio.position.worklet.js", binary_name + ".audio.position.worklet.js")
+
+    add_to_template(
+        env.Textfile(
+            target="#platform/web/js/importmap/js_import_map.json",
+            source=json.dumps(import_map, indent=True),
+        ),
+        "template/js/importmap/import_map.json",
+        skip_compression=True,
+    )
 
     # JavaScript modules
     for module_name in modules.keys():
@@ -113,6 +121,7 @@ def create_template_zip(env, js, main_wasm, side_wasm=None, modules={}):
             "___GODOT_OFFLINE_PAGE___": "offline.html",
             "___GODOT_THREADS_ENABLED___": "true" if env["threads"] else "false",
             "___GODOT_ENSURE_CROSSORIGIN_ISOLATION_HEADERS___": "true",
+            "___GODOT_JS_IMPORT_MAP___": json.dumps(import_map),
         }
         html = env.Substfile(target="#bin/godot${PROGSUFFIX}.html", source=html, SUBST_DICT=subst_dict)
         add_to_template(html, binary_name + ".html")
