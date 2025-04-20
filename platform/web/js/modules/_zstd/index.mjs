@@ -1,6 +1,7 @@
 import { default as ZstdWasmModule } from "./zstd.mjs";
 
 const nullptr = 0;
+
 /**
  * @type {{
 	HEAP8,
@@ -13,8 +14,8 @@ const nullptr = 0;
 	HEAPU16,
 	HEAPU32,
 	HEAPU64,
-	_malloc: malloc,
-	_free: free,
+	_malloc,
+	_free,
 	_ZSTD_decompressStream,
     _ZSTD_createDCtx,
 	_ZSTD_freeDCtx,
