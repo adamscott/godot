@@ -150,10 +150,14 @@ const zstdTransformContent = {
 		let subchunk;
 		let inBuffer;
 		let outBuffer;
-		let lastRet = 0;
 
 		while (true) {
-			subchunk = _chunk.slice(offset, offset + this.inBufferSize);
+			let nextInputOffset = offset + this.inBufferSize;
+			if (this.lastReturn > 0) {
+				nextInputOffset = offset + this.lastReturn;
+			}
+
+			subchunk = _chunk.slice(offset, nextInputOffset);
 			if (subchunk.byteLength === 0) {
 				break;
 			}
@@ -206,18 +210,18 @@ const zstdTransformContent = {
 				const uncompressedData = wasm.HEAPU8.slice(outBuffer.dstPtr, outBuffer.dstPtr + outBuffer.pos);
 				controller.enqueue(uncompressedData);
 
-				lastRet = ret;
+				this.lastReturn = ret;
 			}
 
 			offset += inBuffer.size;
 		}
-
-		if (lastRet !== 0) {
-			throw new Error(`Zstd error:\n[${lastRet}]EOF before the end of the stream.`);
-		}
 	},
 
 	flush(controller) {
+		if (this.lastReturn !== 0) {
+			throw new Error(`Zstd error:\n[${lastRet}]EOF before the end of the stream.`);
+		}
+
 		wasm._ZSTD_freeDCtx(this.ctxPtr);
 		wasm._free(this.inBufferPtr);
 		wasm._free(this.outBufferPtr);
@@ -235,11 +239,12 @@ export class ZstdUncompressStream extends TransformStream {
 	constructor() {
 		super({
 			...zstdTransformContent,
-			dstreamPtr: 0,
+			ctxPtr: 0,
 			inBufferPtr: 0,
-			outBufferPtr: 0,
 			inBufferDataStackPtr: 0,
+			outBufferPtr: 0,
 			outBufferDataStackPtr: 0,
+			lastReturn: 0,
 		});
 	}
 }
