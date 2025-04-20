@@ -85,13 +85,17 @@ Error EditorExportPlatformWeb::_extract_template(const String &p_template, const
 		Vector<uint8_t> data;
 		data.resize(info.uncompressed_size);
 
-		//read
+		// Read.
 		unzOpenCurrentFile(pkg);
 		unzReadCurrentFile(pkg, data.ptrw(), data.size());
 		unzCloseCurrentFile(pkg);
 
-		//write
-		String dst = p_dir.path_join(file.replace("godot", p_name));
+		// Write.
+		// Only replace "godot" with the export name if it's on the template root.
+		String dst_file_name = file.get_base_dir() == ""
+				? file.replace("godot", p_name)
+				: file;
+		String dst = p_dir.path_join(dst_file_name);
 		String dst_dir = dst.get_base_dir();
 		if (!DirAccess::exists(dst_dir)) {
 			Ref<DirAccess> d = DirAccess::create_for_path(dst_dir);
@@ -138,7 +142,7 @@ void EditorExportPlatformWeb::_replace_strings(const HashMap<String, String> &p_
 	}
 }
 
-void EditorExportPlatformWeb::_fix_html(Vector<uint8_t> &p_html, const Ref<EditorExportPreset> &p_preset, const String &p_name, bool p_debug, BitField<EditorExportPlatform::DebugFlags> p_flags, const Vector<SharedObject> p_shared_objects, const Dictionary &p_file_sizes) {
+void EditorExportPlatformWeb::_fix_html(Vector<uint8_t> &p_html, const Ref<EditorExportPreset> &p_preset, const String &p_name, bool p_debug, BitField<EditorExportPlatform::DebugFlags> p_flags, const Vector<SharedObject> p_shared_objects, const Dictionary &p_file_sizes, const String &p_js_import_map) {
 	// Engine.js config
 	Dictionary config;
 	Array libs;
@@ -191,6 +195,8 @@ void EditorExportPlatformWeb::_fix_html(Vector<uint8_t> &p_html, const Ref<Edito
 	} else {
 		replaces["$GODOT_THREADS_ENABLED"] = "false";
 	}
+
+	replaces["$GODOT_JS_IMPORT_MAP"] = p_js_import_map;
 
 	_replace_strings(replaces, p_html);
 }
@@ -635,8 +641,22 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 	f->get_buffer(html.ptrw(), html.size());
 	f.unref(); // close file.
 
+	// Get the JS import map.
+	String js_import_map_path = base_dir.path_join("template/js/importmap/importmap.json");
+	String js_import_map = "";
+	{
+		Ref<FileAccess> js_import_map_file = FileAccess::open(js_import_map_path, FileAccess::READ);
+		if (js_import_map_file.is_valid()) {
+			js_import_map = js_import_map_file->get_as_text();
+		}
+	}
+
+	// Remove the import map file from the exports.
+	DirAccess::remove_absolute(js_import_map_path);
+	DirAccess::remove_absolute(js_import_map_path.get_base_dir());
+
 	// Generate HTML file with replaced strings.
-	_fix_html(html, p_preset, base_name, p_debug, p_flags, shared_objects, file_sizes);
+	_fix_html(html, p_preset, base_name, p_debug, p_flags, shared_objects, file_sizes, js_import_map);
 	Error err = _write_or_error(html.ptr(), html.size(), p_path);
 	if (err != OK) {
 		// Message is supplied by the subroutine method.
