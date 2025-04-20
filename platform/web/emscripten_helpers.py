@@ -81,10 +81,10 @@ def create_template_zip(env, js, main_wasm, side_wasm=None, modules={}, import_m
 
     add_to_template(
         env.Textfile(
-            target="#platform/web/js/importmap/js_import_map.json",
+            target="#platform/web/js/importmap/importmap.json",
             source=json.dumps(import_map, indent=True),
         ),
-        "template/js/importmap/import_map.json",
+        "template/js/importmap/importmap.json",
         skip_compression=True,
     )
 
