@@ -227,7 +227,7 @@ if "zstd" in env["js_modules"]:
             "file": zstd_wasm,
         },
     ]
-    js_import_map["imports"][module_name] = f"./template/js/modules/{module_name}/index.mjs"
+    js_import_map["imports"][f"@godotengine/{module_name}"] = f"./template/js/modules/{module_name}/index.mjs"
     env_thirdparty_zstd.Depends(zstd_wasm, zstd_module)
 
 if "gzip" in env["js_modules"]:
@@ -351,7 +351,7 @@ if "brotli" in env["js_modules"]:
             "file": brotli_wasm,
         },
     ]
-    js_import_map["imports"][module_name] = f"./template/js/modules/{module_name}/index.mjs"
+    js_import_map["imports"][f"@godotengine/{module_name}"] = f"./template/js/modules/{module_name}/index.mjs"
     env_thirdparty_brotli.Depends(brotli_wasm, brotli_module)
 
 if needs_common_js_module:
@@ -368,7 +368,7 @@ if needs_common_js_module:
                         "file": env.File(file_path),
                     }
                 )
-    js_import_map["imports"][module_name] = f"./template/js/modules/{module_name}/index.mjs"
+    js_import_map["imports"][f"@godotengine/{module_name}"] = f"./template/js/modules/{module_name}/index.mjs"
 # JS modules end
 
 engine = [
