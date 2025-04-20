@@ -82,7 +82,7 @@ def create_template_zip(env, js, main_wasm, side_wasm=None, modules={}, import_m
     add_to_template(
         env.Textfile(
             target="#platform/web/js/importmap/importmap.json",
-            source=json.dumps(import_map, indent=True),
+            source=json.dumps(import_map, indent=True, sort_keys=True),
         ),
         "template/js/importmap/importmap.json",
         skip_compression=True,
@@ -121,7 +121,7 @@ def create_template_zip(env, js, main_wasm, side_wasm=None, modules={}, import_m
             "___GODOT_OFFLINE_PAGE___": "offline.html",
             "___GODOT_THREADS_ENABLED___": "true" if env["threads"] else "false",
             "___GODOT_ENSURE_CROSSORIGIN_ISOLATION_HEADERS___": "true",
-            "___GODOT_JS_IMPORT_MAP___": json.dumps(import_map),
+            "___GODOT_JS_IMPORT_MAP___": json.dumps(import_map, sort_keys=True),
         }
         html = env.Substfile(target="#bin/godot${PROGSUFFIX}.html", source=html, SUBST_DICT=subst_dict)
         add_to_template(html, binary_name + ".html")
