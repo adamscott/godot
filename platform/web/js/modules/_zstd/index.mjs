@@ -150,7 +150,7 @@ const zstdTransformContent = {
 		let subchunk;
 		let inBuffer;
 		let outBuffer;
-		let lastRet;
+		let lastRet = 0;
 
 		while (true) {
 			subchunk = _chunk.slice(offset, offset + this.inBufferSize);
@@ -184,11 +184,8 @@ const zstdTransformContent = {
 				});
 				wasm.HEAPU8.set(outBufferData, this.outBufferDataStackPtr);
 
-				const ret = wasm._ZSTD_decompressStream(
-					this.ctxPtr,
-					this.outBufferDataStackPtr,
-					this.inBufferDataStackPtr,
-				);
+				let ret;
+				ret = wasm._ZSTD_decompressStream(this.ctxPtr, this.outBufferDataStackPtr, this.inBufferDataStackPtr);
 				if (wasm._ZSTD_isError(ret)) {
 					throw new Error(
 						`Zstd error while decompressing stream:\n[${ret}] ${wasm.UTF8ToString(wasm._ZSTD_getErrorName(ret))}`,
@@ -206,12 +203,13 @@ const zstdTransformContent = {
 					throw new Error("`outBuffer.dstPtr` points outside of the size of HEAPU8");
 				}
 
+				const uncompressedData = wasm.HEAPU8.slice(outBuffer.dstPtr, outBuffer.dstPtr + outBuffer.pos);
+				controller.enqueue(uncompressedData);
+
 				lastRet = ret;
 			}
 
-			const uncompressedData = wasm.HEAPU8.slice(outBuffer.dstPtr, outBuffer.dstPtr + outBuffer.pos);
 			offset += inBuffer.size;
-			controller.enqueue(uncompressedData);
 		}
 
 		if (lastRet !== 0) {

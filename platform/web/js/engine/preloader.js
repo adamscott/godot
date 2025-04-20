@@ -5,6 +5,61 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 		compressionFormat: '',
 	};
 
+	async function tryDownloadZstdFile(response) {
+		const newUrl = new URL(response.url);
+		newUrl.pathname += '.zst';
+		try {
+			const zstdHeadResponse = await fetch(newUrl, {
+				method: 'HEAD',
+				headers: response.headers,
+			});
+			if (!zstdHeadResponse.ok) {
+				// The file doesn't exist, it's not an error.
+				return null;
+			}
+
+			let fileSize = 0;
+			if (zstdHeadResponse.headers.has('content-length')) {
+				fileSize = zstdHeadResponse.headers.get('content-length');
+			}
+
+			// The method succeeded, so the file exists.
+			// Lets load the actual brotli-dec-wasm module.
+			const zstdWasm = await Engine.getJSModule('_zstd');
+
+			// Let's load the actual brotli file.
+			const zstdResponse = await fetch(newUrl, {
+				method: 'GET',
+				headers: response.headers,
+			});
+			if (!zstdResponse.ok) {
+				// We weren't able to download the file for some reason, let's just print the error and ignore the file.
+				const error = new Error(
+					`Error while downloading zstd-compressed file "${newUrl.href}", got status ${zstdResponse.status}: ${zstdResponse.statusText}`
+				);
+				engine.config.onPrintError(error);
+				return null;
+			}
+
+			const zstdUncompressStream = new zstdWasm.ZstdUncompressStream();
+			const decompressedStream = zstdResponse.body.pipeThrough(zstdUncompressStream);
+
+			return {
+				response: new Response(decompressedStream, {
+					method: 'GET',
+					status: zstdResponse.status,
+					headers: zstdResponse.headers,
+				}),
+				fileSize,
+			};
+		} catch (error) {
+			const newError = new Error(`Error while downloading brotli-compressed file "${newUrl.href}"`);
+			newError.cause = error;
+			engine.config.onPrintError(error);
+			return null;
+		}
+	}
+
 	/**
 	 * Tries to download a precompressed brotli file.
 	 * @param {Response} response Initial response.
@@ -216,6 +271,9 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 				if (compressionFormats.includes('brotli') && availableModules.includes('brotli-dec-wasm')) {
 					bandwidthSaver.enabled = true;
 					bandwidthSaver.compressionFormat = 'brotli';
+				} else if (compressionFormats.includes('zstd') && availableModules.includes('_zstd')) {
+					bandwidthSaver.enabled = true;
+					bandwidthSaver.compressionFormat = 'zstd';
 				} else if (compressionFormats.includes('gzip') && availableModules.includes('pako')) {
 					bandwidthSaver.enabled = true;
 					bandwidthSaver.compressionFormat = 'gzip';
@@ -225,20 +283,33 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 
 		if (bandwidthSaver.enabled) {
 			switch (bandwidthSaver.compressionFormat) {
-			case 'brotli': {
-				const brotliInfo = await tryDownloadBrotliFile(headResponse);
-				if (brotliInfo != null) {
-					tracker[file].total = brotliInfo.fileSize;
-					return handleResponse(brotliInfo.response);
+			case 'zstd':
+				{
+					const info = await tryDownloadZstdFile(headResponse);
+					if (info != null) {
+						tracker[file].total = info.fileSize;
+						return handleResponse(info.response);
+					}
 				}
-			} break;
-			case 'gzip': {
-				const gzipInfo = await tryDownloadGZipFile(headResponse);
-				if (gzipInfo != null) {
-					tracker[file].total = gzipInfo.fileSize;
-					return handleResponse(gzipInfo.response);
+				break;
+			case 'gzip':
+				{
+					const info = await tryDownloadGZipFile(headResponse);
+					if (info != null) {
+						tracker[file].total = info.fileSize;
+						return handleResponse(info.response);
+					}
 				}
-			} break;
+				break;
+			case 'brotli':
+				{
+					const info = await tryDownloadBrotliFile(headResponse);
+					if (info != null) {
+						tracker[file].total = info.fileSize;
+						return handleResponse(info.response);
+					}
+				}
+				break;
 			default:
 				// Do nothing.
 			}
