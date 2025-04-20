@@ -19,6 +19,7 @@ const nullptr = 0;
     _BrotliDecoderCreateInstance,
 	_BrotliDecoderDestroyInstance,
 	_BrotliDecoderDecompressStream,
+    _BrotliDecoderSetParameter,
 	_BrotliDecoderGetErrorCode,
 	_BrotliDecoderErrorString,
 	ccall,

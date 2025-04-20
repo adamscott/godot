@@ -302,6 +302,7 @@ if env["include_client_compression_libraries"]:
             "BrotliDecoderCreateInstance",
             "BrotliDecoderDestroyInstance",
             "BrotliDecoderDecompressStream",
+            "BrotliDecoderSetParameter",
             "BrotliDecoderGetErrorCode",
             "BrotliDecoderErrorString",
         ]
