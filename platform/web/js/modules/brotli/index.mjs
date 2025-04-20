@@ -2,8 +2,6 @@ import { NULLPTR, initWasmUtils } from "@godotengine/common";
 
 import { default as BrotliWasmModule } from "./brotli.mjs";
 
-const nullptr = 0;
-
 /**
  * @type {{
 	HEAP8,
@@ -92,8 +90,8 @@ const BROTLI_BUFFER_SIZE = 1 << 20; // 1MiB
  */
 const brotliTransformContent = {
 	start() {
-		this.instancePtr = wasm._BrotliDecoderCreateInstance(nullptr, nullptr, nullptr);
-		if (this.instancePtr === nullptr) {
+		this.instancePtr = wasm._BrotliDecoderCreateInstance(NULLPTR, NULLPTR, NULLPTR);
+		if (this.instancePtr === NULLPTR) {
 			throw new Error("Could not create new Brotli instance.");
 		}
 		this.inBuffer = new WasmValue(BROTLI_BUFFER_SIZE);
@@ -157,7 +155,7 @@ export class BrotliUncompressStream extends TransformStream {
 	constructor() {
 		super({
 			...brotliTransformContent,
-			instancePtr: nullptr,
+			instancePtr: NULLPTR,
 			inBuffer: null,
 			outBuffer: null,
 			inAvailable: null,
