@@ -60,6 +60,7 @@ public:
 
 		private:
 			EncoderMode _encoder_mode = BROTLI_ENCODER_MODE_GENERIC;
+			uint8_t _quality = 9;
 
 		public:
 			EncoderMode get_encoder_mode() const {
@@ -68,6 +69,14 @@ public:
 
 			void set_encoder_mode(EncoderMode p_encoder_mode) {
 				_encoder_mode = p_encoder_mode;
+			}
+
+			uint8_t get_quality() const {
+				return _quality;
+			}
+
+			void set_quality(uint8_t p_quality) {
+				_quality = p_quality;
 			}
 		};
 

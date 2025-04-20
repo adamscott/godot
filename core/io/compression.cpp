@@ -65,7 +65,7 @@ int Compression::compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, 
 				} break;
 			}
 			size_t encoded_size;
-			if (BrotliEncoderCompress(9, 0, mode, p_src_size, p_src, &encoded_size, p_dst)) {
+			if (BrotliEncoderCompress(p_settings.get_brotli()->get_quality(), 24, mode, p_src_size, p_src, &encoded_size, p_dst)) {
 				return encoded_size;
 			}
 			return -1;
