@@ -247,29 +247,129 @@ if env["include_client_compression_libraries"]:
                     )
 
     if "brotli" in env["compress_for_servers"]:
-        module_name = "brotli-dec-wasm"
-        js_modules[module_name] = []
-        module_version = "2.3.0"
-        brotli_wasm_files = env.UnTar(f"js/modules/{module_name}-{module_version}.tgz", one_top_level=True)
-        brotli_wasm_dist_dir = f"js/modules/{module_name}-{module_version}/package/"
-        brotli_wasm_dist_pkgweb_dir = brotli_wasm_dist_dir + "pkg/"
-        for f in brotli_wasm_files:
-            if str(f) == brotli_wasm_dist_dir + "index.js":
-                js_modules[module_name].append(
-                    {
-                        "path": f.name,
-                        "file": f,
-                    }
-                )
-            elif os.path.commonprefix([brotli_wasm_dist_pkgweb_dir, str(f)]) == brotli_wasm_dist_pkgweb_dir:
-                # Remove Typescript definition files
-                if ".d.ts" not in f.name:
-                    js_modules[module_name].append(
-                        {
-                            "path": f"pkg/{f.name}",
-                            "file": f,
-                        }
-                    )
+        module_name = "_brotli"
+
+        env_thirdparty_brotli = env.Clone()
+        thirdparty_brotli_dir = "#thirdparty/brotli/"
+        thirdparty_brotli_sources = [
+            "common/constants.c",
+            "common/context.c",
+            "common/dictionary.c",
+            "common/platform.c",
+            "common/shared_dictionary.c",
+            "common/transform.c",
+            "dec/bit_reader.c",
+            "dec/decode.c",
+            "dec/huffman.c",
+            "dec/state.c",
+        ]
+        thirdparty_brotli_sources = [env.File(thirdparty_brotli_dir + file) for file in thirdparty_brotli_sources]
+        thirdparty_brotli_sources = [
+            env.Object(
+                target=f"{os.path.dirname(str(file))}/{splitext(os.path.basename(str(file)))[0]}.js_module.o",
+                source=file,
+            )
+            for file in thirdparty_brotli_sources
+        ]
+        new_linkflags = []
+        banned_flags = [
+            "STACK_SIZE",
+            "EXPORT_NAME",
+            "INITIAL_MEMORY",
+            "MAX_WEBGL_VERSION",
+            "OFFSCREEN_FRAMEBUFFER",
+            "GL_ENABLE_GET_PROC_ADDRESS",
+            "ENVIRONMENT",
+            "MODULARIZE",
+            "INVOKE_RUN",
+            "EXPORTED_FUNCTIONS",
+            "EXPORTED_RUNTIME_METHODS",
+            "EXIT_RUNTIME",
+            "GL_WORKAROUND_SAFARI_GETCONTEXT_BUG",
+        ]
+        for linkflag in env_thirdparty_brotli["LINKFLAGS"]:
+            include_linkflag = True
+            for banned_flag in banned_flags:
+                if banned_flag in str(linkflag):
+                    include_linkflag = False
+                    break
+            if include_linkflag:
+                new_linkflags.append(linkflag)
+        env_thirdparty_brotli["LINKFLAGS"] = new_linkflags
+        exported_functions = [
+            "malloc",
+            "free",
+            "BrotliDecoderCreateInstance",
+            "BrotliDecoderDestroyInstance",
+            "BrotliDecoderDecompressStream",
+            "BrotliDecoderGetErrorCode",
+            "BrotliDecoderErrorString",
+        ]
+        exported_functions = ",".join([f"'_{func}'" for func in exported_functions])
+        runtime_functions = [
+            "ccall",
+            "cwrap",
+            "stackAlloc",
+            "stringToNewUTF8",
+            "UTF8ToString",
+        ]
+        runtime_functions = ",".join([f"'{func}'" for func in runtime_functions])
+        env_thirdparty_brotli.Append(
+            LINKFLAGS=[
+                "-sEXPORT_NAME='Brotli'",
+                "-sENVIRONMENT=web",
+                "-sEXPORT_ES6",
+                "-sMODULARIZE",
+                f"-sEXPORTED_FUNCTIONS=[{exported_functions}]",
+                f"-sEXPORTED_RUNTIME_METHODS=[{runtime_functions}]",
+            ]
+        )
+        brotli_module = env_thirdparty_brotli.add_program(
+            f"js/modules/{module_name}/brotli.mjs", sources=thirdparty_brotli_sources
+        )
+        brotli_module = env_thirdparty_brotli.NoCache(brotli_module)
+
+        brotli_index = env.File(f"js/modules/{module_name}/index.mjs")
+        brotli_wasm = env.File(f"js/modules/{module_name}/brotli.wasm")
+
+        js_modules[module_name] = [
+            {
+                "path": "index.mjs",
+                "file": brotli_index,
+            },
+            {
+                "path": "brotli.mjs",
+                "file": brotli_module,
+            },
+            {
+                "path": "brotli.wasm",
+                "file": brotli_wasm,
+            },
+        ]
+        env.Depends(brotli_wasm, brotli_module)
+
+        # js_modules[module_name] = []
+        # module_version = "2.3.0"
+        # brotli_wasm_files = env.UnTar(f"js/modules/{module_name}-{module_version}.tgz", one_top_level=True)
+        # brotli_wasm_dist_dir = f"js/modules/{module_name}-{module_version}/package/"
+        # brotli_wasm_dist_pkgweb_dir = brotli_wasm_dist_dir + "pkg/"
+        # for f in brotli_wasm_files:
+        #     if str(f) == brotli_wasm_dist_dir + "index.js":
+        #         js_modules[module_name].append(
+        #             {
+        #                 "path": f.name,
+        #                 "file": f,
+        #             }
+        #         )
+        #     elif os.path.commonprefix([brotli_wasm_dist_pkgweb_dir, str(f)]) == brotli_wasm_dist_pkgweb_dir:
+        #         # Remove Typescript definition files
+        #         if ".d.ts" not in f.name:
+        #             js_modules[module_name].append(
+        #                 {
+        #                     "path": f"pkg/{f.name}",
+        #                     "file": f,
+        #                 }
+        #             )
 
 engine = [
     "js/engine/features.js",
