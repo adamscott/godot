@@ -610,16 +610,18 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 	};
 
 	add_file_size(pck_path);
+	add_file_size(pck_path + ".zst");
+	add_file_size(pck_path + ".gz");
 #ifdef BROTLI_ENABLED
 	add_file_size(pck_path + ".br");
 #endif
-	add_file_size(pck_path + ".gz");
 
 	String wasm_path = base_path + ".wasm";
 	add_file_size(wasm_path);
 	// No need for an #ifdef here, as the template may have been brotli compressed.
-	add_file_size(wasm_path + ".br");
+	add_file_size(wasm_path + ".zst");
 	add_file_size(wasm_path + ".gz");
+	add_file_size(wasm_path + ".br");
 
 	// Read the HTML shell file (custom or from template).
 	const String html_path = custom_html.is_empty() ? base_path + ".html" : custom_html;
@@ -947,8 +949,9 @@ Error EditorExportPlatformWeb::_export_project(const Ref<EditorExportPreset> &p_
 	if (err != OK) {
 		auto remove_file = [](const String &path) {
 			DirAccess::remove_absolute(path);
-			DirAccess::remove_absolute(path + ".br");
+			DirAccess::remove_absolute(path + ".zst");
 			DirAccess::remove_absolute(path + ".gz");
+			DirAccess::remove_absolute(path + ".br");
 		};
 
 		// Export generates several files, clean them up on failure.
