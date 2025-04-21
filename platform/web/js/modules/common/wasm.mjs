@@ -2,7 +2,10 @@ export const NULLPTR = 0;
 
 /**
  * @typedef {Int8Array|Int16Array|Int32Array|BigInt64Array|Uint8Array|Uint16Array|Uint32Array|BigUint64Array|Float32Array|Float64Array} TypedArray
- * @typedef {"i8"|"i16"|"i32"|"i64"|"u8"|"u16"|"u32"|"u64"|"float"|"double"|"f32"|"f64"|"i8*"|"i16*"|"i32*"|"i64*"|"u8*"|"u16*"|"u32*"|"u64*"|"float*"|"double*"|"f32*"|"f64*"|"*"|"size_t*"|"size_t"} Type
+ * @typedef {("i8"|"int8_t")|("i16"|"int16_t")|("i32"|"int32_t")|("i64"|"int64_t")|("u8"|"uint8_t")|("u16"|"uint16_t")|("u32"|"uint32_t")|("u64"|"uint64_t")|("f32"|"float32_t"|"float")|("f64"|"float64_t"|"double")|("size_t")} BaseType
+ * @typedef {"*"|"**"|"***"|"****"|"*****"} PtrIndicator
+ * @typedef {`${BaseType}${PtrIndicator}`} PtrType
+ * @typedef {BaseType|PtrType} Type
  * @typedef {(size: number) => number} Malloc
  * @typedef {(ptr: number) => void} Free
  * @typedef {(type: Type) => number} SizeOf
@@ -84,49 +87,49 @@ class WasmStructMember {
 	}
 
 	get value() {
+		if (this._type.endsWith("*")) {
+			if (this._sizeOf("*") === this._sizeOf("u32")) {
+				return this.view.getUint32(0, true);
+			}
+			return this.view.getBigUint64(0, true);
+		}
+
 		switch (this._type) {
 			case "i8":
+			case "int8_t":
 				return this.view.getInt8(0);
 			case "i16":
+			case "int16_t":
 				return this.view.getInt16(0, true);
 			case "i32":
+			case "int32_t":
 				return this.view.getInt32(0, true);
 			case "i64":
+			case "int64_t":
 				return this.view.getBigInt64(0, true);
 			case "u8":
+			case "uint8_t":
 				return this.view.getUint8(0);
 			case "u16":
+			case "uint16_t":
 				return this.view.getUint16(0, true);
-			case "u32":
+			case "uint32_t":
 				return this.view.getUint32(0, true);
-			case "u64":
+			case "uint64_t":
 				return this.view.getBigUint64(0, true);
 			case "float":
 			case "f32":
+			case "float32_t":
 				return this.view.getFloat32(0, true);
 			case "double":
 			case "f64":
+			case "float64_t":
 				return this.view.getFloat64(0, true);
-			case "i8*":
-			case "i16*":
-			case "i32*":
-			case "i64*":
-			case "u8*":
-			case "u16*":
-			case "u32*":
-			case "u64*":
-			case "float*":
-			case "f32*":
-			case "double*":
-			case "f64*":
-			case "*":
-			case "size_t*":
 			case "size_t":
 				if (this._sizeOf("*") === this._sizeOf("u32")) {
 					return this.view.getUint32(0, true);
-				} else {
-					return this.view.getBigUint64(0, true);
 				}
+				return this.view.getBigUint64(0, true);
 			default:
 				throw new TypeError(`Unknown type: "${this._type}"`);
 		}
@@ -134,49 +137,51 @@ class WasmStructMember {
 
 	set value(value) {
 		if (typeof value === "number") {
+			if (this._type.endsWith("*")) {
+				if (this._sizeOf("*") === this._sizeOf("u32")) {
+					return this.view.setUint32(0, value, true);
+				}
+				return this.view.setBigUint64(0, value, true);
+			}
+
 			switch (this._type) {
 				case "i8":
+				case "int8_t":
 					return this.view.setInt8(0, value);
 				case "i16":
+				case "int16_t":
 					return this.view.setInt16(0, value, true);
 				case "i32":
+				case "int32_t":
 					return this.view.setInt32(0, value, true);
 				case "i64":
+				case "int64_t":
 					return this.view.setBigInt64(0, value, true);
 				case "u8":
+				case "uint8_t":
 					return this.view.setUint8(0, value, true);
 				case "u16":
+				case "uint16_t":
 					return this.view.setUint16(0, value, true);
 				case "u32":
+				case "uint32_t":
 					return this.view.setUint32(0, value, true);
 				case "u64":
+				case "uint64_t":
 					return this.view.setBigUint64(0, value, true);
 				case "float":
 				case "f32":
+				case "float32_t":
 					return this.view.setFloat32(0, value, true);
 				case "double":
 				case "f64":
+				case "float64_t":
 					return this.view.setFloat64(0, value, true);
-				case "i8*":
-				case "i16*":
-				case "i32*":
-				case "i64*":
-				case "u8*":
-				case "u16*":
-				case "u32*":
-				case "u64*":
-				case "float*":
-				case "f32*":
-				case "double*":
-				case "f64*":
-				case "*":
-				case "size_t*":
 				case "size_t":
 					if (this._sizeOf("*") === this._sizeOf("u32")) {
 						return this.view.setUint32(0, value, true);
-					} else {
-						return this.view.setBigUint64(0, value, true);
 					}
+					return this.view.setBigUint64(0, value, true);
 				default:
 					throw new TypeError(`Unknown type: "${this._type}"`);
 			}
@@ -373,42 +378,46 @@ export function initWasmUtils(wasmImport, isMemory64 = false) {
 	 * @returns {number} Byte length
 	 */
 	const sizeOf = (type) => {
+		if (type.endsWith("*")) {
+			if (isMemory64) {
+				return BigUint64Array.BYTES_PER_ELEMENT;
+			}
+			return Uint32Array.BYTES_PER_ELEMENT;
+		}
+
 		switch (type) {
 			case "i8":
+			case "int8_t":
 				return Int8Array.BYTES_PER_ELEMENT;
 			case "i16":
+			case "int16_t":
 				return Int16Array.BYTES_PER_ELEMENT;
 			case "i32":
+			case "int32_t":
 				return Int32Array.BYTES_PER_ELEMENT;
 			case "i64":
+			case "int64_t":
 				return BigInt64Array.BYTES_PER_ELEMENT;
 			case "u8":
+			case "uint8_t":
 				return Uint8Array.BYTES_PER_ELEMENT;
 			case "u16":
+			case "uint16_t":
 				return Uint16Array.BYTES_PER_ELEMENT;
 			case "u32":
+			case "uint32_t":
 				return Uint32Array.BYTES_PER_ELEMENT;
 			case "u64":
+			case "uint64_t":
 				return BigUint64Array.BYTES_PER_ELEMENT;
 			case "float":
 			case "f32":
+			case "float32_t":
 				return Float32Array.BYTES_PER_ELEMENT;
 			case "double":
 			case "f64":
+			case "float64_t":
 				return Float64Array.BYTES_PER_ELEMENT;
-			case "i8*":
-			case "i16*":
-			case "i32*":
-			case "i64*":
-			case "u8*":
-			case "u16*":
-			case "u32*":
-			case "u64*":
-			case "float*":
-			case "f32*":
-			case "double*":
-			case "f64":
-			case "*":
 			case "size_t":
 				if (isMemory64) {
 					return BigUint64Array.BYTES_PER_ELEMENT;
