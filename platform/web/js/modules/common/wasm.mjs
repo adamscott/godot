@@ -6,9 +6,12 @@ export const NULLPTR = 0;
  * @typedef {"*"|"**"|"***"|"****"|"*****"} PtrIndicator
  * @typedef {`${BaseType}${PtrIndicator}`} PtrType
  * @typedef {BaseType|PtrType} Type
+ * @typedef {Uint8Array} HEAPU8
+ * @typedef {() => HEAPU8} GetHEAPU8
  * @typedef {(size: number) => number} Malloc
  * @typedef {(ptr: number) => void} Free
  * @typedef {(type: Type) => number} SizeOf
+ * @typedef {ReturnType<initWasmUtils>} WasmUtils
  */
 
 class WasmValueBase {
@@ -27,7 +30,7 @@ class WasmValueBase {
 	get value() {
 		if (this._type != null) {
 			if (this._type.endsWith("*")) {
-				if (this._sizeOf("*") === this._sizeOf("u32")) {
+				if (this._wasmUtils.sizeOf("*") === this._wasmUtils.sizeOf("u32")) {
 					return this.view.getUint32(0, true);
 				}
 				return this.view.getBigUint64(0, true);
@@ -65,7 +68,7 @@ class WasmValueBase {
 				case "float64_t":
 					return this.view.getFloat64(0, true);
 				case "size_t":
-					if (this._sizeOf("*") === this._sizeOf("u32")) {
+					if (this._wasmUtils.sizeOf("*") === this._wasmUtils.sizeOf("u32")) {
 						return this.view.getUint32(0, true);
 					}
 					return this.view.getBigUint64(0, true);
@@ -86,7 +89,7 @@ class WasmValueBase {
 	set value(value) {
 		if (this._type != null) {
 			if (this._type.endsWith("*")) {
-				if (this._sizeOf("*") === this._sizeOf("u32")) {
+				if (this._wasmUtils.sizeOf("*") === this._wasmUtils.sizeOf("u32")) {
 					return this.view.setUint32(0, value, true);
 				}
 				return this.view.setBigUint64(0, value, true);
@@ -126,7 +129,7 @@ class WasmValueBase {
 				case "float64_t":
 					return this.view.setFloat64(0, value, true);
 				case "size_t":
-					if (this._sizeOf("*") === this._sizeOf("u32")) {
+					if (this._wasmUtils.sizeOf("size_t") === this._wasmUtils.sizeOf("uint32_t")) {
 						return this.view.setUint32(0, value, true);
 					}
 					return this.view.setBigUint64(0, value, true);
@@ -142,24 +145,23 @@ class WasmValueBase {
 	 * @returns {DataView}
 	 */
 	get view() {
-		return new DataView(this._HEAPU8.buffer, this._ptr, this._size);
+		try {
+			return new DataView(this._wasmUtils.HEAPU8.buffer, this._ptr, this._size);
+		} catch (err) {
+			const newErr = new Error("???");
+			newErr.cause = err;
+			throw newErr;
+		}
 	}
 
 	/**
 	 * @constructor
 	 * @param {{ type?: Type, size?: number }} params
-	 * @param {{HEAPU8: HEAPU8, malloc: Malloc, free: Free, sizeOf: SizeOf}} wasm
+	 * @param {WasmUtils} wasmUtils
 	 */
-	constructor(params, wasm) {
-		const { HEAPU8, malloc, free, sizeOf } = wasm;
-		/** @type {typeof HEAPU8} */
-		this._HEAPU8 = HEAPU8;
-		/** @type {typeof malloc} */
-		this._malloc = malloc;
-		/** @type {typeof free} */
-		this._free = free;
-		/** @type {typeof sizeOf} */
-		this._sizeOf = sizeOf;
+	constructor(params, wasmUtils) {
+		/** @type {typeof wasm} */
+		this._wasmUtils = wasmUtils;
 
 		const { type, size } = params;
 		if (type != null && size != null) {
@@ -170,7 +172,7 @@ class WasmValueBase {
 		this._type;
 		if (type != null) {
 			this._type = type;
-			this._size = this._sizeOf(this._type);
+			this._size = this._wasmUtils.sizeOf(this._type);
 		} else {
 			this._type = null;
 			this._size = size;
@@ -183,11 +185,11 @@ class WasmValueBase {
 	}
 
 	_init() {
-		this._ptr = this._malloc(this._size);
+		this._ptr = this._wasmUtils.malloc(this._size);
 	}
 
 	destroy() {
-		this._free(this._ptr);
+		this._wasmUtils.free(this._ptr);
 	}
 }
 
@@ -206,12 +208,12 @@ class WasmStructMember {
 	 * @returns {DataView}
 	 */
 	get view() {
-		return new DataView(this._struct._HEAPU8.buffer, this.ptr, this._size);
+		return new DataView(this._struct.wasm.HEAPU8.buffer, this.ptr, this._size);
 	}
 
 	get value() {
 		if (this._type.endsWith("*")) {
-			if (this._sizeOf("*") === this._sizeOf("u32")) {
+			if (this._wasmUtils.sizeOf("size_t") === this._wasmUtils.sizeOf("uint32_t")) {
 				return this.view.getUint32(0, true);
 			}
 			return this.view.getBigUint64(0, true);
@@ -249,7 +251,7 @@ class WasmStructMember {
 			case "float64_t":
 				return this.view.getFloat64(0, true);
 			case "size_t":
-				if (this._sizeOf("*") === this._sizeOf("u32")) {
+				if (this._wasmUtils.sizeOf("size_t") === this._wasmUtils.sizeOf("uint32_t")) {
 					return this.view.getUint32(0, true);
 				}
 				return this.view.getBigUint64(0, true);
@@ -261,7 +263,7 @@ class WasmStructMember {
 	set value(value) {
 		if (typeof value === "number") {
 			if (this._type.endsWith("*")) {
-				if (this._sizeOf("*") === this._sizeOf("u32")) {
+				if (this._wasmUtils.sizeOf("size_t") === this._wasmUtils.sizeOf("uint32_t")) {
 					return this.view.setUint32(0, value, true);
 				}
 				return this.view.setBigUint64(0, value, true);
@@ -301,7 +303,7 @@ class WasmStructMember {
 				case "float64_t":
 					return this.view.setFloat64(0, value, true);
 				case "size_t":
-					if (this._sizeOf("*") === this._sizeOf("u32")) {
+					if (this._wasmUtils.sizeOf("size_t") === this._wasmUtils.sizeOf("uint32_t")) {
 						return this.view.setUint32(0, value, true);
 					}
 					return this.view.setBigUint64(0, value, true);
@@ -316,10 +318,11 @@ class WasmStructMember {
 	 * @constructor
 	 * @param {WasmStructMemberDefinition} signature
 	 * @param {WasmStructBase} struct
-	 * @param {{HEAPU8: HEAPU8, malloc: Malloc, free: Free, sizeOf: SizeOf}} wasm
+	 * @param {WasmUtils} wasmUtils
 	 */
-	constructor(signature, struct, wasm) {
-		const { HEAPU8, malloc, free, sizeOf } = wasm;
+	constructor(signature, struct, wasmUtils) {
+		/** @type {typeof wasmUtils} */
+		this._wasmUtils = wasmUtils;
 
 		/** @type {typeof signature.name} */
 		this._name = signature.name;
@@ -330,15 +333,6 @@ class WasmStructMember {
 		/** @type {typeof signature.offset} */
 		this._offset = signature.offset;
 
-		/** @type {typeof HEAPU8} */
-		this._HEAPU8 = HEAPU8;
-		/** @type {typeof malloc} */
-		this._malloc = malloc;
-		/** @type {typeof free} */
-		this._free = free;
-		/** @type {typeof sizeOf} */
-		this._sizeOf = sizeOf;
-
 		/** @type {typeof struct} */
 		this._struct = struct;
 	}
@@ -346,28 +340,20 @@ class WasmStructMember {
 
 class WasmStructBase {
 	get buffer() {
-		return this._HEAPU8.slice(this._ptr, this.ptr + this._size);
+		return this._wasmUtils.HEAPU8.slice(this._ptr, this.ptr + this._size);
 	}
 
 	/**
 	 * @constructor
 	 * @param {WasmStructMemberDefinition[]} signatures
-	 * @param {{HEAPU8: HEAPU8, malloc: Malloc, free: Free, sizeOf: SizeOf}} wasm
+	 * @param {WasmUtils} wasmUtils
 	 */
-	constructor(signatures, wasm) {
-		const { HEAPU8, malloc, free, sizeOf } = wasm;
+	constructor(signatures, wasmUtils) {
+		/** @type {typeof wasm} */
+		this._wasmUtils = wasmUtils;
 
 		/** @type {typeof signatures} */
 		this._signatures = signatures;
-
-		/** @type {typeof HEAPU8} */
-		this._HEAPU8 = HEAPU8;
-		/** @type {typeof malloc} */
-		this._malloc = malloc;
-		/** @type {typeof free} */
-		this._free = free;
-		/** @type {typeof sizeOf} */
-		this._sizeOf = sizeOf;
 
 		/** @type {Record<string, WasmStructMember>} */
 		this._members = {};
@@ -387,14 +373,7 @@ class WasmStructBase {
 			if (this.hasMember(signature.name)) {
 				throw new Error(`WasmStructMember defined twice: "${signature.name}"`);
 			}
-			this._members[signature.name] = new WasmStructMember(
-				signature,
-				this,
-				this._HEAPU8,
-				this._malloc,
-				this._free,
-				this._sizeOf,
-			);
+			this._members[signature.name] = new WasmStructMember(signature, this, this._wasmUtils);
 			Object.defineProperty(this, signature.name, {
 				get: function (member) {
 					return this;
@@ -405,7 +384,7 @@ class WasmStructBase {
 		}
 
 		this._size = structSize;
-		this._ptr = this._malloc(this._size);
+		this._ptr = this._wasmUtils.malloc(this._size);
 	}
 
 	/**
@@ -433,13 +412,13 @@ class WasmStructBase {
 	 * Use to destroy instance.
 	 */
 	destroy() {
-		this._free(this._ptr);
+		this._wasmUtils.free(this._ptr);
 	}
 }
 
 /**
  * @typedef {{
- *    HEAPU8: Uint8Array
+ *    HEAPU8: HEAPU8
  *    _malloc: Malloc
  *    _free: Free
  * }} WasmImport
@@ -451,8 +430,8 @@ class WasmStructBase {
  * @param {boolean} isMemory64
  */
 export function initWasmUtils(wasmImport, isMemory64 = false) {
-	const { HEAPU8, _malloc: malloc, _free: free } = wasmImport;
-	if (HEAPU8 == null) {
+	const { _malloc: malloc, _free: free } = wasmImport;
+	if (wasmImport.HEAPU8 == null) {
 		throw new Error("HEAPU8 is null.");
 	}
 	if (malloc == null) {
@@ -558,12 +537,12 @@ export function initWasmUtils(wasmImport, isMemory64 = false) {
 		 * @param {{ type?: Type, size?: number }} params
 		 */
 		constructor(params) {
-			super(params, { HEAPU8, malloc: mallocOrDie, free: freeOrDie, sizeOf });
+			super(params, wasmUtils);
 		}
 	}
 
 	/**
-	 *
+	 * Framework to manage memory of a defined struct.
 	 */
 	class WasmStruct extends WasmStructBase {
 		/**
@@ -571,15 +550,23 @@ export function initWasmUtils(wasmImport, isMemory64 = false) {
 		 * @param {WasmStructMemberDefinition[]} signatures
 		 */
 		constructor(signatures) {
-			super(signatures, { HEAPU8, malloc: mallocOrDie, free: freeOrDie, sizeOf });
+			super(signatures, wasmUtils);
 		}
 	}
 
-	return {
-		mallocOrDie,
-		freeOrDie,
+	const wasmUtils = {
+		malloc: mallocOrDie,
+		free: freeOrDie,
 		sizeOf,
 		WasmValue,
 		WasmStruct,
 	};
+	Object.defineProperty(wasmUtils, "HEAPU8", {
+		get() {
+			// Needed as we need the direct reference,
+			// as if we pass it, we actually copy the Uint8Array.
+			return wasmImport.HEAPU8;
+		},
+	});
+	return Object.freeze(wasmUtils);
 }
