@@ -44,7 +44,8 @@ const BrotliDecoderResult = {
 	NEEDS_MORE_OUTPUT: 3,
 };
 
-const BROTLI_BUFFER_SIZE = 1 << 20; // 1MiB
+const BROTLI_BUFFER_SIZE = 1024 * 512; // 512KiB
+
 /**
  * The logic of `BrotliUncompressStream`.
  */
