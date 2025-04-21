@@ -9,12 +9,17 @@ export const NULLPTR = 0;
  */
 
 class WasmValueBase {
+	/** @type {typeof this._ptr} */
+	get ptr() {
+		return this._ptr;
+	}
+
 	/**
 	 * Returns the value in memory.
 	 * @returns {Uint8Array}
 	 */
 	get value() {
-		return this.HEAPU8.slice(this.ptr, this.ptr + this.size);
+		return new DataView(this._HEAPU8.buffer, this._ptr, this._size);
 	}
 
 	/**
@@ -26,7 +31,7 @@ class WasmValueBase {
 		if (typeof val === "number") {
 			valueToSet = [val];
 		}
-		this.HEAPU8.set(valueToSet, this.ptr);
+		this._HEAPU8.set(valueToSet, this._ptr);
 	}
 
 	/**
@@ -38,25 +43,25 @@ class WasmValueBase {
 	 */
 	constructor(size, HEAPU8, malloc, free) {
 		/** @type {typeof size} */
-		this.size = size;
+		this._size = size;
 		/** @type {typeof HEAPU8} */
-		this.HEAPU8 = HEAPU8;
+		this._HEAPU8 = HEAPU8;
 		/** @type {typeof malloc} */
-		this.malloc = malloc;
+		this._malloc = malloc;
 		/** @type {typeof free} */
-		this.free = free;
+		this._free = free;
 		/** @type {number} */
-		this.ptr = NULLPTR;
+		this._ptr = NULLPTR;
 
 		this._init();
 	}
 
 	_init() {
-		this.ptr = this.malloc(this.size);
+		this._ptr = this._malloc(this._size);
 	}
 
 	destroy() {
-		this.free(this.ptr);
+		this._free(this._ptr);
 	}
 }
 
@@ -65,38 +70,156 @@ class WasmValueBase {
  */
 
 class WasmStructMember {
+	get ptr() {
+		return this._struct._ptr + this._offset;
+	}
+
 	/**
 	 * Returns a view to a buffer.
 	 * @throws {Error} When `buffer` is null.
 	 * @returns {DataView}
 	 */
 	get view() {
-		if (this.buffer == null) {
-			throw new Error("`buffer` is null");
+		return new DataView(this._struct._HEAPU8.buffer, this.ptr, this._size);
+	}
+
+	get value() {
+		switch (this._type) {
+			case "i8":
+				return this.view.getInt8(0);
+			case "i16":
+				return this.view.getInt16(0, true);
+			case "i32":
+				return this.view.getInt32(0, true);
+			case "i64":
+				return this.view.getBigInt64(0, true);
+			case "u8":
+				return this.view.getUint8(0);
+			case "u16":
+				return this.view.getUint16(0, true);
+			case "u32":
+				return this.view.getUint32(0, true);
+			case "u64":
+				return this.view.getBigUint64(0, true);
+			case "float":
+			case "f32":
+				return this.view.getFloat32(0, true);
+			case "double":
+			case "f64":
+				return this.view.getFloat64(0, true);
+			case "i8*":
+			case "i16*":
+			case "i32*":
+			case "i64*":
+			case "u8*":
+			case "u16*":
+			case "u32*":
+			case "u64*":
+			case "float*":
+			case "f32*":
+			case "double*":
+			case "f64*":
+			case "*":
+			case "size_t":
+				if (this._sizeOf("*") === this._sizeOf("u32")) {
+					return this.view.getUint32(0, true);
+				} else {
+					return this.view.getBigUint64(0, true);
+				}
+			default:
+				throw new TypeError(`Unknown type: "${type}"`);
 		}
-		return new DataView(this.buffer.slice(this.offset, this.offset + this.size));
+	}
+
+	set value(value) {
+		if (typeof value === "number") {
+			switch (this._type) {
+				case "i8":
+					return this.view.setInt8(0, value);
+				case "i16":
+					return this.view.setInt16(0, value, true);
+				case "i32":
+					return this.view.setInt32(0, value, true);
+				case "i64":
+					return this.view.setBigInt64(0, value, true);
+				case "u8":
+					return this.view.setUint8(0, value, true);
+				case "u16":
+					return this.view.setUint16(0, value, true);
+				case "u32":
+					return this.view.setUint32(0, value, true);
+				case "u64":
+					return this.view.setBigUint64(0, value, true);
+				case "float":
+				case "f32":
+					return this.view.setFloat32(0, value, true);
+				case "double":
+				case "f64":
+					return this.view.setFloat64(0, value, true);
+				case "i8*":
+				case "i16*":
+				case "i32*":
+				case "i64*":
+				case "u8*":
+				case "u16*":
+				case "u32*":
+				case "u64*":
+				case "float*":
+				case "f32*":
+				case "double*":
+				case "f64*":
+				case "*":
+				case "size_t":
+					if (this._sizeOf("*") === this._sizeOf("u32")) {
+						return this.view.setUint32(0, value, true);
+					} else {
+						return this.view.setBigUint64(0, value, true);
+					}
+				default:
+					throw new TypeError(`Unknown type: "${this._type}"`);
+			}
+		}
+		throw new Error("Value type not supported");
 	}
 
 	/**
 	 * @constructor
 	 * @param {WasmStructMemberDefinition} signature
+	 * @param {WasmStructBase} struct
+	 * @param {Uint8Array} HEAPU8
+	 * @param {Malloc} malloc
+	 * @param {Free} free
+	 * @param {SizeOf} sizeOf
 	 */
-	constructor(signature) {
+	constructor(signature, struct, HEAPU8, malloc, free, sizeOf) {
 		/** @type {typeof signature.name} */
-		this.name = signature.name;
+		this._name = signature.name;
 		/** @type {typeof signature.type} */
-		this.type = signature.type;
+		this._type = signature.type;
 		/** @type {typeof signature.size} */
-		this.size = signature.size;
+		this._size = signature.size;
 		/** @type {typeof signature.offset} */
-		this.offset = signature.offset;
+		this._offset = signature.offset;
 
-		/** @type {ArrayBuffer | null} */
-		this.buffer = null;
+		/** @type {typeof HEAPU8} */
+		this._HEAPU8 = HEAPU8;
+		/** @type {typeof malloc} */
+		this._malloc = malloc;
+		/** @type {typeof free} */
+		this._free = free;
+		/** @type {typeof sizeOf} */
+		this._sizeOf = sizeOf;
+
+		/** @type {typeof struct} */
+		this._struct = struct;
 	}
 }
 
 class WasmStructBase {
+	get buffer() {
+		return this._HEAPU8.slice(this._ptr, this.ptr + this._size);
+	}
+
 	/**
 	 * @constructor
 	 * @param {WasmStructMemberDefinition[]} signatures
@@ -107,50 +230,63 @@ class WasmStructBase {
 	 */
 	constructor(signatures, HEAPU8, malloc, free, sizeOf) {
 		/** @type {typeof signatures} */
-		this.signatures = signatures;
+		this._signatures = signatures;
 
 		/** @type {typeof HEAPU8} */
-		this.HEAPU8 = HEAPU8;
+		this._HEAPU8 = HEAPU8;
 		/** @type {typeof malloc} */
-		this.malloc = malloc;
+		this._malloc = malloc;
 		/** @type {typeof free} */
-		this.free = free;
+		this._free = free;
 		/** @type {typeof sizeOf} */
-		this.sizeOf = sizeOf;
+		this._sizeOf = sizeOf;
 
 		/** @type {Record<string, WasmStructMember>} */
-		this.members = {};
+		this._members = {};
 
 		/** @type {number} */
-		this.size = 0;
+		this._size = 0;
 		/** @type {number} */
-		this.ptr = NULLPTR;
+		this._ptr = NULLPTR;
 
-		_init();
+		this._init();
 	}
 
 	_init() {
 		let structSize = 0;
 
-		for (const signature of this.signatures) {
+		for (const signature of this._signatures) {
 			if (this.hasMember(signature.name)) {
 				throw new Error(`WasmStructMember defined twice: "${signature.name}"`);
 			}
-			this.members[signature.name] = new WasmStructMember(signature);
+			this._members[signature.name] = new WasmStructMember(
+				signature,
+				this,
+				this._HEAPU8,
+				this._malloc,
+				this._free,
+				this._sizeOf,
+			);
+			Object.defineProperty(this, signature.name, {
+				get: function (member) {
+					return this;
+				}.bind(this._members[signature.name]),
+			});
 
 			structSize = Math.max(structSize, signature.offset + signature.size);
 		}
 
-		this.size = structSize;
-		this.ptr = this.malloc(this.size);
-		const buffer = this.HEAPU8.slice(this.ptr, this.ptr + this.size).buffer;
-		for (const member of this.members) {
-			member.buffer = buffer;
-		}
+		this._size = structSize;
+		this._ptr = this._malloc(this._size);
 	}
 
+	/**
+	 * Returns if submitted member name is part of this struct.
+	 * @param {string} memberName
+	 * @returns {boolean}
+	 */
 	hasMember(memberName) {
-		return Object.keys(this.members).includes(signature.name);
+		return Object.keys(this._members).includes(memberName);
 	}
 
 	/**
@@ -162,19 +298,22 @@ class WasmStructBase {
 		if (!this.hasMember(memberName)) {
 			throw new Error(`This struct don't have a member named "${memberName}"`);
 		}
-		return this.members[memberName].view;
+		return this._members[memberName].view;
 	}
 
+	/**
+	 * Use to destroy instance.
+	 */
 	destroy() {
-		this.free(this.ptr);
+		this._free(this._ptr);
 	}
 }
 
 /**
  * @typedef {{
  *    HEAPU8: Uint8Array
- *    malloc: Malloc
- *    free: Free
+ *    _malloc: Malloc
+ *    _free: Free
  * }} WasmImport
  */
 
@@ -184,7 +323,7 @@ class WasmStructBase {
  * @param {boolean} isMemory64
  */
 export function initWasmUtils(wasmImport, isMemory64 = false) {
-	const { HEAPU8, malloc, free } = wasmImport;
+	const { HEAPU8, _malloc: malloc, _free: free } = wasmImport;
 	if (HEAPU8 == null) {
 		throw new Error("HEAPU8 is null.");
 	}

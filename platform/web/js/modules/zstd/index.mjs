@@ -1,53 +1,9 @@
+import { NULLPTR, initWasmUtils } from "@godotengine/common";
+
 import { default as ZstdWasmModule } from "./zstd.mjs";
 
-const nullptr = 0;
-
-/**
- * @type {{
-	HEAP8,
-	HEAP16,
-	HEAP32,
-	HEAP64,
-	HEAPF32,
-	HEAPF64,
-	HEAPU8,
-	HEAPU16,
-	HEAPU32,
-	HEAPU64,
-	_malloc,
-	_free,
-	_ZSTD_decompressStream,
-    _ZSTD_createDCtx,
-	_ZSTD_freeDCtx,
-	_ZSTD_DCtx_setMaxWindowSize,
-	_ZSTD_DStreamInSize,
-	_ZSTD_DStreamOutSize,
-	_ZSTD_isError,
-	_ZSTD_getErrorName,
-	ccall,
-	cwrap,
-	stackAlloc,
-	stringToNewUTF8,
-	UTF8ToString,
-}}
- */
 export const wasm = await ZstdWasmModule();
-
-function mallocOrDie(size) {
-	if (typeof size !== "number") {
-		throw new Error(`size is not a number (${size})`);
-	}
-	const heapPtr = wasm._malloc(size);
-	if (heapPtr === nullptr) {
-		throw new Error("Could not malloc successfully.");
-	}
-	return heapPtr;
-}
-
-/**
- * Typed array.
- * @typedef {Int8Array|Int16Array|Int32Array|BigInt64Array|Uint8Array|Uint16Array|Uint32Array|BigUint64Array|Float32Array|Float64Array} TypedArray
- */
+const { mallocOrDie, freeOrDie, sizeOf, WasmValue, WasmStruct } = initWasmUtils(wasm);
 
 /**
  * Zstd stream "in-buffer"
@@ -133,24 +89,30 @@ function fromZSTD_outBuffer(zstdOutBuffer) {
 const zstdTransformContent = {
 	start() {
 		this.ctxPtr = wasm._ZSTD_createDCtx();
-		if (this.ctxPtr === nullptr) {
+		if (this.ctxPtr === NULLPTR) {
 			throw new Error("Could not create new Zstd context.");
 		}
 
 		this.inBufferSize = wasm._ZSTD_DStreamInSize();
 		this.outBufferSize = wasm._ZSTD_DStreamOutSize();
-		this.inBufferPtr = mallocOrDie(this.inBufferSize);
-		this.outBufferPtr = mallocOrDie(this.outBufferSize);
-		this.inBufferDataStackPtr = mallocOrDie(3 * Uint32Array.BYTES_PER_ELEMENT);
-		this.outBufferDataStackPtr = mallocOrDie(3 * Uint32Array.BYTES_PER_ELEMENT);
+		this.inBuffer = new WasmValue(this.inBufferSize);
+		this.outBuffer = new WasmValue(this.outBufferSize);
+		this.inBufferData = new WasmStruct([
+			{ name: "src", type: "*", size: sizeOf("*"), offset: 0 },
+			{ name: "size", type: "u32", size: sizeOf("u32"), offset: sizeOf("*") },
+			{ name: "pos", type: "u32", size: sizeOf("u32"), offset: sizeOf("*") + sizeOf("u32") },
+		]);
+		this.outBufferData = new WasmStruct([
+			{ name: "dst", type: "*", size: sizeOf("*"), offset: 0 },
+			{ name: "size", type: "u32", size: sizeOf("u32"), offset: sizeOf("*") },
+			{ name: "pos", type: "u32", size: sizeOf("u32"), offset: sizeOf("*") + sizeOf("u32") },
+		]);
 	},
 
 	async transform(chunk, controller) {
 		let _chunk = await chunk;
 		let offset = 0;
 		let subchunk;
-		let inBuffer;
-		let outBuffer;
 
 		while (true) {
 			let nextInputOffset = offset + this.inBufferSize;
@@ -162,53 +124,30 @@ const zstdTransformContent = {
 			if (subchunk.byteLength === 0) {
 				break;
 			}
-			wasm.HEAPU8.set(subchunk, this.inBufferPtr);
+			this.inBuffer.value = subchunk;
 
-			const inBufferData = toZSTD_inBuffer({
-				srcPtr: this.inBufferPtr,
-				size: subchunk.byteLength,
-				pos: 0,
-			});
-			wasm.HEAPU8.set(inBufferData, this.inBufferDataStackPtr);
+			this.inBufferData.set("src", this.inBuffer.ptr);
+			this.inBufferData.set("size", subchunk.byteLength);
+			this.inBufferData.set("pos", 0);
 
 			while (true) {
-				inBuffer = fromZSTD_inBuffer(
-					wasm.HEAPU8.slice(
-						this.inBufferDataStackPtr,
-						this.inBufferDataStackPtr + 3 * Uint32Array.BYTES_PER_ELEMENT,
-					),
-				);
-				if (inBuffer.pos >= inBuffer.size) {
+				if (this.inBufferData.get("pos") >= this.inBuffer.get("size")) {
 					break;
 				}
 
-				const outBufferData = toZSTD_outBuffer({
-					dstPtr: this.outBufferPtr,
-					size: this.outBufferSize,
-					pos: 0,
-				});
-				wasm.HEAPU8.set(outBufferData, this.outBufferDataStackPtr);
+				this.outBufferData.set("dst", this.outBuffer.ptr);
+				this.outBufferData.set("size", this.outBufferSize);
+				this.outBufferData.set("pos", 0);
 
 				let ret;
-				ret = wasm._ZSTD_decompressStream(this.ctxPtr, this.outBufferDataStackPtr, this.inBufferDataStackPtr);
+				ret = wasm._ZSTD_decompressStream(this.ctxPtr, this.outBufferData.ptr, this.inBufferData.ptr);
 				if (wasm._ZSTD_isError(ret)) {
-					throw new Error(
+					controller.error(
 						`Zstd error while decompressing stream:\n[${ret}] ${wasm.UTF8ToString(wasm._ZSTD_getErrorName(ret))}`,
 					);
 				}
 
-				outBuffer = fromZSTD_outBuffer(
-					wasm.HEAPU8.slice(
-						this.outBufferDataStackPtr,
-						this.outBufferDataStackPtr + 3 * Uint32Array.BYTES_PER_ELEMENT,
-					),
-				);
-
-				if (outBuffer.dstPtr > wasm.HEAPU8.byteLength) {
-					throw new Error("`outBuffer.dstPtr` points outside of the size of HEAPU8");
-				}
-
-				const uncompressedData = wasm.HEAPU8.slice(outBuffer.dstPtr, outBuffer.dstPtr + outBuffer.pos);
+				const uncompressedData = this.outBuffer.value;
 				controller.enqueue(uncompressedData);
 
 				this.lastReturn = ret;
@@ -220,14 +159,14 @@ const zstdTransformContent = {
 
 	flush(controller) {
 		if (this.lastReturn !== 0) {
-			throw new Error(`Zstd error:\n[${lastRet}]EOF before the end of the stream.`);
+			controller.error(`Zstd error:\n[${lastRet}]EOF before the end of the stream.`);
 		}
 
 		wasm._ZSTD_freeDCtx(this.ctxPtr);
-		wasm._free(this.inBufferPtr);
-		wasm._free(this.outBufferPtr);
-		wasm._free(this.inBufferDataStackPtr);
-		wasm._free(this.outBufferDataStackPtr);
+		this.inBuffer.destroy();
+		this.outBuffer.destroy();
+		this.inBufferData.destroy();
+		this.outBufferData.destroy();
 
 		controller.terminate();
 	},
