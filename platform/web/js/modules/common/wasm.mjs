@@ -127,7 +127,7 @@ class WasmStructMember {
 					return this.view.getBigUint64(0, true);
 				}
 			default:
-				throw new TypeError(`Unknown type: "${type}"`);
+				throw new TypeError(`Unknown type: "${this._type}"`);
 		}
 	}
 
