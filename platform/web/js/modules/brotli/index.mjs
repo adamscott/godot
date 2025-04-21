@@ -78,12 +78,12 @@ const brotliTransformContent = {
 		this.availableOut.value = BROTLI_BUFFER_SIZE;
 		this.nextOut.value = this.outBuffer.ptr;
 
-		while_loop: while (true) {
+		whileLoop: while (true) {
 			switch (this.result) {
 				case BrotliDecoderResult.NEEDS_MORE_INPUT:
 					{
 						if (offset >= _chunk.byteLength) {
-							break while_loop;
+							break whileLoop;
 						}
 						const subchunk = _chunk.slice(offset, offset + BROTLI_BUFFER_SIZE);
 						this.inBuffer.value = subchunk;
@@ -101,7 +101,7 @@ const brotliTransformContent = {
 					}
 					break;
 				default:
-					break while_loop;
+					break whileLoop;
 			}
 
 			this.result = wasm._BrotliDecoderDecompressStream(
