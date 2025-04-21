@@ -143,7 +143,7 @@ const zstdTransformContent = {
 				ret = wasm._ZSTD_decompressStream(this.ctxPtr, this.outBufferData.ptr, this.inBufferData.ptr);
 				if (wasm._ZSTD_isError(ret)) {
 					controller.error(
-						`Zstd error while decompressing stream:\n[${ret}] ${wasm.UTF8ToString(wasm._ZSTD_getErrorName(ret))}`,
+						new Error(`Zstd error:\n[${ret}] ${wasm.UTF8ToString(wasm._ZSTD_getErrorName(ret))}`),
 					);
 				}
 
@@ -159,7 +159,7 @@ const zstdTransformContent = {
 
 	flush(controller) {
 		if (this.lastReturn !== 0) {
-			controller.error(`Zstd error:\n[${lastRet}]EOF before the end of the stream.`);
+			controller.error(new Error(`Zstd error:\n[${lastRet}]EOF before the end of the stream.`));
 		}
 
 		wasm._ZSTD_freeDCtx(this.ctxPtr);
