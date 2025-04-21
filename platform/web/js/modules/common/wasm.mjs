@@ -212,107 +212,22 @@ class WasmStructMember {
 		return new DataView(this._struct.wasm.HEAPU8.buffer, this.ptr, this._size);
 	}
 
+	/**
+	 * Returns the value of the struct member.
+	 * If the struct member is an array, it will return only the first item.
+	 * @returns {number}
+	 */
 	get value() {
-		if (this._type.endsWith("*")) {
-			if (this._wasmUtils.sizeOf("size_t") === this._wasmUtils.sizeOf("uint32_t")) {
-				return this.view.getUint32(0, true);
-			}
-			return this.view.getBigUint64(0, true);
-		}
-
-		switch (this._type) {
-			case "i8":
-			case "int8_t":
-				return this.view.getInt8(0);
-			case "i16":
-			case "int16_t":
-				return this.view.getInt16(0, true);
-			case "i32":
-			case "int32_t":
-				return this.view.getInt32(0, true);
-			case "i64":
-			case "int64_t":
-				return this.view.getBigInt64(0, true);
-			case "u8":
-			case "uint8_t":
-				return this.view.getUint8(0);
-			case "u16":
-			case "uint16_t":
-				return this.view.getUint16(0, true);
-			case "uint32_t":
-				return this.view.getUint32(0, true);
-			case "uint64_t":
-				return this.view.getBigUint64(0, true);
-			case "float":
-			case "f32":
-			case "float32_t":
-				return this.view.getFloat32(0, true);
-			case "double":
-			case "f64":
-			case "float64_t":
-				return this.view.getFloat64(0, true);
-			case "size_t":
-				if (this._wasmUtils.sizeOf("size_t") === this._wasmUtils.sizeOf("uint32_t")) {
-					return this.view.getUint32(0, true);
-				}
-				return this.view.getBigUint64(0, true);
-			default:
-				throw new TypeError(`Unknown type: "${this._type}"`);
-		}
+		this.getOffset(0);
 	}
 
+	/**
+	 * Sets the value of the struct member.
+	 * If the struct member is an array, it will set only the first item.
+	 * @param {number} value
+	 */
 	set value(value) {
-		if (typeof value === "number") {
-			if (this._type.endsWith("*")) {
-				if (this._wasmUtils.sizeOf("size_t") === this._wasmUtils.sizeOf("uint32_t")) {
-					return this.view.setUint32(0, value, true);
-				}
-				return this.view.setBigUint64(0, value, true);
-			}
-
-			switch (this._type) {
-				case "i8":
-				case "int8_t":
-					return this.view.setInt8(0, value);
-				case "i16":
-				case "int16_t":
-					return this.view.setInt16(0, value, true);
-				case "i32":
-				case "int32_t":
-					return this.view.setInt32(0, value, true);
-				case "i64":
-				case "int64_t":
-					return this.view.setBigInt64(0, value, true);
-				case "u8":
-				case "uint8_t":
-					return this.view.setUint8(0, value, true);
-				case "u16":
-				case "uint16_t":
-					return this.view.setUint16(0, value, true);
-				case "u32":
-				case "uint32_t":
-					return this.view.setUint32(0, value, true);
-				case "u64":
-				case "uint64_t":
-					return this.view.setBigUint64(0, value, true);
-				case "float":
-				case "f32":
-				case "float32_t":
-					return this.view.setFloat32(0, value, true);
-				case "double":
-				case "f64":
-				case "float64_t":
-					return this.view.setFloat64(0, value, true);
-				case "size_t":
-					if (this._wasmUtils.sizeOf("size_t") === this._wasmUtils.sizeOf("uint32_t")) {
-						return this.view.setUint32(0, value, true);
-					}
-					return this.view.setBigUint64(0, value, true);
-				default:
-					throw new TypeError(`Unknown type: "${this._type}"`);
-			}
-		}
-		throw new Error("Value type not supported");
+		this.setOffset(value, 0);
 	}
 
 	/**
@@ -342,6 +257,118 @@ class WasmStructMember {
 
 		/** @type {typeof struct} */
 		this._struct = struct;
+	}
+
+	/**
+	 * Sets a value at a given offset. Useful for arrays.
+	 * @param {number} value
+	 * @param {number} offset
+	 */
+	setOffset(value, offset) {
+		if (this._type.endsWith("*")) {
+			if (this._wasmUtils.sizeOf("size_t") === this._wasmUtils.sizeOf("uint32_t")) {
+				return this.view.setUint32(offset, value, true);
+			}
+			return this.view.setBigUint64(offset, value, true);
+		}
+
+		switch (this._type) {
+			case "i8":
+			case "int8_t":
+				return this.view.setInt8(offset, value);
+			case "i16":
+			case "int16_t":
+				return this.view.setInt16(offset, value, true);
+			case "i32":
+			case "int32_t":
+				return this.view.setInt32(offset, value, true);
+			case "i64":
+			case "int64_t":
+				return this.view.setBigInt64(offset, value, true);
+			case "u8":
+			case "uint8_t":
+				return this.view.setUint8(offset, value, true);
+			case "u16":
+			case "uint16_t":
+				return this.view.setUint16(offset, value, true);
+			case "u32":
+			case "uint32_t":
+				return this.view.setUint32(offset, value, true);
+			case "u64":
+			case "uint64_t":
+				return this.view.setBigUint64(offset, value, true);
+			case "float":
+			case "f32":
+			case "float32_t":
+				return this.view.setFloat32(offset, value, true);
+			case "double":
+			case "f64":
+			case "float64_t":
+				return this.view.setFloat64(offset, value, true);
+			case "size_t":
+				if (this._wasmUtils.sizeOf("size_t") === this._wasmUtils.sizeOf("uint32_t")) {
+					return this.view.setUint32(offset, value, true);
+				}
+				return this.view.setBigUint64(offset, value, true);
+			default:
+				throw new TypeError(`Unknown type: "${this._type}"`);
+		}
+	}
+
+	/**
+	 * Gets a value at a given offset. Useful for arrays.
+	 * @param {number} offset
+	 * @returns {number}
+	 */
+	getOffset(offset) {
+		if (this._type.endsWith("*")) {
+			if (this._wasmUtils.sizeOf("size_t") === this._wasmUtils.sizeOf("uint32_t")) {
+				return this.view.getUint32(offset, true);
+			}
+			return this.view.getBigUint64(offset, true);
+		}
+
+		switch (this._type) {
+			case "i8":
+			case "int8_t":
+				return this.view.getInt8(offset);
+			case "i16":
+			case "int16_t":
+				return this.view.getInt16(offset, true);
+			case "i32":
+			case "int32_t":
+				return this.view.getInt32(offset, true);
+			case "i64":
+			case "int64_t":
+				return this.view.getBigInt64(offset, true);
+			case "u8":
+			case "uint8_t":
+				return this.view.getUint8(offset);
+			case "u16":
+			case "uint16_t":
+				return this.view.getUint16(offset, true);
+			case "u32":
+			case "uint32_t":
+				return this.view.getUint32(offset, true);
+			case "u64":
+			case "uint64_t":
+				return this.view.getBigUint64(offset, true);
+			case "float":
+			case "f32":
+			case "float32_t":
+				return this.view.getFloat32(offset, true);
+			case "double":
+			case "f64":
+			case "float64_t":
+				return this.view.getFloat64(offset, true);
+			case "size_t":
+				if (this._wasmUtils.sizeOf("size_t") === this._wasmUtils.sizeOf("uint32_t")) {
+					return this.view.getUint32(offset, true);
+				}
+				return this.view.getBigUint64(offset, true);
+			default:
+				throw new TypeError(`Unknown type: "${this._type}"`);
+		}
 	}
 }
 
