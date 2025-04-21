@@ -13,6 +13,7 @@ export const NULLPTR = 0;
  * @typedef {(ptr: number) => void} Free
  * @typedef {(type: Type) => number} SizeOf
  * @typedef {ReturnType<initWasmUtils>} WasmUtils
+ * @typedef {{ name: string, type: Type, size?: number, offset: number }} WasmStructMemberDefinition
  */
 
 class WasmValueBase {
@@ -194,10 +195,6 @@ class WasmValueBase {
 	}
 }
 
-/**
- * @typedef {{ name: string, type: Type, size?: number, offset: number }} WasmStructMemberDefinition
- */
-
 class WasmStructMember {
 	get ptr() {
 		return this._struct._ptr + this._offset;
@@ -231,6 +228,38 @@ class WasmStructMember {
 	}
 
 	/**
+	 * Gets the member name.
+	 * @returns {typeof this._name}
+	 */
+	get name() {
+		return this._name;
+	}
+
+	/**
+	 * Gets the member type.
+	 * @returns {typeof this._type}
+	 */
+	get name() {
+		return this._type;
+	}
+
+	/**
+	 * Gets the member size.
+	 * @returns {typeof this._size}
+	 */
+	get size() {
+		return this._size;
+	}
+
+	/**
+	 * Gets the member offset.
+	 * @returns {typeof this._offset}
+	 */
+	get offset() {
+		return this._offset;
+	}
+
+	/**
 	 * @constructor
 	 * @param {WasmStructMemberDefinition} signature
 	 * @param {WasmStructBase} struct
@@ -240,7 +269,7 @@ class WasmStructMember {
 		/** @type {typeof wasmUtils} */
 		this._wasmUtils = wasmUtils;
 
-		/** @type {typeof signature.size} */
+		/** @type {NonNullable<typeof signature.size>!} */
 		this._size;
 		if (signature.size == null) {
 			this._size = this._wasmUtils.sizeOf(signature.type);
@@ -379,7 +408,7 @@ class WasmStructBase {
 
 	/**
 	 * @constructor
-	 * @param {WasmStructMemberDefinition[]} signatures
+	 * @param {Array<WasmStructMemberDefinition|WasmStructMember>} signatures
 	 * @param {WasmUtils} wasmUtils
 	 */
 	constructor(signatures, wasmUtils) {
@@ -407,7 +436,13 @@ class WasmStructBase {
 			if (this.hasMember(signature.name)) {
 				throw new Error(`WasmStructMember defined twice: "${signature.name}"`);
 			}
-			const member = new WasmStructMember(signature, this, this._wasmUtils);
+			/** @type {WasmStructMember!} */
+			let member;
+			if (signature instanceof WasmStructMember) {
+				member = signature;
+			} else {
+				member = new WasmStructMember(signature, this, this._wasmUtils);
+			}
 			this._members[signature.name] = member;
 
 			// We create a property for each member, so that we can
@@ -601,6 +636,7 @@ export function initWasmUtils(wasmImport, isMemory64 = false) {
 		sizeOf,
 		WasmValue,
 		WasmStruct,
+		WasmStructMember,
 	};
 	Object.defineProperty(wasmUtils, "HEAPU8", {
 		get() {
