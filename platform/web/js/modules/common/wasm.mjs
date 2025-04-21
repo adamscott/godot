@@ -176,6 +176,14 @@ export function initWasmUtils(wasmImport, isMemory64 = false) {
 		}
 
 		/**
+		 * Returns the buffer of the value.
+		 * @returns {Uint8Array}
+		 */
+		get buffer() {
+			return this.view.buffer.slice(this.view.byteOffset, this.view.byteOffset + this.view.byteLength);
+		}
+
+		/**
 		 * @constructor
 		 * @param {{ type?: Type, size?: number }} params
 		 */
@@ -347,6 +355,9 @@ export function initWasmUtils(wasmImport, isMemory64 = false) {
 	}
 
 	class WasmStructMember {
+		/**
+		 * Returns the pointer of the struct member.
+		 */
 		get ptr() {
 			return this._struct._ptr + this._offset;
 		}
@@ -358,6 +369,14 @@ export function initWasmUtils(wasmImport, isMemory64 = false) {
 		 */
 		get view() {
 			return new DataView(wasmImport.HEAPU8.buffer, this.ptr, this._size);
+		}
+
+		/**
+		 * Returns the buffer of the struct member.
+		 * @returns {Uint8Array}
+		 */
+		get buffer() {
+			return this.view.buffer.slice(this.view.byteOffset, this.view.byteOffset + this.view.byteLength);
 		}
 
 		/**
@@ -576,6 +595,14 @@ export function initWasmUtils(wasmImport, isMemory64 = false) {
 		 */
 		get view() {
 			return new DataView(wasmImport.HEAPU8.buffer, this._ptr, this._size);
+		}
+
+		/**
+		 * Returns the buffer of the entire struct buffer.
+		 * @returns {Uint8Array}
+		 */
+		get buffer() {
+			return this.view.buffer.slice(this.view.byteOffset, this.view.byteOffset + this.view.byteLength);
 		}
 
 		/**
