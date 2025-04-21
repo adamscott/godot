@@ -24,8 +24,13 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 			}
 
 			// The method succeeded, so the file exists.
-			// Lets load the actual brotli-dec-wasm module.
-			const zstdWasm = await Engine.getJSModule('_zstd');
+			let zstd;
+			try {
+				zstd = await import('@godotengine/zstd');
+			} catch (err) {
+				// Failed to load the library. Let's return null and go on.
+				return null;
+			}
 
 			// Let's load the actual brotli file.
 			const zstdResponse = await fetch(newUrl, {
@@ -41,7 +46,7 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 				return null;
 			}
 
-			const zstdUncompressStream = new zstdWasm.ZstdUncompressStream();
+			const zstdUncompressStream = new zstd.ZstdUncompressStream();
 			const decompressedStream = zstdResponse.body.pipeThrough(zstdUncompressStream);
 
 			return {
@@ -83,8 +88,13 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 			}
 
 			// The method succeeded, so the file exists.
-			// Lets load the actual brotli-dec-wasm module.
-			const brotliWasm = await Engine.getJSModule('brotli-dec-wasm').then((m) => m.default);
+			let brotli;
+			try {
+				brotli = await import('@godotengine/brotli');
+			} catch (err) {
+				// Failed to load the library. Let's return null and go on.
+				return null;
+			}
 
 			// Let's load the actual brotli file.
 			const brotliResponse = await fetch(newUrl, {
@@ -100,11 +110,10 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 				return null;
 			}
 
-			const fileContents = await brotliResponse.arrayBuffer();
-			// Note: `brotliWasm.DecompressStream()` method has been tried, but it doesn't seem to work.
-			const decompressedData = brotliWasm.decompress(new Uint8Array(fileContents));
+			const brotliUncompressStream = new brotli.BrotliUncompressStream();
+			const decompressedStream = brotliResponse.body.pipeThrough(brotliUncompressStream);
 			return {
-				response: new Response(decompressedData, {
+				response: new Response(decompressedStream, {
 					method: 'GET',
 					status: brotliResponse.status,
 					headers: brotliResponse.headers,
@@ -205,37 +214,6 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 		}
 	}
 
-	function getTrackedResponse(response, load_status) {
-		function onloadprogress(reader, controller) {
-			return reader.read().then(function (result) {
-				if (load_status.done) {
-					return Promise.resolve();
-				}
-				if (result.value) {
-					controller.enqueue(result.value);
-					load_status.loaded += result.value.length;
-				}
-				if (!result.done) {
-					return onloadprogress(reader, controller);
-				}
-				load_status.done = true;
-				return Promise.resolve();
-			});
-		}
-
-		const reader = response.body.getReader();
-		return new Response(
-			new ReadableStream({
-				start: function (controller) {
-					onloadprogress(reader, controller).then(function () {
-						controller.close();
-					});
-				},
-			}),
-			{ headers: response.headers }
-		);
-	}
-
 	async function loadFetch(file, tracker, fileSize, raw) {
 		tracker[file] = {
 			total: fileSize || 0,
@@ -248,11 +226,31 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 				throw new Error(`Failed loading file '${file}'`);
 			}
 
-			const tr = await getTrackedResponse(response, tracker[file]);
+			const newResponse = new Response(
+				response.body.pipeThrough(
+					new TransformStream({
+						transform(chunk, controller) {
+							tracker[file].loaded += chunk.byteLength;
+							if (tracker[file].loaded > tracker[file].total) {
+								tracker[file].total = tracker[file].loaded;
+							}
+							controller.enqueue(chunk);
+						},
+						flush(controller) {
+							tracker[file].done = true;
+							controller.terminate();
+						},
+					})
+				),
+				{
+					headers: response.headers,
+				}
+			);
+
 			if (raw) {
-				return tr;
+				return newResponse;
 			}
-			return tr.arrayBuffer();
+			return await newResponse.arrayBuffer();
 		};
 
 		const headResponse = await fetch(file, {
@@ -262,57 +260,44 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 			throw new Error(`Failed loading file '${file}'`);
 		}
 
-		if (!bandwidthSaver.checked) {
-			bandwidthSaver.checked = true;
-
-			const availableModules = [];
-			const compressionFormats = [];
-			if (!headResponse.headers.has('content-encoding') && compressionFormats.length > 0) {
-				if (compressionFormats.includes('brotli') && availableModules.includes('brotli-dec-wasm')) {
-					bandwidthSaver.enabled = true;
-					bandwidthSaver.compressionFormat = 'brotli';
-				} else if (compressionFormats.includes('zstd') && availableModules.includes('_zstd')) {
-					bandwidthSaver.enabled = true;
-					bandwidthSaver.compressionFormat = 'zstd';
-				} else if (compressionFormats.includes('gzip') && availableModules.includes('pako')) {
-					bandwidthSaver.enabled = true;
-					bandwidthSaver.compressionFormat = 'gzip';
+		if (bandwidthSaver.enabled || !bandwidthSaver.checked) {
+			if ((bandwidthSaver.enabled && bandwidthSaver.compressionFormat === 'brotli') || !bandwidthSaver.checked) {
+				const info = await tryDownloadBrotliFile(headResponse);
+				if (info != null) {
+					if (!bandwidthSaver.checked) {
+						bandwidthSaver.checked = true;
+						bandwidthSaver.enabled = true;
+						bandwidthSaver.compressionFormat = 'brotli';
+					}
+					tracker[file].total = info.fileSize;
+					return handleResponse(info.response);
 				}
 			}
-		}
-
-		if (bandwidthSaver.enabled) {
-			switch (bandwidthSaver.compressionFormat) {
-			case 'zstd':
-				{
-					const info = await tryDownloadZstdFile(headResponse);
-					if (info != null) {
-						tracker[file].total = info.fileSize;
-						return handleResponse(info.response);
+			if ((bandwidthSaver.enabled && bandwidthSaver.compressionFormat === 'zstd') || !bandwidthSaver.checked) {
+				const info = await tryDownloadZstdFile(headResponse);
+				if (info != null) {
+					if (!bandwidthSaver.checked) {
+						bandwidthSaver.checked = true;
+						bandwidthSaver.enabled = true;
+						bandwidthSaver.compressionFormat = 'zstd';
 					}
+					tracker[file].total = info.fileSize;
+					return handleResponse(info.response);
 				}
-				break;
-			case 'gzip':
-				{
-					const info = await tryDownloadGZipFile(headResponse);
-					if (info != null) {
-						tracker[file].total = info.fileSize;
-						return handleResponse(info.response);
-					}
-				}
-				break;
-			case 'brotli':
-				{
-					const info = await tryDownloadBrotliFile(headResponse);
-					if (info != null) {
-						tracker[file].total = info.fileSize;
-						return handleResponse(info.response);
-					}
-				}
-				break;
-			default:
-				// Do nothing.
 			}
+			if ((bandwidthSaver.enabled && bandwidthSaver.compressionFormat === 'gzip') || !bandwidthSaver.checked) {
+				const info = await tryDownloadGZipFile(headResponse);
+				if (info != null) {
+					if (!bandwidthSaver.checked) {
+						bandwidthSaver.checked = true;
+						bandwidthSaver.enabled = true;
+						bandwidthSaver.compressionFormat = 'gzip';
+					}
+					tracker[file].total = info.fileSize;
+					return handleResponse(info.response);
+				}
+			}
+			bandwidthSaver.checked = true; // eslint-disable-line require-atomic-updates
 		}
 
 		const response = await fetch(file);
