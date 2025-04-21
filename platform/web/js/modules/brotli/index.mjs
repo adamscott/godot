@@ -67,16 +67,17 @@ const brotliTransformContent = {
 
 		// this.data = new WasmStruct(Object.values(defs));
 		this.result = BrotliDecoderResult.NEEDS_MORE_INPUT;
-	},
-
-	async transform(chunk, controller) {
-		const _chunk = await chunk;
-		let offset = 0;
 
 		this.availableIn.value = 0;
 		this.nextIn.value = 0;
 		this.availableOut.value = BROTLI_BUFFER_SIZE;
 		this.nextOut.value = this.outBuffer.ptr;
+		this.totalOut.value = 0;
+	},
+
+	async transform(chunk, controller) {
+		const _chunk = await chunk;
+		let offset = 0;
 
 		whileLoop: while (true) {
 			switch (this.result) {
@@ -112,18 +113,15 @@ const brotliTransformContent = {
 				this.nextOut.ptr,
 				this.totalOut.ptr,
 			);
-
-			if (this.nextOut.value !== this.outBuffer.ptr) {
-				const uncompressedData = new Uint8Array(this.outBuffer.value.buffer).slice(
-					this.outBuffer.value.byteOffset,
-					this.outBuffer.value.byteOffset + this.nextOut.value - this.outBuffer.ptr,
-				);
-				controller.enqueue(uncompressedData);
-			}
 		}
 	},
 
 	flush(controller) {
+		if (this.nextOut.value !== this.outBuffer.ptr) {
+			const offset = this.nextOut.value - this.outBuffer.ptr;
+			const uncompressedData = this.outBuffer.value.slice(0, offset);
+			controller.enqueue(uncompressedData);
+		}
 		if (this.result === BrotliDecoderResult.NEEDS_MORE_OUTPUT) {
 			controller.error(new Error("Brotli error:\nFailed to write output"));
 			return;
