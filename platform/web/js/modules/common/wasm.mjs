@@ -2,7 +2,7 @@ export const NULLPTR = 0;
 
 /**
  * @typedef {Int8Array|Int16Array|Int32Array|BigInt64Array|Uint8Array|Uint16Array|Uint32Array|BigUint64Array|Float32Array|Float64Array} TypedArray
- * @typedef {"i8"|"i16"|"i32"|"i64"|"u8"|"u16"|"u32"|"u64"|"float"|"double"|"f32"|"f64"|"i8*"|"i16*"|"i32*"|"i64*"|"u8*"|"u16*"|"u32*"|"u64*"|"float*"|"double*"|"f32*"|"f64*"|"*"|"size_t"} Type
+ * @typedef {"i8"|"i16"|"i32"|"i64"|"u8"|"u16"|"u32"|"u64"|"float"|"double"|"f32"|"f64"|"i8*"|"i16*"|"i32*"|"i64*"|"u8*"|"u16*"|"u32*"|"u64*"|"float*"|"double*"|"f32*"|"f64*"|"*"|"size_t*"|"size_t"} Type
  * @typedef {(size: number) => number} Malloc
  * @typedef {(ptr: number) => void} Free
  * @typedef {(type: Type) => number} SizeOf
@@ -120,6 +120,7 @@ class WasmStructMember {
 			case "double*":
 			case "f64*":
 			case "*":
+			case "size_t*":
 			case "size_t":
 				if (this._sizeOf("*") === this._sizeOf("u32")) {
 					return this.view.getUint32(0, true);
@@ -169,6 +170,7 @@ class WasmStructMember {
 				case "double*":
 				case "f64*":
 				case "*":
+				case "size_t*":
 				case "size_t":
 					if (this._sizeOf("*") === this._sizeOf("u32")) {
 						return this.view.setUint32(0, value, true);
