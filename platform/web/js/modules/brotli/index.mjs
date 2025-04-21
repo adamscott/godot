@@ -56,12 +56,48 @@ const brotliTransformContent = {
 		}
 		this.inBuffer = new WasmValue(BROTLI_BUFFER_SIZE);
 		this.outBuffer = new WasmValue(BROTLI_BUFFER_SIZE);
-		this.data = new WasmStruct([
-			{ name: "inAvailable", type: "size_t", size: sizeOf("size_t"), offset: 0 },
-			{ name: "outAvailable", type: "size_t", size: sizeOf("size_t"), offset: sizeOf("size_t") },
-			{ name: "inNext", type: "u8*", size: sizeOf("u8*"), offset: sizeOf("size_t") * 2 },
-			{ name: "outNext", type: "u8*", size: sizeOf("u8*"), offset: sizeOf("size_t") * 2 + sizeOf("u8*") },
-		]);
+
+		// https://www.brotli.org/decode.html#a234
+		/** @type {Record<string, import("@godotengine/common").WasmStructMemberDefinition>} */
+		const defs = {};
+		let offset = 0;
+		let previousDef;
+		previousDef = defs["available_in"] = {
+			name: "available_in",
+			type: "size_t",
+			size: sizeOf("size_t"),
+			offset,
+		};
+		offset += previousDef.size;
+		previousDef = defs["next_in"] = {
+			name: "next_in",
+			type: "uint8_t*",
+			size: sizeOf("uint8_t*"),
+			offset,
+		};
+		offset += previousDef.size;
+		previousDef = defs["available_out"] = {
+			name: "available_out",
+			type: "size_t",
+			size: sizeOf("size_t"),
+			offset,
+		};
+		offset += previousDef.size;
+		previousDef = defs["next_out"] = {
+			name: "next_out",
+			type: "uint8_t*",
+			size: sizeOf("uint8_t*"),
+			offset,
+		};
+		offset += previousDef.size;
+		previousDef = data["total_out"] = {
+			name: "total_out",
+			type: "size_t",
+			size: sizeOf("size_t"),
+			offset,
+		};
+
+		this.data = new WasmStruct(Object.values(defs));
 		this.result = BrotliDecoderResult.NEEDS_MORE_INPUT;
 	},
 
@@ -102,11 +138,11 @@ const brotliTransformContent = {
 
 			this.result = wasm._BrotliDecoderDecompressStream(
 				this.instancePtr,
-				this.data.inAvailable.ptr,
-				this.data.inNext.ptr,
+				this.data.inAvailable.value,
+				this.data.inNext.value,
 				this.data.outAvailable.ptr,
-				this.data.outNext.ptr,
-				0,
+				this.data.outNext.value,
+				NULLPTR,
 			);
 		}
 	},
