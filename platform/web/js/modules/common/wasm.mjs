@@ -520,8 +520,20 @@ export function initWasmUtils(wasmImport, isMemory64 = false) {
 	 * Framework to manage memory of a defined struct.
 	 */
 	class WasmStruct {
-		get buffer() {
-			return wasmImport.HEAPU8.slice(this._ptr, this.ptr + this._size);
+		/**
+		 * Returns the pointer of the struct.
+		 * @returns {number}
+		 */
+		get ptr() {
+			return this._ptr;
+		}
+
+		/**
+		 * Returns a view of the entire struct buffer.
+		 * @returns {DataView}
+		 */
+		get view() {
+			return new DataView(wasmImport.HEAPU8.buffer, this._ptr, this._size);
 		}
 
 		/**
