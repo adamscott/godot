@@ -126,8 +126,10 @@ const brotliTransformContent = {
 	flush(controller) {
 		if (this.result === BrotliDecoderResult.NEEDS_MORE_OUTPUT) {
 			controller.error(new Error("Brotli error:\nFailed to write output"));
+			return;
 		} else if (this.result !== BrotliDecoderResult.SUCCESS) {
 			controller.error(new Error("Brotli error:\nCorrupt input"));
+			return;
 		}
 
 		wasm._BrotliDecoderDestroyInstance(this.instancePtr);
