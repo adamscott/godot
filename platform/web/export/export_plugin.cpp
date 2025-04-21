@@ -166,7 +166,7 @@ Error EditorExportPlatformWeb::_compress_template_files(const Ref<EditorExportPr
 				if (err != OK) {
 					return err;
 				}
-				target->store_buffer(file_bytes.ptr(), compressed_byte_size);
+				target->store_buffer(compressed_bytes.ptr(), compressed_byte_size);
 			}
 		skip_zstd:
 			(void)0;
@@ -189,7 +189,7 @@ Error EditorExportPlatformWeb::_compress_template_files(const Ref<EditorExportPr
 				if (err != OK) {
 					return err;
 				}
-				target->store_buffer(file_bytes.ptr(), compressed_byte_size);
+				target->store_buffer(compressed_bytes.ptr(), compressed_byte_size);
 			}
 		skip_gzip:
 			(void)0;
