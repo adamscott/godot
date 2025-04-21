@@ -2,7 +2,7 @@ export const NULLPTR = 0;
 
 /**
  * @typedef {Int8Array|Int16Array|Int32Array|BigInt64Array|Uint8Array|Uint16Array|Uint32Array|BigUint64Array|Float32Array|Float64Array} TypedArray
- * @typedef {("i8"|"int8_t")|("i16"|"int16_t")|("i32"|"int32_t")|("i64"|"int64_t")|("u8"|"uint8_t")|("u16"|"uint16_t")|("u32"|"uint32_t")|("u64"|"uint64_t")|("f32"|"float32_t"|"float")|("f64"|"float64_t"|"double")|("size_t")} BaseType
+ * @typedef {("char"|"i8"|"int8_t")|("i16"|"int16_t")|("i32"|"int32_t")|("i64"|"int64_t")|("u8"|"uint8_t")|("u16"|"uint16_t")|("u32"|"uint32_t")|("u64"|"uint64_t")|("f32"|"float32_t"|"float")|("f64"|"float64_t"|"double")|("size_t")} BaseType
  * @typedef {"*"|"**"|"***"|"****"|"*****"} PtrIndicator
  * @typedef {`${BaseType}${PtrIndicator}`} PtrType
  * @typedef {`void${PtrIndicator}`} VoidType
@@ -82,6 +82,7 @@ export function initWasmUtils(wasmImport, isMemory64 = false) {
 		}
 
 		switch (type) {
+			case "char":
 			case "i8":
 			case "int8_t":
 				return Int8Array.BYTES_PER_ELEMENT;
@@ -149,58 +150,7 @@ export function initWasmUtils(wasmImport, isMemory64 = false) {
 		 * @returns {typeof this._type extends Type ? number : DataView}
 		 */
 		get value() {
-			if (this._type == null) {
-				return new Uint8Array(this.view.buffer).slice(
-					this.view.byteOffset,
-					this.view.byteOffset + this.view.byteLength,
-				);
-			}
-			if (this._type.endsWith("*")) {
-				if (sizeOf("*") === sizeOf("u32")) {
-					return this.view.getUint32(0, true);
-				}
-				return this.view.getBigUint64(0, true);
-			}
-
-			switch (this._type) {
-				case "i8":
-				case "int8_t":
-					return this.view.getInt8(0);
-				case "i16":
-				case "int16_t":
-					return this.view.getInt16(0, true);
-				case "i32":
-				case "int32_t":
-					return this.view.getInt32(0, true);
-				case "i64":
-				case "int64_t":
-					return this.view.getBigInt64(0, true);
-				case "u8":
-				case "uint8_t":
-					return this.view.getUint8(0);
-				case "u16":
-				case "uint16_t":
-					return this.view.getUint16(0, true);
-				case "uint32_t":
-					return this.view.getUint32(0, true);
-				case "uint64_t":
-					return this.view.getBigUint64(0, true);
-				case "float":
-				case "f32":
-				case "float32_t":
-					return this.view.getFloat32(0, true);
-				case "double":
-				case "f64":
-				case "float64_t":
-					return this.view.getFloat64(0, true);
-				case "size_t":
-					if (sizeOf("*") === sizeOf("u32")) {
-						return this.view.getUint32(0, true);
-					}
-					return this.view.getBigUint64(0, true);
-				default:
-					throw new TypeError(`Unknown type: "${this._type}"`);
-			}
+			return this.getOffset(0);
 		}
 
 		/**
@@ -208,59 +158,7 @@ export function initWasmUtils(wasmImport, isMemory64 = false) {
 		 * @param {typeof this._type extends Type ? number : TypedArray}
 		 */
 		set value(value) {
-			if (this._type == null) {
-				new Uint8Array(this.view.buffer).set(value, this.view.byteOffset);
-				return;
-			}
-
-			if (this._type.endsWith("*")) {
-				if (sizeOf("*") === sizeOf("u32")) {
-					return this.view.setUint32(0, value, true);
-				}
-				return this.view.setBigUint64(0, value, true);
-			}
-
-			switch (this._type) {
-				case "i8":
-				case "int8_t":
-					return this.view.setInt8(0, value);
-				case "i16":
-				case "int16_t":
-					return this.view.setInt16(0, value, true);
-				case "i32":
-				case "int32_t":
-					return this.view.setInt32(0, value, true);
-				case "i64":
-				case "int64_t":
-					return this.view.setBigInt64(0, value, true);
-				case "u8":
-				case "uint8_t":
-					return this.view.setUint8(0, value, true);
-				case "u16":
-				case "uint16_t":
-					return this.view.setUint16(0, value, true);
-				case "u32":
-				case "uint32_t":
-					return this.view.setUint32(0, value, true);
-				case "u64":
-				case "uint64_t":
-					return this.view.setBigUint64(0, value, true);
-				case "float":
-				case "f32":
-				case "float32_t":
-					return this.view.setFloat32(0, value, true);
-				case "double":
-				case "f64":
-				case "float64_t":
-					return this.view.setFloat64(0, value, true);
-				case "size_t":
-					if (sizeOf("size_t") === sizeOf("uint32_t")) {
-						return this.view.setUint32(0, value, true);
-					}
-					return this.view.setBigUint64(0, value, true);
-				default:
-					throw new TypeError(`Unknown type: "${this._type}"`);
-			}
+			return this.setOffset(value, 0);
 		}
 
 		/**
@@ -307,6 +205,140 @@ export function initWasmUtils(wasmImport, isMemory64 = false) {
 
 		_init() {
 			this._ptr = malloc(this._size);
+		}
+
+		/**
+		 * Sets a value at a given offset. Useful for arrays.
+		 * @param {number} value
+		 * @param {number} offset
+		 */
+		setOffset(value, offset) {
+			if (offset >= this.view.byteLength) {
+				throw new Error("Out-of-bounds offset.");
+			}
+
+			if (this._type == null) {
+				new Uint8Array(this.view.buffer).set(value, this.view.byteOffset + offset);
+				return;
+			}
+
+			if (this._type.endsWith("*")) {
+				if (sizeOf("size_t") === sizeOf("uint32_t")) {
+					return this.view.setUint32(offset, value, true);
+				}
+				return this.view.setBigUint64(offset, value, true);
+			}
+
+			switch (this._type) {
+				case "char":
+				case "i8":
+				case "int8_t":
+					return this.view.setInt8(offset, value);
+				case "i16":
+				case "int16_t":
+					return this.view.setInt16(offset, value, true);
+				case "i32":
+				case "int32_t":
+					return this.view.setInt32(offset, value, true);
+				case "i64":
+				case "int64_t":
+					return this.view.setBigInt64(offset, value, true);
+				case "u8":
+				case "uint8_t":
+					return this.view.setUint8(offset, value, true);
+				case "u16":
+				case "uint16_t":
+					return this.view.setUint16(offset, value, true);
+				case "u32":
+				case "uint32_t":
+					return this.view.setUint32(offset, value, true);
+				case "u64":
+				case "uint64_t":
+					return this.view.setBigUint64(offset, value, true);
+				case "float":
+				case "f32":
+				case "float32_t":
+					return this.view.setFloat32(offset, value, true);
+				case "double":
+				case "f64":
+				case "float64_t":
+					return this.view.setFloat64(offset, value, true);
+				case "size_t":
+					if (sizeOf("size_t") === sizeOf("uint32_t")) {
+						return this.view.setUint32(offset, value, true);
+					}
+					return this.view.setBigUint64(offset, value, true);
+				default:
+					throw new TypeError(`Unknown type: "${this._type}"`);
+			}
+		}
+
+		/**
+		 * Gets a value at a given offset. Useful for arrays.
+		 * @param {number} offset
+		 * @returns {typeof this._type extends Type ? number : DataView}
+		 */
+		getOffset(offset) {
+			if (offset >= this.view.byteLength) {
+				throw new Error("Out-of-bounds offset.");
+			}
+
+			if (this._type == null) {
+				return new Uint8Array(this.view.buffer).slice(
+					this.view.byteOffset + offset,
+					this.view.byteOffset + this.view.byteLength,
+				);
+			}
+
+			if (this._type.endsWith("*")) {
+				if (sizeOf("size_t") === sizeOf("uint32_t")) {
+					return this.view.getUint32(offset, true);
+				}
+				return this.view.getBigUint64(offset, true);
+			}
+
+			switch (this._type) {
+				case "char":
+				case "i8":
+				case "int8_t":
+					return this.view.getInt8(offset);
+				case "i16":
+				case "int16_t":
+					return this.view.getInt16(offset, true);
+				case "i32":
+				case "int32_t":
+					return this.view.getInt32(offset, true);
+				case "i64":
+				case "int64_t":
+					return this.view.getBigInt64(offset, true);
+				case "u8":
+				case "uint8_t":
+					return this.view.getUint8(offset);
+				case "u16":
+				case "uint16_t":
+					return this.view.getUint16(offset, true);
+				case "u32":
+				case "uint32_t":
+					return this.view.getUint32(offset, true);
+				case "u64":
+				case "uint64_t":
+					return this.view.getBigUint64(offset, true);
+				case "float":
+				case "f32":
+				case "float32_t":
+					return this.view.getFloat32(offset, true);
+				case "double":
+				case "f64":
+				case "float64_t":
+					return this.view.getFloat64(offset, true);
+				case "size_t":
+					if (sizeOf("size_t") === sizeOf("uint32_t")) {
+						return this.view.getUint32(offset, true);
+					}
+					return this.view.getBigUint64(offset, true);
+				default:
+					throw new TypeError(`Unknown type: "${this._type}"`);
+			}
 		}
 
 		destroy() {
@@ -409,6 +441,10 @@ export function initWasmUtils(wasmImport, isMemory64 = false) {
 		 * @param {number} offset
 		 */
 		setOffset(value, offset) {
+			if (offset >= this.view.byteLength) {
+				throw new Error("Out-of-bounds offset.");
+			}
+
 			if (this._type.endsWith("*")) {
 				if (sizeOf("size_t") === sizeOf("uint32_t")) {
 					return this.view.setUint32(offset, value, true);
@@ -417,6 +453,7 @@ export function initWasmUtils(wasmImport, isMemory64 = false) {
 			}
 
 			switch (this._type) {
+				case "char":
 				case "i8":
 				case "int8_t":
 					return this.view.setInt8(offset, value);
@@ -465,6 +502,10 @@ export function initWasmUtils(wasmImport, isMemory64 = false) {
 		 * @returns {number}
 		 */
 		getOffset(offset) {
+			if (offset >= this.view.byteLength) {
+				throw new Error("Out-of-bounds offset.");
+			}
+
 			if (this._type.endsWith("*")) {
 				if (sizeOf("size_t") === sizeOf("uint32_t")) {
 					return this.view.getUint32(offset, true);
@@ -473,6 +514,7 @@ export function initWasmUtils(wasmImport, isMemory64 = false) {
 			}
 
 			switch (this._type) {
+				case "char":
 				case "i8":
 				case "int8_t":
 					return this.view.getInt8(offset);
@@ -597,18 +639,6 @@ export function initWasmUtils(wasmImport, isMemory64 = false) {
 		 */
 		hasMember(memberName) {
 			return Object.keys(this._members).includes(memberName);
-		}
-
-		/**
-		 * Returns the memory view of a member.
-		 * @param {string} memberName
-		 * @returns {DataView}
-		 */
-		getView(memberName) {
-			if (!this.hasMember(memberName)) {
-				throw new Error(`This struct don't have a member named "${memberName}"`);
-			}
-			return this._members[memberName].view;
 		}
 
 		/**
