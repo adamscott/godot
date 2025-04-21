@@ -173,6 +173,8 @@ class WasmValueBase {
 		const { type, size } = params;
 		if (type != null && size != null) {
 			throw new Error("Cannot define both type and size.");
+		} else if (type == null && size == null) {
+			throw new Error("Type and size not set.");
 		}
 
 		/** @type {Type|null} */
