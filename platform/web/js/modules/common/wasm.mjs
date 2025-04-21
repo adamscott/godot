@@ -137,6 +137,14 @@ export function initWasmUtils(wasmImport, isMemory64 = false) {
 		}
 
 		/**
+		 * Returns the value size.
+		 * @type {typeof this._size}
+		 */
+		get size() {
+			return this._size;
+		}
+
+		/**
 		 * Returns the value in memory.
 		 * @returns {typeof this._type extends Type ? number : DataView}
 		 */
