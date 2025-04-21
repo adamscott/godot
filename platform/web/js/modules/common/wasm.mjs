@@ -5,7 +5,8 @@ export const NULLPTR = 0;
  * @typedef {("i8"|"int8_t")|("i16"|"int16_t")|("i32"|"int32_t")|("i64"|"int64_t")|("u8"|"uint8_t")|("u16"|"uint16_t")|("u32"|"uint32_t")|("u64"|"uint64_t")|("f32"|"float32_t"|"float")|("f64"|"float64_t"|"double")|("size_t")} BaseType
  * @typedef {"*"|"**"|"***"|"****"|"*****"} PtrIndicator
  * @typedef {`${BaseType}${PtrIndicator}`} PtrType
- * @typedef {BaseType|PtrType} Type
+ * @typedef {`void${PtrIndicator}`} VoidType
+ * @typedef {BaseType|PtrType|VoidType} Type
  * @typedef {Uint8Array} HEAPU8
  * @typedef {() => HEAPU8} GetHEAPU8
  * @typedef {(size: number) => number} Malloc
@@ -194,7 +195,7 @@ class WasmValueBase {
 }
 
 /**
- * @typedef {{ name: string, type: Type, size: number, offset: number }} WasmStructMemberDefinition
+ * @typedef {{ name: string, type: Type, size?: number, offset: number }} WasmStructMemberDefinition
  */
 
 class WasmStructMember {
@@ -324,12 +325,18 @@ class WasmStructMember {
 		/** @type {typeof wasmUtils} */
 		this._wasmUtils = wasmUtils;
 
+		/** @type {typeof signature.size} */
+		this._size;
+		if (signature.size == null) {
+			this._size = this._wasmUtils.sizeOf(signature.type);
+		} else {
+			this._size = signature.size;
+		}
+
 		/** @type {typeof signature.name} */
 		this._name = signature.name;
 		/** @type {typeof signature.type} */
 		this._type = signature.type;
-		/** @type {typeof signature.size} */
-		this._size = signature.size;
 		/** @type {typeof signature.offset} */
 		this._offset = signature.offset;
 
@@ -373,14 +380,21 @@ class WasmStructBase {
 			if (this.hasMember(signature.name)) {
 				throw new Error(`WasmStructMember defined twice: "${signature.name}"`);
 			}
-			this._members[signature.name] = new WasmStructMember(signature, this, this._wasmUtils);
+			const member = new WasmStructMember(signature, this, this._wasmUtils);
+			this._members[signature.name] = member;
+
+			// We create a property for each member, so that we can
+			// actually access each member directly, instead of using
+			// a proxy function.
 			Object.defineProperty(this, signature.name, {
+				// Important to bind each member to the get function,
+				// as otherwise, the member don't have access to its data.
 				get: function (member) {
 					return this;
 				}.bind(this._members[signature.name]),
 			});
 
-			structSize = Math.max(structSize, signature.offset + signature.size);
+			structSize = Math.max(structSize, member.offset + member.size);
 		}
 
 		this._size = structSize;
