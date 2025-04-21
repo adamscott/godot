@@ -326,7 +326,7 @@ export function initWasmUtils(wasmImport, isMemory64 = false) {
 		 * @returns {number}
 		 */
 		get value() {
-			this.getOffset(0);
+			return this.getOffset(0);
 		}
 
 		/**
