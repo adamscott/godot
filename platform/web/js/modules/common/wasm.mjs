@@ -12,6 +12,9 @@ export const NULLPTR = 0;
  * @typedef {(size: number) => number} Malloc
  * @typedef {(ptr: number) => void} Free
  * @typedef {(type: Type) => number} SizeOf
+ * @typedef {WasmStructMember} WasmStructMember
+ * @typedef {WasmStructBase} WasmStructBase
+ * @typedef {WasmValueBase} WasmValueBase
  * @typedef {ReturnType<initWasmUtils>} WasmUtils
  * @typedef {{ name: string, type: Type, size?: number, offset: number }} WasmStructMemberDefinition
  */
@@ -30,58 +33,58 @@ class WasmValueBase {
 	 * @returns {typeof this._type extends Type ? number : DataView}
 	 */
 	get value() {
-		if (this._type != null) {
-			if (this._type.endsWith("*")) {
+		if (this._type == null) {
+			return new Uint8Array(this.view.buffer).slice(
+				this.view.byteOffset,
+				this.view.byteOffset + this.view.byteLength,
+			);
+		}
+		if (this._type.endsWith("*")) {
+			if (this._wasmUtils.sizeOf("*") === this._wasmUtils.sizeOf("u32")) {
+				return this.view.getUint32(0, true);
+			}
+			return this.view.getBigUint64(0, true);
+		}
+
+		switch (this._type) {
+			case "i8":
+			case "int8_t":
+				return this.view.getInt8(0);
+			case "i16":
+			case "int16_t":
+				return this.view.getInt16(0, true);
+			case "i32":
+			case "int32_t":
+				return this.view.getInt32(0, true);
+			case "i64":
+			case "int64_t":
+				return this.view.getBigInt64(0, true);
+			case "u8":
+			case "uint8_t":
+				return this.view.getUint8(0);
+			case "u16":
+			case "uint16_t":
+				return this.view.getUint16(0, true);
+			case "uint32_t":
+				return this.view.getUint32(0, true);
+			case "uint64_t":
+				return this.view.getBigUint64(0, true);
+			case "float":
+			case "f32":
+			case "float32_t":
+				return this.view.getFloat32(0, true);
+			case "double":
+			case "f64":
+			case "float64_t":
+				return this.view.getFloat64(0, true);
+			case "size_t":
 				if (this._wasmUtils.sizeOf("*") === this._wasmUtils.sizeOf("u32")) {
 					return this.view.getUint32(0, true);
 				}
 				return this.view.getBigUint64(0, true);
-			}
-
-			switch (this._type) {
-				case "i8":
-				case "int8_t":
-					return this.view.getInt8(0);
-				case "i16":
-				case "int16_t":
-					return this.view.getInt16(0, true);
-				case "i32":
-				case "int32_t":
-					return this.view.getInt32(0, true);
-				case "i64":
-				case "int64_t":
-					return this.view.getBigInt64(0, true);
-				case "u8":
-				case "uint8_t":
-					return this.view.getUint8(0);
-				case "u16":
-				case "uint16_t":
-					return this.view.getUint16(0, true);
-				case "uint32_t":
-					return this.view.getUint32(0, true);
-				case "uint64_t":
-					return this.view.getBigUint64(0, true);
-				case "float":
-				case "f32":
-				case "float32_t":
-					return this.view.getFloat32(0, true);
-				case "double":
-				case "f64":
-				case "float64_t":
-					return this.view.getFloat64(0, true);
-				case "size_t":
-					if (this._wasmUtils.sizeOf("*") === this._wasmUtils.sizeOf("u32")) {
-						return this.view.getUint32(0, true);
-					}
-					return this.view.getBigUint64(0, true);
-				default:
-					throw new TypeError(`Unknown type: "${this._type}"`);
-			}
+			default:
+				throw new TypeError(`Unknown type: "${this._type}"`);
 		}
-		return new Uint8Array(this.view.buffer).slice(
-			this.view.byteOffset,
-			this.view.byteOffset + this.view.byteLength,
-		);
 	}
 
 	/**
@@ -89,57 +92,59 @@ class WasmValueBase {
 	 * @param {typeof this._type extends Type ? number : TypedArray}
 	 */
 	set value(value) {
-		if (this._type != null) {
-			if (this._type.endsWith("*")) {
-				if (this._wasmUtils.sizeOf("*") === this._wasmUtils.sizeOf("u32")) {
+		if (this._type == null) {
+			new Uint8Array(this.view.buffer).set(value, this.view.byteOffset);
+			return;
+		}
+
+		if (this._type.endsWith("*")) {
+			if (this._wasmUtils.sizeOf("*") === this._wasmUtils.sizeOf("u32")) {
+				return this.view.setUint32(0, value, true);
+			}
+			return this.view.setBigUint64(0, value, true);
+		}
+
+		switch (this._type) {
+			case "i8":
+			case "int8_t":
+				return this.view.setInt8(0, value);
+			case "i16":
+			case "int16_t":
+				return this.view.setInt16(0, value, true);
+			case "i32":
+			case "int32_t":
+				return this.view.setInt32(0, value, true);
+			case "i64":
+			case "int64_t":
+				return this.view.setBigInt64(0, value, true);
+			case "u8":
+			case "uint8_t":
+				return this.view.setUint8(0, value, true);
+			case "u16":
+			case "uint16_t":
+				return this.view.setUint16(0, value, true);
+			case "u32":
+			case "uint32_t":
+				return this.view.setUint32(0, value, true);
+			case "u64":
+			case "uint64_t":
+				return this.view.setBigUint64(0, value, true);
+			case "float":
+			case "f32":
+			case "float32_t":
+				return this.view.setFloat32(0, value, true);
+			case "double":
+			case "f64":
+			case "float64_t":
+				return this.view.setFloat64(0, value, true);
+			case "size_t":
+				if (this._wasmUtils.sizeOf("size_t") === this._wasmUtils.sizeOf("uint32_t")) {
 					return this.view.setUint32(0, value, true);
 				}
 				return this.view.setBigUint64(0, value, true);
-			}
-
-			switch (this._type) {
-				case "i8":
-				case "int8_t":
-					return this.view.setInt8(0, value);
-				case "i16":
-				case "int16_t":
-					return this.view.setInt16(0, value, true);
-				case "i32":
-				case "int32_t":
-					return this.view.setInt32(0, value, true);
-				case "i64":
-				case "int64_t":
-					return this.view.setBigInt64(0, value, true);
-				case "u8":
-				case "uint8_t":
-					return this.view.setUint8(0, value, true);
-				case "u16":
-				case "uint16_t":
-					return this.view.setUint16(0, value, true);
-				case "u32":
-				case "uint32_t":
-					return this.view.setUint32(0, value, true);
-				case "u64":
-				case "uint64_t":
-					return this.view.setBigUint64(0, value, true);
-				case "float":
-				case "f32":
-				case "float32_t":
-					return this.view.setFloat32(0, value, true);
-				case "double":
-				case "f64":
-				case "float64_t":
-					return this.view.setFloat64(0, value, true);
-				case "size_t":
-					if (this._wasmUtils.sizeOf("size_t") === this._wasmUtils.sizeOf("uint32_t")) {
-						return this.view.setUint32(0, value, true);
-					}
-					return this.view.setBigUint64(0, value, true);
-				default:
-					throw new TypeError(`Unknown type: "${this._type}"`);
-			}
+			default:
+				throw new TypeError(`Unknown type: "${this._type}"`);
 		}
-		new Uint8Array(this.view.buffer).set(value, this.view.byteOffset);
 	}
 
 	/**
@@ -172,12 +177,12 @@ class WasmValueBase {
 
 		/** @type {Type|null} */
 		this._type;
-		if (type != null) {
-			this._type = type;
-			this._size = this._wasmUtils.sizeOf(this._type);
-		} else {
+		if (type == null) {
 			this._type = null;
 			this._size = size;
+		} else {
+			this._type = type;
+			this._size = this._wasmUtils.sizeOf(this._type);
 		}
 
 		/** @type {number} */
