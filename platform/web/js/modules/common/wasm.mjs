@@ -12,7 +12,10 @@ export const NULLPTR = 0;
  */
 
 class WasmValueBase {
-	/** @type {typeof this._ptr} */
+	/**
+	 * Returns the pointer of the value.
+	 * @type {typeof this._ptr}
+	 */
 	get ptr() {
 		return this._ptr;
 	}
@@ -134,13 +137,12 @@ class WasmValueBase {
 		new Uint8Array(this.view.buffer).set(value, this.view.byteOffset);
 	}
 
+	/**
+	 * Returns the DataView of the value.
+	 * @returns {DataView}
+	 */
 	get view() {
 		return new DataView(this._HEAPU8.buffer, this._ptr, this._size);
-	}
-
-	get numberValue() {
-		switch (this._type) {
-		}
 	}
 
 	/**

@@ -58,44 +58,6 @@ const brotliTransformContent = {
 		this.outBuffer = new WasmValue({ size: BROTLI_BUFFER_SIZE });
 
 		// https://www.brotli.org/decode.html#a234
-		// /** @type {Record<string, import("@godotengine/common").WasmStructMemberDefinition>} */
-		// const defs = {};
-		// let offset = 0;
-		// let previousDef;
-		// previousDef = defs["available_in"] = {
-		// 	name: "available_in",
-		// 	type: "size_t",
-		// 	size: sizeOf("size_t"),
-		// 	offset,
-		// };
-		// offset += previousDef.size;
-		// previousDef = defs["next_in"] = {
-		// 	name: "next_in",
-		// 	type: "uint8_t*",
-		// 	size: sizeOf("uint8_t*"),
-		// 	offset,
-		// };
-		// offset += previousDef.size;
-		// previousDef = defs["available_out"] = {
-		// 	name: "available_out",
-		// 	type: "size_t",
-		// 	size: sizeOf("size_t"),
-		// 	offset,
-		// };
-		// offset += previousDef.size;
-		// previousDef = defs["next_out"] = {
-		// 	name: "next_out",
-		// 	type: "uint8_t*",
-		// 	size: sizeOf("uint8_t*"),
-		// 	offset,
-		// };
-		// offset += previousDef.size;
-		// previousDef = data["total_out"] = {
-		// 	name: "total_out",
-		// 	type: "size_t",
-		// 	size: sizeOf("size_t"),
-		// 	offset,
-		// };
 		this.availableIn = new WasmValue({ type: "size_t" });
 		this.nextIn = new WasmValue({ type: "uint8_t*" });
 		this.availableOut = new WasmValue({ type: "size_t" });
@@ -110,10 +72,6 @@ const brotliTransformContent = {
 		const _chunk = await chunk;
 		let offset = 0;
 
-		// this.data.inAvailable.value = 0;
-		// this.data.outAvailable.value = BROTLI_BUFFER_SIZE;
-		// this.data.inNext.value = 0;
-		// this.data.outNext.value = this.outBuffer.ptr;
 		this.availableIn.value = 0;
 		this.nextIn.value = 0;
 		this.availableOut.value = BROTLI_BUFFER_SIZE;
@@ -128,8 +86,6 @@ const brotliTransformContent = {
 						}
 						const subchunk = _chunk.slice(offset, offset + BROTLI_BUFFER_SIZE);
 						this.inBuffer.value = subchunk;
-						// this.data.inAvailable.value = subchunk.byteLength;
-						// this.data.inNext.value = this.inBuffer.ptr;
 						this.availableIn.value = subchunk.byteLength;
 						this.nextIn.value = this.inBuffer.ptr;
 						offset += subchunk.byteLength;
@@ -139,8 +95,6 @@ const brotliTransformContent = {
 					{
 						const uncompressedData = this.outBuffer.value.slice(0, BROTLI_BUFFER_SIZE);
 						controller.enqueue(uncompressedData);
-						// this.data.outAvailable.value = BROTLI_BUFFER_SIZE;
-						// this.data.outNext.value = this.outBuffer.ptr;
 						this.availableOut.value = BROTLI_BUFFER_SIZE;
 						this.nextOut.value = this.outBuffer.ptr;
 					}
@@ -151,11 +105,6 @@ const brotliTransformContent = {
 
 			this.result = wasm._BrotliDecoderDecompressStream(
 				this.instancePtr,
-				// this.data.inAvailable.value,
-				// this.data.inNext.value,
-				// this.data.outAvailable.ptr,
-				// this.data.outNext.value,
-				// NULLPTR,
 				this.availableIn.ptr,
 				this.nextIn.ptr,
 				this.availableOut.ptr,
@@ -163,10 +112,6 @@ const brotliTransformContent = {
 				this.totalOut.ptr,
 			);
 
-			// if (this.data.outNext.value !== this.outBuffer.ptr) {
-			// 	const data = this.outBuffer.value.slice(0, this.data.outNext.value - this.outBuffer.ptr);
-			// 	controller.enqueue(data);
-			// }
 			if (this.nextOut.value !== this.outBuffer.ptr) {
 				const uncompressedData = new Uint8Array(this.outBuffer.value.buffer).slice(
 					this.outBuffer.value.byteOffset,
@@ -188,7 +133,6 @@ const brotliTransformContent = {
 		this.inBuffer.destroy();
 		this.outBuffer.destroy();
 
-		// this.data.destroy();
 		this.availableIn.destroy();
 		this.nextIn.destroy();
 		this.availableOut.destroy();
