@@ -30,7 +30,7 @@ import { default as BrotliWasmModule } from "./brotli.mjs";
 }}
  */
 export const wasm = await BrotliWasmModule();
-const { mallocOrDie, freeOrDie, sizeOf, WasmValue, WasmStruct } = initWasmUtils(wasm);
+const { WasmValue } = initWasmUtils(wasm);
 
 const BrotliDecoderResult = {
 	ERROR: 0,
