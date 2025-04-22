@@ -32,11 +32,6 @@ import { default as BrotliWasmModule } from "./brotli.mjs";
 export const wasm = await BrotliWasmModule();
 const { mallocOrDie, freeOrDie, sizeOf, WasmValue, WasmStruct } = initWasmUtils(wasm);
 
-/**
- * Typed array.
- * @typedef {Int8Array|Int16Array|Int32Array|BigInt64Array|Uint8Array|Uint16Array|Uint32Array|BigUint64Array|Float32Array|Float64Array} TypedArray
- */
-
 const BrotliDecoderResult = {
 	ERROR: 0,
 	SUCCESS: 1,
