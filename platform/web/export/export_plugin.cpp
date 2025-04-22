@@ -600,8 +600,8 @@ void EditorExportPlatformWeb::get_export_options(List<ExportOption> *r_options) 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "variant/extensions_support"), false)); // GDExtension support.
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "variant/thread_support"), false)); // Thread support (i.e. run with or without COEP/COOP headers).
 
-	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "bandwidth_saver/zstd_compress"), false));
-	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "bandwidth_saver/gzip_compress"), false));
+	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "bandwidth_saver/zstd_compress"), true));
+	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "bandwidth_saver/gzip_compress"), true));
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "bandwidth_saver/brotli_compress"), false));
 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "vram_texture_compression/for_desktop"), true)); // S3TC
