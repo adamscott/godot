@@ -215,7 +215,7 @@ if "zstd" in env["js_modules"]:
     zstd_module = env_thirdparty_zstd.NoCache(zstd_module)
 
     zstd_index = env_thirdparty_zstd.File(f"js/modules/{module_name}/index.mjs")
-    zstd_wasm = env_thirdparty_zstd.File(f"js/modules/{module_name}/zstd.wasm")
+    zstd_wasm = env_thirdparty_zstd.File(f"js/modules/{module_name}/{module_name}.wasm")
     js_modules[module_name] = [
         {
             "path": "index.mjs",
@@ -322,7 +322,7 @@ if "brotli" in env["js_modules"]:
     brotli_module = env_thirdparty_brotli.NoCache(brotli_module)
 
     brotli_index = env_thirdparty_brotli.File(f"js/modules/{module_name}/index.mjs")
-    brotli_wasm = env_thirdparty_brotli.File(f"js/modules/{module_name}/brotli.wasm")
+    brotli_wasm = env_thirdparty_brotli.File(f"js/modules/{module_name}/{module_name}.wasm")
 
     js_modules[module_name] = [
         {
