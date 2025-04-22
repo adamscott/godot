@@ -230,23 +230,6 @@ if "zstd" in env["js_modules"]:
     js_import_map["imports"][f"@godotengine/{module_name}"] = f"./template/js/modules/{module_name}/index.mjs"
     env_thirdparty_zstd.Depends(zstd_wasm, zstd_module)
 
-if "gzip" in env["js_modules"]:
-    module_name = "npm_pako"
-    js_modules[module_name] = []
-    module_version = "2.1.0"
-    pako_files = env.UnTar(f"js/modules/pako-{module_version}.tgz", one_top_level=True)
-    pako_dist_dir = f"js/modules/pako-{module_version}/package/dist/"
-    for f in pako_files:
-        if os.path.commonprefix([pako_dist_dir, str(f)]) == pako_dist_dir:
-            # Remove non-module files
-            if ".esm" in f.name:
-                js_modules[module_name].append(
-                    {
-                        "path": f.name,
-                        "file": f,
-                    }
-                )
-
 if "brotli" in env["js_modules"]:
     needs_common_js_module = True
     module_name = "brotli"

@@ -147,41 +147,6 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 			}
 
 			// The method succeeded, so the file exists.
-			// Lets load the actual pako module.
-			const pako = await Engine.getJSModule('pako');
-			const inflatorEventTarget = new EventTarget();
-
-			class Inflator extends pako.Inflate {
-				onData(chunk) {
-					super.onData(chunk);
-					inflatorEventTarget.dispatchEvent(new CustomEvent('data', { detail: { chunk } }));
-				}
-
-				onEnd(status) {
-					super.onEnd(status);
-					inflatorEventTarget.dispatchEvent(new CustomEvent('end'));
-				}
-			}
-			const inflator = new Inflator();
-
-			const decompressionStream = new TransformStream({
-				start(controller) {
-					inflatorEventTarget.addEventListener('data', (event) => {
-						controller.enqueue(event.detail.chunk);
-					});
-					inflatorEventTarget.addEventListener('end', (_) => {
-						controller.terminate();
-					});
-				},
-				transform(chunk, controller) {
-					inflator.push(chunk);
-					if (inflator.err) {
-						const error = new Error(`gzip inflation error: ${inflator.msg}`);
-						controller.error(error);
-					}
-				},
-			});
-
 			// Let's load the actual gzip file.
 			const gzipResponse = await fetch(newUrl, {
 				method: 'GET',
@@ -196,7 +161,7 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 				return null;
 			}
 
-			const decompressedStream = gzipResponse.body.pipeThrough(decompressionStream);
+			const decompressedStream = gzipResponse.body.pipeThrough(new DecompressionStream('gzip'));
 
 			return {
 				response: new Response(decompressedStream, {

@@ -69,9 +69,9 @@ def get_opts():
         ),
         ListVariable(
             "js_modules",
-            help="JS modules to build. They don't take bandwidth; they are loaded on-demand",
+            help="JS modules to build. They don't take bandwidth; they are loaded on-demand. (browsers are shipped with gzip decompression tools)",
             default="all",
-            names=["zstd", "gzip", "brotli"],
+            names=["zstd", "brotli"],
         ),
     ]
 
