@@ -213,7 +213,7 @@ Error EditorExportPlatformWeb::_compress_template_files(const Ref<EditorExportPr
 		PackedByteArray compressed_bytes;
 
 		// Zstd.
-		if (p_preset->get("bandwidth_saver/zstd_compress").operator bool()) {
+		if (p_preset->get("bandwidth_saver/zstd_precompress").operator bool()) {
 			int compressed_byte_size;
 			String target_path = template_file + ".zst";
 			if (FileAccess::exists(target_path)) {
@@ -236,7 +236,7 @@ Error EditorExportPlatformWeb::_compress_template_files(const Ref<EditorExportPr
 		}
 
 		// Gzip.
-		if (p_preset->get("bandwidth_saver/gzip_compress").operator bool()) {
+		if (p_preset->get("bandwidth_saver/gzip_precompress").operator bool()) {
 			int compressed_byte_size;
 			String target_path = template_file + ".gz";
 			if (FileAccess::exists(target_path)) {
@@ -260,7 +260,7 @@ Error EditorExportPlatformWeb::_compress_template_files(const Ref<EditorExportPr
 
 #ifdef BROTLI_ENABLED
 		// Brotli
-		if (p_preset->get("bandwidth_saver/brotli_compress").operator bool()) {
+		if (p_preset->get("bandwidth_saver/brotli_precompress").operator bool()) {
 			Compression::Settings settings(Compression::MODE_BROTLI);
 			settings.get_brotli()->set_quality(11);
 
@@ -445,10 +445,10 @@ Error EditorExportPlatformWeb::_build_pwa(const Ref<EditorExportPreset> &p_prese
 				}
 			}
 		};
-		loop_and_add("bandwidth_saver/zstd_compress", ".zst");
-		loop_and_add("bandwidth_saver/gzip_compress", ".gz");
+		loop_and_add("bandwidth_saver/zstd_precompress", ".zst");
+		loop_and_add("bandwidth_saver/gzip_precompress", ".gz");
 #ifdef BROTLI_ENABLED
-		loop_and_add("bandwidth_saver/brotli_compress", ".br");
+		loop_and_add("bandwidth_saver/brotli_precompress", ".br");
 #endif
 
 		if (files_to_add.is_empty()) {
@@ -600,9 +600,9 @@ void EditorExportPlatformWeb::get_export_options(List<ExportOption> *r_options) 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "variant/extensions_support"), false)); // GDExtension support.
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "variant/thread_support"), false)); // Thread support (i.e. run with or without COEP/COOP headers).
 
-	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "bandwidth_saver/zstd_compress"), true));
-	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "bandwidth_saver/gzip_compress"), true));
-	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "bandwidth_saver/brotli_compress"), false));
+	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "bandwidth_saver/zstd_precompress"), true));
+	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "bandwidth_saver/gzip_precompress"), true));
+	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "bandwidth_saver/brotli_precompress"), false));
 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "vram_texture_compression/for_desktop"), true)); // S3TC
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "vram_texture_compression/for_mobile"), false)); // ETC or ETC2, depending on renderer
@@ -641,10 +641,8 @@ String EditorExportPlatformWeb::get_export_option_warning(const EditorExportPres
 			return false;
 		};
 
-		if (p_name == "bandwidth_saver/zstd_compress") {
-		} else if (p_name == "bandwidth_saver/gzip_compress") {
 #ifdef BROTLI_ENABLED
-		} else if (p_name == "bandwidth_saver/brotli_compress") {
+		if (p_name == "bandwidth_saver/brotli_precompress") {
 			bool debug_has_wasm_br = has_file("godot.wasm.br", template_debug_files);
 			bool release_has_wasm_br = has_file("godot.wasm.br", template_release_files);
 			String cpu_intensive = TTR("As Brotli compression is very CPU intensive, the editor may appear unresponsive when exporting. This may take a while.");
@@ -655,8 +653,8 @@ String EditorExportPlatformWeb::get_export_option_warning(const EditorExportPres
 			} else if (!release_has_wasm_br) {
 				return TTR("The release template engine WASM file isn't Brotli compressed.") + " " + cpu_intensive;
 			}
-#endif // BROTLI_ENABLED
 		}
+#endif // BROTLI_ENABLED
 	}
 	return EditorExportPlatform::get_export_option_warning(p_preset, p_name);
 }
@@ -1256,7 +1254,7 @@ Error EditorExportPlatformWeb::_stop_server() {
 
 Error EditorExportPlatformWeb::_compress_file_to_formats_if_applicable(const String &p_path, const Ref<EditorExportPreset> &p_preset) {
 	Error err;
-	if (p_preset->get("bandwidth_saver/zstd_compress").operator bool()) {
+	if (p_preset->get("bandwidth_saver/zstd_precompress").operator bool()) {
 		String compressed_path = _compress_file_to_format(p_path, FileAccessCompressed::COMPRESSION_ZSTD, &err);
 		if (err != OK) {
 			add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), compressed_path));
