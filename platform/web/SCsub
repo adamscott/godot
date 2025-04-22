@@ -208,7 +208,9 @@ if "zstd" in env["js_modules"]:
             f"-sEXPORTED_RUNTIME_METHODS=[{runtime_functions}]",
         ]
     )
-    zstd_module = env_thirdparty_zstd.Program(f"js/modules/{module_name}/zstd.mjs", source=thirdparty_zstd_sources)
+    zstd_module = env_thirdparty_zstd.Program(
+        f"js/modules/{module_name}/{module_name}.mjs", source=thirdparty_zstd_sources
+    )
     zstd_module = env_thirdparty_zstd.NoCache(zstd_module)
 
     zstd_index = env_thirdparty_zstd.File(f"js/modules/{module_name}/index.mjs")
@@ -219,11 +221,11 @@ if "zstd" in env["js_modules"]:
             "file": zstd_index,
         },
         {
-            "path": "zstd.mjs",
+            "path": f"{module_name}.mjs",
             "file": zstd_module,
         },
         {
-            "path": "zstd.wasm",
+            "path": f"{module_name}.wasm",
             "file": zstd_wasm,
         },
     ]
@@ -313,7 +315,7 @@ if "brotli" in env["js_modules"]:
         ]
     )
     brotli_module = env_thirdparty_brotli.Program(
-        f"js/modules/{module_name}/brotli.mjs", source=thirdparty_brotli_sources
+        f"js/modules/{module_name}/{module_name}.mjs", source=thirdparty_brotli_sources
     )
     brotli_module = env_thirdparty_brotli.NoCache(brotli_module)
 
@@ -326,11 +328,11 @@ if "brotli" in env["js_modules"]:
             "file": brotli_index,
         },
         {
-            "path": "brotli.mjs",
+            "path": f"{module_name}.mjs",
             "file": brotli_module,
         },
         {
-            "path": "brotli.wasm",
+            "path": f"{module_name}.wasm",
             "file": brotli_wasm,
         },
     ]
