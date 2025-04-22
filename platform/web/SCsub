@@ -191,6 +191,7 @@ if "zstd" in env["js_modules"]:
     ]
     exported_functions = ",".join([f"'_{func}'" for func in exported_functions])
     runtime_functions = [
+        "HEAPU8",
         "ccall",
         "cwrap",
         "stackAlloc",
@@ -297,6 +298,7 @@ if "brotli" in env["js_modules"]:
     ]
     exported_functions = ",".join([f"'_{func}'" for func in exported_functions])
     runtime_functions = [
+        "HEAPU8",
         "ccall",
         "cwrap",
         "stackAlloc",
