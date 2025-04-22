@@ -354,6 +354,7 @@ if needs_common_js_module:
                     }
                 )
     js_import_map["imports"][f"@godotengine/{module_name}"] = f"./template/js/modules/{module_name}/index.mjs"
+    js_import_map["imports"][f"@godotengine/{module_name}/wasm"] = f"./template/js/modules/{module_name}/wasm/index.mjs"
 # JS modules end
 
 engine = [

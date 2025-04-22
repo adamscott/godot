@@ -1,4 +1,4 @@
-import { NULLPTR, initWasmUtils } from "@godotengine/common";
+import { NULLPTR, initWasmUtils } from "@godotengine/common/wasm";
 
 import { default as BrotliWasmModule } from "./brotli.mjs";
 
