@@ -602,9 +602,7 @@ void EditorExportPlatformWeb::get_export_options(List<ExportOption> *r_options) 
 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "bandwidth_saver/zstd_compress"), false));
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "bandwidth_saver/gzip_compress"), false));
-#ifdef BROTLI_ENABLED
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "bandwidth_saver/brotli_compress"), false));
-#endif
 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "vram_texture_compression/for_desktop"), true)); // S3TC
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "vram_texture_compression/for_mobile"), false)); // ETC or ETC2, depending on renderer
@@ -669,6 +667,12 @@ bool EditorExportPlatformWeb::get_export_option_visibility(const EditorExportPre
 			p_option == "custom_template/release") {
 		return advanced_options_enabled;
 	}
+
+#ifndef BROTLI_ENABLED
+	if (p_option == "bandwidth_saver/brotli_compress") {
+		return false;
+	}
+#endif // !BROTLI_ENABLED
 
 	return true;
 }
