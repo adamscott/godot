@@ -47,7 +47,8 @@ const BrotliDecoderResult = {
 const BROTLI_BUFFER_SIZE = 1024 * 512; // 512KiB
 
 /**
- * The logic of `BrotliUncompressStream`.
+ * The logic of `BrotliDecompressionStream`.
+ * @type {ConstructorParameters<typeof TransformStream>[0]}
  */
 const brotliTransformContent = {
 	start() {
@@ -95,8 +96,8 @@ const brotliTransformContent = {
 					break;
 				case BrotliDecoderResult.NEEDS_MORE_OUTPUT:
 					{
-						const uncompressedData = this.outBuffer.value.slice(0, BROTLI_BUFFER_SIZE);
-						controller.enqueue(uncompressedData);
+						const decompressedData = this.outBuffer.value.slice(0, BROTLI_BUFFER_SIZE);
+						controller.enqueue(decompressedData);
 						this.availableOut.value = BROTLI_BUFFER_SIZE;
 						this.nextOut.value = this.outBuffer.ptr;
 					}
@@ -119,8 +120,8 @@ const brotliTransformContent = {
 	flush(controller) {
 		if (this.nextOut.value !== this.outBuffer.ptr) {
 			const offset = this.nextOut.value - this.outBuffer.ptr;
-			const uncompressedData = this.outBuffer.value.slice(0, offset);
-			controller.enqueue(uncompressedData);
+			const decompressedData = this.outBuffer.value.slice(0, offset);
+			controller.enqueue(decompressedData);
 		}
 		if (this.result === BrotliDecoderResult.NEEDS_MORE_OUTPUT) {
 			controller.error(new Error("Brotli error:\nFailed to write output"));
@@ -147,7 +148,7 @@ const brotliTransformContent = {
 /**
  * This TransformStream decompresses Brotli chunks.
  */
-export class BrotliUncompressStream extends TransformStream {
+export class BrotliDecompressionStream extends TransformStream {
 	constructor() {
 		super({
 			...brotliTransformContent,

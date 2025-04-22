@@ -46,8 +46,7 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 				return null;
 			}
 
-			const zstdUncompressStream = new zstd.ZstdUncompressStream();
-			const decompressedStream = zstdResponse.body.pipeThrough(zstdUncompressStream);
+			const decompressedStream = zstdResponse.body.pipeThrough(new zstd.ZstdDecompressionStream());
 
 			return {
 				response: new Response(decompressedStream, {
@@ -110,8 +109,7 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 				return null;
 			}
 
-			const brotliUncompressStream = new brotli.BrotliUncompressStream();
-			const decompressedStream = brotliResponse.body.pipeThrough(brotliUncompressStream);
+			const decompressedStream = brotliResponse.body.pipeThrough(new brotli.BrotliDecompressionStream());
 			return {
 				response: new Response(decompressedStream, {
 					method: 'GET',

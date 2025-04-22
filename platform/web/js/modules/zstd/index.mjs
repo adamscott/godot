@@ -10,7 +10,7 @@ const { WasmValue, WasmStruct, WasmStructMember } = initWasmUtils(wasm);
  */
 
 /**
- * The logic of `ZstdUncompressStream`.
+ * The logic of `ZstdDecompressionStream`.
  * @type {ConstructorParameters<typeof TransformStream>[0]}
  */
 const zstdTransformContent = {
@@ -109,7 +109,8 @@ const zstdTransformContent = {
 					);
 					return;
 				}
-				controller.enqueue(this.outBuffer.value.slice(0, this.outBufferData.pos.value));
+				const decompressedData = this.outBuffer.value.slice(0, this.outBufferData.pos.value);
+				controller.enqueue(decompressedData);
 				this.lastReturn = ret;
 			}
 
@@ -139,7 +140,7 @@ const zstdTransformContent = {
 /**
  * This TransformStream decompresses Zstd chunks.
  */
-export class ZstdUncompressStream extends TransformStream {
+export class ZstdDecompressionStream extends TransformStream {
 	constructor() {
 		super({
 			...zstdTransformContent,
