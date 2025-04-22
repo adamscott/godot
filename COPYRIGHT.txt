@@ -138,12 +138,6 @@ Comment: ProcessPhoenix
 Copyright: 2015, Jake Wharton
 License: Apache-2.0
 
-Files: platform/web/js/modules/brotli-wasm-dec-2.3.0.tgz
-Comment: brotli-wasm-dec
-Copyright: 2021, brotli-wasm authors (presumed)
- myl7
-License: Apache-2.0, Expat
-
 Files: scene/animation/easing_equations.h
 Comment: Robert Penner's Easing Functions
 Copyright: 2001, Robert Penner
