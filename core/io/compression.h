@@ -84,11 +84,11 @@ public:
 		Mode _mode = MODE_ZSTD;
 		bool _mode_set = false;
 
+	public:
 		union {
-			Brotli *_brotli = nullptr;
+			Brotli *brotli = nullptr;
 		};
 
-	public:
 		Mode get_mode() const {
 			if (!_mode_set) {
 				ERR_FAIL_V_MSG(_mode, "Trying to get mode when none has been set yet");
@@ -104,7 +104,7 @@ public:
 			_mode = p_mode;
 			switch (_mode) {
 				case MODE_BROTLI: {
-					_brotli = memnew(Brotli);
+					brotli = memnew(Brotli);
 				} break;
 				default: {
 					// Do nothing.
@@ -112,14 +112,10 @@ public:
 			}
 		}
 
-		Brotli *get_brotli() const {
-			return _brotli;
-		}
-
 		Settings() {
 			_mode = MODE_ZSTD;
 			_mode_set = false;
-			_brotli = nullptr;
+			brotli = nullptr;
 		}
 
 		Settings(Mode p_mode) {
@@ -132,7 +128,7 @@ public:
 			}
 			switch (_mode) {
 				case MODE_BROTLI: {
-					memfree(_brotli);
+					memfree(brotli);
 				} break;
 				default: {
 					// Do nothing.

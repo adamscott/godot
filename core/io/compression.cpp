@@ -53,7 +53,7 @@ int Compression::compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, 
 	switch (p_settings.get_mode()) {
 		case MODE_BROTLI: {
 			BrotliEncoderMode mode = BROTLI_MODE_GENERIC;
-			switch (p_settings.get_brotli()->get_encoder_mode()) {
+			switch (p_settings.brotli->get_encoder_mode()) {
 				case Settings::Brotli::BROTLI_ENCODER_MODE_FONT: {
 					mode = BROTLI_MODE_FONT;
 				} break;
@@ -65,7 +65,7 @@ int Compression::compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, 
 				} break;
 			}
 			size_t encoded_size;
-			if (BrotliEncoderCompress(p_settings.get_brotli()->get_quality(), 24, mode, p_src_size, p_src, &encoded_size, p_dst)) {
+			if (BrotliEncoderCompress(p_settings.brotli->get_quality(), 24, mode, p_src_size, p_src, &encoded_size, p_dst)) {
 				return encoded_size;
 			}
 			return -1;

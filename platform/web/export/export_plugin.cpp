@@ -262,7 +262,7 @@ Error EditorExportPlatformWeb::_compress_template_files(const Ref<EditorExportPr
 		// Brotli
 		if (p_preset->get("bandwidth_saver/brotli_precompress").operator bool()) {
 			Compression::Settings settings(Compression::MODE_BROTLI);
-			settings.get_brotli()->set_quality(11);
+			settings.brotli->set_quality(11);
 
 			int compressed_byte_size;
 			String target_path = template_file + ".br";
@@ -271,11 +271,11 @@ Error EditorExportPlatformWeb::_compress_template_files(const Ref<EditorExportPr
 			}
 
 			if (text_file_extensions.has(template_file.get_extension())) {
-				settings.get_brotli()->set_encoder_mode(Compression::Settings::Brotli::BROTLI_ENCODER_MODE_TEXT);
+				settings.brotli->set_encoder_mode(Compression::Settings::Brotli::BROTLI_ENCODER_MODE_TEXT);
 			} else if (font_file_extensions.has(template_file.get_extension())) {
-				settings.get_brotli()->set_encoder_mode(Compression::Settings::Brotli::BROTLI_ENCODER_MODE_FONT);
+				settings.brotli->set_encoder_mode(Compression::Settings::Brotli::BROTLI_ENCODER_MODE_FONT);
 			} else {
-				settings.get_brotli()->set_encoder_mode(Compression::Settings::Brotli::BROTLI_ENCODER_MODE_GENERIC);
+				settings.brotli->set_encoder_mode(Compression::Settings::Brotli::BROTLI_ENCODER_MODE_GENERIC);
 			}
 			compressed_bytes.resize(Compression::get_max_compressed_buffer_size(file_bytes.size(), settings));
 			compressed_byte_size = Compression::compress(compressed_bytes.ptrw(), file_bytes.ptr(), file_bytes.size(), settings);
@@ -1299,11 +1299,11 @@ String EditorExportPlatformWeb::_compress_file_to_format(const String &p_path, F
 			const String path_extension = p_path.get_extension();
 			compression_settings.set_mode(Compression::MODE_BROTLI);
 			if (text_file_extensions.has(path_extension)) {
-				compression_settings.get_brotli()->set_encoder_mode(Compression::Settings::Brotli::BROTLI_ENCODER_MODE_TEXT);
+				compression_settings.brotli->set_encoder_mode(Compression::Settings::Brotli::BROTLI_ENCODER_MODE_TEXT);
 			} else if (font_file_extensions.has(path_extension)) {
-				compression_settings.get_brotli()->set_encoder_mode(Compression::Settings::Brotli::BROTLI_ENCODER_MODE_FONT);
+				compression_settings.brotli->set_encoder_mode(Compression::Settings::Brotli::BROTLI_ENCODER_MODE_FONT);
 			} else {
-				compression_settings.get_brotli()->set_encoder_mode(Compression::Settings::Brotli::BROTLI_ENCODER_MODE_GENERIC);
+				compression_settings.brotli->set_encoder_mode(Compression::Settings::Brotli::BROTLI_ENCODER_MODE_GENERIC);
 			}
 		} break;
 #endif
