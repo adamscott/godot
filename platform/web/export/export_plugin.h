@@ -52,6 +52,12 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		REMOTE_DEBUG_STATE_SERVING,
 	};
 
+	struct TemplateFileInfos {
+		String file_name;
+		uint32_t compressed_size;
+		uint32_t uncompressed_size;
+	};
+
 	Ref<ImageTexture> logo;
 	Ref<ImageTexture> run_icon;
 	Ref<ImageTexture> stop_icon;
@@ -118,6 +124,8 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		return splash;
 	}
 
+	String _get_template_path(const Ref<EditorExportPreset> &p_preset, bool p_debug) const;
+	LocalVector<TemplateFileInfos> _get_template_file_infos(const String &p_template, Error *r_error = nullptr) const;
 	Error _extract_template(const String &p_template, const String &p_dir, const String &p_name, bool pwa, LocalVector<String> &p_template_files);
 	Error _compress_template_files(const Ref<EditorExportPreset> &p_preset, LocalVector<String> &p_template_files);
 	void _replace_strings(const HashMap<String, String> &p_replaces, Vector<uint8_t> &r_template);
@@ -138,6 +146,7 @@ public:
 	virtual void get_preset_features(const Ref<EditorExportPreset> &p_preset, List<String> *r_features) const override;
 
 	virtual void get_export_options(List<ExportOption> *r_options) const override;
+	virtual String get_export_option_warning(const EditorExportPreset *p_preset, const StringName &p_name) const override;
 	virtual bool get_export_option_visibility(const EditorExportPreset *p_preset, const String &p_option) const override;
 
 	virtual String get_name() const override;

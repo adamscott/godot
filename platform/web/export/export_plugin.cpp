@@ -49,6 +49,69 @@
 #include "modules/modules_enabled.gen.h" // For mono.
 #include "modules/svg/image_loader_svg.h"
 
+String EditorExportPlatformWeb::_get_template_path(const Ref<EditorExportPreset> &p_preset, bool p_debug) const {
+	const String custom_debug = p_preset->get("custom_template/debug");
+	const String custom_release = p_preset->get("custom_template/release");
+
+	String template_path = p_debug ? custom_debug : custom_release;
+	template_path = template_path.strip_edges();
+	if (template_path.is_empty()) {
+		bool extensions = (bool)p_preset->get("variant/extensions_support");
+		bool thread_support = (bool)p_preset->get("variant/thread_support");
+		template_path = find_export_template(_get_template_name(extensions, thread_support, p_debug));
+	}
+	return template_path;
+}
+
+LocalVector<EditorExportPlatformWeb::TemplateFileInfos> EditorExportPlatformWeb::_get_template_file_infos(const String &p_template, Error *r_error) const {
+	Error err = OK;
+	LocalVector<TemplateFileInfos> template_files;
+	unzFile pkg = nullptr;
+
+#define RETURN_AND_CLOSE_V(val) \
+	err = val;                  \
+	goto close;
+
+	Ref<FileAccess> io_fa;
+	zlib_filefunc_def io = zipio_create_io(&io_fa);
+	pkg = unzOpen2(p_template.utf8().get_data(), &io);
+
+	if (!pkg) {
+		RETURN_AND_CLOSE_V(ERR_FILE_NOT_FOUND);
+	}
+
+	if (unzGoToFirstFile(pkg) != UNZ_OK) {
+		RETURN_AND_CLOSE_V(ERR_FILE_CORRUPT);
+	}
+
+	do {
+		// Get filename.
+		unz_file_info info;
+		const uint32_t file_name_size = 16384;
+		char fname[file_name_size];
+		unzGetCurrentFileInfo(pkg, &info, fname, file_name_size, nullptr, 0, nullptr, 0);
+
+		String file = String::utf8(fname);
+
+		// Skip folders.
+		if (file.ends_with("/")) {
+			continue;
+		}
+
+		template_files.push_back({
+				.file_name = file,
+				.compressed_size = (uint32_t)info.compressed_size,
+				.uncompressed_size = (uint32_t)info.uncompressed_size,
+		});
+	} while (unzGoToNextFile(pkg) == UNZ_OK);
+
+close:
+	if (r_error) {
+		*r_error = err;
+	}
+	return template_files;
+}
+
 Error EditorExportPlatformWeb::_extract_template(const String &p_template, const String &p_dir, const String &p_name, bool pwa, LocalVector<String> &p_template_files) {
 	Ref<FileAccess> io_fa;
 	zlib_filefunc_def io = zipio_create_io(&io_fa);
@@ -563,6 +626,43 @@ void EditorExportPlatformWeb::get_export_options(List<ExportOption> *r_options) 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::COLOR, "progressive_web_app/background_color", PROPERTY_HINT_COLOR_NO_ALPHA), Color()));
 }
 
+String EditorExportPlatformWeb::get_export_option_warning(const EditorExportPreset *p_preset, const StringName &p_name) const {
+	Ref<EditorExportPreset> preset = Ref<EditorExportPreset>(p_preset);
+	if (p_preset && preset.is_valid()) {
+		String template_path_debug = _get_template_path(preset, true);
+		String template_path_release = _get_template_path(preset, true);
+		LocalVector<TemplateFileInfos> template_debug_files = _get_template_file_infos(template_path_debug);
+		LocalVector<TemplateFileInfos> template_release_files = _get_template_file_infos(template_path_release);
+
+		auto has_file = [](const String &l_path, const LocalVector<TemplateFileInfos> &l_files) -> bool {
+			for (const TemplateFileInfos &file : l_files) {
+				if (file.file_name == l_path) {
+					return true;
+				}
+			}
+			return false;
+		};
+
+		if (p_name == "bandwidth_saver/zstd_compress") {
+		} else if (p_name == "bandwidth_saver/gzip_compress") {
+#ifdef BROTLI_ENABLED
+		} else if (p_name == "bandwidth_saver/brotli_compress") {
+			bool debug_has_wasm_br = has_file("godot.wasm.br", template_debug_files);
+			bool release_has_wasm_br = has_file("godot.wasm.br", template_release_files);
+			String cpu_intensive = TTR("As Brotli compression is very CPU intensive, the editor may appear unresponsive when exporting. This may take a while.");
+			if (!debug_has_wasm_br && !release_has_wasm_br) {
+				return TTR("Both debug and release template engine WASM files aren't Brotli compressed.") + " " + cpu_intensive;
+			} else if (!debug_has_wasm_br) {
+				return TTR("The debug template engine WASM file isn't Brotli compressed.") + " " + cpu_intensive;
+			} else if (!release_has_wasm_br) {
+				return TTR("The release template engine WASM file isn't Brotli compressed.") + " " + cpu_intensive;
+			}
+#endif // BROTLI_ENABLED
+		}
+	}
+	return EditorExportPlatform::get_export_option_warning(p_preset, p_name);
+}
+
 bool EditorExportPlatformWeb::get_export_option_visibility(const EditorExportPreset *p_preset, const String &p_option) const {
 	bool advanced_options_enabled = p_preset->are_advanced_options_enabled();
 	if (p_option == "custom_template/debug" ||
@@ -672,13 +772,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 	}
 
 	// Find the correct template
-	String template_path = p_debug ? custom_debug : custom_release;
-	template_path = template_path.strip_edges();
-	if (template_path.is_empty()) {
-		bool extensions = (bool)p_preset->get("variant/extensions_support");
-		bool thread_support = (bool)p_preset->get("variant/thread_support");
-		template_path = find_export_template(_get_template_name(extensions, thread_support, p_debug));
-	}
+	String template_path = _get_template_path(p_preset, p_debug);
 
 	if (!template_path.is_empty() && !FileAccess::exists(template_path)) {
 		add_message(EXPORT_MESSAGE_ERROR, TTR("Prepare Templates"), vformat(TTR("Template file not found: \"%s\"."), template_path));
