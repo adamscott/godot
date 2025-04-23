@@ -1761,6 +1761,7 @@ private:
 	SuiteNode *current_suite = nullptr;
 
 	CompletionContext completion_context;
+	CompletionCall completion_call;
 	List<CompletionCall> completion_call_stack;
 
 	RefactorRenameContext refactor_rename_context;
@@ -2003,8 +2004,6 @@ public:
 	CompletionCall get_completion_call() const {
 		return completion_call;
 	}
-
-	CompletionContext get_completion_context() const { return completion_context; }
 
 	RefactorRenameContext get_refactor_rename_context() const {
 		return refactor_rename_context;
