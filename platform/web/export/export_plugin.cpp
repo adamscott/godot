@@ -180,118 +180,40 @@ Error EditorExportPlatformWeb::_extract_template(const String &p_template, const
 }
 
 Error EditorExportPlatformWeb::_compress_template_files(const Ref<EditorExportPreset> &p_preset, LocalVector<String> &p_template_files) {
-	for (const String &template_file : p_template_files) {
-		bool next_template = false;
+	static const LocalVector<String> banned_files = {
+		// Do not compress the JavaScript import map.
+		"/template/js/importmap/importmap.json"
+	};
+	static const LocalVector<String> banned_extensions = {
+		// Do not compress compressed files.
+		".zst",
+		".gz",
+		".br",
+	};
 
-		const LocalVector<String> banned_files = {
-			// Do not compress the JavaScript import map.
-			"/template/js/importmap/importmap.json"
-		};
+	for (const String &template_file : p_template_files) {
 		for (const String &banned_file : banned_files) {
 			if (template_file.ends_with(banned_file)) {
-				next_template = true;
-				break;
+				goto next_template;
 			}
 		}
-		if (next_template) {
-			break;
+
+		for (const String &banned_extension : banned_extensions) {
+			if (template_file.ends_with(banned_extension)) {
+				goto next_template;
+			}
 		}
 
-		const LocalVector<String> banned_extensions = {
-			// Do not compress compressed files.
-			".zst",
-			".gz",
-			".br",
-		};
-		if (banned_extensions.has(template_file.get_extension())) {
-			break;
+		{
+			// Actually start compressing the file.
+			Error error = _compress_file_to_formats_if_applicable(template_file, p_preset);
+			if (error != OK) {
+				return error;
+			}
 		}
 
-		// Actually start compressing the file.
-
-		PackedByteArray file_bytes = FileAccess::get_file_as_bytes(template_file);
-		PackedByteArray compressed_bytes;
-
-		// Zstd.
-		if (p_preset->get("bandwidth_saver/zstd_precompress").operator bool()) {
-			int compressed_byte_size;
-			String target_path = template_file + ".zst";
-			if (FileAccess::exists(target_path)) {
-				goto skip_zstd;
-			}
-
-			compressed_bytes.resize(Compression::get_max_compressed_buffer_size(file_bytes.size(), Compression::MODE_ZSTD));
-			compressed_byte_size = Compression::compress(compressed_bytes.ptrw(), file_bytes.ptr(), file_bytes.size(), Compression::MODE_ZSTD);
-
-			{
-				Error err;
-				Ref<FileAccess> target = FileAccess::open(target_path, FileAccess::WRITE, &err);
-				if (err != OK) {
-					return err;
-				}
-				target->store_buffer(compressed_bytes.ptr(), compressed_byte_size);
-			}
-		skip_zstd:
-			(void)0;
-		}
-
-		// Gzip.
-		if (p_preset->get("bandwidth_saver/gzip_precompress").operator bool()) {
-			int compressed_byte_size;
-			String target_path = template_file + ".gz";
-			if (FileAccess::exists(target_path)) {
-				goto skip_gzip;
-			}
-
-			compressed_bytes.resize(Compression::get_max_compressed_buffer_size(file_bytes.size(), Compression::MODE_GZIP));
-			compressed_byte_size = Compression::compress(compressed_bytes.ptrw(), file_bytes.ptr(), file_bytes.size(), Compression::MODE_GZIP);
-
-			{
-				Error err;
-				Ref<FileAccess> target = FileAccess::open(target_path, FileAccess::WRITE, &err);
-				if (err != OK) {
-					return err;
-				}
-				target->store_buffer(compressed_bytes.ptr(), compressed_byte_size);
-			}
-		skip_gzip:
-			(void)0;
-		}
-
-#ifdef BROTLI_ENABLED
-		// Brotli
-		if (p_preset->get("bandwidth_saver/brotli_precompress").operator bool()) {
-			Compression::Settings settings(Compression::MODE_BROTLI);
-			settings.brotli->set_quality(11);
-
-			int compressed_byte_size;
-			String target_path = template_file + ".br";
-			if (FileAccess::exists(target_path)) {
-				goto skip_brotli;
-			}
-
-			if (text_file_extensions.has(template_file.get_extension())) {
-				settings.brotli->set_encoder_mode(Compression::Settings::Brotli::BROTLI_ENCODER_MODE_TEXT);
-			} else if (font_file_extensions.has(template_file.get_extension())) {
-				settings.brotli->set_encoder_mode(Compression::Settings::Brotli::BROTLI_ENCODER_MODE_FONT);
-			} else {
-				settings.brotli->set_encoder_mode(Compression::Settings::Brotli::BROTLI_ENCODER_MODE_GENERIC);
-			}
-			compressed_bytes.resize(Compression::get_max_compressed_buffer_size(file_bytes.size(), settings));
-			compressed_byte_size = Compression::compress(compressed_bytes.ptrw(), file_bytes.ptr(), file_bytes.size(), settings);
-
-			{
-				Error err;
-				Ref<FileAccess> target = FileAccess::open(target_path, FileAccess::WRITE, &err);
-				if (err != OK) {
-					return err;
-				}
-				target->store_buffer(compressed_bytes.ptr(), compressed_byte_size);
-			}
-		skip_brotli:
-			(void)0;
-		}
-#endif // BROTLI_ENABLED
+	next_template:
+		(void)0;
 	}
 
 	return OK;
@@ -447,9 +369,7 @@ Error EditorExportPlatformWeb::_build_pwa(const Ref<EditorExportPreset> &p_prese
 		};
 		loop_and_add("bandwidth_saver/zstd_precompress", ".zst");
 		loop_and_add("bandwidth_saver/gzip_precompress", ".gz");
-#ifdef BROTLI_ENABLED
 		loop_and_add("bandwidth_saver/brotli_precompress", ".br");
-#endif
 
 		if (files_to_add.is_empty()) {
 			return;
@@ -667,7 +587,7 @@ bool EditorExportPlatformWeb::get_export_option_visibility(const EditorExportPre
 	}
 
 #ifndef BROTLI_ENABLED
-	if (p_option == "bandwidth_saver/brotli_compress") {
+	if (p_option == "bandwidth_saver/brotli_precompress") {
 		return false;
 	}
 #endif // !BROTLI_ENABLED
@@ -841,9 +761,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 	add_file_size(pck_path);
 	add_file_size(pck_path + ".zst");
 	add_file_size(pck_path + ".gz");
-#ifdef BROTLI_ENABLED
 	add_file_size(pck_path + ".br");
-#endif
 
 	String wasm_path = base_path + ".wasm";
 	add_file_size(wasm_path);
@@ -1261,7 +1179,7 @@ Error EditorExportPlatformWeb::_compress_file_to_formats_if_applicable(const Str
 			ERR_FAIL_V_MSG(err, "Error while zstd compressing an exported file");
 		}
 	}
-	if (p_preset->get("bandwidth_saver/gzip_compress").operator bool()) {
+	if (p_preset->get("bandwidth_saver/gzip_precompress").operator bool()) {
 		String compressed_path = _compress_file_to_format(p_path, FileAccessCompressed::COMPRESSION_GZIP, &err);
 		if (err != OK) {
 			add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), compressed_path));
@@ -1269,7 +1187,7 @@ Error EditorExportPlatformWeb::_compress_file_to_formats_if_applicable(const Str
 		}
 	}
 #ifdef BROTLI_ENABLED
-	if (p_preset->get("bandwidth_saver/brotli_compress").operator bool()) {
+	if (p_preset->get("bandwidth_saver/brotli_precompress").operator bool()) {
 		String compressed_path = _compress_file_to_format(p_path, FileAccessCompressed::COMPRESSION_BROTLI, &err);
 		if (err != OK) {
 			add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), compressed_path));
@@ -1308,7 +1226,9 @@ String EditorExportPlatformWeb::_compress_file_to_format(const String &p_path, F
 		} break;
 #endif
 		default: {
-			*r_error = ERR_INVALID_PARAMETER;
+			if (r_error) {
+				*r_error = ERR_INVALID_PARAMETER;
+			}
 			return "";
 		}
 	}
@@ -1318,6 +1238,12 @@ String EditorExportPlatformWeb::_compress_file_to_format(const String &p_path, F
 	{
 		// Read.
 		Ref<FileAccess> file = FileAccess::open(p_path, FileAccess::READ);
+		if (file.is_null()) {
+			if (r_error) {
+				*r_error = ERR_FILE_CANT_OPEN;
+			}
+			return "";
+		}
 		src_file_bytes.resize(file->get_length());
 		file->get_buffer(src_file_bytes.ptrw(), file->get_length());
 	}
@@ -1330,11 +1256,19 @@ String EditorExportPlatformWeb::_compress_file_to_format(const String &p_path, F
 			return compressed_path;
 		}
 		Ref<FileAccess> file_compressed = FileAccess::open(compressed_path, FileAccess::WRITE);
+		if (file_compressed.is_null()) {
+			if (r_error) {
+				*r_error = ERR_FILE_CANT_OPEN;
+			}
+			return "";
+		}
 		file_compressed->store_buffer(dst_file_bytes.ptr(), compressed_size);
 		file_compressed->close();
 	}
 
-	*r_error = OK;
+	if (r_error) {
+		*r_error = OK;
+	}
 	return compressed_path;
 }
 
