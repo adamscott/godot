@@ -1644,8 +1644,8 @@ static GDScriptParsingIdentifier _type_from_property(const PropertyInfo &p_prope
 	return ci;
 }
 
-static GDScriptCompletionIdentifier _callable_type_from_method_info(const MethodInfo &p_method) {
-	GDScriptCompletionIdentifier ci;
+static GDScriptParsingIdentifier _callable_type_from_method_info(const MethodInfo &p_method) {
+	GDScriptParsingIdentifier ci;
 	ci.type.kind = GDScriptParser::DataType::BUILTIN;
 	ci.type.builtin_type = Variant::CALLABLE;
 	ci.type.type_source = GDScriptParser::DataType::ANNOTATED_EXPLICIT;
@@ -2779,7 +2779,7 @@ static bool _guess_method_return_type_from_base(GDScriptParser::ParsingContext &
 static bool _guess_expecting_callable(GDScriptParser::CompletionContext &p_context) {
 	if (p_context.call.call != nullptr && p_context.call.call->type == GDScriptParser::Node::CALL) {
 		GDScriptParser::CallNode *call_node = static_cast<GDScriptParser::CallNode *>(p_context.call.call);
-		GDScriptCompletionIdentifier ci;
+		GDScriptParsingIdentifier ci;
 		if (_guess_expression_type(p_context, call_node->callee, ci)) {
 			if (ci.type.kind == GDScriptParser::DataType::BUILTIN && ci.type.builtin_type == Variant::CALLABLE) {
 				if (p_context.call.argument >= 0 && p_context.call.argument < ci.type.method_info.arguments.size()) {
