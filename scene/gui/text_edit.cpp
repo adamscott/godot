@@ -29,6 +29,7 @@
 /**************************************************************************/
 
 #include "text_edit.h"
+#include "core/error/error_macros.h"
 #include "text_edit.compat.inc"
 
 #include "core/config/project_settings.h"
@@ -4922,10 +4923,14 @@ Point2 TextEdit::get_local_mouse_pos() const {
 
 String TextEdit::get_word_at_pos(const Vector2 &p_pos) const {
 	Point2i pos = get_line_column_at_pos(p_pos, false, false);
+	if (pos.y == -1 || pos.x == -1) {
+		return "";
+	}
 	return get_word_at_line_column(pos.y, pos.x);
 }
 
 String TextEdit::get_word_at_line_column(int p_line, int p_column) const {
+	ERR_FAIL_INDEX_V(p_line, text.size(), "");
 	String s = text[p_line];
 	if (s.length() == 0) {
 		return "";
