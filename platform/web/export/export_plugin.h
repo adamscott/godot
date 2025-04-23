@@ -140,7 +140,7 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 	Error _stop_server();
 
 	Error _compress_file_to_formats_if_applicable(const String &p_path, const Ref<EditorExportPreset> &p_preset);
-	String _compress_file_to_format(const String &p_path, FileAccessCompressed::CompressionMode p_mode, Error *r_error);
+	String _compress_file_to_format(const String &p_path, FileAccessCompressed::CompressionMode p_mode, Error *r_error = nullptr);
 
 public:
 	virtual void get_preset_features(const Ref<EditorExportPreset> &p_preset, List<String> *r_features) const override;
