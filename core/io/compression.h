@@ -80,33 +80,23 @@ public:
 			void set_quality(uint8_t p_quality) {
 				_quality = p_quality;
 			}
+
+			constexpr Brotli &operator=(const Brotli &p_brotli_settings) {
+				_encoder_mode = p_brotli_settings._encoder_mode;
+				_quality = p_brotli_settings._quality;
+				return *this;
+			}
 		};
 
 	private:
 		Mode _mode = MODE_ZSTD;
 		bool _mode_set = false;
 
-	public:
-		union {
-			Brotli *brotli = nullptr;
-		};
-
-		Mode get_mode() const {
-			if (!_mode_set) {
-				ERR_FAIL_V_MSG(_mode, "Trying to get mode when none has been set yet");
-			}
-			return _mode;
-		}
-
-		void set_mode(Mode p_mode) {
-			if (_mode_set) {
-				ERR_FAIL_MSG("Cannot set mode twice.");
-			}
-			_mode_set = true;
-			_mode = p_mode;
+		void _copy_from_settings(const Settings &p_settings) {
+			set_mode(p_settings._mode);
 			switch (_mode) {
 				case MODE_BROTLI: {
-					brotli = memnew(Brotli);
+					*brotli = *p_settings.brotli;
 				} break;
 				default: {
 					// Do nothing.
@@ -114,20 +104,67 @@ public:
 			}
 		}
 
-		Settings() {
-			_mode = MODE_ZSTD;
-			_mode_set = false;
-			brotli = nullptr;
+	public:
+		union {
+			Brotli *brotli = nullptr;
+		};
+
+		Mode get_mode() const {
+			return _mode;
 		}
+
+		void set_mode(Mode p_mode) {
+			if (p_mode == _mode && _mode_set) {
+				return;
+			}
+
+			Mode from = _mode;
+			Mode to = p_mode;
+
+			if (_mode_set) {
+				switch (from) {
+					case MODE_BROTLI: {
+						memfree(brotli);
+					} break;
+					default: {
+						// Do nothing.
+					}
+				}
+			}
+
+			switch (to) {
+				case MODE_BROTLI: {
+					brotli = memnew(Brotli);
+				} break;
+				default: {
+					// Do nothing.
+				}
+			}
+
+			_mode = to;
+			_mode_set = true;
+		}
+
+		constexpr void operator=(const Settings &p_settings) {
+			_copy_from_settings(p_settings);
+		}
+
+		Settings() :
+				Settings(MODE_ZSTD) {}
 
 		Settings(Mode p_mode) {
 			set_mode(p_mode);
+		}
+
+		Settings(const Settings &p_settings) {
+			_copy_from_settings(p_settings);
 		}
 
 		~Settings() {
 			if (!_mode_set) {
 				return;
 			}
+
 			switch (_mode) {
 				case MODE_BROTLI: {
 					memfree(brotli);
