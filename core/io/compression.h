@@ -35,12 +35,20 @@
 
 class Compression {
 public:
+	// Deflate.
 	static int zlib_level;
+	static int zlib_chunk_size;
+	// Gzip.
 	static int gzip_level;
+	static int gzip_chunk_size;
+	// Zstd.
 	static int zstd_level;
 	static bool zstd_long_distance_matching;
 	static int zstd_window_log_size;
-	static int gzip_chunk;
+	// Brotli.
+	static int brotli_chunk_size;
+	static int brotli_encoder_mode;
+	static int brotli_quality;
 
 	enum Mode : int32_t {
 		MODE_FASTLZ,
@@ -50,7 +58,30 @@ public:
 		MODE_BROTLI
 	};
 
+public:
 	struct Settings {
+		struct Deflate {
+			int level;
+			int chunk_size;
+			Deflate() :
+					level(zlib_level), chunk_size(zlib_chunk_size) {}
+		};
+
+		struct Gzip {
+			int level;
+			int chunk_size;
+			Gzip() :
+					level(gzip_level), chunk_size(gzip_chunk_size) {}
+		};
+
+		struct Zstd {
+			int level;
+			bool long_distance_matching;
+			int window_log_size;
+			Zstd() :
+					level(zstd_level), long_distance_matching(zstd_long_distance_matching), window_log_size(zstd_window_log_size) {}
+		};
+
 		struct Brotli {
 			enum EncoderMode {
 				BROTLI_ENCODER_MODE_FONT,
@@ -58,32 +89,18 @@ public:
 				BROTLI_ENCODER_MODE_TEXT,
 			};
 
-		private:
-			EncoderMode _encoder_mode = BROTLI_ENCODER_MODE_GENERIC;
-			uint8_t _quality = 9;
-
-		public:
-			EncoderMode get_encoder_mode() const {
-				return _encoder_mode;
-			}
-
-			void set_encoder_mode(EncoderMode p_encoder_mode) {
-				_encoder_mode = p_encoder_mode;
-			}
-
-			uint8_t get_quality() const {
-				return _quality;
-			}
-
-			void set_quality(uint8_t p_quality) {
-				_quality = p_quality;
-			}
+			int chunk_size;
+			EncoderMode encoder_mode;
+			uint8_t quality;
 
 			constexpr Brotli &operator=(const Brotli &p_brotli_settings) {
-				_encoder_mode = p_brotli_settings._encoder_mode;
-				_quality = p_brotli_settings._quality;
+				encoder_mode = p_brotli_settings.encoder_mode;
+				quality = p_brotli_settings.quality;
 				return *this;
 			}
+
+			Brotli() :
+					chunk_size(brotli_chunk_size), encoder_mode(static_cast<EncoderMode>(brotli_encoder_mode)), quality(brotli_quality) {}
 		};
 
 	private:
@@ -92,10 +109,16 @@ public:
 
 		void _copy_from_settings(const Settings &p_settings) {
 			set_mode(p_settings._mode);
+#define SWITCH_CASE(mode, variable)       \
+	case MODE_##mode: {                   \
+		*variable = *p_settings.variable; \
+	} break
 			switch (_mode) {
-				case MODE_BROTLI: {
-					*brotli = *p_settings.brotli;
-				} break;
+				SWITCH_CASE(DEFLATE, deflate);
+				SWITCH_CASE(GZIP, gzip);
+				SWITCH_CASE(ZSTD, zstd);
+				SWITCH_CASE(BROTLI, brotli);
+#undef SWITCH_CASE
 				default: {
 					// Do nothing.
 				}
@@ -104,7 +127,10 @@ public:
 
 	public:
 		union {
-			Brotli *brotli = nullptr;
+			Deflate *deflate = nullptr;
+			Gzip *gzip;
+			Zstd *zstd;
+			Brotli *brotli;
 		};
 
 		Mode get_mode() const {
@@ -121,6 +147,15 @@ public:
 
 			if (_mode_set) {
 				switch (from) {
+					case MODE_DEFLATE: {
+						memfree(deflate);
+					} break;
+					case MODE_GZIP: {
+						memfree(gzip);
+					} break;
+					case MODE_ZSTD: {
+						memfree(zstd);
+					} break;
 					case MODE_BROTLI: {
 						memfree(brotli);
 					} break;
@@ -131,6 +166,15 @@ public:
 			}
 
 			switch (to) {
+				case MODE_DEFLATE: {
+					deflate = memnew(Deflate);
+				} break;
+				case MODE_GZIP: {
+					gzip = memnew(Gzip);
+				} break;
+				case MODE_ZSTD: {
+					zstd = memnew(Zstd);
+				} break;
 				case MODE_BROTLI: {
 					brotli = memnew(Brotli);
 				} break;
