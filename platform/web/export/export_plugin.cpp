@@ -207,7 +207,7 @@ Error EditorExportPlatformWeb::_compress_template_files(const Ref<EditorExportPr
 
 		{
 			// Actually start compressing the file.
-			Error error = _launch_file_compression_to_formats_if_applicable(template_file, p_preset);
+			Error error = _compress_file_to_formats_if_applicable(template_file, p_preset);
 			if (error != OK) {
 				return error;
 			}
@@ -424,7 +424,7 @@ Error EditorExportPlatformWeb::_build_pwa(const Ref<EditorExportPreset> &p_prese
 		// Message is supplied by the subroutine method.
 		return err;
 	}
-	err = _launch_file_compression_to_formats_if_applicable(sw_path, p_preset);
+	err = _compress_file_to_formats_if_applicable(sw_path, p_preset);
 	if (err != OK) {
 		// Message is supplied by the subroutine method.
 		return err;
@@ -440,7 +440,7 @@ Error EditorExportPlatformWeb::_build_pwa(const Ref<EditorExportPreset> &p_prese
 			add_message(EXPORT_MESSAGE_ERROR, TTR("PWA"), vformat(TTR("Could not read file: \"%s\"."), offline_dest));
 			return err;
 		}
-		err = _launch_file_compression_to_formats_if_applicable(offline_dest, p_preset);
+		err = _compress_file_to_formats_if_applicable(offline_dest, p_preset);
 		if (err != OK) {
 			// Message is supplied by the subroutine method.
 			return err;
@@ -488,7 +488,7 @@ Error EditorExportPlatformWeb::_build_pwa(const Ref<EditorExportPreset> &p_prese
 		// Message is supplied by the subroutine method.
 		return err;
 	}
-	err = _launch_file_compression_to_formats_if_applicable(manifest_path, p_preset);
+	err = _compress_file_to_formats_if_applicable(manifest_path, p_preset);
 	if (err != OK) {
 		// Message is supplied by the subroutine method.
 		return err;
@@ -710,7 +710,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 		add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), pck_path));
 		return error;
 	}
-	error = _launch_file_compression_to_formats_if_applicable(pck_path, p_preset);
+	error = _compress_file_to_formats_if_applicable(pck_path, p_preset);
 	if (error != OK) {
 		// Message is supplied by the subroutine method.
 		return error;
@@ -725,7 +725,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 				add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), shared_objects[i].path.get_file()));
 				return error;
 			}
-			error = _launch_file_compression_to_formats_if_applicable(dst, p_preset);
+			error = _compress_file_to_formats_if_applicable(dst, p_preset);
 			if (error != OK) {
 				// Message is supplied by the subroutine method.
 				return error;
@@ -813,7 +813,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 		add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), splash_png_path));
 		return ERR_FILE_CANT_WRITE;
 	}
-	error = _launch_file_compression_to_formats_if_applicable(splash_png_path, p_preset);
+	error = _compress_file_to_formats_if_applicable(splash_png_path, p_preset);
 	if (error != OK) {
 		// Message is supplied by the subroutine method.
 		return error;
@@ -828,7 +828,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 			add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), favicon_png_path));
 			return ERR_FILE_CANT_WRITE;
 		}
-		error = _launch_file_compression_to_formats_if_applicable(favicon_png_path, p_preset);
+		error = _compress_file_to_formats_if_applicable(favicon_png_path, p_preset);
 		if (error != OK) {
 			// Message is supplied by the subroutine method.
 			return error;
@@ -839,7 +839,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 			add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), apple_icon_png_path));
 			return ERR_FILE_CANT_WRITE;
 		}
-		error = _launch_file_compression_to_formats_if_applicable(apple_icon_png_path, p_preset);
+		error = _compress_file_to_formats_if_applicable(apple_icon_png_path, p_preset);
 		if (error != OK) {
 			// Message is supplied by the subroutine method.
 			return error;
@@ -855,27 +855,6 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 		}
 	}
 
-	uint32_t file_compression_tasks_size = file_compression_tasks.size();
-	if (file_compression_tasks_size > 0) {
-		EditorProgress ep("web_bandwidth_saver_precompress", vformat(TTR("Precompressing files")), file_compression_tasks_size, true);
-		bool failed = false;
-		int progress_index = 0;
-
-		for (const KeyValue<WorkerThreadPool::TaskID, FileCompressionTask *> &KV : file_compression_tasks) {
-			ep.step(KV.value->dst_path, progress_index, true);
-			WorkerThreadPool::get_singleton()->wait_for_task_completion(KV.key);
-			if (KV.value->status == FileCompressionTask::TASK_STATUS_FAIL) {
-				failed = true;
-			}
-			memfree(KV.value);
-			progress_index += 1;
-		}
-		file_compression_tasks.clear();
-
-		if (failed) {
-			return FAILED;
-		}
-	}
 	return OK;
 }
 
@@ -1192,17 +1171,19 @@ Error EditorExportPlatformWeb::_stop_server() {
 	return OK;
 }
 
-Error EditorExportPlatformWeb::_launch_file_compression_to_formats_if_applicable(const String &p_path, const Ref<EditorExportPreset> &p_preset) {
+Error EditorExportPlatformWeb::_compress_file_to_formats_if_applicable(const String &p_path, const Ref<EditorExportPreset> &p_preset) {
 	Error err;
 	if (p_preset->get("bandwidth_saver/zstd_precompress").operator bool()) {
-		String compressed_path = _launch_file_compression_to_format(p_path, FileAccessCompressed::COMPRESSION_ZSTD, &err);
+		String compressed_path = _get_compress_file_format_path(p_path, Compression::MODE_ZSTD);
+		err = _compress_file_to_format(p_path, compressed_path, Compression::MODE_ZSTD);
 		if (err != OK) {
 			add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), compressed_path));
 			ERR_FAIL_V_MSG(err, "Error while zstd compressing an exported file");
 		}
 	}
 	if (p_preset->get("bandwidth_saver/gzip_precompress").operator bool()) {
-		String compressed_path = _launch_file_compression_to_format(p_path, FileAccessCompressed::COMPRESSION_GZIP, &err);
+		String compressed_path = _get_compress_file_format_path(p_path, Compression::MODE_GZIP);
+		err = _compress_file_to_format(p_path, compressed_path, Compression::MODE_GZIP);
 		if (err != OK) {
 			add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), compressed_path));
 			ERR_FAIL_V_MSG(err, "Error while gzip compressing an exported file");
@@ -1210,7 +1191,8 @@ Error EditorExportPlatformWeb::_launch_file_compression_to_formats_if_applicable
 	}
 #ifdef BROTLI_ENABLED
 	if (p_preset->get("bandwidth_saver/brotli_precompress").operator bool()) {
-		String compressed_path = _launch_file_compression_to_format(p_path, FileAccessCompressed::COMPRESSION_BROTLI, &err);
+		String compressed_path = _get_compress_file_format_path(p_path, Compression::MODE_BROTLI);
+		err = _compress_file_to_format(p_path, compressed_path, Compression::MODE_BROTLI);
 		if (err != OK) {
 			add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), compressed_path));
 			ERR_FAIL_V_MSG(err, "Error while brotli compressing an exported file");
@@ -1220,22 +1202,18 @@ Error EditorExportPlatformWeb::_launch_file_compression_to_formats_if_applicable
 	return OK;
 }
 
-String EditorExportPlatformWeb::_launch_file_compression_to_format(const String &p_path, FileAccessCompressed::CompressionMode p_mode, Error *r_error) {
-	String compressed_path;
+Error EditorExportPlatformWeb::_compress_file_to_format(const String &p_path, const String &p_compressed_path, Compression::Mode p_mode) {
 	Compression::Settings compression_settings;
 
 	switch (p_mode) {
-		case FileAccessCompressed::COMPRESSION_ZSTD: {
-			compressed_path = p_path + ".zst";
+		case Compression::MODE_ZSTD: {
 			compression_settings.set_mode(Compression::MODE_ZSTD);
 		} break;
-		case FileAccessCompressed::COMPRESSION_GZIP: {
-			compressed_path = p_path + ".gz";
+		case Compression::MODE_GZIP: {
 			compression_settings.set_mode(Compression::MODE_GZIP);
 		} break;
 #ifdef BROTLI_ENABLED
-		case FileAccessCompressed::COMPRESSION_BROTLI: {
-			compressed_path = p_path + ".br";
+		case Compression::MODE_BROTLI: {
 			const String path_extension = p_path.get_extension();
 			compression_settings.set_mode(Compression::MODE_BROTLI);
 			compression_settings.brotli->quality = 11;
@@ -1249,59 +1227,56 @@ String EditorExportPlatformWeb::_launch_file_compression_to_format(const String 
 		} break;
 #endif
 		default: {
-			if (r_error) {
-				*r_error = ERR_INVALID_PARAMETER;
-			}
-			return "";
+			return FAILED;
 		}
 	}
-
-	FileCompressionTask *task = memnew(FileCompressionTask);
-	task->src_path = p_path;
-	task->dst_path = compressed_path;
-	task->settings = compression_settings;
-	task->task_id = WorkerThreadPool::get_singleton()->add_native_task(&EditorExportPlatformWeb::_compress_file_to_format_task, task, true);
-	file_compression_tasks[task->task_id] = task;
-
-	if (r_error) {
-		*r_error = OK;
-	}
-	return compressed_path;
-}
-
-void EditorExportPlatformWeb::_compress_file_to_format_task(void *p_task) {
-	FileCompressionTask *task = static_cast<FileCompressionTask *>(p_task);
 
 	PackedByteArray src_file_bytes;
 	PackedByteArray dst_file_bytes;
 	{
 		// Read.
-		Ref<FileAccess> file = FileAccess::open(task->src_path, FileAccess::READ);
+		Ref<FileAccess> file = FileAccess::open(p_path, FileAccess::READ);
 		if (file.is_null()) {
-			task->status = FileCompressionTask::TASK_STATUS_FAIL;
-			return;
+			return ERR_FILE_CANT_OPEN;
 		}
 		src_file_bytes.resize(file->get_length());
 		file->get_buffer(src_file_bytes.ptrw(), file->get_length());
 	}
 	{
 		// Write.
-		dst_file_bytes.resize(Compression::get_max_compressed_buffer_size(src_file_bytes.size(), task->settings));
-		int compressed_size = Compression::compress(dst_file_bytes.ptrw(), src_file_bytes.ptr(), src_file_bytes.size(), task->settings);
+		dst_file_bytes.resize(Compression::get_max_compressed_buffer_size(src_file_bytes.size(), compression_settings));
+		int compressed_size = Compression::compress(dst_file_bytes.ptrw(), src_file_bytes.ptr(), src_file_bytes.size(), compression_settings);
 		if (compressed_size < 0) {
-			task->status = FileCompressionTask::TASK_STATUS_FAIL;
-			return;
+			return FAILED;
 		}
-		Ref<FileAccess> file_compressed = FileAccess::open(task->dst_path, FileAccess::WRITE);
+		Ref<FileAccess> file_compressed = FileAccess::open(p_compressed_path, FileAccess::WRITE);
 		if (file_compressed.is_null()) {
-			task->status = FileCompressionTask::TASK_STATUS_FAIL;
-			return;
+			return ERR_FILE_CANT_OPEN;
 		}
 		file_compressed->store_buffer(dst_file_bytes.ptr(), compressed_size);
 		file_compressed->close();
 	}
 
-	task->status = FileCompressionTask::TASK_STATUS_SUCCESS;
+	return OK;
+}
+
+String EditorExportPlatformWeb::_get_compress_file_format_path(const String &p_path, Compression::Mode p_mode) {
+	ERR_FAIL_COND_V(p_path.is_empty(), "");
+
+	switch (p_mode) {
+		case Compression::MODE_ZSTD: {
+			return p_path + ".zst";
+		} break;
+		case Compression::MODE_GZIP: {
+			return p_path + ".gz";
+		} break;
+		case Compression::MODE_BROTLI: {
+			return p_path + ".br";
+		} break;
+		default: {
+			return "";
+		}
+	}
 }
 
 Ref<Texture2D> EditorExportPlatformWeb::get_run_icon() const {
