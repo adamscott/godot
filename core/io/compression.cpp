@@ -52,7 +52,7 @@ int Compression::compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, 
 	switch (p_settings.get_mode()) {
 		case MODE_BROTLI: {
 			BrotliEncoderMode mode = BROTLI_MODE_GENERIC;
-			switch (p_settings.brotli->get_encoder_mode()) {
+			switch (p_settings.brotli->encoder_mode) {
 				case Settings::Brotli::BROTLI_ENCODER_MODE_FONT: {
 					mode = BROTLI_MODE_FONT;
 				} break;
@@ -64,7 +64,7 @@ int Compression::compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, 
 				} break;
 			}
 			size_t encoded_size;
-			if (BrotliEncoderCompress(p_settings.brotli->get_quality(), 24, mode, p_src_size, p_src, &encoded_size, p_dst)) {
+			if (BrotliEncoderCompress(p_settings.brotli->quality, 24, mode, p_src_size, p_src, &encoded_size, p_dst)) {
 				return encoded_size;
 			}
 			return -1;
@@ -88,7 +88,7 @@ int Compression::compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, 
 			strm.zalloc = zipio_alloc;
 			strm.zfree = zipio_free;
 			strm.opaque = Z_NULL;
-			int level = p_settings.get_mode() == MODE_DEFLATE ? zlib_level : gzip_level;
+			int level = p_settings.get_mode() == MODE_DEFLATE ? p_settings.deflate->level : p_settings.gzip->level;
 			int err = deflateInit2(&strm, level, Z_DEFLATED, window_bits, 8, Z_DEFAULT_STRATEGY);
 			if (err != Z_OK) {
 				return -1;
@@ -107,13 +107,13 @@ int Compression::compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, 
 		} break;
 		case MODE_ZSTD: {
 			ZSTD_CCtx *cctx = ZSTD_createCCtx();
-			ZSTD_CCtx_setParameter(cctx, ZSTD_c_compressionLevel, zstd_level);
-			if (zstd_long_distance_matching) {
+			ZSTD_CCtx_setParameter(cctx, ZSTD_c_compressionLevel, p_settings.zstd->level);
+			if (p_settings.zstd->long_distance_matching) {
 				ZSTD_CCtx_setParameter(cctx, ZSTD_c_enableLongDistanceMatching, 1);
-				ZSTD_CCtx_setParameter(cctx, ZSTD_c_windowLog, zstd_window_log_size);
+				ZSTD_CCtx_setParameter(cctx, ZSTD_c_windowLog, p_settings.zstd->window_log_size);
 			}
 			int max_dst_size = get_max_compressed_buffer_size(p_src_size, p_settings);
-			int ret = ZSTD_compressCCtx(cctx, p_dst, max_dst_size, p_src, p_src_size, zstd_level);
+			int ret = ZSTD_compressCCtx(cctx, p_dst, max_dst_size, p_src, p_src_size, p_settings.zstd->level);
 			ZSTD_freeCCtx(cctx);
 			return ret;
 		} break;
@@ -211,17 +211,17 @@ int Compression::decompress(uint8_t *p_dst, int p_dst_max_size, const uint8_t *p
 		case MODE_ZSTD: {
 			MutexLock lock(mutex);
 
-			if (!current_zstd_d_ctx || current_zstd_long_distance_matching != zstd_long_distance_matching || current_zstd_window_log_size != zstd_window_log_size) {
+			if (!current_zstd_d_ctx || current_zstd_long_distance_matching != p_settings.zstd->long_distance_matching || current_zstd_window_log_size != p_settings.zstd->window_log_size) {
 				if (current_zstd_d_ctx) {
 					ZSTD_freeDCtx(current_zstd_d_ctx);
 				}
 
 				current_zstd_d_ctx = ZSTD_createDCtx();
-				if (zstd_long_distance_matching) {
-					ZSTD_DCtx_setParameter(current_zstd_d_ctx, ZSTD_d_windowLogMax, zstd_window_log_size);
+				if (p_settings.zstd->long_distance_matching) {
+					ZSTD_DCtx_setParameter(current_zstd_d_ctx, ZSTD_d_windowLogMax, p_settings.zstd->window_log_size);
 				}
-				current_zstd_long_distance_matching = zstd_long_distance_matching;
-				current_zstd_window_log_size = zstd_window_log_size;
+				current_zstd_long_distance_matching = p_settings.zstd->long_distance_matching;
+				current_zstd_window_log_size = p_settings.zstd->window_log_size;
 			}
 
 			int ret = ZSTD_decompressDCtx(current_zstd_d_ctx, p_dst, p_dst_max_size, p_src, p_src_size);
@@ -263,14 +263,14 @@ int Compression::decompress_dynamic(Vector<uint8_t> *p_dst_vect, int p_max_dst_s
 		do {
 			// Add another chunk size to the output buffer.
 			// This forces a copy of the whole buffer.
-			p_dst_vect->resize(p_dst_vect->size() + gzip_chunk);
+			p_dst_vect->resize(p_dst_vect->size() + p_settings.brotli->chunk_size);
 			// Get pointer to the actual output buffer.
 			dst = p_dst_vect->ptrw();
 
 			// Set the stream to the new output stream.
 			// Since it was copied, we need to reset the stream to the new buffer.
 			next_out = &(dst[out_mark]);
-			avail_out += gzip_chunk;
+			avail_out += p_settings.brotli->chunk_size;
 
 			ret = BrotliDecoderDecompressStream(state, &avail_in, &next_in, &avail_out, &next_out, &total_out);
 			if (ret == BROTLI_DECODER_RESULT_ERROR) {
@@ -280,7 +280,7 @@ int Compression::decompress_dynamic(Vector<uint8_t> *p_dst_vect, int p_max_dst_s
 				return Z_DATA_ERROR;
 			}
 
-			out_mark += gzip_chunk - avail_out;
+			out_mark += p_settings.brotli->chunk_size - avail_out;
 
 			// Enforce max output size.
 			if (p_max_dst_size > -1 && total_out > (uint64_t)p_max_dst_size) {
@@ -327,17 +327,24 @@ int Compression::decompress_dynamic(Vector<uint8_t> *p_dst_vect, int p_max_dst_s
 		p_dst_vect->clear();
 
 		// Decompress until deflate stream ends or end of file.
+		int chunk_size;
+		if (p_settings.get_mode() == MODE_DEFLATE) {
+			chunk_size = p_settings.deflate->chunk_size;
+		} else {
+			chunk_size = p_settings.gzip->chunk_size;
+		}
+
 		do {
 			// Add another chunk size to the output buffer.
 			// This forces a copy of the whole buffer.
-			p_dst_vect->resize(p_dst_vect->size() + gzip_chunk);
+			p_dst_vect->resize(p_dst_vect->size() + chunk_size);
 			// Get pointer to the actual output buffer.
 			dst = p_dst_vect->ptrw();
 
 			// Set the stream to the new output stream.
 			// Since it was copied, we need to reset the stream to the new buffer.
 			strm.next_out = &(dst[out_mark]);
-			strm.avail_out = gzip_chunk;
+			strm.avail_out = chunk_size;
 
 			// Run inflate() on input until output buffer is full and needs to be resized or input runs out.
 			do {
@@ -360,7 +367,7 @@ int Compression::decompress_dynamic(Vector<uint8_t> *p_dst_vect, int p_max_dst_s
 				}
 			} while (strm.avail_out > 0 && strm.avail_in > 0);
 
-			out_mark += gzip_chunk;
+			out_mark += chunk_size;
 
 			// Enforce max output size.
 			if (p_max_dst_size > -1 && strm.total_out > (uint64_t)p_max_dst_size) {

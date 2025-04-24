@@ -1238,13 +1238,13 @@ String EditorExportPlatformWeb::_launch_file_compression_to_format(const String 
 			compressed_path = p_path + ".br";
 			const String path_extension = p_path.get_extension();
 			compression_settings.set_mode(Compression::MODE_BROTLI);
-			compression_settings.brotli->set_quality(11);
+			compression_settings.brotli->quality = 11;
 			if (text_file_extensions.has(path_extension)) {
-				compression_settings.brotli->set_encoder_mode(Compression::Settings::Brotli::BROTLI_ENCODER_MODE_TEXT);
+				compression_settings.brotli->encoder_mode = Compression::Settings::Brotli::BROTLI_ENCODER_MODE_TEXT;
 			} else if (font_file_extensions.has(path_extension)) {
-				compression_settings.brotli->set_encoder_mode(Compression::Settings::Brotli::BROTLI_ENCODER_MODE_FONT);
+				compression_settings.brotli->encoder_mode = Compression::Settings::Brotli::BROTLI_ENCODER_MODE_FONT;
 			} else {
-				compression_settings.brotli->set_encoder_mode(Compression::Settings::Brotli::BROTLI_ENCODER_MODE_GENERIC);
+				compression_settings.brotli->encoder_mode = Compression::Settings::Brotli::BROTLI_ENCODER_MODE_GENERIC;
 			}
 		} break;
 #endif
