@@ -130,51 +130,36 @@ public:
 			}
 		}
 
-	public:
-		union {
-			FastLZ *fastlz = nullptr;
-			Deflate *deflate;
-			Gzip *gzip;
-			Zstd *zstd;
-			Brotli *brotli;
-		};
-
-		Mode get_mode() const {
-			return _mode;
-		}
-
-		void set_mode(Mode p_mode) {
-			if (p_mode == _mode && _mode_set) {
+		void _switch_from() {
+			if (!_mode_set) {
 				return;
 			}
 
-			Mode from = _mode;
-			Mode to = p_mode;
-
-			if (_mode_set) {
-				switch (from) {
-					case MODE_FASTLZ: {
-						memfree(fastlz);
-					} break;
-					case MODE_DEFLATE: {
-						memfree(deflate);
-					} break;
-					case MODE_GZIP: {
-						memfree(gzip);
-					} break;
-					case MODE_ZSTD: {
-						memfree(zstd);
-					} break;
-					case MODE_BROTLI: {
-						memfree(brotli);
-					} break;
-					default: {
-						// Do nothing.
-					}
+			switch (_mode) {
+				case MODE_FASTLZ: {
+					memfree(fastlz);
+				} break;
+				case MODE_DEFLATE: {
+					memfree(deflate);
+				} break;
+				case MODE_GZIP: {
+					memfree(gzip);
+				} break;
+				case MODE_ZSTD: {
+					memfree(zstd);
+				} break;
+				case MODE_BROTLI: {
+					memfree(brotli);
+				} break;
+				default: {
+					// Do nothing.
 				}
 			}
+			fastlz = nullptr;
+		}
 
-			switch (to) {
+		void _switch_to(const Mode p_mode) {
+			switch (p_mode) {
 				case MODE_FASTLZ: {
 					fastlz = memnew(FastLZ);
 				} break;
@@ -194,9 +179,29 @@ public:
 					// Do nothing.
 				}
 			}
-
-			_mode = to;
+			_mode = p_mode;
 			_mode_set = true;
+		}
+
+	public:
+		union {
+			FastLZ *fastlz = nullptr;
+			Deflate *deflate;
+			Gzip *gzip;
+			Zstd *zstd;
+			Brotli *brotli;
+		};
+
+		Mode get_mode() const {
+			return _mode;
+		}
+
+		void set_mode(Mode p_mode) {
+			if (p_mode == _mode && _mode_set) {
+				return;
+			}
+			_switch_from();
+			_switch_to(p_mode);
 		}
 
 		constexpr void operator=(const Settings &p_settings) {
@@ -215,11 +220,55 @@ public:
 		}
 
 		~Settings() {
+			_switch_from();
+		}
+	};
+
+	struct Stream {
+		struct FastLZ {
+		};
+
+		struct Deflate {
+		};
+
+		struct Gzip {
+		};
+
+		struct Zstd {
+		};
+
+		struct Brotli {
+		};
+
+		uint8_t *src;
+		uint32_t src_size;
+		uint8_t *dst;
+		uint32_t dst_max_size;
+		Settings settings;
+		bool done;
+
+	private:
+		Mode _mode;
+		bool _mode_set = false;
+
+		void _switch_from() {
 			if (!_mode_set) {
 				return;
 			}
 
 			switch (_mode) {
+				case MODE_FASTLZ: {
+					memfree(fastlz);
+				} break;
+				case MODE_DEFLATE: {
+					memfree(deflate);
+				} break;
+				case MODE_GZIP: {
+					memfree(gzip);
+				} break;
+				case MODE_ZSTD: {
+					memfree(zstd);
+				} break;
 				case MODE_BROTLI: {
 					memfree(brotli);
 				} break;
@@ -227,12 +276,50 @@ public:
 					// Do nothing.
 				}
 			}
+			fastlz = nullptr;
+		}
+
+		void _switch_to(const Mode p_mode) {
+			switch (p_mode) {
+				case MODE_FASTLZ: {
+					fastlz = memnew(FastLZ);
+				} break;
+				case MODE_DEFLATE: {
+					deflate = memnew(Deflate);
+				} break;
+				case MODE_GZIP: {
+					gzip = memnew(Gzip);
+				} break;
+				case MODE_ZSTD: {
+					zstd = memnew(Zstd);
+				} break;
+				case MODE_BROTLI: {
+					brotli = memnew(Brotli);
+				} break;
+				default: {
+					// Do nothing.
+				}
+			}
+			_mode = p_mode;
+			_mode_set = true;
+		}
+
+	public:
+		union {
+			FastLZ *fastlz = nullptr;
+			Deflate *deflate;
+			Gzip *gzip;
+			Zstd *zstd;
+			Brotli *brotli;
+		};
+
+		~Stream() {
+			_switch_from();
 		}
 	};
 
 public:
-	static int
-	compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, Mode p_mode = MODE_ZSTD) {
+	static int compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, Mode p_mode = MODE_ZSTD) {
 		return compress(p_dst, p_src, p_src_size, Settings(p_mode));
 	}
 	static int compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, const Settings &p_settings = {});
