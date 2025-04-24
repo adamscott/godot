@@ -60,6 +60,9 @@ public:
 
 public:
 	struct Settings {
+		struct FastLZ {
+		};
+
 		struct Deflate {
 			int level;
 			int chunk_size;
@@ -127,7 +130,8 @@ public:
 
 	public:
 		union {
-			Deflate *deflate = nullptr;
+			FastLZ *fastlz = nullptr;
+			Deflate *deflate;
 			Gzip *gzip;
 			Zstd *zstd;
 			Brotli *brotli;
@@ -147,6 +151,9 @@ public:
 
 			if (_mode_set) {
 				switch (from) {
+					case MODE_FASTLZ: {
+						memfree(fastlz);
+					} break;
 					case MODE_DEFLATE: {
 						memfree(deflate);
 					} break;
@@ -166,6 +173,9 @@ public:
 			}
 
 			switch (to) {
+				case MODE_FASTLZ: {
+					fastlz = memnew(FastLZ);
+				} break;
 				case MODE_DEFLATE: {
 					deflate = memnew(Deflate);
 				} break;
@@ -219,7 +229,8 @@ public:
 	};
 
 public:
-	static int compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, Mode p_mode = MODE_ZSTD) {
+	static int
+	compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, Mode p_mode = MODE_ZSTD) {
 		return compress(p_dst, p_src, p_src_size, Settings(p_mode));
 	}
 	static int compress(uint8_t *p_dst, const uint8_t *p_src, int p_src_size, const Settings &p_settings = {});
