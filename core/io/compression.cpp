@@ -31,8 +31,10 @@
 #include "compression.h"
 
 #include "core/config/project_settings.h"
+#include "core/error/error_list.h"
 #include "core/io/zip_io.h"
 
+#include "core/variant/variant.h"
 #include "thirdparty/misc/fastlz.h"
 
 #include <zstd.h>
@@ -386,4 +388,108 @@ int Compression::decompress_dynamic(Vector<uint8_t> *p_dst_vect, int p_max_dst_s
 		(void)inflateEnd(&strm);
 		return Z_OK;
 	}
+}
+
+Error Compression::stream_decompress(Stream &p_stream) {
+	switch (p_stream.get_mode()) {
+		case MODE_BROTLI: {
+			if (p_stream.done) {
+				return FAILED;
+			}
+			if (!p_stream.initialized) {
+				p_stream.initialize();
+			}
+
+			// Chunk assignment.
+			const uint32_t BUFFER_SIZE = p_stream.settings.brotli->chunk_size;
+			PackedByteArray chunk = p_stream.load_chunk(BUFFER_SIZE);
+
+			// If the chunk is empty, it means that we loaded all the file.
+			if (chunk.size() == 0) {
+				if (p_stream.brotli->next_out != p_stream.brotli->out_buffer.ptrw()) {
+					const uint32_t offset = p_stream.brotli->next_out - p_stream.brotli->out_buffer.ptrw();
+					p_stream.save_chunk(p_stream.brotli->out_buffer.slice(0, offset));
+				}
+				if (p_stream.brotli->result == BROTLI_DECODER_RESULT_NEEDS_MORE_OUTPUT) {
+					return ERR_FILE_CANT_WRITE;
+				} else if (p_stream.brotli->result == BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT) {
+					return ERR_FILE_CORRUPT;
+				}
+
+				p_stream.finalize();
+			}
+
+			while (true) {
+				switch (static_cast<BrotliDecoderResult>(p_stream.brotli->result)) {
+					case BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT: {
+						memcpy(p_stream.brotli->in_buffer.ptrw(), chunk.ptr(), chunk.size());
+						p_stream.brotli->available_in = chunk.size();
+						p_stream.brotli->next_in = p_stream.brotli->in_buffer.ptr();
+					} break;
+					case BROTLI_DECODER_RESULT_NEEDS_MORE_OUTPUT: {
+						p_stream.save_chunk(p_stream.brotli->out_buffer);
+						p_stream.brotli->available_out = BUFFER_SIZE;
+						p_stream.brotli->next_out = p_stream.brotli->out_buffer.ptrw();
+					} break;
+					default: {
+						ERR_FAIL_V_MSG(FAILED, "This is a bug. This should not happen.");
+					}
+				}
+
+				{
+					BrotliDecoderState *state = static_cast<BrotliDecoderState *>(p_stream.brotli->brotli_decoder_instance);
+					size_t *available_in = &p_stream.brotli->available_in;
+					const uint8_t **next_in = &p_stream.brotli->next_in;
+					size_t *available_out = &p_stream.brotli->available_out;
+					uint8_t **next_out = &p_stream.brotli->next_out;
+					size_t *total_out = &p_stream.brotli->total_out;
+					p_stream.brotli->result = BrotliDecoderDecompressStream(state, available_in, next_in, available_out, next_out, total_out);
+				}
+			}
+
+		} break;
+		default: {
+			return FAILED;
+		}
+	}
+}
+
+PackedByteArray Compression::Stream::load_chunk(uint32_t p_chunk_size) {
+	ERR_FAIL_NULL_V(src, PackedByteArray());
+
+	PackedByteArray loaded_chunk;
+
+	uint32_t chunk_size = MIN(src_size - src_offset, p_chunk_size);
+	loaded_chunk.resize(chunk_size);
+	memcpy(loaded_chunk.ptrw(), src + src_offset, chunk_size);
+	src_offset += chunk_size;
+
+	return loaded_chunk;
+}
+
+void Compression::Stream::save_chunk(PackedByteArray p_chunk) {
+	ERR_FAIL_NULL(dst);
+	ERR_FAIL_INDEX(*dst + dst_offset, dst_max_size);
+
+	const uint32_t chunk_size = p_chunk.size();
+	memcpy(dst + dst_offset, p_chunk.ptr(), chunk_size);
+	dst_offset += chunk_size;
+}
+
+void Compression::Stream::Brotli::initialize(const Stream &p_stream) {
+	in_buffer.resize(p_stream.settings.brotli->chunk_size);
+	out_buffer.resize(p_stream.settings.brotli->chunk_size);
+
+	brotli_decoder_instance = BrotliDecoderCreateInstance(nullptr, nullptr, nullptr);
+
+	available_in = 0;
+	next_in = nullptr;
+	available_out = p_stream.brotli->in_buffer.size();
+	next_out = p_stream.brotli->out_buffer.ptrw();
+
+	result = BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT;
+}
+
+void Compression::Stream::Brotli::finalize(const Stream &p_stream) {
+	BrotliDecoderDestroyInstance(static_cast<BrotliDecoderState *>(brotli_decoder_instance));
 }

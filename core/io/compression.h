@@ -32,6 +32,8 @@
 
 #include "core/templates/vector.h"
 #include "core/typedefs.h"
+#include "core/variant/variant.h"
+#include <cstdint>
 
 #include <zlib.h>
 
@@ -67,14 +69,14 @@ public:
 
 		struct Deflate {
 			int level;
-			int chunk_size;
+			uint32_t chunk_size;
 			Deflate() :
 					level(zlib_level), chunk_size(zlib_chunk_size) {}
 		};
 
 		struct Gzip {
 			int level;
-			int chunk_size;
+			uint32_t chunk_size;
 			Gzip() :
 					level(gzip_level), chunk_size(gzip_chunk_size) {}
 		};
@@ -94,7 +96,7 @@ public:
 				BROTLI_ENCODER_MODE_TEXT,
 			};
 
-			int chunk_size;
+			uint32_t chunk_size;
 			EncoderMode encoder_mode;
 			uint8_t quality;
 
@@ -238,14 +240,33 @@ public:
 		};
 
 		struct Brotli {
+			PackedByteArray in_buffer;
+			PackedByteArray out_buffer;
+
+			void *brotli_decoder_instance = nullptr;
+
+			size_t available_in = 0;
+			const uint8_t *next_in = nullptr;
+			size_t available_out = 0;
+			uint8_t *next_out = nullptr;
+			size_t total_out = 0;
+
+			int result = 0;
+
+			void initialize(const Stream &p_stream);
+			void finalize(const Stream &p_stream);
 		};
 
 		uint8_t *src;
 		uint32_t src_size;
+		uint32_t src_offset;
 		uint8_t *dst;
 		uint32_t dst_max_size;
+		uint32_t dst_offset;
 		Settings settings;
-		bool done;
+
+		bool initialized = false;
+		bool done = false;
 
 	private:
 		Mode _mode;
@@ -313,6 +334,52 @@ public:
 			Brotli *brotli;
 		};
 
+		void set_mode(const Mode p_mode) {
+			if (_mode == p_mode) {
+				return;
+			}
+			_switch_from();
+			_switch_to(p_mode);
+			settings.set_mode(p_mode);
+		}
+
+		Mode get_mode() {
+			return _mode;
+		}
+
+		void initialize() {
+			ERR_FAIL_COND(initialized);
+
+			switch (_mode) {
+				case MODE_BROTLI: {
+					brotli->initialize(*this);
+				} break;
+				default: {
+					// Do nothing.
+				}
+			}
+
+			initialized = true;
+		}
+
+		void finalize() {
+			ERR_FAIL_COND(!initialized || done);
+
+			switch (_mode) {
+				case MODE_BROTLI: {
+					brotli->finalize(*this);
+				} break;
+				default: {
+					// Do nothing.
+				}
+			}
+
+			done = true;
+		}
+
+		PackedByteArray load_chunk(uint32_t p_chunk_size);
+		void save_chunk(PackedByteArray p_chunk);
+
 		~Stream() {
 			_switch_from();
 		}
@@ -335,4 +402,6 @@ public:
 		return decompress_dynamic(p_dst_vect, p_max_dst_size, p_src, p_src_size, Settings(p_mode));
 	}
 	static int decompress_dynamic(Vector<uint8_t> *p_dst_vect, int p_max_dst_size, const uint8_t *p_src, int p_src_size, const Settings &p_settings = {});
+
+	static Error stream_decompress(Stream &p_stream);
 };
