@@ -108,6 +108,10 @@ sys_env.Depends(build[0], sys_env["JS_EXTERNS"])
 # JS modules start
 js_modules = {}
 js_import_map = {"imports": {}}
+js_environment = ["web"]
+if env["threads"]:
+    js_environment.append("worker")
+js_environment = ",".join(js_environment)
 needs_common_js_module = False
 if "zstd" in env["js_modules"]:
     needs_common_js_module = True
@@ -189,7 +193,7 @@ if "zstd" in env["js_modules"]:
     env_thirdparty_zstd.Append(
         LINKFLAGS=[
             "-sEXPORT_NAME='Zstd'",
-            "-sENVIRONMENT=web",
+            f"-sENVIRONMENT=${js_environment}",
             "-sEXPORT_ES6",
             "-sMODULARIZE",
             f"-sEXPORTED_FUNCTIONS=[{exported_functions}]",
@@ -296,7 +300,7 @@ if "brotli" in env["js_modules"]:
     env_thirdparty_brotli.Append(
         LINKFLAGS=[
             "-sEXPORT_NAME='Brotli'",
-            "-sENVIRONMENT=web",
+            f"-sENVIRONMENT=${js_environment}",
             "-sEXPORT_ES6",
             "-sMODULARIZE",
             f"-sEXPORTED_FUNCTIONS=[{exported_functions}]",
