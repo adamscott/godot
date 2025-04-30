@@ -605,6 +605,9 @@ void Main::print_help(const char *p_binary) {
 	print_help_option("", "--disable-vsync can speed up movie writing but makes interaction more difficult.\n");
 	print_help_option("", "--quit-after can be used to specify the number of frames to write.\n");
 
+	print_help_title("Editor options");
+	print_help_option("--init-project <project name>", "Initializes a project at the specified path (--editor is implied).\n", CLI_OPTION_AVAILABILITY_EDITOR);
+
 	print_help_title("Display options");
 	print_help_option("-f, --fullscreen", "Request fullscreen mode.\n");
 	print_help_option("-m, --maximized", "Request a maximized window.\n");
@@ -1016,6 +1019,10 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 		I = I->next();
 	}
 
+	bool set_cwd = false;
+	String cwd = "";
+	bool init_project = false;
+	String init_project_name = "";
 	String audio_driver = "";
 	String project_path = ".";
 	bool upwards = false;
@@ -1629,10 +1636,16 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 
 			if (N) {
 				String p = N->get();
-				if (OS::get_singleton()->set_cwd(p) != OK) {
-					OS::get_singleton()->print("Invalid project path specified: \"%s\", aborting.\n", p.utf8().get_data());
+				if (p.is_empty()) {
+					OS::get_singleton()->print("Invalid project path specified: the path is empty, aborting.\n");
 					goto error;
 				}
+				if (set_cwd) {
+					OS::get_singleton()->print("Cannot set path more than once, aborting.\n");
+					goto error;
+				}
+				set_cwd = true;
+				cwd = p;
 				N = N->next();
 			} else {
 				OS::get_singleton()->print("Missing relative or absolute path, aborting.\n");
@@ -1659,11 +1672,12 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 			} else {
 				path = file.substr(0, sep);
 			}
-			if (OS::get_singleton()->set_cwd(path) == OK) {
-				// path already specified, don't override
-			} else {
-				project_path = path;
+			if (set_cwd) {
+				OS::get_singleton()->print("Cannot set path more than once, aborting.\n");
+				goto error;
 			}
+			set_cwd = true;
+			cwd = path;
 #ifdef TOOLS_ENABLED
 			editor = true;
 #endif
@@ -1785,6 +1799,18 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 				OS::get_singleton()->print("Missing write-movie argument, aborting.\n");
 				goto error;
 			}
+#ifdef TOOLS_ENABLED
+		} else if (arg == "--init-project") {
+			if (N) {
+				editor = true;
+				init_project = true;
+				init_project_name = N->get();
+				N = N->next();
+			} else {
+				OS::get_singleton()->print("Missing init-project argument, aborting.\n");
+				goto error;
+			}
+#endif // TOOLS_ENABLED
 		} else if (arg == "--disable-vsync") {
 			disable_vsync = true;
 		} else if (arg == "--print-fps") {
@@ -1895,7 +1921,31 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 				"Error: Command line arguments implied opening both editor and project manager, which is not possible. Aborting.\n");
 		goto error;
 	}
+
+	if (init_project && set_cwd) {
+		const String error_msg = "Cannot create project path directory: \"%s\", aborting.\n";
+		Error err;
+		Ref<DirAccess> current_dir = DirAccess::open(".", &err);
+		if (err != OK || current_dir.is_null()) {
+			OS::get_singleton()->print(error_msg.utf8().get_data(), cwd.utf8().get_data());
+			goto error;
+		}
+		if (!current_dir->dir_exists(cwd)) {
+			err = current_dir->make_dir_recursive(cwd);
+			if (err != OK) {
+				OS::get_singleton()->print(error_msg.utf8().get_data(), cwd.utf8().get_data());
+				goto error;
+			}
+		}
+	}
 #endif
+
+	if (set_cwd) {
+		if (OS::get_singleton()->set_cwd(cwd) != OK) {
+			OS::get_singleton()->print("Invalid project path specified: \"%s\", aborting.\n", cwd.utf8().get_data());
+			goto error;
+		}
+	}
 
 	// Network file system needs to be configured before globals, since globals are based on the
 	// 'project.godot' file which will only be available through the network if this is enabled
@@ -1916,7 +1966,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	}
 
 	OS::get_singleton()->_in_editor = editor;
-	if (globals->setup(project_path, main_pack, upwards, editor) == OK) {
+	if (globals->setup(project_path, main_pack, upwards, editor, init_project, init_project_name) == OK) {
 #ifdef TOOLS_ENABLED
 		found_project = true;
 #endif

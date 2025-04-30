@@ -602,7 +602,7 @@ void ProjectSettings::_convert_to_last_version(int p_from_version) {
  *    If a project file is found, load it or fail.
  *    If nothing was found, error out.
  */
-Error ProjectSettings::_setup(const String &p_path, const String &p_main_pack, bool p_upwards, bool p_ignore_override) {
+Error ProjectSettings::_setup(const String &p_path, const String &p_main_pack, bool p_upwards, bool p_ignore_override, bool p_init_project) {
 	if (!OS::get_singleton()->get_resource_dir().is_empty()) {
 		// OS will call ProjectSettings->get_resource_path which will be empty if not overridden!
 		// If the OS would rather use a specific location, then it will not be empty.
@@ -615,6 +615,9 @@ Error ProjectSettings::_setup(const String &p_path, const String &p_main_pack, b
 	// Attempt with a user-defined main pack first
 
 	if (!p_main_pack.is_empty()) {
+#ifdef TOOLS_ENABLED
+		ERR_FAIL_COND_V_MSG(p_init_project, FAILED, "Cannot both initialize a new project and open a .pck file.");
+#endif // TOOLS_ENABLED
 		bool ok = _load_resource_pack(p_main_pack, false, 0, true);
 		ERR_FAIL_COND_V_MSG(!ok, ERR_CANT_OPEN, vformat("Cannot open resource pack '%s'.", p_main_pack));
 
@@ -652,7 +655,7 @@ Error ProjectSettings::_setup(const String &p_path, const String &p_main_pack, b
 			// Attempt to load PCK from macOS .app bundle resources.
 			found = _load_resource_pack(OS::get_singleton()->get_bundle_resource_dir().path_join(exec_basename + ".pck"), false, 0, true) || _load_resource_pack(OS::get_singleton()->get_bundle_resource_dir().path_join(exec_filename + ".pck"), false, 0, true);
 		}
-#endif
+#endif // MACOS_ENABLED
 
 		if (!found) {
 			// Try to load data pack at the location of the executable.
@@ -668,6 +671,9 @@ Error ProjectSettings::_setup(const String &p_path, const String &p_main_pack, b
 
 		// If we opened our package, try and load our project.
 		if (found) {
+#ifdef TOOLS_ENABLED
+			ERR_FAIL_COND_V_MSG(p_init_project, FAILED, "Cannot both initialize a new project and open a .pck file.");
+#endif // TOOLS_ENABLED
 			Error err = _load_settings_text_or_binary("res://project.godot", "res://project.binary");
 			if (err == OK && !p_ignore_override) {
 				// Load overrides from the PCK and the executable location.
@@ -679,11 +685,19 @@ Error ProjectSettings::_setup(const String &p_path, const String &p_main_pack, b
 		}
 	}
 
+#ifdef TOOLS_ENABLED
+	// Setting up the recurring error message.
+	const String project_already_exist_error_text = "Project settings already exist. Stopping cowardly.";
+#endif // TOOLS_ENABLED
+
 	// Try to use the filesystem for files, according to OS.
 	// (Only Android -when reading from pck- and iOS use this.)
 
 	if (!OS::get_singleton()->get_resource_dir().is_empty()) {
 		Error err = _load_settings_text_or_binary("res://project.godot", "res://project.binary");
+#ifdef TOOLS_ENABLED
+		ERR_FAIL_COND_V_MSG(p_init_project && err == OK, FAILED, project_already_exist_error_text);
+#endif // TOOLS_ENABLED
 		if (err == OK && !p_ignore_override) {
 			// Optional, we don't mind if it fails.
 			_load_settings_text("res://override.cfg");
@@ -705,13 +719,16 @@ Error ProjectSettings::_setup(const String &p_path, const String &p_main_pack, b
 		Error err;
 
 		err = _load_settings_text_or_binary(resource_path.path_join("project.godot"), resource_path.path_join("project.binary"));
+#ifdef TOOLS_ENABLED
+		ERR_FAIL_COND_V_MSG(p_init_project && err == OK, FAILED, project_already_exist_error_text);
+#endif // TOOLS_ENABLED
 		if (err == OK && !p_ignore_override) {
 			// Optional, we don't mind if it fails.
 			_load_settings_text(resource_path.path_join("override.cfg"));
 			return err;
 		}
 	}
-#endif
+#endif // MACOS_ENABLED
 
 	// Nothing was found, try to find a project file in provided path (`p_path`)
 	// or, if requested (`p_upwards`) in parent directories.
@@ -729,6 +746,9 @@ Error ProjectSettings::_setup(const String &p_path, const String &p_main_pack, b
 		resource_path = current_dir;
 		resource_path = resource_path.replace_char('\\', '/'); // Windows path to Unix path just in case.
 		err = _load_settings_text_or_binary(current_dir.path_join("project.godot"), current_dir.path_join("project.binary"));
+#ifdef TOOLS_ENABLED
+		ERR_FAIL_COND_V_MSG(p_init_project && err == OK, FAILED, project_already_exist_error_text);
+#endif // TOOLS_ENABLED
 		if (err == OK && !p_ignore_override) {
 			// Optional, we don't mind if it fails.
 			_load_settings_text(current_dir.path_join("override.cfg"));
@@ -748,7 +768,7 @@ Error ProjectSettings::_setup(const String &p_path, const String &p_main_pack, b
 		}
 	}
 
-	if (!found) {
+	if (!found && !p_init_project) {
 		return err;
 	}
 
@@ -756,11 +776,24 @@ Error ProjectSettings::_setup(const String &p_path, const String &p_main_pack, b
 		resource_path = resource_path.substr(0, resource_path.length() - 1); // Chop end.
 	}
 
+#ifdef TOOLS_ENABLED
+	if (p_init_project) {
+		// As `resource_path` has been validated AND we know that it doesn't exist,
+		// (it would have trip the checks), we must absolutely create the project.
+		Ref<FileAccess> new_project = FileAccess::create_for_path(resource_path.path_join("project.godot"));
+		ERR_FAIL_COND_V_MSG(new_project.is_null(), FAILED, "Could not create project settings");
+		if (!p_ignore_override) {
+			// Optional, we don't mind if it fails.
+			_load_settings_text(resource_path.path_join("override.cfg"));
+		}
+	}
+#endif
+
 	return OK;
 }
 
-Error ProjectSettings::setup(const String &p_path, const String &p_main_pack, bool p_upwards, bool p_ignore_override) {
-	Error err = _setup(p_path, p_main_pack, p_upwards, p_ignore_override);
+Error ProjectSettings::setup(const String &p_path, const String &p_main_pack, bool p_upwards, bool p_ignore_override, bool p_init_project, const String &p_init_project_name) {
+	Error err = _setup(p_path, p_main_pack, p_upwards, p_ignore_override, p_init_project);
 	if (err == OK && !p_ignore_override) {
 		String custom_settings = GLOBAL_GET("application/config/project_settings_override");
 		if (!custom_settings.is_empty()) {
@@ -782,6 +815,12 @@ Error ProjectSettings::setup(const String &p_path, const String &p_main_pack, bo
 	Compression::gzip_level = GLOBAL_GET("compression/formats/gzip/compression_level");
 
 	load_scene_groups_cache();
+
+#ifdef TOOLS_ENABLED
+	if (p_init_project) {
+		set_setting("application/config/name", p_init_project_name);
+	}
+#endif // TOOLS_ENABLED
 
 	project_loaded = err == OK;
 	return err;
