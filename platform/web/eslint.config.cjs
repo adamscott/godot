@@ -135,7 +135,6 @@ module.exports = [
 			},
 		},
 	},
-
 	// libraries and modules (browser)
 	{
 		files: ['js/libs/**/*.js', 'platform/web/js/libs/**/*.js', 'modules/**/*.js'],
@@ -147,6 +146,7 @@ module.exports = [
 				'GodotEventListeners': true,
 				'GodotFS': true,
 				'GodotOS': true,
+                'GodotAsync': true,
 				'GodotAudio': true,
 				'GodotRuntime': true,
 				'IDHandler': true,
@@ -200,6 +200,7 @@ module.exports = [
 			'**/eslint.config.cjs',
 			'**/.eslintrc*.js',
 			'**/*.externs.js',
+            'platform/web/js/libs/library_godot_async.js'
 		],
 	},
 ];

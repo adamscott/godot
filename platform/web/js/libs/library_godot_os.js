@@ -373,7 +373,7 @@ mergeInto(LibraryManager.library, GodotOS);
  * Keeps track of registered event listeners so it can remove them on shutdown.
  */
 const GodotEventListeners = {
-	$GodotEventListeners__deps: ['$GodotOS'],
+	$GodotEventListeners__deps: ['$GodotOS', '$GodotAsync'],
 	$GodotEventListeners__postset: 'GodotOS.atexit(function(resolve, reject) { GodotEventListeners.clear(); resolve(); });',
 	$GodotEventListeners: {
 		handlers: [],
@@ -388,14 +388,19 @@ const GodotEventListeners = {
 			if (GodotEventListeners.has(target, event, method, capture)) {
 				return;
 			}
-			function Handler(p_target, p_event, p_method, p_capture) {
+			function Handler(p_target, p_event, p_method, p_capture, p_async_wrapper) {
 				this.target = p_target;
 				this.event = p_event;
 				this.method = p_method;
 				this.capture = p_capture;
+				this.async_wrapper = p_async_wrapper;
 			}
-			GodotEventListeners.handlers.push(new Handler(target, event, method, capture));
-			target.addEventListener(event, method, capture);
+			const asyncWrapper = async function (...args) {
+				await GodotAsync.suspending;
+				method(...args);
+			};
+			GodotEventListeners.handlers.push(new Handler(target, event, method, capture, asyncWrapper));
+			target.addEventListener(event, asyncWrapper, capture);
 		},
 
 		clear: function () {

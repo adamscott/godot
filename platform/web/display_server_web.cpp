@@ -570,6 +570,10 @@ void DisplayServerWeb::_mouse_update_mode() {
 void DisplayServerWeb::mouse_set_mode(MouseMode p_mode) {
 	ERR_FAIL_INDEX(p_mode, MouseMode::MOUSE_MODE_MAX);
 
+	print_line("Before async");
+	godot_js_async_test();
+	print_line("After async");
+
 	if (mouse_mode_override_enabled) {
 		mouse_mode_base = p_mode;
 		// No need to update, as override is enabled.

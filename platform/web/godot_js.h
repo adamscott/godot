@@ -131,6 +131,8 @@ extern void godot_js_display_vk_cb(void (*p_input)(const char *p_text, int p_cur
 extern void godot_js_display_vk_show(const char *p_text, int p_type, int p_start, int p_end);
 extern void godot_js_display_vk_hide();
 
+extern void godot_js_async_test();
+
 #ifdef __cplusplus
 }
 #endif
