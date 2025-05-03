@@ -411,10 +411,10 @@ const GodotDisplay = {
 		utterance.rate = p_rate;
 		utterance.pitch = p_pitch;
 		utterance.volume = p_volume / 100.0;
-		utterance.addEventListener('end', listener_end);
-		utterance.addEventListener('start', listener_start);
-		utterance.addEventListener('error', listener_error);
-		utterance.addEventListener('boundary', listener_bound);
+		GodotEventListeners.add(utterance, 'end', listener_end);
+		GodotEventListeners.add(utterance, 'start', listener_start);
+		GodotEventListeners.add(utterance, 'error', listener_error);
+		GodotEventListeners.add(utterance, 'boundary', listener_bound);
 		utterance.id = p_utterance_id;
 		utterance.cb = func;
 		const voice = GodotRuntime.parseString(p_voice);

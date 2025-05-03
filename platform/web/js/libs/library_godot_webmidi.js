@@ -61,7 +61,7 @@ const GodotWebMidi = {
 			inputs.forEach((input, i) => {
 				const abortController = new AbortController();
 				GodotWebMidi.abortControllers.push(abortController);
-				input.addEventListener('midimessage', (event) => {
+				GodotEventListeners.add(input, 'midimessage', (event) => {
 					const status = event.data[0];
 					const data = event.data.slice(1);
 					const size = data.length;

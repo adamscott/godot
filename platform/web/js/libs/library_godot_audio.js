@@ -788,7 +788,7 @@ class SampleNode {
 				// do nothing
 			}
 		};
-		this._source.addEventListener('ended', this._onended);
+		GodotEventListeners.add(this._source, 'ended', this._onended);
 	}
 }
 

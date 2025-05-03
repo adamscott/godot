@@ -29,17 +29,23 @@
 /**************************************************************************/
 
 const GodotAsync = {
+    $GodotAsync__postset: [
+        "GodotAsync.suspending = Promise.resolve();"
+    ].join("\n"),
 	$GodotAsync: {
-		suspending: Promise.resolve(),
+		suspending: null,
+        init: () => {
+
+        },
 		handleAsync: (startAsync) => {
 // eslint-disable
 #if ASYNCIFY == 1
 			const returnValue = Asyncify.handleAsync(startAsync);
-			GodotAsync.suspending = suspending.then(() => Asyncify.whenDone());
+			GodotAsync.suspending = Asyncify.whenDone();
 			return returnValue;
 #elif ASYNCIFY == 2
 			const sleepPromise = Asyncify.handleAsync(startAsync);
-			GodotAsync.suspending = suspending.then(() => sleepPromise);
+			GodotAsync.suspending = GodotAsync.suspending.then(() => sleepPromise);
 			return sleepPromise;
 #else
 			// TODO: Error out.
@@ -50,11 +56,11 @@ const GodotAsync = {
 // eslint-disable
 #if ASYNCIFY == 1
 			const returnValue = Asyncify.handleSleep(startAsync);
-			GodotAsync.suspending = suspending.then(() => Asyncify.whenDone());
+			GodotAsync.suspending = GodotAsync.suspending.then(() => Asyncify.whenDone());
 			return returnValue;
 #elif ASYNCIFY == 2
 			const sleepPromise = Asyncify.handleSleep(startAsync);
-			GodotAsync.suspending = suspending.then(() => sleepPromise);
+			GodotAsync.suspending = GodotAsync.suspending.then(() => sleepPromise);
 			return sleepPromise;
 #else
 			// TODO: Error out.
