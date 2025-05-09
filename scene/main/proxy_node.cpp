@@ -40,9 +40,15 @@
 void ProxyNode::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_ENTER_TREE: {
+			if (!get_owner()) {
+				return;
+			}
 			get_owner()->connect(SNAME("child_order_changed"), callable_mp(this, &ProxyNode::_on_child_order_changed));
 		} break;
-		case NOTIFICATION_CHILD_ORDER_CHANGED: {
+		case NOTIFICATION_EXIT_TREE: {
+			if (!get_owner()) {
+				return;
+			}
 			get_owner()->disconnect(SNAME("child_order_changed"), callable_mp(this, &ProxyNode::_on_child_order_changed));
 		} break;
 	}
