@@ -40,6 +40,7 @@
 #include "scene/gui/label.h"
 #include "scene/gui/panel_container.h"
 #include "scene/gui/popup.h"
+#include "scene/gui/rich_text_label.h"
 #include "scene/main/timer.h"
 
 class MenuButton;
@@ -60,7 +61,7 @@ class RefactorRenamePopup : public PanelContainer {
 	VBoxContainer *meta_container;
 
 	HBoxContainer *error_container;
-	Label *error_label;
+	RichTextLabel *error_label;
 
 	HBoxContainer *rename_container;
 	LineEdit *symbol_edit;

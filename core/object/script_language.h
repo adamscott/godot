@@ -345,6 +345,8 @@ public:
 
 	enum RefactorRenameSymbolResultType {
 		REFACTOR_RENAME_SYMBOL_RESULT_NONE,
+		REFACTOR_RENAME_SYMBOL_RESULT_CONTROL_FLOW,
+		REFACTOR_RENAME_SYMBOL_RESULT_KEYWORD,
 		REFACTOR_RENAME_SYMBOL_RESULT_NATIVE,
 		REFACTOR_RENAME_SYMBOL_RESULT_NOT_EXPOSED,
 		REFACTOR_RENAME_SYMBOL_RESULT_SCRIPT,
@@ -508,7 +510,7 @@ public:
 		}
 
 		bool has_failed() const {
-			return error != OK || outside_refactor == true;
+			return error != OK || outside_refactor;
 		}
 
 		void reset(bool p_keep_context = false) {

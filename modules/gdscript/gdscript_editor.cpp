@@ -1452,6 +1452,58 @@ static void _find_identifiers_in_base(const GDScriptParsingIdentifier &p_base, b
 	}
 }
 
+static const LocalVector<String> _keywords = {
+	"true",
+	"false",
+	"PI",
+	"TAU",
+	"INF",
+	"NAN",
+	"null",
+	"self",
+	"super",
+};
+
+static const LocalVector<String> _keywords_control_flow = {
+	"break",
+	"breakpoint",
+	"continue",
+	"pass",
+	"return",
+};
+
+static const LocalVector<String> _keywords_with_space = {
+	"and",
+	"not",
+	"or",
+	"in",
+	"as",
+	"class",
+	"class_name",
+	"extends",
+	"is",
+	"func",
+	"signal",
+	"await",
+	"const",
+	"enum",
+	"abstract",
+	"static",
+	"var",
+	"if",
+	"elif",
+	"else",
+	"for",
+	"match",
+	"when",
+	"while",
+};
+
+static const LocalVector<String> _keywords_with_args = {
+	"assert",
+	"preload",
+};
+
 static void _find_identifiers(const GDScriptParser::ParsingContext &p_context, bool p_only_functions, bool p_add_braces, HashMap<String, ScriptLanguage::CodeCompletionOption> &r_result, int p_recursion_depth) {
 	if (!p_only_functions && p_context.current_suite) {
 		// This includes function parameters, since they are also locals.
@@ -1486,47 +1538,28 @@ static void _find_identifiers(const GDScriptParser::ParsingContext &p_context, b
 
 	_find_built_in_variants(r_result);
 
-	static const char *_keywords[] = {
-		"true", "false", "PI", "TAU", "INF", "NAN", "null", "self", "super",
-		"break", "breakpoint", "continue", "pass", "return",
-		nullptr
+	auto loop_keyword = [&r_result](const LocalVector<String> &p_vec) -> void {
+		for (const String &keyword : p_vec) {
+			ScriptLanguage::CodeCompletionOption option(keyword, ScriptLanguage::CODE_COMPLETION_KIND_PLAIN_TEXT);
+			r_result.insert(option.display, option);
+		}
 	};
+	loop_keyword(_keywords);
+	loop_keyword(_keywords_control_flow);
 
-	const char **kw = _keywords;
-	while (*kw) {
-		ScriptLanguage::CodeCompletionOption option(*kw, ScriptLanguage::CODE_COMPLETION_KIND_PLAIN_TEXT);
-		r_result.insert(option.display, option);
-		kw++;
-	}
-
-	static const char *_keywords_with_space[] = {
-		"and", "not", "or", "in", "as", "class", "class_name", "extends", "is", "func", "signal", "await",
-		"const", "enum", "abstract", "static", "var", "if", "elif", "else", "for", "match", "when", "while",
-		nullptr
-	};
-
-	const char **kws = _keywords_with_space;
-	while (*kws) {
-		ScriptLanguage::CodeCompletionOption option(*kws, ScriptLanguage::CODE_COMPLETION_KIND_PLAIN_TEXT);
+	for (const String &keyword_with_space : _keywords_with_space) {
+		ScriptLanguage::CodeCompletionOption option(keyword_with_space, ScriptLanguage::CODE_COMPLETION_KIND_PLAIN_TEXT);
 		option.insert_text += " ";
 		r_result.insert(option.display, option);
-		kws++;
 	}
 
-	static const char *_keywords_with_args[] = {
-		"assert", "preload",
-		nullptr
-	};
-
-	const char **kwa = _keywords_with_args;
-	while (*kwa) {
-		ScriptLanguage::CodeCompletionOption option(*kwa, ScriptLanguage::CODE_COMPLETION_KIND_FUNCTION);
+	for (const String &keyword_with_args : _keywords_with_args) {
+		ScriptLanguage::CodeCompletionOption option(keyword_with_args, ScriptLanguage::CODE_COMPLETION_KIND_FUNCTION);
 		if (p_add_braces) {
 			option.insert_text += "(";
 			option.display += U"(\u2026)";
 		}
 		r_result.insert(option.display, option);
-		kwa++;
 	}
 
 	List<StringName> utility_func_names;
@@ -4251,6 +4284,14 @@ static Error _refactor_rename_symbol_from_base(GDScriptParser::RefactorRenameCon
 
 	if (p_symbol == "PI" || p_symbol == "TAU" || p_symbol == "INF" || p_symbol == "NAN") {
 		REFACTOR_RENAME_OUTSIDE_GDSCRIPT(ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_CONSTANT);
+		REFACTOR_RENAME_RETURN(OK);
+	}
+
+	if (_keywords_control_flow.has(p_symbol)) {
+		REFACTOR_RENAME_OUTSIDE_GDSCRIPT(ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_CONTROL_FLOW);
+		REFACTOR_RENAME_RETURN(OK);
+	} else if (_keywords.has(p_symbol) || _keywords_with_space.has(p_symbol) || _keywords_with_args.has(p_symbol)) {
+		REFACTOR_RENAME_OUTSIDE_GDSCRIPT(ScriptLanguage::RefactorRenameSymbolResultType::REFACTOR_RENAME_SYMBOL_RESULT_KEYWORD);
 		REFACTOR_RENAME_RETURN(OK);
 	}
 

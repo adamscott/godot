@@ -59,6 +59,7 @@
 #include "scene/gui/control.h"
 #include "scene/gui/line_edit.h"
 #include "scene/gui/menu_button.h"
+#include "scene/gui/rich_text_label.h"
 #include "scene/gui/separator.h"
 #include "scene/main/node.h"
 #include "scene/main/window.h"
@@ -117,6 +118,7 @@ void RefactorRenamePopup::_focus_check() {
 void RefactorRenamePopup::_update_layout() {
 	error_container->set_visible(state == State::STATE_ERROR);
 	rename_container->set_visible(state == State::STATE_RENAME);
+	set_size(Size2());
 	clear();
 }
 
@@ -157,26 +159,70 @@ void RefactorRenamePopup::request_refactor(const ScriptLanguage::RefactorRenameS
 
 	code_position = p_code_position;
 	caret_position = p_caret_position;
-	symbol_edit->set_text(result.symbol);
-	if (p_selection_start_position.x == -1) {
-		int caret_column = result.symbol.length();
-		symbol_edit->select_all();
-		symbol_edit->set_caret_column(caret_column);
-	} else {
-		int leftmost_column;
-		int rightmost_column;
-		if (p_selection_start_position.x < p_caret_position.x) {
-			leftmost_column = p_selection_start_position.x - p_code_position.x + 1;
-			rightmost_column = p_caret_position.x - p_code_position.x + 1;
-		} else {
-			leftmost_column = p_caret_position.x - p_code_position.x + 1;
-			rightmost_column = p_selection_start_position.x - p_code_position.x + 1;
-		}
-		int caret_column = p_caret_position.x - p_code_position.x + 1;
-		symbol_edit->select(leftmost_column, rightmost_column);
-		symbol_edit->set_caret_column(caret_column);
+
+	switch (state) {
+		case STATE_ERROR: {
+			ERR_FAIL_COND_EDMSG(!result.outside_refactor, "An error occurred during refactoring.");
+			switch (result.type) {
+				case ScriptLanguage::REFACTOR_RENAME_SYMBOL_RESULT_CONTROL_FLOW: {
+					Color keyword_color = EDITOR_GET("text_editor/theme/highlighting/control_flow_keyword_color");
+					error_label->set_text(vformat(TTR("[color=%s][code]%s[/code][/color] is a control flow keyword, it cannot be refactored."), keyword_color.to_html(), result.symbol));
+				} break;
+				case ScriptLanguage::REFACTOR_RENAME_SYMBOL_RESULT_KEYWORD: {
+					Color keyword_color = EDITOR_GET("text_editor/theme/highlighting/keyword_color");
+					error_label->set_text(vformat(TTR("[color=%s][code]%s[/code][/color] is a keyword, it cannot be refactored."), keyword_color.to_html(), result.symbol));
+				} break;
+				case ScriptLanguage::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_NAME: {
+					Color keyword_color = EDITOR_GET("text_editor/theme/highlighting/engine_type_color");
+					error_label->set_text(vformat(TTR("[color=%s][code]%s[/code][/color] is a built-in class, it cannot be refactored."), keyword_color.to_html(), result.symbol));
+				} break;
+				default: {
+					error_label->set_text(vformat(TTR("[code]%s[/code] cannot be refactored."), result.symbol));
+				}
+			}
+			grab_focus();
+		} break;
+		case STATE_RENAME: {
+			symbol_edit->set_text(result.symbol);
+
+			Color symbol_color;
+			switch (result.type) {
+				case ScriptLanguage::REFACTOR_RENAME_SYMBOL_RESULT_CONTROL_FLOW: {
+					symbol_color = EDITOR_GET("text_editor/theme/highlighting/control_flow_keyword_color");
+				} break;
+				case ScriptLanguage::REFACTOR_RENAME_SYMBOL_RESULT_KEYWORD: {
+					symbol_color = EDITOR_GET("text_editor/theme/highlighting/keyword_color");
+				} break;
+				case ScriptLanguage::REFACTOR_RENAME_SYMBOL_RESULT_CLASS_NAME: {
+					symbol_color = EDITOR_GET("text_editor/theme/highlighting/user_type_color");
+				} break;
+				default: {
+					symbol_color = EDITOR_GET("text_editor/theme/highlighting/text_color");
+				}
+			}
+			symbol_edit->add_theme_color_override(SceneStringName(font_color), symbol_color);
+
+			if (p_selection_start_position.x == -1) {
+				int caret_column = result.symbol.length();
+				symbol_edit->select_all();
+				symbol_edit->set_caret_column(caret_column);
+			} else {
+				int leftmost_column;
+				int rightmost_column;
+				if (p_selection_start_position.x < p_caret_position.x) {
+					leftmost_column = p_selection_start_position.x - p_code_position.x + 1;
+					rightmost_column = p_caret_position.x - p_code_position.x + 1;
+				} else {
+					leftmost_column = p_caret_position.x - p_code_position.x + 1;
+					rightmost_column = p_selection_start_position.x - p_code_position.x + 1;
+				}
+				int caret_column = p_caret_position.x - p_code_position.x + 1;
+				symbol_edit->select(leftmost_column, rightmost_column);
+				symbol_edit->set_caret_column(caret_column);
+			}
+			symbol_edit->grab_focus();
+		} break;
 	}
-	symbol_edit->grab_focus();
 
 	set_visible(true);
 	set_process_unhandled_input(true);
@@ -241,6 +287,19 @@ void RefactorRenamePopup::_notification(int p_what) {
 		case NOTIFICATION_EXIT_TREE: {
 			close();
 		} break;
+		case NOTIFICATION_THEME_CHANGED: {
+			Color code_color = EDITOR_GET("text_editor/theme/highlighting/text_color");
+
+			error_label->add_theme_color_override(SNAME("normal_font"), code_color);
+			error_label->add_theme_font_override(SNAME("normal_font"), get_theme_font(SNAME("main"), EditorStringName(EditorFonts)));
+			error_label->add_theme_font_size_override(SNAME("normal_font_size"), get_theme_font_size(SNAME("main_size"), EditorStringName(EditorFonts)));
+			error_label->add_theme_color_override(SNAME("mono_font"), code_color);
+			error_label->add_theme_font_override(SNAME("mono_font"), get_theme_font(SNAME("source"), EditorStringName(EditorFonts)));
+			error_label->add_theme_font_size_override(SNAME("mono_font_size"), get_theme_font_size(SNAME("source_size"), EditorStringName(EditorFonts)));
+
+			symbol_edit->add_theme_font_override(SceneStringName(font), get_theme_font(SNAME("source"), EditorStringName(EditorFonts)));
+			symbol_edit->add_theme_font_size_override(SceneStringName(font_size), get_theme_font_size(SNAME("source_size"), EditorStringName(EditorFonts)));
+		} break;
 	}
 }
 
@@ -259,6 +318,8 @@ void RefactorRenamePopup::_bind_methods() {
 }
 
 RefactorRenamePopup::RefactorRenamePopup() {
+	set_focus_mode(FocusMode::FOCUS_ALL);
+
 	// Container of containers.
 	meta_container = memnew(VBoxContainer);
 	add_child(meta_container);
@@ -269,8 +330,11 @@ RefactorRenamePopup::RefactorRenamePopup() {
 	meta_container->add_child(error_container);
 	error_container->connect(SceneStringName(focus_exited), callable_mp(this, &RefactorRenamePopup::_on_focus_exited));
 
-	error_label = memnew(Label);
+	error_label = memnew(RichTextLabel);
 	error_container->add_child(error_label);
+	error_label->set_use_bbcode(true);
+	error_label->set_fit_content(true);
+	error_label->set_custom_minimum_size(Size2(500, 0));
 	error_label->connect(SceneStringName(focus_exited), callable_mp(this, &RefactorRenamePopup::_on_focus_exited));
 
 	// Edit contents.
@@ -281,6 +345,8 @@ RefactorRenamePopup::RefactorRenamePopup() {
 	symbol_edit = memnew(LineEdit);
 	rename_container->add_child(symbol_edit);
 	symbol_edit->set_custom_minimum_size(Size2(250, 0));
+
+	symbol_edit->set_caret_blink_enabled(true);
 	symbol_edit->connect(SceneStringName(focus_exited), callable_mp(this, &RefactorRenamePopup::_on_focus_exited));
 
 	// preview_button = memnew(Button);
