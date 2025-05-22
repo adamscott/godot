@@ -92,26 +92,11 @@ repos:
         pass_filenames: false
         files: ^(gles3|glsl)_builders\.py$
 
-      - id: eslint
-        name: eslint
-        language: node
-        entry: eslint
-        files: ^(platform/web/js/|modules/|misc/dist/html/).*\.(js|html)$
-        args:
-          - --fix
-          - --no-warn-ignored
-          - --no-config-lookup
-          - --config
-          - platform/web/eslint.config.cjs
-        additional_dependencies:
-          - "@eslint/js@^9.3.0"
-          - "@html-eslint/eslint-plugin@^0.24.1"
-          - "@html-eslint/parser@^0.24.1"
-          - "@stylistic/eslint-plugin@^2.1.0"
-          - eslint@^9.3.0
-          - eslint-plugin-html@^8.1.1
-          - globals@^15.3.0
-          - espree@^10.0.1
+      - id: denofmt
+        name: denofmt
+        language: python
+        entry: python misc/scripts/setup_denofmt.py
+        files: ^(platform/web/(?:js|src)/|modules/|misc/dist/html/).*\.(js|ts|html)$
 
       - id: jsdoc
         name: jsdoc
@@ -143,7 +128,7 @@ repos:
         name: copyright-headers
         language: python
         entry: python misc/scripts/copyright_headers.py
-        files: \.(c|h|cpp|hpp|cc|hh|cxx|hxx|m|mm|inc|java)$
+        files: \.(c|h|cpp|hpp|cc|hh|cxx|hxx|m|mm|inc|java|ts)$
         exclude: |
           (?x)^(
             core/math/bvh_.*\.inc|
