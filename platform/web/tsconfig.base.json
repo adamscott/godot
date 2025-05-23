@@ -12,7 +12,6 @@
 		"noImplicitOverride": true,
 		"noImplicitReturns": false,
 		"noImplicitThis": true,
-		"noImplicitUseStrict": true,
 		"noStrictGenericChecks": false,
 		"noUnusedLocals": false,
 		"noUnusedParameters": false,
@@ -26,6 +25,6 @@
 		"useUnknownInCatchVariables": true,
 		"module": "ESNext",
 		"moduleResolution": "bundler",
-		"lib": ["ESNext", "ESNext.AsyncIterable", "ESNext.Iterator"]
+		"lib": ["ESNext", "ESNext.AsyncIterable"]
 	}
 }

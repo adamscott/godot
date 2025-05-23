@@ -3,6 +3,7 @@
 	"compilerOptions": {
 		"lib": ["ESNext", "ESNext.AsyncIterable", "deno.window"],
 		"module": "ESNext",
+		"moduleResolution": "node16",
 		"target": "ESNext"
 	}
 }
