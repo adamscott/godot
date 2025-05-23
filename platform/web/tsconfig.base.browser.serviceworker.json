@@ -1,0 +1,11 @@
+{
+	"extends": "./tsconfig.base.json",
+	"compilerOptions": {
+		"types": [
+			// Types don't seem to work super well with Deno.
+			// Need to use /// <reference types="npm:@types/serviceworker" />
+			// in the file directly.
+			"serviceworker"
+		]
+	}
+}
