@@ -29,7 +29,7 @@
 /**************************************************************************/
 
 import { exists } from "@std/fs/exists";
-import { basename, dirname, extname, join, resolve, relative } from "@std/path";
+import { basename, dirname, extname, join, relative, resolve } from "@std/path";
 
 import { parseArgs } from "node:util";
 
@@ -51,7 +51,17 @@ export function withoutExtName(name: string): string {
 	return withoutExt;
 }
 
-export async function runDenoLintOrFmt(task: "lint" | "fmt", file: string): Promise<boolean> {
+export async function runDenoLintOrFmt(
+	task: "lint" | "fmt",
+	file: string,
+): Promise<boolean> {
+	if (
+		!file.endsWith("js") && !file.endsWith("ts") && !file.endsWith("cjs") &&
+		!file.endsWith("cts") && !file.endsWith("mjs") && !file.endsWith("mts")
+	) {
+		return true;
+	}
+
 	const args = [task, file, "-c", join(root, "deno.jsonc")];
 	const command = new Deno.Command(Deno.execPath(), {
 		args,
@@ -94,7 +104,9 @@ export async function lintEmscriptenLibraryFile(
 		}
 		if (
 			directoryFile.name === `${directoryFileRoot}.lint_settings.json` ||
-			(directoryFile.name.startsWith(`${directoryFileRoot}.lint_settings.`) &&
+			(directoryFile.name.startsWith(
+				`${directoryFileRoot}.lint_settings.`,
+			) &&
 				directoryFile.name.endsWith(".json"))
 		) {
 			settingFiles.push(join(libraryDirectory, directoryFile.name));
@@ -105,7 +117,8 @@ export async function lintEmscriptenLibraryFile(
 		if (verbose) {
 			console.log("Did not find any settings file. Linting file as is.");
 		}
-		const success = (await runDenoLintOrFmt("lint", file)) && (await runDenoLintOrFmt("fmt", file));
+		const success = (await runDenoLintOrFmt("lint", file)) &&
+			(await runDenoLintOrFmt("fmt", file));
 		Deno.exit(success ? 0 : 1);
 	}
 
@@ -116,14 +129,29 @@ export async function lintEmscriptenLibraryFile(
 				fileRoot.length,
 				baseSettingFile.length - ".json".length,
 			);
-			const preprocessed = join(libraryDirectory, `${fileWithoutExt}.preprocessed${settingMiddlePart}${fileExt}`);
+			const preprocessed = join(
+				libraryDirectory,
+				`${fileWithoutExt}.preprocessed${settingMiddlePart}${fileExt}`,
+			);
 
 			await new Promise(async (resolve, _reject) => {
-				const preprocess_script = join("misc", "scripts", "preprocess_emscripten_library.mjs");
+				const preprocess_script = join(
+					"misc",
+					"scripts",
+					"preprocess_emscripten_library.mjs",
+				);
 				const commandExec = Deno.execPath();
-				const commandArgs = [preprocess_script, settingFile, file, "-o", preprocessed];
+				const commandArgs = [
+					preprocess_script,
+					settingFile,
+					file,
+					"-o",
+					preprocessed,
+				];
 				if (verbose) {
-					const commandString = [commandExec, ...commandArgs].join(" ");
+					const commandString = [commandExec, ...commandArgs].join(
+						" ",
+					);
 					console.log(`Executing: ${commandString}`);
 				}
 				const command = new Deno.Command(commandExec, {
@@ -139,8 +167,8 @@ export async function lintEmscriptenLibraryFile(
 				Deno.exit(1);
 			});
 
-			const success =
-				(await runDenoLintOrFmt("lint", preprocessed)) && (await runDenoLintOrFmt("fmt", preprocessed));
+			const success = (await runDenoLintOrFmt("lint", preprocessed)) &&
+				(await runDenoLintOrFmt("fmt", preprocessed));
 
 			if (!keepPreprocessed) {
 				await Deno.remove(preprocessed);
@@ -184,7 +212,8 @@ export async function lintAndFormat(
 		return;
 	}
 
-	const success = (await runDenoLintOrFmt("lint", fileName)) && (await runDenoLintOrFmt("fmt", fileName));
+	const success = (await runDenoLintOrFmt("lint", fileName)) &&
+		(await runDenoLintOrFmt("fmt", fileName));
 	Deno.exit(success ? 0 : 1);
 }
 

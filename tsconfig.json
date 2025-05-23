@@ -5,8 +5,7 @@
 		"outDir": "__tsoutdir"
 	},
 	"references": [
-		{ "path": "./misc/scripts/jsconfig.json" },
-		{ "path": "./platform/web/tsconfig.json" },
-		{ "path": "./tsconfig.eslint.json" }
+		{ "path": "./misc/scripts/tsconfig.json" },
+		{ "path": "./platform/web/tsconfig.json" }
 	]
 }

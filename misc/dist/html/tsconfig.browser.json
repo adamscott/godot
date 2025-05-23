@@ -1,0 +1,9 @@
+{
+	"extends": "../../../platform/web/tsconfig.base.browser.json",
+	"compilerOptions": {
+		"composite": true,
+		"rootDir": "./src"
+	},
+	"include": ["src/**/*.ts"],
+	"exclude": ["src/service-worker.ts"]
+}
