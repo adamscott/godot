@@ -1,0 +1,4 @@
+{
+	"extends": "../../platform/web/tsconfig.base.deno.json",
+	"include": ["./**.ts"]
+}
