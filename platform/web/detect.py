@@ -287,9 +287,6 @@ def configure(env: "SConsEnvironment"):
     # Reduce code size by generating less support code (e.g. skip NodeJS support).
     env.Append(LINKFLAGS=["-sENVIRONMENT=web,worker"])
 
-    # Wrap the JavaScript support code around a closure named Godot.
-    env.Append(LINKFLAGS=["-sMODULARIZE=1", "-sEXPORT_NAME='Godot'"])
-
     # Force long jump mode to 'wasm'
     env.Append(CCFLAGS=["-sSUPPORT_LONGJMP='wasm'"])
     env.Append(LINKFLAGS=["-sSUPPORT_LONGJMP='wasm'"])
@@ -302,8 +299,8 @@ def configure(env: "SConsEnvironment"):
     # Do not call main immediately when the support code is ready.
     env.Append(LINKFLAGS=["-sINVOKE_RUN=0"])
 
-    # callMain for manual start, cwrap for the mono version.
-    env.Append(LINKFLAGS=["-sEXPORTED_RUNTIME_METHODS=['callMain','cwrap']"])
+    # callMain for manual start.
+    env.Append(LINKFLAGS=["-sEXPORTED_RUNTIME_METHODS=['callMain']"])
 
     # Add code that allow exiting runtime.
     env.Append(LINKFLAGS=["-sEXIT_RUNTIME=1"])
@@ -311,3 +308,8 @@ def configure(env: "SConsEnvironment"):
     # This workaround creates a closure that prevents the garbage collector from freeing the WebGL context.
     # We also only use WebGL2, and changing context version is not widely supported anyway.
     env.Append(LINKFLAGS=["-sGL_WORKAROUND_SAFARI_GETCONTEXT_BUG=0"])
+
+    # Tell Emscripten to output ES6 modules (ESM).
+    env.Append(LINKFLAGS=["-sEXPORT_ES6"])
+    env.Append(LINKFLAGS=["-sMODULARIZE=1"])
+    env.Append(LINKFLAGS=["-sEXPORT_NAME='GodotEngine'"])

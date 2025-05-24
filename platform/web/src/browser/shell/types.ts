@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  shell.ts                                                              */
+/*  types.ts                                                              */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,38 +28,5 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import { Engine, init as engineInit } from "+browser/entry/engine.ts";
-import type { ShellConfig } from "+browser/shell/types.ts";
-import { fetchWithRetry } from "+shared/utils/fetch.ts";
-
-class Shell extends EventTarget {
-	engine: Engine | null = null;
-
-	constructor() {
-		super();
-	}
-}
-
-async function getConfig(): Promise<ShellConfig> {
-	const configRaw = await fetchWithRetry<string>(
-		"config.json",
-		(response) => {
-			return response.text();
-		},
-		{
-			retry: {
-				maxAttempts: 3,
-			},
-		},
-	);
-	if (configRaw == null) {
-		throw new Error("Could not fetch config.");
-	}
-	return JSON.parse(configRaw) as ShellConfig;
-}
-
-export async function init() {
-	const shell = new Shell();
-	const config = getConfig();
-	const engine = await engineInit({});
+export interface ShellConfig {
 }
