@@ -62,7 +62,7 @@ export async function runDenoLintOrFmt(
 		return true;
 	}
 
-	const args = [task, file, "-c", join(root, "deno.jsonc")];
+	const args = [task, file, "-c", join(root, "deno.jsonc"), "-q"];
 	const command = new Deno.Command(Deno.execPath(), {
 		args,
 	});

@@ -60,6 +60,15 @@ sys_env.AddJSPost(
     ]
 )
 
+# esbuild Web files using Deno.
+sys_env.RunEsbuild(
+    source=[
+        sys_env.Glob("#misc/dist/html/src/**.ts"),
+        sys_env.Glob("#platform/web/src/browser/**.ts"),
+        sys_env.Glob("#platform/web/src/shared/**.ts"),
+    ]
+)
+
 if env["javascript_eval"]:
     sys_env.AddJSLibraries(["js/libs/library_godot_javascript_singleton.js"])
 
@@ -124,7 +133,11 @@ wrap_list = [
     js_engine,
 ]
 js_wrapped = env.NoCache(
-    env.Textfile("#bin/godot", [env.File(f) for f in wrap_list], TEXTFILESUFFIX="${PROGSUFFIX}.wrapped.js")
+    env.Textfile(
+        "#bin/godot",
+        [env.File(f) for f in wrap_list],
+        TEXTFILESUFFIX="${PROGSUFFIX}.wrapped.js",
+    )
 )
 
 # 0 - unwrapped js file (use wrapped one instead)

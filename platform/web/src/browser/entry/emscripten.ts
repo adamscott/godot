@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  os.ts                                                                 */
+/*  emscripten.ts                                                         */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,21 +28,4 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import "+deno/lib.ts";
-
-export function errorAndExit(...args: unknown[]): never {
-	console.error(...args);
-	Deno.exit(1);
-}
-
-export async function which(command: string): Promise<string | null> {
-	const cmd_exec = Deno.build.os === "windows" ? "where" : "which";
-	const cmd = new Deno.Command(cmd_exec, {
-		args: [command],
-	});
-	const { success, stdout } = await cmd.output();
-	if (!success) {
-		return null;
-	}
-	return new TextDecoder().decode(stdout).trim().split("\r\n")[0];
-}
+export * from "+browser/emscripten/audio.ts";

@@ -1,4 +1,10 @@
 {
+	"tasks": {
+		"esbuild": {
+			"description": "Build Godot Engine Web files",
+			"command": "deno run --allow-env --allow-read --allow-run --allow-write platform/web/scripts/build.ts --clear"
+		}
+	},
 	"lint": {
 		"rules": {
 			"tags": ["recommended"]
@@ -16,11 +22,13 @@
 		"+shared/": "./platform/web/src/shared/",
 		"+browser/": "./platform/web/src/browser/",
 		"+deno/": "./platform/web/src/deno/",
+		"+dist-src/": "./misc/dist/html/src/",
 		"@luca/esbuild-deno-loader": "jsr:@luca/esbuild-deno-loader@^0.11.1",
 		"@std/cli": "jsr:@std/cli@^1.0.17",
 		"@std/fs": "jsr:@std/fs@^1.0.17",
 		"@std/path": "jsr:@std/path@^1.0.9",
 		"@types/serviceworker": "npm:@types/serviceworker@^0.0.135",
-		"esbuild": "npm:esbuild@^0.25.4"
+		"esbuild": "npm:esbuild@^0.25.4",
+		"esbuild-sass-plugin": "npm:esbuild-sass-plugin@^3.3.1"
 	}
 }

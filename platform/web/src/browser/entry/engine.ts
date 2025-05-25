@@ -28,7 +28,9 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-export interface EngineInitConfig {}
+export interface EngineInitConfig {
+	godotEngineModule: object;
+}
 
 export class Engine extends EventTarget {
 	constructor() {
@@ -40,5 +42,6 @@ export class Engine extends EventTarget {
 }
 
 export async function init(config: EngineInitConfig): Promise<Engine> {
+	// const godotEngineModule = await import("");
 	return new Engine();
 }

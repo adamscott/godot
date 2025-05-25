@@ -96,7 +96,7 @@ repos:
         name: denofmt
         language: python
         entry: python misc/scripts/setup_denofmt.py
-        files: ^(platform/web/(?:js|src)/|modules/|misc/dist/html/).*\.(js|ts|html|jsonc?)$
+        files: ^(platform/web/(?:js|src)/|modules/|misc/dist/html/).*\.(js|ts|html|scss|jsonc?)$
 
       - id: jsdoc
         name: jsdoc

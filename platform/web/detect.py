@@ -11,6 +11,7 @@ from emscripten_helpers import (
     create_template_zip,
     get_template_zip_path,
     run_closure_compiler,
+    run_esbuild,
 )
 from SCons.Util import WhereIs
 
@@ -26,7 +27,7 @@ def get_name():
 
 
 def can_build():
-    return WhereIs("emcc") is not None
+    return WhereIs("emcc") is not None and WhereIs("deno") is not None
 
 
 def get_tools(env: "SConsEnvironment"):
@@ -161,6 +162,10 @@ def configure(env: "SConsEnvironment"):
         env.Append(LINKFLAGS=["-fsanitize=leak"])
     if env["use_safe_heap"]:
         env.Append(LINKFLAGS=["-sSAFE_HEAP=1"])
+
+    # esbuild.
+    esbuild = env.Builder(generator=run_esbuild)
+    env.Append(BUILDERS={"RunEsbuild": esbuild})
 
     # Closure compiler
     if env["use_closure_compiler"]:

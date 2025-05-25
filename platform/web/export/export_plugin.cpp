@@ -117,6 +117,8 @@ void EditorExportPlatformWeb::_replace_strings(const HashMap<String, String> &p_
 	for (int i = 0; i < lines.size(); i++) {
 		String current_line = lines[i];
 		for (const KeyValue<String, String> &E : p_replaces) {
+			const String commented_key = vformat("<!--[[%s]]-->", E.key);
+			current_line = current_line.replace(commented_key, E.value);
 			current_line = current_line.replace(E.key, E.value);
 		}
 		out += current_line + "\n";

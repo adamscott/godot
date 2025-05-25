@@ -1,4 +1,4 @@
 {
 	"extends": "./tsconfig.base.browser.json",
-	"include": ["src/deno/**.ts"]
+	"include": ["src/deno/**/*.ts"]
 }

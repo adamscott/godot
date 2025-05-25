@@ -30,12 +30,12 @@
 
 /// <reference types="npm:@types/serviceworker" />
 
-import type { ServiceWorkerData } from "./service-worker/types.ts";
+import type { ServiceWorkerData } from "+dist-src/service-worker/types.ts";
 import {
 	fetchAndCache,
 	getFullCache,
 	wrapResponseWithCrossOriginIsolationHeaders,
-} from "./service-worker/utils.ts";
+} from "+dist-src/service-worker/utils.ts";
 
 // This service worker is required to expose an exported Godot project as a
 // Progressive Web App. It provides an offline fallback page telling the user

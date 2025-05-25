@@ -28,12 +28,14 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
+import { exists } from "jsr:@std/fs";
 import { dirname, join, resolve } from "jsr:@std/path";
 import { parseArgs } from "node:util";
 
 import browserslist from "npm:browserslist";
 import * as esbuild from "npm:esbuild";
 import { resolveToEsbuildTarget } from "npm:esbuild-plugin-browserslist";
+import { sassPlugin } from "npm:esbuild-sass-plugin";
 
 import { denoPlugins } from "jsr:@luca/esbuild-deno-loader";
 
@@ -55,35 +57,34 @@ const defaultTarget = resolveToEsbuildTarget(
 	},
 );
 
-export async function buildTarget(
-	binDir: string,
+export async function clearDirectory(directory: string): Promise<void> {
+	if (!(await exists(directory))) {
+		return;
+	}
+
+	for await (const dirEntry of Deno.readDir(directory)) {
+		await Deno.remove(join(directory, dirEntry.name), { recursive: true });
+	}
+}
+
+export async function buildJavaScriptTarget(
+	distDir: string,
 	entryPoints: string[],
-	options: {
-		target?: string | string[];
-		sourceMap?: boolean;
-		clear?: boolean;
-	} = {},
-) {
+	settings: {
+		target: string | string[];
+		sourceMap: boolean;
+	},
+): Promise<Record<string, string>> {
 	const prefixEntryPoint = (entryPoint: string): string => `./${entryPoint}`;
 
-	const { target = defaultTarget, sourceMap = false, clear = false } =
-		options;
-
-	if (clear) {
-		for await (const dirEntry of Deno.readDir(binDir)) {
-			if (dirEntry.isDirectory) {
-				continue;
-			}
-			await Deno.remove(join(binDir, dirEntry.name));
-		}
-	}
+	const { target, sourceMap } = settings;
 
 	const result = await esbuild.build({
 		plugins: [...denoPlugins()],
 		entryPoints: entryPoints.map(prefixEntryPoint),
 		entryNames: "[name]-[hash]",
 		metafile: true,
-		outdir: binDir,
+		outdir: distDir,
 		bundle: true,
 		splitting: true,
 		sourcemap: sourceMap,
@@ -95,7 +96,7 @@ export async function buildTarget(
 	const importMap: Record<string, string> = {};
 	const outputFilePaths = Object.keys(result.metafile.outputs);
 	for (const outFilePath of outputFilePaths) {
-		const outFileName = outFilePath.substring(binDir.length);
+		const outFileName = outFilePath.substring(distDir.length);
 		const targetFileMatch = outFileName.match(targetFileRegExp);
 		if (targetFileMatch == null) {
 			errorAndExit(
@@ -106,51 +107,160 @@ export async function buildTarget(
 		importMap[targetFileName] = outFileName;
 	}
 
-	await Deno.writeTextFile(
-		join(binDir, "importmap.json"),
-		JSON.stringify(importMap),
-	);
+	return importMap;
 }
 
-export async function buildBrowser(
+export async function buildCssTarget(
+	distDir: string,
+	entryPoints: string[],
+	settings: {
+		target: string | string[];
+		sourceMap: boolean;
+	},
+): Promise<Record<string, string>> {
+	const prefixEntryPoint = (entryPoint: string): string => `./${entryPoint}`;
+
+	const { target = defaultTarget, sourceMap = false } = settings;
+
+	const result = await esbuild.build({
+		plugins: [sassPlugin()],
+		entryPoints: entryPoints.map(prefixEntryPoint),
+		entryNames: "[name]-[hash]",
+		metafile: true,
+		outdir: distDir,
+		bundle: true,
+		sourcemap: sourceMap,
+		target,
+	});
+
+	const targetFileRegExp = /^\/?([^/]+?)-[A-Z\d]{8}\.(.+?)$/m;
+	const importMap: Record<string, string> = {};
+	const outputFilePaths = Object.keys(result.metafile.outputs);
+	for (const outFilePath of outputFilePaths) {
+		const outFileName = outFilePath.substring(distDir.length);
+		const targetFileMatch = outFileName.match(targetFileRegExp);
+		if (targetFileMatch == null) {
+			errorAndExit(
+				"Could not generate target name of the out file name.",
+			);
+		}
+		const targetFileName = `${targetFileMatch[1]}.${targetFileMatch[2]}`;
+		importMap[targetFileName] = outFileName;
+	}
+
+	return importMap;
+}
+
+export async function buildShell(
+	directory: string,
 	options: {
 		target?: string | string[];
 		sourceMap?: boolean;
-		clear?: boolean;
 	} = {},
-) {
-	const { target = "", sourceMap = false, clear = false } = options;
-	const binBrowserDir = "platform/web/bin/browser/";
-	const shellEntryPoint = "misc/dist/html/src/shell.ts";
+): Promise<Record<string, string>> {
+	const { target = [], sourceMap = false } = options;
+	const shellEntryPoint = "misc/dist/html/src/entry/shell.ts";
 	const engineEntryPoint = "platform/web/src/browser/entry/engine.ts";
 
-	await buildTarget(binBrowserDir, [shellEntryPoint, engineEntryPoint], {
-		target,
-		sourceMap,
-		clear,
-	});
+	const importMap = {};
+
+	Object.assign(
+		importMap,
+		await buildJavaScriptTarget(directory, [
+			shellEntryPoint,
+			engineEntryPoint,
+		], {
+			target,
+			sourceMap,
+		}),
+	);
+
+	Object.assign(
+		importMap,
+		await buildCssTarget(directory, [
+			"misc/dist/html/assets/scss/main/shell.scss",
+		], { target, sourceMap }),
+	);
+
+	return importMap;
+}
+
+export async function buildEditor(
+	directory: string,
+	options: {
+		target?: string | string[];
+		sourceMap?: boolean;
+	} = {},
+): Promise<Record<string, string>> {
+	const { target = defaultTarget, sourceMap = false } = options;
+	const editorEntryPoint = "misc/dist/html/src/entry/editor.ts";
+	const engineEntryPoint = "platform/web/src/browser/entry/engine.ts";
+
+	const importMap = {};
+
+	Object.assign(
+		importMap,
+		await buildJavaScriptTarget(directory, [
+			editorEntryPoint,
+			engineEntryPoint,
+		], {
+			target,
+			sourceMap,
+		}),
+	);
+
+	Object.assign(
+		importMap,
+		await buildCssTarget(directory, [
+			"misc/dist/html/assets/scss/main/editor.scss",
+		], { target, sourceMap }),
+	);
+
+	return importMap;
 }
 
 export async function buildServiceWorker(
+	directory: string,
 	options: {
 		target?: string | string[];
 		sourceMap?: boolean;
-		clear?: boolean;
 	} = {},
-) {
-	const { target = "", sourceMap = false, clear = false } = options;
-	const binServiceWorkerDir = "platform/web/bin/service-worker/";
-	const serviceWorkerEntryPoint = "misc/dist/html/src/service-worker.ts";
+): Promise<Record<string, string>> {
+	const { target = defaultTarget, sourceMap = false } = options;
+	const serviceWorkerEntryPoint =
+		"misc/dist/html/src/entry/service-worker.ts";
 
-	await buildTarget(binServiceWorkerDir, [serviceWorkerEntryPoint], {
-		target,
-		sourceMap,
-		clear,
-	});
+	return await buildJavaScriptTarget(
+		directory,
+		[serviceWorkerEntryPoint],
+		{
+			target,
+			sourceMap,
+		},
+	);
+}
+
+export async function buildEmscriptenLibraries(
+	directory: string,
+	options: { target?: string | string[]; sourceMap?: boolean } = {},
+): Promise<void> {
+	const { target = defaultTarget, sourceMap = false } = options;
+	const emscriptenLibrariesEntryPoint =
+		"platform/web/src/browser/entry/emscripten.ts";
+
+	await buildJavaScriptTarget(
+		directory,
+		[emscriptenLibrariesEntryPoint],
+		{
+			target,
+			sourceMap,
+		},
+	);
 }
 
 async function main() {
 	const args = parseArgs({
+		allowPositionals: true,
 		options: {
 			target: {
 				type: "string",
@@ -166,11 +276,65 @@ async function main() {
 			},
 		},
 	});
+
+	if (args.positionals.length !== 1) {
+		errorAndExit("Invalid number of positional arguments.");
+	}
+
 	const target = args.values.target;
 	const sourceMap = args.values["source-map"];
 	const clear = args.values.clear;
-	await buildBrowser({ target, sourceMap, clear });
-	await buildServiceWorker({ target, sourceMap, clear });
+
+	let directory = "platform/web/dist/";
+	const buildTarget = args.positionals[0].toLowerCase();
+	switch (buildTarget) {
+		case "shell":
+			directory += "shell/";
+			break;
+		case "editor":
+			directory += "editor/";
+			break;
+		case "emscripten":
+			directory += "emscripten/";
+			break;
+		default:
+			errorAndExit("Invalid build target.");
+	}
+
+	if (clear) {
+		await clearDirectory(directory);
+	}
+
+	if (buildTarget === "emscripten") {
+		await buildEmscriptenLibraries(directory, { target, sourceMap });
+		Deno.exit(0);
+	}
+
+	const importMap = {};
+	switch (buildTarget) {
+		case "shell":
+			Object.assign(
+				importMap,
+				await buildShell(directory, { target, sourceMap }),
+			);
+			break;
+		case "editor":
+			Object.assign(
+				importMap,
+				await buildEditor(directory, { target, sourceMap }),
+			);
+			break;
+		default:
+			errorAndExit("Invalid build target.");
+	}
+	Object.assign(
+		importMap,
+		await buildServiceWorker(directory, { target, sourceMap }),
+	);
+	await Deno.writeTextFile(
+		join(directory, "importmap.json"),
+		JSON.stringify(importMap),
+	);
 }
 
 if (import.meta.main) {

@@ -51,6 +51,48 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		REMOTE_DEBUG_STATE_SERVING,
 	};
 
+	struct ExportData {
+		String name;
+		Ref<EditorExportPreset> preset;
+		Vector<SharedObject> shared_objects;
+		Dictionary file_sizes;
+		Vector<String> flags;
+
+		ExportData clone(ExportData &p_from) {
+			return {
+				.name = p_from.name,
+				.preset = p_from.preset,
+				.shared_objects = p_from.shared_objects.duplicate(),
+				.file_sizes = p_from.file_sizes,
+				.flags = p_from.flags.duplicate()
+			};
+		}
+
+		Dictionary get_config() const {
+			Array libs;
+			for (int i = 0; i < shared_objects.size(); i++) {
+				libs.push_back(shared_objects[i].path.get_file());
+			}
+
+			Array args;
+			for (int i = 0; i < flags.size(); i++) {
+				args.push_back(flags[i]);
+			}
+
+			Dictionary config;
+
+			config["canvasResizePolicy"] = preset->get("html/canvas_resize_policy");
+			config["experimentalVK"] = preset->get("html/experimental_virtual_keyboard");
+			config["focusCanvas"] = preset->get("html/focus_canvas_on_start");
+			config["ensureCrossOriginIsolationHeaders"] = static_cast<bool>(preset->get("progressive_web_app/ensure_cross_origin_isolation_headers"));
+			config["gdextensionLibs"] = libs;
+			config["executable"] = name;
+			config["fileSizes"] = file_sizes;
+
+			return config;
+		}
+	};
+
 	Ref<ImageTexture> logo;
 	Ref<ImageTexture> run_icon;
 	Ref<ImageTexture> stop_icon;

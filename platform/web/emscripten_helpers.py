@@ -1,5 +1,6 @@
 import json
 import os
+import subprocess
 
 from SCons.Util import WhereIs
 
@@ -21,6 +22,19 @@ def run_closure_compiler(target, source, env, for_signature):
         cmd.extend(["--js", f.get_abspath()])
     cmd.extend(["--js_output_file", target[0].get_abspath()])
     return " ".join(cmd)
+
+
+def run_esbuild(target, source, env, for_signature):
+    deno_bin = WhereIs("deno")
+    cmd = [deno_bin, "run", "esbuild"]
+
+    if not for_signature:
+        subprocess.run(cmd)
+
+    if env.editor_build:
+        return env.Glob("#platform/web/dist/editor/**")
+
+    return env.Glob("#platform/web/dist/shell/**")
 
 
 def create_engine_file(env, target, source, externs, threads_enabled):

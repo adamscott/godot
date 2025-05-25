@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  os.ts                                                                 */
+/*  emscripten.ts                                                         */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,21 +28,61 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import "+deno/lib.ts";
+import type { TypedArray } from "+browser/types/api.ts";
 
-export function errorAndExit(...args: unknown[]): never {
-	console.error(...args);
-	Deno.exit(1);
-}
+export declare const addToLibrary: (pElementToAdd: object) => void;
+export declare const mergeInto: (
+	pElement: object,
+	pElementToAdd: object,
+) => void;
+export declare const autoAddDeps: (pTarget: object, pDeps: string) => void;
 
-export async function which(command: string): Promise<string | null> {
-	const cmd_exec = Deno.build.os === "windows" ? "where" : "which";
-	const cmd = new Deno.Command(cmd_exec, {
-		args: [command],
-	});
-	const { success, stdout } = await cmd.output();
-	if (!success) {
-		return null;
-	}
-	return new TextDecoder().decode(stdout).trim().split("\r\n")[0];
-}
+// Global objects.
+export declare const wasmTable: Map<number, (...args: unknown[]) => unknown>;
+export declare const err: Console["error"];
+export declare const out: Console["log"];
+export declare const _malloc: (pSize: number) => number;
+export declare const _free: (pPtr: number) => void;
+
+type PointerSize = 8 | 16 | 32 | 64;
+type SignedIntegerPointerType = `i${PointerSize}`;
+type UnsignedIntegerPointerType = `u${PointerSize}`;
+export type PointerType =
+	| SignedIntegerPointerType
+	| UnsignedIntegerPointerType
+	| "f32"
+	| "f64"
+	| "*";
+
+export declare const getValue: (pPtr: number, pType: PointerType) => number;
+export declare const setValue: (
+	pPtr: number,
+	pValue: number,
+	pType: PointerType,
+) => void;
+
+export declare const UTF8ToString: (pPtr: number) => string;
+export declare const lengthBytesUTF8: (pString: string) => number;
+export declare const stringToUTF8: (
+	pString: string,
+	pCStringPtr: number,
+	pLength: number,
+) => number;
+export declare const stringToUTF8Array: (
+	pString: string,
+	pArray: TypedArray,
+	pPtr: number,
+	pLength: number,
+) => number;
+
+export declare const HEAP8: Int8Array;
+export declare const HEAP16: Int16Array;
+export declare const HEAP32: Int32Array;
+export declare const HEAPU8: Uint8Array;
+export declare const HEAPU16: Uint16Array;
+export declare const HEAPU32: Uint32Array;
+export declare const HEAPF32: Float32Array;
+export declare const HEAPF64: Float64Array;
+
+// TODO: Remove in favor of the new ESM engine module.
+export declare const Module: object;
