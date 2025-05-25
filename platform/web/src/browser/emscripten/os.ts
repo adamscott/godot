@@ -28,13 +28,16 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import "+browser/lib.ts";
+import "./lib.ts";
+import "./runtime.ts";
+
 import type { ConfigOptions } from "+browser/types/config.ts";
-import { addToLibrary, autoAddDeps, Module } from "./emscripten.ts";
 
 type IDHandlerId = number;
 type IDHandlerReference = unknown;
-declare const IDHandler: typeof _IDHandler.$IDHandler;
+declare global {
+	const IDHandler: typeof _IDHandler.$IDHandler;
+}
 const _IDHandler = {
 	$IDHandler: {
 		_lastId: 0 as IDHandlerId,
@@ -58,7 +61,9 @@ const _IDHandler = {
 autoAddDeps(_IDHandler, "$IDHandler");
 addToLibrary(_IDHandler);
 
-declare const GodotConfig: typeof _GodotConfig.$GodotConfig;
+declare global {
+	const GodotConfig: typeof _GodotConfig.$GodotConfig;
+}
 const _GodotConfig = {
 	// TODO: Rename Module to GodotEngine
 	$GodotConfig__postset: 'Module["initConfig"] = GodotConfig.init_config;',
@@ -141,8 +146,73 @@ const _GodotConfig = {
 autoAddDeps(_GodotConfig, "$GodotConfig");
 addToLibrary(_GodotConfig);
 
-declare const GodotEventListeners:
-	typeof _GodotEventListeners.$GodotEventListeners;
+declare global {
+	const GodotFS: typeof _GodotFS.$GodotFS;
+}
+const _GodotFS = {
+	$GodotFS__deps: ["$FS", "$IDBFS", "$GodotRuntime"],
+	$GodotFS__postset: [
+		'Module["initFS"] = GodotFS.init;',
+		'Module["copyToFS"] = GodotFS.copy_to_fs;',
+	].join(""),
+	$GodotFS: {
+		ENOENT: 44,
+		_idbfs: false,
+		_syncing: false,
+		_mountPoints: [] as string[],
+
+		isPersistent: (): boolean => {
+			return GodotFS._idbfs;
+		},
+
+		// Initialize godot file system, setting up persistent paths.
+		// Returns a promise that resolves when the FS is ready.
+		// We keep track of mount_points, so that we can properly close the IDBFS
+		// since emscripten is not doing it by itself. (emscripten GH#12516).
+		init: async (pPersistentPaths: string[]): Promise<void> => {
+			GodotFS._idbfs = false;
+			if (!Array.isArray(pPersistentPaths)) {
+				throw new Error("Persistent paths must be an array.");
+			}
+			if (pPersistentPaths.length === 0) {
+				return;
+			}
+			GodotFS._mountPoints = pPersistentPaths.slice();
+
+			const createRecursive = (pDirectory: string): void => {
+				try {
+					FS.stat(pDirectory);
+				} catch (err: Error) {
+					if (err.errno !== GodotFS.ENOENT) {
+						GodotRuntime.error(err);
+					}
+					FS.mkdirTree(pDirectory);
+				}
+			};
+
+			for (const mountPoint of GodotFS._mountPoints) {
+				createRecursive(mountPoint);
+				FS.mount(IDBFS, {}, mountPoint);
+			}
+
+			return new Promise((resolve, reject) => {
+				FS.syncfs(true, (pErrorCode) => {
+					if (pErrorCode) {
+						GodotFS._mountPoints = [];
+						GodotFS._idbfs = false;
+						GodotRuntime.print(
+							`IndexedDB not available: ${pErrorCode.message}`,
+						);
+					} else {
+						GodotFS._idbfs = true;
+					}
+					resolve(pErrorCode);
+				});
+			});
+		},
+	},
+};
+
 class Handler {
 	target: EventTarget;
 	event: string;
@@ -180,7 +250,10 @@ class Handler {
 	}
 }
 
-export const _GodotEventListeners = {
+declare global {
+	const GodotEventListeners: typeof _GodotEventListeners.$GodotEventListeners;
+}
+const _GodotEventListeners = {
 	$GodotEventListeners__deps: ["$GodotOS"],
 	$GodotEventListeners__postset:
 		"GodotOS.atexit(function(resolve, reject) { GodotEventListeners.clear(); resolve(); });",

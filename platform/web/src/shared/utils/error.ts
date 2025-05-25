@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  emscripten.ts                                                         */
+/*  error.ts                                                              */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,6 +28,12 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-export * from "+browser/emscripten/runtime.ts";
-export * from "+browser/emscripten/os.ts";
-export * from "+browser/emscripten/audio.ts";
+export function throwIfNull<T>(
+	pTest: T,
+	pError: Error,
+): asserts pTest is NonNullable<T> {
+	if (pTest != null) {
+		return;
+	}
+	throw pError;
+}
