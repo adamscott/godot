@@ -165,13 +165,13 @@ const _GodotFS = {
 		// Returns a promise that resolves when the FS is ready.
 		// We keep track of mount_points, so that we can properly close the IDBFS
 		// since emscripten is not doing it by itself. (emscripten GH#12516).
-		init: async (pPersistentPaths: string[]): Promise<Error | null> => {
+		init: (pPersistentPaths: string[]): Promise<Error | null> => {
 			GodotFS._idbfs = false;
 			if (!Array.isArray(pPersistentPaths)) {
 				throw new Error("Persistent paths must be an array.");
 			}
 			if (pPersistentPaths.length === 0) {
-				return null;
+				return Promise.resolve(null);
 			}
 			GodotFS._mountPoints = pPersistentPaths.slice();
 
@@ -227,10 +227,10 @@ const _GodotFS = {
 			GodotFS._syncing = false;
 		},
 
-		sync: async (): Promise<Error | null> => {
+		sync: (): Promise<Error | null> => {
 			if (GodotFS._syncing) {
 				GodotRuntime.error("Already syncing.");
-				return null;
+				return Promise.resolve(null);
 			}
 			GodotFS._syncing = true;
 			return new Promise((pResolve, _pReject) => {
@@ -268,7 +268,7 @@ const _GodotFS = {
 		},
 	},
 };
-// autoAddDeps(_GodotFS, "$GodotFS");
+autoAddDeps(_GodotFS, "$GodotFS");
 addToLibrary(_GodotFS);
 
 declare global {
@@ -508,6 +508,7 @@ const _GodotEventListeners = {
 		},
 	},
 };
+autoAddDeps(_GodotEventListeners, "$GodotEventListeners");
 addToLibrary(_GodotEventListeners);
 
 declare global {
