@@ -34,8 +34,22 @@ import "./runtime.ts";
 import type { AnyFunction } from "+shared/types/aliases.ts";
 import type { ConfigOptions } from "+browser/types/config.ts";
 
-type IDHandlerId = number;
-type IDHandlerReference = unknown;
+declare global {
+	type IDHandlerId = number;
+	interface IDHandlerReference {
+		request: Promise<Response> | null;
+		response: Response | null;
+		abortController: AbortController | null;
+		reader: ReadableStreamDefaultReader<Uint8Array<ArrayBufferLike>> | null;
+		error: Error | null;
+		done: boolean;
+		reading: boolean;
+		status: number;
+		chunked: boolean;
+		chunks: Uint8Array<ArrayBufferLike>[];
+	}
+}
+
 declare global {
 	const IDHandler: typeof _IDHandler.$IDHandler;
 }
