@@ -30,19 +30,17 @@
 
 import type { TypedArray } from "+browser/types/api.ts";
 
+interface ErrnoError extends Error {
+	errno: number;
+}
+
 declare global {
 	const addToLibrary: (pElementToAdd: object) => void;
-	const mergeInto: (
-		pElement: object,
-		pElementToAdd: object,
-	) => void;
+	const mergeInto: (pElement: object, pElementToAdd: object) => void;
 	const autoAddDeps: (pTarget: object, pDeps: string) => void;
 
 	// Global objects.
-	const wasmTable: Map<
-		number,
-		(...args: unknown[]) => unknown
-	>;
+	const wasmTable: Map<number, (...args: unknown[]) => unknown>;
 	const err: Console["error"];
 	const out: Console["log"];
 	const _malloc: (pSize: number) => number;
@@ -59,11 +57,7 @@ declare global {
 		| "*";
 
 	const getValue: (pPtr: number, pType: PointerType) => number;
-	const setValue: (
-		pPtr: number,
-		pValue: number,
-		pType: PointerType,
-	) => void;
+	const setValue: (pPtr: number, pValue: number, pType: PointerType) => void;
 
 	const UTF8ToString: (pPtr: number) => string;
 	const lengthBytesUTF8: (pString: string) => number;
@@ -89,10 +83,14 @@ declare global {
 	const HEAPF64: Float64Array;
 
 	const FS: {
-		mkdir: (pPath: string, pMode: number) => void;
-		mkdirTree: (pPath: string, pMode: number) => void;
+		mkdir: (pPath: string, pMode?: number) => void;
+		mkdirTree: (pPath: string, pMode?: number) => void;
 		mount: (pType: object, pOpts: object, pMountPoint: string) => void;
-		stat: (pPath: string, pDontFollow?: boolean) => {
+		unmount: (pPath: string) => void;
+		stat: (
+			pPath: string,
+			pDontFollow?: boolean,
+		) => {
 			dev: number;
 			ino: number;
 			mode: number;
@@ -110,6 +108,25 @@ declare global {
 		syncfs: (
 			pPopulate: boolean | ((pErrCode: Error) => void),
 			pCallback: (pErrCode: Error) => void,
+		) => void;
+		writeFile: (
+			pPath: string,
+			pTypedArray: TypedArray,
+			pOptions?: { flags?: number },
+		) => void;
+		ErrnoError: Error & {
+			new (...args: unknown[]): ErrnoError;
+			errno: number;
+		};
+	};
+
+	const IDBFS: {
+		dbs: Record<string, IDBDatabase>;
+		mount: (pMount: string) => unknown;
+		syncfs: (
+			pMount: string,
+			pPopulate: boolean,
+			pCallback: (pError: Error) => void,
 		) => void;
 	};
 
