@@ -488,8 +488,8 @@ const _GodotEventListeners = {
 		},
 
 		add: (
-			target: InstanceType<typeof Handler>["method"],
-			event: InstanceType<typeof Handler>["method"],
+			target: InstanceType<typeof Handler>["target"],
+			event: InstanceType<typeof Handler>["event"],
 			method: InstanceType<typeof Handler>["method"],
 			capture?: InstanceType<typeof Handler>["capture"],
 		) => {
