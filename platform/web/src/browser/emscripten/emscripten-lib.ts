@@ -28,6 +28,10 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
+import "./lib.ts";
+
+import type { CPointer as CPointerAlias } from "+shared/types/aliases.ts";
+
 import type { TypedArray } from "+browser/types/api.ts";
 
 interface ErrnoError extends Error {
@@ -46,30 +50,35 @@ declare global {
 	const _malloc: (pSize: number) => number;
 	const _free: (pPtr: number) => void;
 
-	type PointerSize = 8 | 16 | 32 | 64;
-	type SignedIntegerPointerType = `i${PointerSize}`;
-	type UnsignedIntegerPointerType = `u${PointerSize}`;
-	export type PointerType =
-		| SignedIntegerPointerType
-		| UnsignedIntegerPointerType
-		| "f32"
-		| "f64"
+	type CPointer = CPointerAlias;
+	type CPointerSize = 8 | 16 | 32 | 64;
+	type SignedIntegerCPointerType = `i${CPointerSize}`;
+	type UnsignedIntegerCPointerType = `u${CPointerSize}`;
+	type FloatCPointerType = "f32" | "float" | "f64" | "double";
+	export type CPointerType =
+		| SignedIntegerCPointerType
+		| UnsignedIntegerCPointerType
+		| FloatCPointerType
 		| "*";
 
-	const getValue: (pPtr: number, pType: PointerType) => number;
-	const setValue: (pPtr: number, pValue: number, pType: PointerType) => void;
+	const getValue: (pPtr: CPointer, pType: CPointerType) => number;
+	const setValue: (
+		pPtr: CPointer,
+		pValue: number,
+		pType: CPointerType,
+	) => void;
 
-	const UTF8ToString: (pPtr: number) => string;
+	const UTF8ToString: (pPtr: CPointer) => string;
 	const lengthBytesUTF8: (pString: string) => number;
 	const stringToUTF8: (
 		pString: string,
-		pCStringPtr: number,
+		pStringPtr: CPointer,
 		pLength: number,
 	) => number;
 	const stringToUTF8Array: (
 		pString: string,
 		pArray: TypedArray,
-		pPtr: number,
+		pPtr: CPointer,
 		pLength: number,
 	) => number;
 
@@ -86,7 +95,7 @@ declare global {
 		mkdir: (pPath: string, pMode?: number) => void;
 		mkdirTree: (pPath: string, pMode?: number) => void;
 		mount: (pType: object, pOpts: object, pMountPoint: string) => void;
-		unmount: (pPath: string) => void;
+		rmdir: (pDir: string) => void;
 		stat: (
 			pPath: string,
 			pDontFollow?: boolean,
@@ -109,15 +118,14 @@ declare global {
 			pPopulate: boolean | ((pErrCode: Error) => void),
 			pCallback: (pErrCode: Error) => void,
 		) => void;
+		unlink: (pPath: string) => void;
+		unmount: (pPath: string) => void;
 		writeFile: (
 			pPath: string,
 			pTypedArray: TypedArray,
 			pOptions?: { flags?: number },
 		) => void;
-		ErrnoError: Error & {
-			new (...args: unknown[]): ErrnoError;
-			errno: number;
-		};
+		ErrnoError: ErrnoError;
 	};
 
 	const IDBFS: {

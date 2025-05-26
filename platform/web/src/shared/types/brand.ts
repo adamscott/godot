@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  api.ts                                                                */
+/*  brand.ts                                                              */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,19 +28,6 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-export type TypedArray =
-	| Int8Array
-	| Uint8Array
-	| Uint8ClampedArray
-	| Int16Array
-	| Uint16Array
-	| Int32Array
-	| Uint32Array
-	| Float32Array
-	| Float64Array;
+declare const __brand: unique symbol;
 
-declare global {
-	interface DataTransferItem {
-		getAsEntry?: DataTransferItem["webkitGetAsEntry"];
-	}
-}
+export type Brand<T, B> = T & { [__brand]: B };

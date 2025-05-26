@@ -32,35 +32,51 @@ import "./lib.ts";
 import "./runtime.ts";
 import "./os.ts";
 
+const getModifiers = (pEvent: KeyboardEvent | MouseEvent): number => {
+	return (Number(pEvent.shiftKey) << 0) +
+		(Number(pEvent.altKey) << 1) + (Number(pEvent.ctrlKey) << 2) +
+		(Number(pEvent.metaKey) << 3);
+};
+
+const GodotIMECompositionType = Object.freeze({
+	start: 0,
+	update: 1,
+	end: 2,
+});
+
 declare global {
 	const GodotIME: typeof _GodotIME.$GodotIME;
 }
 const _GodotIME = {
 	$GodotIME__deps: ["$GodotRuntime", "$GodotEventListeners"],
-	$GodotIME__postset:
-		"GodotOS.atexit(function(resolve, reject) { GodotIME.clear(); resolve(); });",
+	$GodotIME__postset: "GodotOS.atExit(async () => { GodotIME.clear(); });",
 	$GodotIME: {
 		imeElement: null as HTMLDivElement | null,
-		active: false,
+		_active: false,
 		focusTimerIntervalId: -1,
 
-		init: (
-			pIMECallback,
+		initialize: (
+			pIMECallback: (
+				pCompositionType: typeof GodotIMECompositionType[
+					keyof typeof GodotIMECompositionType
+				],
+				pStringPtr: CPointer | null,
+			) => void,
 			pKeyCallback: (
 				pPressed: boolean,
 				pRepeat: boolean,
 				pModifiers: number,
 			) => void,
-			pCode: number,
-			pKey: number,
+			pCodePtr: CPointer,
+			pKeyPtr: CPointer,
 		): void => {
 			const keyEventCallback = (
 				pPressed: boolean,
 				pEvent: KeyboardEvent,
 			): void => {
 				const modifiers = GodotIME.getModifiers(pEvent);
-				GodotRuntime.stringToHeap(pEvent.code, pCode, 32);
-				GodotRuntime.stringToHeap(pEvent.key, pKey, 32);
+				GodotRuntime.stringToHeap(pEvent.code, pCodePtr, 32);
+				GodotRuntime.stringToHeap(pEvent.key, pKeyPtr, 32);
 				pKeyCallback(pPressed, pEvent.repeat, modifiers);
 				pEvent.preventDefault();
 			};
@@ -146,21 +162,17 @@ const _GodotIME = {
 
 			imeElement.addEventListener("blur", () => {
 				imeElement.style.display = "none";
-				GodotConfig.canvas?.focus();
-				GodotIME.active = false;
+				GodotConfig.canvas.focus();
+				GodotIME._active = false;
 			});
 
-			GodotConfig.canvas?.parentElement?.appendChild(imeElement);
+			GodotConfig.canvas.parentElement?.appendChild(imeElement);
 			GodotIME.imeElement = imeElement;
 		},
 
-		getModifiers: (pEvent: KeyboardEvent): number => {
-			return (Number(pEvent.shiftKey) << 0) +
-				(Number(pEvent.altKey) << 1) + (Number(pEvent.ctrlKey) << 2) +
-				(Number(pEvent.metaKey) << 3);
-		},
+		getModifiers,
 
-		setIMEActive: (pActive: boolean): void => {
+		setActive: (pActive: boolean): void => {
 			const clearFocusTimerInterval = (): void => {
 				clearInterval(GodotIME.focusTimerIntervalId);
 				GodotIME.focusTimerIntervalId = -1;
@@ -182,14 +194,33 @@ const _GodotIME = {
 				return;
 			}
 
-			GodotIME.active = pActive;
+			GodotIME._active = pActive;
 			if (pActive) {
 				GodotIME.imeElement.style.display = "block";
 				GodotIME.focusTimerIntervalId = setInterval(focusTimer, 100);
 			} else {
 				GodotIME.imeElement.style.display = "none";
-				GodotConfig.canvas?.focus();
+				GodotConfig.canvas.focus();
 			}
+		},
+
+		getActive: (): boolean => {
+			return GodotIME._active;
+		},
+
+		setPosition: (pX: number, pY: number): void => {
+			if (GodotIME.imeElement == null) {
+				return;
+			}
+			const canvas = GodotConfig.canvas;
+			const rect = canvas.getBoundingClientRect();
+			const rectWidth = canvas.width / rect.width;
+			const rectHeight = canvas.height / rect.height;
+			const clX = (pX / rectWidth) + rect.x;
+			const clY = (pY / rectHeight) + rect.y;
+
+			GodotIME.imeElement.style.left = `${clX}px`;
+			GodotIME.imeElement.style.top = `${clY}px`;
 		},
 
 		clear: function () {
@@ -208,7 +239,7 @@ const _GodotIME = {
 autoAddDeps(_GodotIME, "$GodotIME");
 addToLibrary(_GodotIME);
 
-export interface GamepadSample {
+export interface GodotInputGamepadSample {
 	standard: boolean;
 	buttons: number[];
 	axes: number[];
@@ -221,14 +252,14 @@ declare global {
 const _GodotInputGamepads = {
 	$GodotInputGamepads__deps: ["$GodotRuntime", "$GodotEventListeners"],
 	$GodotInputGamepads: {
-		samples: [] as (GamepadSample | null)[],
+		samples: [] as (GodotInputGamepadSample | null)[],
 
-		init: (
+		initialize: (
 			pOnChange: (
 				pPadIndex: number,
 				pConnected: boolean,
-				pIdPtr: number,
-				pGuidPtr: number,
+				pIdPtr?: number,
+				pGuidPtr?: number,
 			) => void,
 		): void => {
 			GodotInputGamepads.samples = [];
@@ -252,8 +283,18 @@ const _GodotInputGamepads = {
 				globalThis,
 				"gamepadconnected",
 				(pEvent: GamepadEvent) => {
-					if (pEvent.gamepad) {
-						// TODO: continue.
+					if (pEvent.gamepad != null) {
+						addPad(pEvent.gamepad);
+					}
+				},
+			);
+
+			GodotEventListeners.add(
+				globalThis,
+				"gamepaddisconnected",
+				(pEvent: GamepadEvent) => {
+					if (pEvent.gamepad != null) {
+						pOnChange(pEvent.gamepad.index, false);
 					}
 				},
 			);
@@ -274,18 +315,18 @@ const _GodotInputGamepads = {
 			}
 		},
 
-		getSample: (pIndex: number): GamepadSample | null => {
+		getSample: (pIndex: number): GodotInputGamepadSample | null => {
 			const samples = GodotInputGamepads.samples;
 			return pIndex < samples.length ? samples[pIndex] : null;
 		},
 
-		getSamples: (): (GamepadSample | null)[] => {
+		getSamples: (): (GodotInputGamepadSample | null)[] => {
 			return GodotInputGamepads.samples;
 		},
 
 		sampleGamepads: (): number => {
 			const gamepads = GodotInputGamepads.getGamepads();
-			const samples: (GamepadSample | null)[] = [];
+			const samples: (GodotInputGamepadSample | null)[] = [];
 			let activeGamepads = 0;
 			for (const gamepad of gamepads) {
 				if (gamepad == null) {
@@ -300,7 +341,7 @@ const _GodotInputGamepads = {
 					),
 					axes: [...gamepad.axes],
 					connected: gamepad.connected,
-				} satisfies GamepadSample;
+				} satisfies GodotInputGamepadSample;
 
 				samples.push(gamepadSample);
 				activeGamepads += 1;
@@ -308,5 +349,639 @@ const _GodotInputGamepads = {
 			GodotInputGamepads.samples = samples;
 			return activeGamepads;
 		},
+
+		getGUID: (pGamepad: Gamepad): string => {
+			if (pGamepad.mapping) {
+				return pGamepad.mapping;
+			}
+			const operatingSystem = GodotOS.getCurrentOS();
+			const id = pGamepad.id;
+			// Chrom* style: NAME (Vendor: xxxx Product: xxxx).
+			const chromiumRegExp =
+				/vendor: ([0-9a-f]{4}) product: ([0-9a-f]{4})/i;
+			// Firefox/Safari style (Safari may remove leading zeroes).
+			const nonChromiumRegExp = /^([0-9a-f]+)-([0-9a-f]+)-/i;
+			let vendor = "";
+			let product = "";
+			const [match] = Array.from(
+				id.matchAll(chromiumRegExp) ??
+					id.matchAll(nonChromiumRegExp ?? []),
+			);
+			if (match != null) {
+				vendor = match[1].padStart(4, "0");
+				product = match[2].padStart(4, "0");
+			}
+			if (vendor === "" || product === "") {
+				return `${operatingSystem}Unknown`;
+			}
+			return operatingSystem + vendor + product;
+		},
 	},
 };
+autoAddDeps(_GodotInputGamepads, "$GodotInputGamepads");
+addToLibrary(_GodotInputGamepads);
+
+interface GodotInputFile {
+	path: string;
+	name: string;
+	type: string;
+	size: number;
+	data: ArrayBuffer;
+}
+
+/*
+ * Drag and drop helper.
+ * This is pretty big, but basically detect dropped files on GodotConfig.canvas,
+ * process them one by one (recursively for directories), and copies them to
+ * the temporary FS path '/tmp/drop-[random]/' so it can be emitted as a godot
+ * event (that requires a string array of paths).
+ *
+ * NOTE: The temporary files are removed after the callback. This means that
+ * deferred callbacks won't be able to access the files.
+ */
+declare global {
+	const GodotInputDragDrop: typeof _GodotInputDragDrop.$GodotInputDragDrop;
+}
+const _GodotInputDragDrop = {
+	$GodotInputDragDrop__deps: ["$FS", "$GodotFS"],
+	$GodotInputDragDrop: {
+		_promises: [] as Promise<void>[],
+		_pendingFiles: [] as GodotInputFile[],
+
+		addEntry: (pEntry: FileSystemEntry): void => {
+			if (pEntry.isDirectory) {
+				GodotInputDragDrop.addDirectory(
+					pEntry as FileSystemDirectoryEntry,
+				);
+			} else if (pEntry.isFile) {
+				GodotInputDragDrop.addFile(pEntry as FileSystemFileEntry);
+			} else {
+				GodotRuntime.error(
+					"Unrecognized input drag&drop entry:",
+					pEntry,
+				);
+			}
+		},
+
+		addDirectory: (pEntry: FileSystemDirectoryEntry): void => {
+			GodotInputDragDrop._promises.push(
+				new Promise((pResolve, pReject) => {
+					const reader = pEntry.createReader();
+					reader.readEntries((pEntries) => {
+						for (const entry of pEntries) {
+							GodotInputDragDrop.addEntry(entry);
+						}
+						pResolve(undefined);
+					}, (pError) => {
+						pReject(pError);
+					});
+				}),
+			);
+		},
+
+		addFile: (pEntry: FileSystemFileEntry): void => {
+			GodotInputDragDrop._promises.push(
+				new Promise((pResolve, pReject) => {
+					pEntry.file((pFile) => {
+						const fileRelativePath = "relativePath" in pFile
+							? pFile.relativePath as string
+							: pFile.webkitRelativePath;
+						const reader = new FileReader();
+						reader.addEventListener("load", (_pEvent) => {
+							const file = {
+								path: fileRelativePath,
+								name: pFile.name,
+								type: pFile.type,
+								size: pFile.size,
+								data: reader.result as ArrayBuffer,
+							} satisfies GodotInputFile;
+							GodotInputDragDrop._pendingFiles.push(file);
+							pResolve(undefined);
+						});
+						reader.addEventListener("error", (_pEvent) => {
+							GodotRuntime.print(
+								`Error reading file ${fileRelativePath}`,
+							);
+							pReject(reader.error);
+						});
+						reader.readAsArrayBuffer(pFile);
+					}, (pError) => {
+						GodotRuntime.error("Error parsing entry file", pError);
+						pReject(pError);
+					});
+				}),
+			);
+		},
+
+		processEvent: (
+			pEvent: DragEvent,
+			pCallback: (pFiles: string[]) => void,
+		) => {
+			pEvent.preventDefault();
+
+			if (pEvent.dataTransfer?.items == null) {
+				GodotRuntime.error("File upload is not supported.");
+				return;
+			}
+
+			// Use DataTransferItemList interface to access the file(s)
+			const dataTransferItems = Array.from(pEvent.dataTransfer.items);
+			for (const dataTransferItem of dataTransferItems) {
+				const entry = dataTransferItem.getAsEntry?.() ??
+					dataTransferItem.webkitGetAsEntry();
+				if (entry == null) {
+					continue;
+				}
+				GodotInputDragDrop.addEntry(entry);
+			}
+			Promise.allSettled(GodotInputDragDrop._promises).then(() => {
+				const dropTemporaryDirectoryPath = `/tmp/drop-${
+					(Math.random() * (1 << 30)).toString(10)
+				}/`;
+				const dropPaths = [] as string[];
+				const filePaths = [] as string[];
+
+				// Without trailing slash
+				FS.mkdir(dropTemporaryDirectoryPath.slice(0, -1));
+				for (const pendingFile of GodotInputDragDrop._pendingFiles) {
+					const path = pendingFile.path;
+					GodotFS.copyToFS(
+						dropTemporaryDirectoryPath + path,
+						pendingFile.data,
+					);
+					let index = path.indexOf("/");
+					if (index === -1) {
+						// Root file.
+						dropPaths.push(dropTemporaryDirectoryPath + path);
+					} else {
+						// Subdirectory.
+						const subdirectory = path.substring(0, index);
+						index = subdirectory.indexOf("/");
+						if (
+							index < 0 &&
+							dropPaths.indexOf(
+									dropTemporaryDirectoryPath + subdirectory,
+								) === -1
+						) {
+							dropPaths.push(
+								dropTemporaryDirectoryPath + subdirectory,
+							);
+						}
+					}
+					filePaths.push(dropTemporaryDirectoryPath + path);
+				}
+
+				GodotInputDragDrop._promises = [];
+				GodotInputDragDrop._pendingFiles = [];
+				pCallback(dropPaths);
+			});
+		},
+
+		removeDrop: (pFiles: string[], pDropPath: string): void => {
+			const directories = [pDropPath.substring(0, pDropPath.length - 1)];
+
+			// Remove temporary files.
+			for (const file of pFiles) {
+				FS.unlink(file);
+				const directory = file.replace(pDropPath, "");
+				let index = directory.lastIndexOf("/");
+				while (index > 0) {
+					if (directories.indexOf(pDropPath + directory) === -1) {
+						directories.push(pDropPath + directory);
+					}
+					index = directory.lastIndexOf("/");
+				}
+			}
+
+			// Remove directories.
+			directories.sort((a, b) => {
+				const al = (a.match(/\//g) || []).length;
+				const bl = (b.match(/\//g) || []).length;
+				return al > bl ? -1 : Number(al < bl);
+			});
+			for (const directory of directories) {
+				FS.rmdir(directory);
+			}
+		},
+
+		handler:
+			(pCallback: (pFiles: string[]) => void) => (pEvent: DragEvent) => {
+				GodotInputDragDrop.processEvent(pEvent, pCallback);
+			},
+	},
+};
+autoAddDeps(_GodotInputDragDrop, "$GodotInputDragDrop");
+addToLibrary(_GodotInputDragDrop);
+
+const GodotInputTouchType = Object.freeze({
+	start: 0,
+	end: 1,
+	cancel: 2,
+	move: 3,
+});
+declare global {
+	const GodotInput: typeof _GodotInput.$GodotInput;
+}
+const _GodotInput = {
+	$GodotInput__deps: [
+		"$GodotRuntime",
+		"$GodotConfig",
+		"$GodotEventListeners",
+		"$GodotInputGamepads",
+		"$GodotInputDragDrop",
+		"$GodotIME",
+	],
+	$GodotInput: {
+		getModifiers,
+
+		computePosition: (
+			pEvent: MouseEvent | Touch,
+			pRect: DOMRect,
+		): [number, number] => {
+			const canvas = GodotConfig.canvas;
+			const rectWidth = canvas.width / pRect.width;
+			const rectHeight = canvas.height / pRect.height;
+			const x = (pEvent.clientX - pRect.x) * rectWidth;
+			const y = (pEvent.clientY - pRect.y) * rectHeight;
+			return [x, y];
+		},
+	},
+
+	//
+	// Mouse API.
+	//
+	godot_js_input_mouse_move_cb__proxy: "sync",
+	godot_js_input_mouse_move_cb__sig: "vp",
+	godot_js_input_mouse_move_cb: (pCallbackPtr: CPointer): void => {
+		const canvas = GodotConfig.canvas;
+		const cCallback = GodotRuntime.getFunction(pCallbackPtr);
+		const moveEventCallback = (pEvent: MouseEvent): void => {
+			const rect = canvas.getBoundingClientRect();
+			const position = GodotInput.computePosition(pEvent, rect);
+			// Scale movement
+			const rectWidth = canvas.width / rect.width;
+			const rectHeight = canvas.height / rect.height;
+			const relativePositionX = pEvent.movementX * rectWidth;
+			const relativePositionY = pEvent.movementY * rectHeight;
+			const modifiers = GodotInput.getModifiers(pEvent);
+			cCallback(
+				position[0],
+				position[1],
+				relativePositionX,
+				relativePositionY,
+				modifiers,
+			);
+		};
+		GodotEventListeners.add(window, "mousemove", moveEventCallback, false);
+	},
+
+	godot_js_input_mouse_wheel_cb__proxy: "sync",
+	godot_js_input_mouse_wheel_cb__sig: "vp",
+	godot_js_input_mouse_wheel_cb: (pCallbackPtr: CPointer): void => {
+		const cCallback = GodotRuntime.getFunction(pCallbackPtr);
+		const wheelEventCallback = (pEvent: WheelEvent): void => {
+			if (cCallback(pEvent.deltaX ?? 0, pEvent.deltaY ?? 0)) {
+				pEvent.preventDefault();
+			}
+		};
+		GodotEventListeners.add(
+			GodotConfig.canvas,
+			"wheel",
+			wheelEventCallback,
+			false,
+		);
+	},
+
+	godot_js_input_mouse_button_cb__proxy: "sync",
+	godot_js_input_mouse_button_cb__sig: "vp",
+	godot_js_input_mouse_button_cb: (pCallbackPtr: CPointer): void => {
+		const canvas = GodotConfig.canvas;
+		const cCallback = GodotRuntime.getFunction(pCallbackPtr);
+		const mouseEventCallback = (
+			pEvent: MouseEvent,
+			pPressed: boolean,
+		): void => {
+			const rect = canvas.getBoundingClientRect();
+			const position = GodotInput.computePosition(pEvent, rect);
+			const modifiers = GodotInput.getModifiers(pEvent);
+			// Since the event is consumed, focus manually.
+			// NOTE: The iframe container may not have focus yet, so focus even when already active.
+			if (pPressed) {
+				canvas.focus();
+			}
+			if (
+				cCallback(
+					Number(pPressed),
+					pEvent.button,
+					position[0],
+					position[1],
+					modifiers,
+				)
+			) {
+				pEvent.preventDefault();
+			}
+		};
+		GodotEventListeners.add(
+			canvas,
+			"mousedown",
+			(pEvent: MouseEvent) => mouseEventCallback(pEvent, true),
+			false,
+		);
+		GodotEventListeners.add(
+			canvas,
+			"mouseup",
+			(pEvent: MouseEvent) => mouseEventCallback(pEvent, false),
+			false,
+		);
+	},
+
+	//
+	// Touch API.
+	//
+	godot_js_input_touch_cb__proxy: "sync",
+	godot_js_input_touch_cb__sig: "vppp",
+	godot_js_input_touch_cb: (
+		pCallbackPtr: CPointer,
+		pIdsPtr: CPointer,
+		pCoordsPtr: CPointer,
+	): void => {
+		const canvas = GodotConfig.canvas;
+		const cCallback = GodotRuntime.getFunction(pCallbackPtr);
+		const touchEventCallback = (
+			pEvent: TouchEvent,
+			pType: typeof GodotInputTouchType[keyof typeof GodotInputTouchType],
+		): void => {
+			if (pType === GodotInputTouchType.start) {
+				canvas.focus();
+			}
+			const rect = canvas.getBoundingClientRect();
+			const touches = Array.from(pEvent.changedTouches);
+			for (let i = 0; i < touches.length; i++) {
+				const touch = touches[i];
+				const position = GodotInput.computePosition(touch, rect);
+				GodotRuntime.setHeapValue(
+					(pCoordsPtr +
+						(i * 2) * Float64Array.BYTES_PER_ELEMENT) as CPointer,
+					position[0],
+					"double",
+				);
+				GodotRuntime.setHeapValue(
+					(pCoordsPtr +
+						(i * 2 + 1) *
+							Float64Array.BYTES_PER_ELEMENT) as CPointer,
+					position[1],
+					"double",
+				);
+				GodotRuntime.setHeapValue(
+					(pIdsPtr + i * Int32Array.BYTES_PER_ELEMENT) as CPointer,
+					touch.identifier,
+					"i32",
+				);
+			}
+			let cCallbackType: number;
+			switch (pType) {
+				case GodotInputTouchType.start:
+					cCallbackType = 0;
+					break;
+				case GodotInputTouchType.end:
+				case GodotInputTouchType.cancel:
+					cCallbackType = 1;
+					break;
+				case GodotInputTouchType.move:
+					cCallbackType = 2;
+					break;
+			}
+			cCallback(cCallbackType, touches.length);
+			if (pEvent.cancelable) {
+				pEvent.preventDefault();
+			}
+		};
+
+		GodotEventListeners.add(
+			canvas,
+			"touchstart",
+			(pEvent: TouchEvent) =>
+				touchEventCallback(pEvent, GodotInputTouchType.start),
+			false,
+		);
+		GodotEventListeners.add(
+			canvas,
+			"touchend",
+			(pEvent: TouchEvent) =>
+				touchEventCallback(pEvent, GodotInputTouchType.end),
+			false,
+		);
+		GodotEventListeners.add(
+			canvas,
+			"touchcancel",
+			(pEvent: TouchEvent) =>
+				touchEventCallback(pEvent, GodotInputTouchType.cancel),
+			false,
+		);
+		GodotEventListeners.add(
+			canvas,
+			"touchmove",
+			(pEvent: TouchEvent) =>
+				touchEventCallback(pEvent, GodotInputTouchType.move),
+			false,
+		);
+	},
+
+	//
+	// Key API.
+	//
+	godot_js_input_key_cb__proxy: "sync",
+	godot_js_input_key_cb__sig: "vppp",
+	godot_js_input_key_cb: (
+		pCallbackPtr: CPointer,
+		pCodePtr: CPointer,
+		pKeyPtr: CPointer,
+	): void => {
+		const canvas = GodotConfig.canvas;
+		const cCallback = GodotRuntime.getFunction(pCallbackPtr);
+		const keyboardEventHandler = (
+			pEvent: KeyboardEvent,
+			pPressed: boolean,
+		): void => {
+			const modifiers = GodotInput.getModifiers(pEvent);
+			GodotRuntime.stringToHeap(pEvent.code, pCodePtr, 32);
+			GodotRuntime.stringToHeap(pEvent.key, pKeyPtr, 32);
+			cCallback(Number(pPressed), pEvent.repeat, modifiers);
+			pEvent.preventDefault();
+		};
+
+		GodotEventListeners.add(
+			canvas,
+			"keydown",
+			(pEvent: KeyboardEvent) => keyboardEventHandler(pEvent, true),
+			false,
+		);
+
+		GodotEventListeners.add(
+			canvas,
+			"keyup",
+			(pEvent: KeyboardEvent) => keyboardEventHandler(pEvent, false),
+			false,
+		);
+	},
+
+	//
+	// IME API.
+	//
+	godot_js_set_ime_active__proxy: "sync",
+	godot_js_set_ime_active__sig: "vi",
+	godot_js_set_ime_active: (pActive: number): void => {
+		GodotIME.setActive(Boolean(pActive));
+	},
+
+	godot_js_set_ime_position__proxy: "sync",
+	godot_js_set_ime_position__sig: "vii",
+	godot_js_set_ime_position: (pX: number, pY: number): void => {
+		GodotIME.setPosition(pX, pY);
+	},
+
+	godot_js_set_ime_cb__proxy: "sync",
+	godot_js_set_ime_cb__sig: "vpppp",
+	godot_js_set_ime_cb: (
+		pIMECallbackPtr: CPointer,
+		pKeyCallbackPtr: CPointer,
+		pCodePtr: CPointer,
+		pKeyPtr: CPointer,
+	): void => {
+		const imeCallback = GodotRuntime.getFunction(pIMECallbackPtr);
+		const keyCallback = GodotRuntime.getFunction(pKeyCallbackPtr);
+		GodotIME.initialize(imeCallback, keyCallback, pCodePtr, pKeyPtr);
+	},
+
+	godot_js_is_ime_focused__proxy: "sync",
+	godot_js_is_ime_focused__sig: "i",
+	godot_js_is_ime_focused: (): number => {
+		return Number(GodotIME.getActive());
+	},
+
+	//
+	// Gamepad API.
+	//
+	godot_js_input_gamepad_cb__proxy: "sync",
+	godot_js_input_gamepad_cb__sig: "vp",
+	godot_js_input_gamepad_cb: (pOnChangeCallbackPtr: CPointer): void => {
+		const onChangeCallback = GodotRuntime.getFunction(pOnChangeCallbackPtr);
+		GodotInputGamepads.initialize(onChangeCallback);
+	},
+
+	godot_js_input_gamepad_sample_count__proxy: "sync",
+	godot_js_input_gamepad_sample_count__sig: "i",
+	godot_js_input_gamepad_sample_count: (): number => {
+		return GodotInputGamepads.getSamples().length;
+	},
+
+	godot_js_input_gamepad_sample__proxy: "sync",
+	godot_js_input_gamepad_sample__sig: "i",
+	godot_js_input_gamepad_sample: (): number => {
+		return GodotInputGamepads.sampleGamepads();
+	},
+
+	godot_js_input_gamepad_sample_get__proxy: "sync",
+	godot_js_input_gamepad_sample_get__sig: "iippppp",
+	godot_js_input_gamepad_sample_get: (
+		pIndex: number,
+		rButtonsPtr: CPointer,
+		rButtonsCountPtr: CPointer,
+		rAxesPtr: CPointer,
+		rAxesCountPtr: CPointer,
+		rStandardPtr: CPointer,
+	): number => {
+		const sample = GodotInputGamepads.getSample(pIndex);
+		if (sample == null || !sample.connected) {
+			return 1;
+		}
+
+		const buttons = sample.buttons;
+		const buttonsCount = Math.min(buttons.length, 16);
+		for (let i = 0; i < buttonsCount; i++) {
+			GodotRuntime.setHeapValue(
+				(rButtonsPtr + (i << 2)) as CPointer,
+				buttons[i],
+				"float",
+			);
+		}
+		GodotRuntime.setHeapValue(rButtonsCountPtr, buttonsCount, "i32");
+
+		const axes = sample.axes;
+		const axesCount = Math.min(axes.length, 10);
+		for (let i = 0; i < axesCount; i++) {
+			GodotRuntime.setHeapValue(
+				(rAxesPtr + (i << 2)) as CPointer,
+				axes[i],
+				"float",
+			);
+		}
+		GodotRuntime.setHeapValue(rAxesCountPtr, axesCount, "i32");
+
+		GodotRuntime.setHeapValue(rStandardPtr, Number(sample.standard), "i32");
+
+		return 0;
+	},
+
+	//
+	// Drag&Drop API.
+	//
+	godot_js_input_drop_files_cb__proxy: "sync",
+	godot_js_input_drop_files_cb__sig: "vp",
+	godot_js_input_drop_files_cb: (pCallbackPtr: CPointer): void => {
+		const canvas = GodotConfig.canvas;
+		const cCallback = GodotRuntime.getFunction(pCallbackPtr);
+		const dropEventHandler = (files: string[]): void => {
+			const args = files ?? [];
+			if (args.length === 0) {
+				return;
+			}
+			const argc = args.length;
+			const argv = GodotRuntime.allocStringArray(args);
+			cCallback(argc, argv);
+			GodotRuntime.freeStringArray(argv, argc);
+		};
+
+		GodotEventListeners.add(canvas, "dragover", (pEvent: DragEvent) => {
+			// Prevent default behavior (which would try to open the file(s)).
+			pEvent.preventDefault();
+		});
+		GodotEventListeners.add(
+			canvas,
+			"drop",
+			GodotInputDragDrop.handler(dropEventHandler),
+		);
+	},
+
+	//
+	// Paste API.
+	//
+	godot_js_input_paste_cb__proxy: "sync",
+	godot_js_input_paste_cb__sig: "vp",
+	godot_js_input_paste_cb: (pCallbackPtr: CPointer): void => {
+		const cCallback = GodotRuntime.getFunction(pCallbackPtr);
+		const pasteEventHandler = (pEvent: ClipboardEvent): void => {
+			const text = pEvent.clipboardData?.getData("text");
+			if (text == null) {
+				return;
+			}
+			const textPtr = GodotRuntime.allocString(text);
+			cCallback(textPtr);
+			GodotRuntime.free(textPtr);
+		};
+
+		GodotEventListeners.add(globalThis, "paste", pasteEventHandler, false);
+	},
+
+	godot_js_input_vibrate_handheld__proxy: "sync",
+	godot_js_input_vibrate_handheld__sig: "vi",
+	godot_js_input_vibrate_handheld: (pDurationMs: number): void => {
+		if (typeof navigator.vibrate !== "function") {
+			GodotRuntime.print("This browser doesn't support vibration.");
+			return;
+		}
+		navigator.vibrate(pDurationMs);
+	},
+};
+autoAddDeps(_GodotInput, "$GodotInput");
+addToLibrary(_GodotInput);

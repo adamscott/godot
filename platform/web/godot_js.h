@@ -39,8 +39,8 @@ extern "C" {
 #endif
 
 // Config
-extern void godot_js_config_locale_get(char *p_ptr, int p_ptr_max);
-extern void godot_js_config_canvas_id_get(char *p_ptr, int p_ptr_max);
+extern void godot_js_config_locale_get(char *p_ptr, int p_max_size);
+extern void godot_js_config_canvas_id_get(char *p_ptr, int p_max_size);
 
 // OS
 extern void godot_js_os_finish_async(void (*p_callback)());

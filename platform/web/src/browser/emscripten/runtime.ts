@@ -38,7 +38,7 @@ declare global {
 const _GodotRuntime = {
 	$GodotRuntime: {
 		// Functions.
-		getFunc: (pPtr: number): (...args: unknown[]) => unknown => {
+		getFunction: (pPtr: CPointer): (...args: unknown[]) => unknown => {
 			const func = wasmTable.get(pPtr);
 			if (func == null) {
 				throw new Error("Function is null");
@@ -56,29 +56,29 @@ const _GodotRuntime = {
 		},
 
 		// Memory.
-		malloc: (pSize: number): number => {
-			return _malloc(pSize);
+		malloc: (pSize: number): CPointer => {
+			return _malloc(pSize) as CPointer;
 		},
 
-		free: (pPtr: number): void => {
+		free: (pPtr: CPointer): void => {
 			_free(pPtr);
 		},
 
-		getHeapValue: (pPtr: number, pType: PointerType): number => {
+		getHeapValue: (pPtr: CPointer, pType: CPointerType): number => {
 			return getValue(pPtr, pType);
 		},
 
 		setHeapValue: (
-			pPtr: number,
+			pPtr: CPointer,
 			pValue: number,
-			pType: PointerType,
+			pType: CPointerType,
 		): void => {
 			setValue(pPtr, pValue, pType);
 		},
 
 		heapSub: <T extends TypedArray>(
 			pHeap: T,
-			pPtr: number,
+			pPtr: CPointer,
 			pLength: number,
 		): T => {
 			const bytes = pHeap.BYTES_PER_ELEMENT;
@@ -88,7 +88,7 @@ const _GodotRuntime = {
 
 		heapSlice: <T extends TypedArray>(
 			pHeap: T,
-			pPtr: number,
+			pPtr: CPointer,
 			pLength: number,
 		): T => {
 			const bytes = pHeap.BYTES_PER_ELEMENT;
@@ -99,7 +99,7 @@ const _GodotRuntime = {
 		heapCopy: <T extends TypedArray, U extends TypedArray>(
 			pDestination: U,
 			pSource: T,
-			pPtr: number,
+			pPtr: CPointer,
 		): void => {
 			const bytes = pSource.BYTES_PER_ELEMENT;
 			const index = pPtr / bytes;
@@ -107,50 +107,53 @@ const _GodotRuntime = {
 		},
 
 		// Strings.
-		parseString: (pPtr: number): string => {
+		parseString: (pPtr: CPointer): string => {
 			return UTF8ToString(pPtr);
 		},
 
-		parseStringArray: (pPtr: number, pSize: number): string[] => {
+		parseStringArray: (pPtr: CPointer, pSize: number): string[] => {
 			return Array.from(GodotRuntime.heapSub(HEAP32, pPtr, pSize)).map((
 				pMappedPtr,
-			) => GodotRuntime.parseString(pMappedPtr));
+			) => GodotRuntime.parseString(pMappedPtr as CPointer));
 		},
 
 		strlen: (pString: string): number => {
 			return lengthBytesUTF8(pString);
 		},
 
-		allocString: (pString: string): number => {
+		allocString: (pString: string): CPointer => {
 			const length = GodotRuntime.strlen(pString);
 			const cStringPtr = GodotRuntime.malloc(length);
 			stringToUTF8(pString, cStringPtr, length);
 			return cStringPtr;
 		},
 
-		allocStringArray: (pStrings: string[]): number => {
+		allocStringArray: (pStrings: string[]): CPointer => {
 			const size = pStrings.length;
-			const cPointer = GodotRuntime.malloc(
+			const cStringArrayPointer = GodotRuntime.malloc(
 				size * Uint32Array.BYTES_PER_ELEMENT,
 			);
 			for (let i = 0; i < size; i++) {
-				HEAP32[(cPointer >> 2) + i] = GodotRuntime.allocString(
-					pStrings[i],
-				);
+				HEAP32[(cStringArrayPointer >> 2) + i] = GodotRuntime
+					.allocString(
+						pStrings[i],
+					);
 			}
-			return cPointer;
+			return cStringArrayPointer;
 		},
 
-		freeStringArray: (pPtr: number, pLength: number): void => {
+		freeStringArray: (pStringArrayPtr: CPointer, pLength: number): void => {
 			for (let i = 0; i < pLength; i++) {
-				GodotRuntime.free(HEAP32[(pPtr >> 2) + i]);
+				GodotRuntime.free(
+					HEAP32[((pStringArrayPtr as number) >> 2) + i] as CPointer,
+				);
 			}
-			GodotRuntime.free(pPtr);
+			GodotRuntime.free(pStringArrayPtr);
 		},
 
 		stringToHeap: (
 			pString: string,
-			pPtr: number,
+			pPtr: CPointer,
 			pLength: number,
 		): number => {
 			return stringToUTF8Array(pString, HEAP8, pPtr, pLength);

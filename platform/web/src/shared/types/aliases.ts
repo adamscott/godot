@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  api.ts                                                                */
+/*  aliases.ts                                                            */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,19 +28,8 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-export type TypedArray =
-	| Int8Array
-	| Uint8Array
-	| Uint8ClampedArray
-	| Int16Array
-	| Uint16Array
-	| Int32Array
-	| Uint32Array
-	| Float32Array
-	| Float64Array;
+import type { Brand } from "./brand.ts";
 
-declare global {
-	interface DataTransferItem {
-		getAsEntry?: DataTransferItem["webkitGetAsEntry"];
-	}
-}
+// deno-lint-ignore no-explicit-any
+export type AnyFunction = (...args: any[]) => any;
+export type CPointer = Brand<number, "CPointer">;
