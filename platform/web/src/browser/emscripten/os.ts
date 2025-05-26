@@ -31,6 +31,7 @@
 import "./lib.ts";
 import "./runtime.ts";
 
+import type { AnyFunction } from "+shared/types.ts";
 import type { ConfigOptions } from "+browser/types/config.ts";
 
 type IDHandlerId = number;
@@ -428,7 +429,7 @@ addToLibrary(_GodotOS);
 class Handler {
 	target: EventTarget;
 	event: string;
-	method: (...args: unknown[]) => unknown;
+	method: AnyFunction;
 	capture: boolean | undefined;
 
 	constructor(
@@ -487,8 +488,8 @@ const _GodotEventListeners = {
 		},
 
 		add: (
-			target: InstanceType<typeof Handler>["target"],
-			event: InstanceType<typeof Handler>["event"],
+			target: InstanceType<typeof Handler>["method"],
+			event: InstanceType<typeof Handler>["method"],
 			method: InstanceType<typeof Handler>["method"],
 			capture?: InstanceType<typeof Handler>["capture"],
 		) => {
