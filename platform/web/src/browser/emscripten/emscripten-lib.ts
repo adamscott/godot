@@ -62,6 +62,7 @@ export type CPointerType =
 	| UnsignedIntegerCPointerType
 	| FloatCPointerType
 	| "*";
+export const NULLPTR = 0 as CPointer;
 
 export declare const getValue: (pPtr: CPointer, pType: CPointerType) => number;
 export declare const setValue: (
