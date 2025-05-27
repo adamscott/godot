@@ -50,18 +50,21 @@ import {
 	wasmTable,
 } from "./emscripten-lib.ts";
 
-import type { TypedArray } from "+browser/types/api.ts";
+import { TypedArray } from "+browser/types/api.ts";
+import { AnyFunction } from "+shared/types/aliases.ts";
 
 export declare const GodotRuntime: typeof _GodotRuntime.$GodotRuntime;
 const _GodotRuntime = {
 	$GodotRuntime: {
 		// Functions.
-		getFunction: (pPtr: CPointer): (...args: unknown[]) => unknown => {
+		getFunction: <T extends AnyFunction>(
+			pPtr: CPointer,
+		): T => {
 			const func = wasmTable.get(pPtr);
 			if (func == null) {
 				throw new Error("Function is null");
 			}
-			return func;
+			return func as T;
 		},
 
 		// Print.

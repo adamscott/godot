@@ -361,14 +361,15 @@ const _GodotOS = {
 	godot_js_os_finish_async__proxy: "sync",
 	godot_js_os_finish_async__sig: "vp",
 	godot_js_os_finish_async: (pCallbackPtr: CPointer): void => {
-		const callback = GodotRuntime.getFunction(pCallbackPtr);
-		GodotOS.finishAsync(callback);
+		const callback = GodotRuntime.getFunction<() => void>(pCallbackPtr);
+		GodotOS.finishAsync(() => callback());
 	},
 
 	godot_js_os_request_quit_cb__proxy: "sync",
 	godot_js_os_request_quit_cb__sig: "vp",
 	godot_js_os_request_quit_cb: (pCallbackPtr: CPointer): void => {
-		GodotOS.requestQuit = GodotRuntime.getFunction(pCallbackPtr);
+		const callback = GodotRuntime.getFunction<() => void>(pCallbackPtr);
+		GodotOS.requestQuit = callback;
 	},
 
 	godot_js_os_fs_is_persistent__proxy: "sync",
@@ -380,7 +381,7 @@ const _GodotOS = {
 	godot_js_os_fs_sync__proxy: "sync",
 	godot_js_os_fs_sync__sig: "vp",
 	godot_js_os_fs_sync: (pCallbackPtr: CPointer): void => {
-		const callback = GodotRuntime.getFunction(pCallbackPtr);
+		const callback = GodotRuntime.getFunction<() => void>(pCallbackPtr);
 		GodotOS._fsSyncPromise = GodotFS.sync();
 		GodotOS._fsSyncPromise.then((_error): void => {
 			callback();
@@ -596,10 +597,15 @@ const _GodotPWA = {
 	godot_js_pwa_cb: (pUpdateCallbackPtr: CPointer): void => {
 		if ("serviceWorker" in navigator) {
 			try {
-				const callback = GodotRuntime.getFunction(pUpdateCallbackPtr);
+				const callback = GodotRuntime.getFunction<() => void>(
+					pUpdateCallbackPtr,
+				);
 				navigator.serviceWorker.getRegistration().then(
 					(pRegistration) => {
-						GodotPWA.updateState(callback, pRegistration ?? null);
+						GodotPWA.updateState(
+							callback,
+							pRegistration ?? null,
+						);
 					},
 				);
 			} catch (error) {

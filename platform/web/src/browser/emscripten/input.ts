@@ -31,7 +31,13 @@
 import "+browser/lib.ts";
 import "+browser/types/extensions/dataTransferItemGetAsEntry.ts";
 
-import { addToLibrary, autoAddDeps, CPointer, FS } from "./emscripten-lib.ts";
+import {
+	addToLibrary,
+	autoAddDeps,
+	CPointer,
+	FS,
+	NULLPTR,
+} from "./emscripten-lib.ts";
 import { GodotRuntime } from "./runtime.ts";
 import { GodotConfig, GodotEventListeners, GodotFS, GodotOS } from "./os.ts";
 
@@ -258,8 +264,8 @@ const _GodotInputGamepads = {
 			pOnChange: (
 				pPadIndex: number,
 				pConnected: boolean,
-				pIdPtr?: number,
-				pGuidPtr?: number,
+				pIdPtr?: CPointer,
+				pGuidPtr?: CPointer,
 			) => void,
 		): void => {
 			GodotInputGamepads.samples = [];
@@ -611,7 +617,15 @@ const _GodotInput = {
 	godot_js_input_mouse_move_cb__sig: "vp",
 	godot_js_input_mouse_move_cb: (pCallbackPtr: CPointer): void => {
 		const canvas = GodotConfig.canvas;
-		const cCallback = GodotRuntime.getFunction(pCallbackPtr);
+		const callback = GodotRuntime.getFunction<
+			(
+				pX: number,
+				pY: number,
+				pRelativeX: number,
+				pRelativeY: number,
+				pModifiers: number,
+			) => void
+		>(pCallbackPtr);
 		const moveEventCallback = (pEvent: MouseEvent): void => {
 			const rect = canvas.getBoundingClientRect();
 			const position = GodotInput.computePosition(pEvent, rect);
@@ -621,7 +635,7 @@ const _GodotInput = {
 			const relativePositionX = pEvent.movementX * rectWidth;
 			const relativePositionY = pEvent.movementY * rectHeight;
 			const modifiers = GodotInput.getModifiers(pEvent);
-			cCallback(
+			callback(
 				position[0],
 				position[1],
 				relativePositionX,
@@ -635,9 +649,11 @@ const _GodotInput = {
 	godot_js_input_mouse_wheel_cb__proxy: "sync",
 	godot_js_input_mouse_wheel_cb__sig: "vp",
 	godot_js_input_mouse_wheel_cb: (pCallbackPtr: CPointer): void => {
-		const cCallback = GodotRuntime.getFunction(pCallbackPtr);
+		const callback = GodotRuntime.getFunction<
+			(pDeltaX: number, pDeltaY: number) => number
+		>(pCallbackPtr);
 		const wheelEventCallback = (pEvent: WheelEvent): void => {
-			if (cCallback(pEvent.deltaX ?? 0, pEvent.deltaY ?? 0)) {
+			if (callback(pEvent.deltaX ?? 0, pEvent.deltaY ?? 0) !== 0) {
 				pEvent.preventDefault();
 			}
 		};
@@ -653,7 +669,15 @@ const _GodotInput = {
 	godot_js_input_mouse_button_cb__sig: "vp",
 	godot_js_input_mouse_button_cb: (pCallbackPtr: CPointer): void => {
 		const canvas = GodotConfig.canvas;
-		const cCallback = GodotRuntime.getFunction(pCallbackPtr);
+		const callback = GodotRuntime.getFunction<
+			(
+				pPressed: number,
+				pButton: number,
+				pX: number,
+				pY: number,
+				pModifiers: number,
+			) => number
+		>(pCallbackPtr);
 		const mouseEventCallback = (
 			pEvent: MouseEvent,
 			pPressed: boolean,
@@ -667,13 +691,13 @@ const _GodotInput = {
 				canvas.focus();
 			}
 			if (
-				cCallback(
+				callback(
 					Number(pPressed),
 					pEvent.button,
 					position[0],
 					position[1],
 					modifiers,
-				)
+				) !== 0
 			) {
 				pEvent.preventDefault();
 			}
@@ -703,7 +727,9 @@ const _GodotInput = {
 		pCoordsPtr: CPointer,
 	): void => {
 		const canvas = GodotConfig.canvas;
-		const cCallback = GodotRuntime.getFunction(pCallbackPtr);
+		const callback = GodotRuntime.getFunction<
+			(pType: number, pCount: number) => void
+		>(pCallbackPtr);
 		const touchEventCallback = (
 			pEvent: TouchEvent,
 			pType: typeof GodotInputTouchType[keyof typeof GodotInputTouchType],
@@ -735,20 +761,20 @@ const _GodotInput = {
 					"i32",
 				);
 			}
-			let cCallbackType: number;
+			let callbackType: number;
 			switch (pType) {
 				case GodotInputTouchType.start:
-					cCallbackType = 0;
+					callbackType = 0;
 					break;
 				case GodotInputTouchType.end:
 				case GodotInputTouchType.cancel:
-					cCallbackType = 1;
+					callbackType = 1;
 					break;
 				case GodotInputTouchType.move:
-					cCallbackType = 2;
+					callbackType = 2;
 					break;
 			}
-			cCallback(cCallbackType, touches.length);
+			callback(callbackType, touches.length);
 			if (pEvent.cancelable) {
 				pEvent.preventDefault();
 			}
@@ -795,7 +821,9 @@ const _GodotInput = {
 		pKeyPtr: CPointer,
 	): void => {
 		const canvas = GodotConfig.canvas;
-		const cCallback = GodotRuntime.getFunction(pCallbackPtr);
+		const callback = GodotRuntime.getFunction<
+			(pType: number, pRepeat: number, pModifiers: number) => void
+		>(pCallbackPtr);
 		const keyboardEventHandler = (
 			pEvent: KeyboardEvent,
 			pPressed: boolean,
@@ -803,7 +831,7 @@ const _GodotInput = {
 			const modifiers = GodotInput.getModifiers(pEvent);
 			GodotRuntime.stringToHeap(pEvent.code, pCodePtr, 32);
 			GodotRuntime.stringToHeap(pEvent.key, pKeyPtr, 32);
-			cCallback(Number(pPressed), pEvent.repeat, modifiers);
+			callback(Number(pPressed), Number(pEvent.repeat), modifiers);
 			pEvent.preventDefault();
 		};
 
@@ -845,9 +873,33 @@ const _GodotInput = {
 		pCodePtr: CPointer,
 		pKeyPtr: CPointer,
 	): void => {
-		const imeCallback = GodotRuntime.getFunction(pIMECallbackPtr);
-		const keyCallback = GodotRuntime.getFunction(pKeyCallbackPtr);
-		GodotIME.initialize(imeCallback, keyCallback, pCodePtr, pKeyPtr);
+		const imeCallback = GodotRuntime.getFunction<
+			(pType: number, pTextPtr: CPointer) => void
+		>(pIMECallbackPtr);
+		const keyCallback = GodotRuntime.getFunction<
+			(pType: number, pRepeat: number, pModifiers: number) => void
+		>(pKeyCallbackPtr);
+
+		const imeCallbackWrapper: Parameters<typeof GodotIME.initialize>[0] = (
+			pCompositionType,
+			pStringPtr,
+		): void => {
+			imeCallback(pCompositionType, pStringPtr ?? NULLPTR);
+		};
+		const keyCallbackWrapper: Parameters<typeof GodotIME.initialize>[1] = (
+			pPressed,
+			pRepeat,
+			pModifiers,
+		): void => {
+			keyCallback(Number(pPressed), Number(pRepeat), Number(pModifiers));
+		};
+
+		GodotIME.initialize(
+			imeCallbackWrapper,
+			keyCallbackWrapper,
+			pCodePtr,
+			pKeyPtr,
+		);
 	},
 
 	godot_js_is_ime_focused__proxy: "sync",
@@ -862,8 +914,25 @@ const _GodotInput = {
 	godot_js_input_gamepad_cb__proxy: "sync",
 	godot_js_input_gamepad_cb__sig: "vp",
 	godot_js_input_gamepad_cb: (pOnChangeCallbackPtr: CPointer): void => {
-		const onChangeCallback = GodotRuntime.getFunction(pOnChangeCallbackPtr);
-		GodotInputGamepads.initialize(onChangeCallback);
+		const onChangeCallback = GodotRuntime.getFunction<
+			(
+				pIndex: number,
+				pConnected: number,
+				pIdPtr: CPointer,
+				pGuidPtr: CPointer,
+			) => void
+		>(pOnChangeCallbackPtr);
+		const onChangeCallbackWrapper: Parameters<
+			typeof GodotInputGamepads.initialize
+		>[0] = (pPadIndex, pConnected, pIdPtr, pGuidPtr) => {
+			onChangeCallback(
+				pPadIndex,
+				Number(pConnected),
+				pIdPtr ?? NULLPTR,
+				pGuidPtr ?? NULLPTR,
+			);
+		};
+		GodotInputGamepads.initialize(onChangeCallbackWrapper);
 	},
 
 	godot_js_input_gamepad_sample_count__proxy: "sync",
@@ -927,7 +996,9 @@ const _GodotInput = {
 	godot_js_input_drop_files_cb__sig: "vp",
 	godot_js_input_drop_files_cb: (pCallbackPtr: CPointer): void => {
 		const canvas = GodotConfig.canvas;
-		const cCallback = GodotRuntime.getFunction(pCallbackPtr);
+		const callback = GodotRuntime.getFunction<
+			(pFileVPtr: CPointer, pFileC: number) => void
+		>(pCallbackPtr);
 		const dropEventHandler = (files: string[]): void => {
 			const args = files ?? [];
 			if (args.length === 0) {
@@ -935,7 +1006,7 @@ const _GodotInput = {
 			}
 			const argc = args.length;
 			const argv = GodotRuntime.allocStringArray(args);
-			cCallback(argc, argv);
+			callback(argv, argc);
 			GodotRuntime.freeStringArray(argv, argc);
 		};
 
@@ -956,14 +1027,16 @@ const _GodotInput = {
 	godot_js_input_paste_cb__proxy: "sync",
 	godot_js_input_paste_cb__sig: "vp",
 	godot_js_input_paste_cb: (pCallbackPtr: CPointer): void => {
-		const cCallback = GodotRuntime.getFunction(pCallbackPtr);
+		const callback = GodotRuntime.getFunction<
+			(pTextPtr: CPointer) => void
+		>(pCallbackPtr);
 		const pasteEventHandler = (pEvent: ClipboardEvent): void => {
 			const text = pEvent.clipboardData?.getData("text");
 			if (text == null) {
 				return;
 			}
 			const textPtr = GodotRuntime.allocString(text);
-			cCallback(textPtr);
+			callback(textPtr);
 			GodotRuntime.free(textPtr);
 		};
 

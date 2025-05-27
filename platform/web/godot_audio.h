@@ -39,7 +39,8 @@ extern "C" {
 extern int godot_audio_is_available();
 extern int godot_audio_has_worklet();
 extern int godot_audio_has_script_processor();
-extern int godot_audio_init(int *p_mix_rate, int p_latency, void (*_state_cb)(int), void (*_latency_cb)(float));
+extern int godot_audio_init(int *p_mix_rate, int p_latency, void (*_state_cb)(int p_state), void (*_latency_cb)(float p_latency));
+
 extern void godot_audio_resume();
 
 extern int godot_audio_input_start();
@@ -56,7 +57,7 @@ extern int godot_audio_sample_is_active(const char *p_playback_object_id);
 extern double godot_audio_get_sample_playback_position(const char *p_playback_object_id);
 extern void godot_audio_sample_update_pitch_scale(const char *p_playback_object_id, float p_pitch_scale);
 extern void godot_audio_sample_set_volumes_linear(const char *p_playback_object_id, int *p_buses_buf, int p_buses_size, float *p_volumes_buf, int p_volumes_size);
-extern void godot_audio_sample_set_finished_callback(void (*p_callback)(const char *));
+extern void godot_audio_sample_set_finished_callback(void (*p_callback)(const char *p_playback_object_id));
 
 extern void godot_audio_sample_bus_set_count(int p_count);
 extern void godot_audio_sample_bus_remove(int p_index);

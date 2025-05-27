@@ -276,17 +276,23 @@ const _GodotFetch = {
 	},
 
 	godot_js_fetch_read_headers__proxy: "sync",
-	godot_js_fetch_read_headers__sig: "iipi",
+	godot_js_fetch_read_headers__sig: "iipp",
 	godot_js_fetch_read_headers: (
 		pId: IDHandlerId,
 		pParseCallbackPtr: CPointer,
-		pReference: number,
+		pReference: CPointer,
 	): number => {
 		const reference = IDHandler.get<GodotFetchEntry>(pId);
 		if (reference?.response == null) {
 			return 1;
 		}
-		const cCallback = GodotRuntime.getFunction(pParseCallbackPtr);
+		const callback = GodotRuntime.getFunction<
+			(
+				pSize: number,
+				pHeadersPtr: CPointer,
+				pReferencePtr: CPointer,
+			) => void
+		>(pParseCallbackPtr);
 		const headersStringArray: string[] = [];
 		reference.response.headers.forEach((pValue, pKey) => {
 			headersStringArray.push(`${pKey}:${pValue}`);
@@ -294,7 +300,7 @@ const _GodotFetch = {
 		const headersStringArrayPtr = GodotRuntime.allocStringArray(
 			headersStringArray,
 		);
-		cCallback(headersStringArray.length, headersStringArrayPtr, pReference);
+		callback(headersStringArray.length, headersStringArrayPtr, pReference);
 		GodotRuntime.freeStringArray(
 			headersStringArrayPtr,
 			headersStringArray.length,

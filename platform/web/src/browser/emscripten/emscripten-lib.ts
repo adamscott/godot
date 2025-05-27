@@ -46,11 +46,11 @@ export declare const mergeInto: (
 export declare const autoAddDeps: (pTarget: object, pDeps: string) => void;
 
 // Global objects.
-export declare const wasmTable: Map<number, (...args: unknown[]) => unknown>;
+export declare const wasmTable: Map<CPointer, (...args: unknown[]) => unknown>;
 export declare const err: Console["error"];
 export declare const out: Console["log"];
-export declare const _malloc: (pSize: number) => number;
-export declare const _free: (pPtr: number) => void;
+export declare const _malloc: (pSize: number) => CPointer;
+export declare const _free: (pPtr: CPointer) => void;
 
 export type CPointer = CPointerAlias;
 export type CPointerSize = 8 | 16 | 32 | 64;

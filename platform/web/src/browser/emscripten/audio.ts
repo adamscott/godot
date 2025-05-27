@@ -1213,10 +1213,14 @@ const _GodotAudio = {
 		pOnStateChangeCallbackPtr: CPointer,
 		pOnLatencyUpdateCallbackPtr: CPointer,
 	): number => {
-		const onStateChangeCallback = GodotRuntime.getFunction(
+		const onStateChangeCallback = GodotRuntime.getFunction<
+			(pState: number) => void
+		>(
 			pOnStateChangeCallbackPtr,
 		);
-		const onLatencyUpdateCallback = GodotRuntime.getFunction(
+		const onLatencyUpdateCallback = GodotRuntime.getFunction<
+			(pLatency: number) => void
+		>(
 			pOnLatencyUpdateCallbackPtr,
 		);
 		const mixRate = GodotRuntime.getHeapValue(pMixRatePtr, "i32");
@@ -1523,7 +1527,9 @@ const _GodotAudio = {
 	godot_audio_sample_set_finished_callback: (
 		pCallbackPtr: CPointer,
 	): void => {
-		GodotAudio.sampleFinishedCallback = GodotRuntime.getFunction(
+		GodotAudio.sampleFinishedCallback = GodotRuntime.getFunction<
+			(pPlaybackObjectIdPtr: CPointer) => void
+		>(
 			pCallbackPtr,
 		);
 	},
@@ -1807,8 +1813,12 @@ const _GodotAudioWorklet = {
 		pInBufferSize: number,
 		pInCallbackPtr: CPointer,
 	): void => {
-		const outCallback = GodotRuntime.getFunction(pOutCallbackPtr);
-		const inCallback = GodotRuntime.getFunction(pInCallbackPtr);
+		const outCallback = GodotRuntime.getFunction<
+			(pPosition: number, pFrames: number) => void
+		>(pOutCallbackPtr);
+		const inCallback = GodotRuntime.getFunction<
+			(pPosition: number, pFrames: number) => void
+		>(pInCallbackPtr);
 		GodotAudioWorklet.startNoThreads(
 			pOutBufferPtr,
 			pOutBufferSize,

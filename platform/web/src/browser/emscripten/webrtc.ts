@@ -290,25 +290,44 @@ const _GodotRTCDataChannel = {
 	},
 
 	godot_js_rtc_datachannel_connect__proxy: "sync",
-	godot_js_rtc_datachannel_connect__sig: "viipppp",
+	godot_js_rtc_datachannel_connect__sig: "vippppp",
 	godot_js_rtc_datachannel_connect: (
 		pId: IDHandlerId,
-		pReference: number,
+		pReferencePtr: CPointer,
 		pOnOpenCallbackPtr: CPointer,
 		pOnMessageCallbackPtr: CPointer,
 		pOnErrorCallbackPtr: CPointer,
 		pOnCloseCallbackPtr: CPointer,
 	): void => {
-		const onOpenCallback = GodotRuntime.getFunction(pOnOpenCallbackPtr);
-		const onMessageCallback = GodotRuntime.getFunction(
+		const onOpenCallback = GodotRuntime.getFunction<
+			(pReferencePointer: CPointer) => void
+		>(
+			pOnOpenCallbackPtr,
+		);
+		const onMessageCallback = GodotRuntime.getFunction<
+			(
+				pReferencePointer: CPointer,
+				pBufferPtr: CPointer,
+				pBufferSize: number,
+				pIsString: number,
+			) => void
+		>(
 			pOnMessageCallbackPtr,
 		);
-		const onErrorCallback = GodotRuntime.getFunction(pOnErrorCallbackPtr);
-		const onCloseCallback = GodotRuntime.getFunction(pOnCloseCallbackPtr);
+		const onErrorCallback = GodotRuntime.getFunction<
+			(pReferencePointer: CPointer) => void
+		>(
+			pOnErrorCallbackPtr,
+		);
+		const onCloseCallback = GodotRuntime.getFunction<
+			(pReferencePointer: CPointer) => void
+		>(
+			pOnCloseCallbackPtr,
+		);
 
 		const onOpen: Parameters<typeof GodotRTCDataChannel.connect>[1] =
 			() => {
-				onOpenCallback(pReference);
+				onOpenCallback(pReferencePtr);
 			};
 		const onMessage: Parameters<typeof GodotRTCDataChannel.connect>[2] = (
 			pOutPtr,
@@ -316,7 +335,7 @@ const _GodotRTCDataChannel = {
 			pIsString,
 		) => {
 			onMessageCallback(
-				pReference,
+				pReferencePtr,
 				pOutPtr,
 				pOutLength,
 				Number(pIsString),
@@ -324,11 +343,11 @@ const _GodotRTCDataChannel = {
 		};
 		const onError: Parameters<typeof GodotRTCDataChannel.connect>[3] =
 			() => {
-				onErrorCallback(pReference);
+				onErrorCallback(pReferencePtr);
 			};
 		const onClose: Parameters<typeof GodotRTCDataChannel.connect>[4] =
 			() => {
-				onCloseCallback(pReference);
+				onCloseCallback(pReferencePtr);
 			};
 
 		GodotRTCDataChannel.connect(pId, onOpen, onMessage, onError, onClose);
