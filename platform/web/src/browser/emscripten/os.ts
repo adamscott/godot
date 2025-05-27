@@ -37,7 +37,7 @@ import {
 	FS,
 	HEAP8,
 	IDBFS,
-} from "./emscripten-lib.ts";
+} from "./emscripten_lib.ts";
 import { GodotRuntime } from "./runtime.ts";
 
 import type { AnyFunction } from "+shared/types/aliases.ts";

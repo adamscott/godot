@@ -36,7 +36,7 @@ import {
 	CPointer,
 	HEAPU8,
 	NULLPTR,
-} from "./emscripten-lib.ts";
+} from "./emscripten_lib.ts";
 import { GodotRuntime } from "./runtime.ts";
 import { IDHandler, IDHandlerId } from "./os.ts";
 

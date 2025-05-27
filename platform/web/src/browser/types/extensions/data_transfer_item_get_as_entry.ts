@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  dataTransferItemGetAsEntry.ts                                         */
+/*  data_transfer_item_get_as_entry.ts                                    */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */

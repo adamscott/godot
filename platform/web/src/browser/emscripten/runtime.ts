@@ -48,7 +48,7 @@ import {
 	stringToUTF8Array,
 	UTF8ToString,
 	wasmTable,
-} from "./emscripten-lib.ts";
+} from "./emscripten_lib.ts";
 
 import { TypedArray } from "+browser/types/api.ts";
 import { AnyFunction } from "+shared/types/aliases.ts";

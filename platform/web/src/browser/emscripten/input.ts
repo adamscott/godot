@@ -29,7 +29,7 @@
 /**************************************************************************/
 
 import "+browser/lib.ts";
-import "+browser/types/extensions/dataTransferItemGetAsEntry.ts";
+import "+browser/types/extensions/data_transfer_item_get_as_entry.ts";
 
 import {
 	addToLibrary,
@@ -37,7 +37,7 @@ import {
 	CPointer,
 	FS,
 	NULLPTR,
-} from "./emscripten-lib.ts";
+} from "./emscripten_lib.ts";
 import { GodotRuntime } from "./runtime.ts";
 import { GodotConfig, GodotEventListeners, GodotFS, GodotOS } from "./os.ts";
 

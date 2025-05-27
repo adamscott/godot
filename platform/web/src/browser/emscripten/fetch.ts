@@ -35,7 +35,7 @@ import {
 	autoAddDeps,
 	CPointer,
 	HEAP8,
-} from "./emscripten-lib.ts";
+} from "./emscripten_lib.ts";
 import { GodotRuntime } from "./runtime.ts";
 import { IDHandler, IDHandlerId } from "./os.ts";
 

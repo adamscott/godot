@@ -36,7 +36,7 @@ import {
 	CPointer,
 	HEAP32,
 	HEAPF32,
-} from "./emscripten-lib.ts";
+} from "./emscripten_lib.ts";
 import { GodotRuntime } from "./runtime.ts";
 import { GodotConfig, GodotOS } from "./os.ts";
 

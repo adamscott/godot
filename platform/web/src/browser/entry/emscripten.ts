@@ -28,6 +28,6 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-export * from "+browser/emscripten/runtime.ts";
-export * from "+browser/emscripten/os.ts";
-export * from "+browser/emscripten/audio.ts";
+import "+browser/emscripten/runtime.ts";
+// import "+browser/emscripten/os.ts";
+// import "+browser/emscripten/audio.ts";

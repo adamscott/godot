@@ -29,14 +29,14 @@
 /**************************************************************************/
 
 import "+browser/lib.ts";
-import "+browser/types/extensions/midiInputMapMapLike.ts";
+import "+browser/types/extensions/midi_input_map_map_like.ts";
 
 import {
 	addToLibrary,
 	autoAddDeps,
 	CPointer,
 	HEAPU8,
-} from "./emscripten-lib.ts";
+} from "./emscripten_lib.ts";
 import { GodotRuntime } from "./runtime.ts";
 import { GodotEventListeners } from "./os.ts";
 
