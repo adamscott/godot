@@ -30,18 +30,19 @@
 
 import "+browser/lib.ts";
 
-import {
-	addToLibrary,
-	autoAddDeps,
-	CPointer,
-	HEAPU8,
-	NULLPTR,
-} from "./emscripten_lib.ts";
+// __emscripten_import_global_const_start
+import { addToLibrary, autoAddDeps, HEAPU8 } from "./emscripten_lib.ts";
 import { GodotRuntime } from "./runtime.ts";
-import { IDHandler, IDHandlerId } from "./os.ts";
+import { IDHandler } from "./os.ts";
+// __emscripten_import_global_const_end
 
+import { CPointer, NULLPTR } from "./emscripten_lib.ts";
+import { IDHandlerId } from "./os.ts";
+
+// __emscripten_declare_global_const_start
 export declare const GodotRTCDataChannel:
 	typeof _GodotRTCDataChannel.$GodotRTCDataChannel;
+// __emscripten_declare_global_const_end
 const _GodotRTCDataChannel = {
 	// Our socket implementation that forwards events to C++.
 	$GodotRTCDataChannel__deps: ["$IDHandler", "$GodotRuntime"],

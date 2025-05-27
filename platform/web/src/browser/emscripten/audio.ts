@@ -30,19 +30,20 @@
 
 import "+browser/lib.ts";
 
+// __emscripten_import_global_const_start
 import {
 	addToLibrary,
 	autoAddDeps,
-	CPointer,
 	HEAP32,
 	HEAPF32,
 } from "./emscripten_lib.ts";
 import { GodotRuntime } from "./runtime.ts";
 import { GodotConfig, GodotOS } from "./os.ts";
+// __emscripten_import_global_const_end
+
+import { CPointer } from "./emscripten_lib.ts";
 
 import { throwIfNull } from "+shared/utils/error.ts";
-
-export declare const GodotAudio: typeof _GodotAudio.$GodotAudio;
 
 export type LoopMode = "disabled" | "forward" | "backward" | "pingpong";
 
@@ -888,6 +889,9 @@ class Bus {
 	}
 }
 
+// __emscripten_declare_global_const_start
+export declare const GodotAudio: typeof _GodotAudio.$GodotAudio;
+// __emscripten_declare_global_const_end
 const _GodotAudio = {
 	$GodotAudio__deps: ["$GodotRuntime", "$GodotOS"],
 	$GodotAudio: {
@@ -1639,8 +1643,10 @@ class RingBuffer {
 	}
 }
 
+// __emscripten_declare_global_const_start
 export declare const GodotAudioWorklet:
 	typeof _GodotAudioWorklet.$GodotAudioWorklet;
+// __emscripten_declare_global_const_end
 const _GodotAudioWorklet = {
 	$GodotAudioWorklet__deps: ["$GodotAudio", "$GodotConfig"],
 	$GodotAudioWorklet: {

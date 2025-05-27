@@ -37,9 +37,13 @@ import * as esbuild from "npm:esbuild";
 import { resolveToEsbuildTarget } from "npm:esbuild-plugin-browserslist";
 import { sassPlugin } from "npm:esbuild-sass-plugin";
 
-import { denoPlugins } from "jsr:@luca/esbuild-deno-loader";
+import {
+	denoLoaderPlugin,
+	denoResolverPlugin,
+} from "jsr:@luca/esbuild-deno-loader";
 
 import { errorAndExit } from "+deno/os.ts";
+import { emscriptenGlobalConstTransformPlugin } from "./plugins/emscripten_global_const_transform.ts";
 
 const defaultTarget = resolveToEsbuildTarget(
 	browserslist([
@@ -80,7 +84,11 @@ export async function buildJavaScriptTarget(
 	const { target, sourceMap } = settings;
 
 	const result = await esbuild.build({
-		plugins: [...denoPlugins()],
+		plugins: [
+			denoResolverPlugin(),
+			emscriptenGlobalConstTransformPlugin(),
+			denoLoaderPlugin(),
+		],
 		entryPoints: entryPoints.map(prefixEntryPoint),
 		entryNames: "[name]-[hash]",
 		metafile: true,

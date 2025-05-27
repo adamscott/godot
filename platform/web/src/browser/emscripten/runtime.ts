@@ -30,13 +30,12 @@
 
 import "+browser/lib.ts";
 
+// __emscripten_import_global_const_start
 import {
 	_free,
 	_malloc,
 	addToLibrary,
 	autoAddDeps,
-	CPointer,
-	CPointerType,
 	err,
 	getValue,
 	HEAP32,
@@ -49,11 +48,16 @@ import {
 	UTF8ToString,
 	wasmTable,
 } from "./emscripten_lib.ts";
+// __emscripten_import_global_const_end
+
+import { CPointer, CPointerType } from "./emscripten_lib.ts";
 
 import { TypedArray } from "+browser/types/api.ts";
 import { AnyFunction } from "+shared/types/aliases.ts";
 
+// __emscripten_declare_global_const_start
 export declare const GodotRuntime: typeof _GodotRuntime.$GodotRuntime;
+// __emscripten_declare_global_const_end
 const _GodotRuntime = {
 	$GodotRuntime: {
 		// Functions.

@@ -31,16 +31,17 @@
 import "+browser/lib.ts";
 import "+browser/types/extensions/midi_input_map_map_like.ts";
 
-import {
-	addToLibrary,
-	autoAddDeps,
-	CPointer,
-	HEAPU8,
-} from "./emscripten_lib.ts";
+// __emscripten_import_global_const_start
+import { addToLibrary, autoAddDeps, HEAPU8 } from "./emscripten_lib.ts";
 import { GodotRuntime } from "./runtime.ts";
 import { GodotEventListeners } from "./os.ts";
+// __emscripten_import_global_const_end
 
+import { CPointer } from "./emscripten_lib.ts";
+
+// __emscripten_declare_global_const_start
 export declare const GodotWebMidi: typeof _GodotWebMidi.$GodotWebMidi;
+// __emscripten_declare_global_const_end
 const _GodotWebMidi = {
 	$GodotWebMidi__deps: ["$GodotRuntime"],
 	$GodotWebMidi: {

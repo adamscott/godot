@@ -30,22 +30,27 @@
 
 import "+browser/lib.ts";
 
+// __emscripten_import_global_const_start
 import {
 	addToLibrary,
 	autoAddDeps,
-	CPointer,
 	FS,
 	HEAP8,
 	IDBFS,
 } from "./emscripten_lib.ts";
 import { GodotRuntime } from "./runtime.ts";
+// __emscripten_import_global_const_end
 
-import type { AnyFunction } from "+shared/types/aliases.ts";
-import type { ConfigOptions } from "+browser/types/config.ts";
+import { CPointer } from "./emscripten_lib.ts";
+
+import { AnyFunction } from "+shared/types/aliases.ts";
+import { ConfigOptions } from "+browser/types/config.ts";
 
 export type IDHandlerId = number;
 
+// __emscripten_declare_global_const_start
 export declare const IDHandler: typeof _IDHandler.$IDHandler;
+// __emscripten_declare_global_const_end
 const _IDHandler = {
 	$IDHandler: {
 		_lastId: 0 as IDHandlerId,
@@ -69,7 +74,9 @@ const _IDHandler = {
 autoAddDeps(_IDHandler, "$IDHandler");
 addToLibrary(_IDHandler);
 
+// __emscripten_declare_global_const_start
 export declare const GodotConfig: typeof _GodotConfig.$GodotConfig;
+// __emscripten_declare_global_const_end
 const _GodotConfig = {
 	// TODO: Rename Module to GodotEngine
 	$GodotConfig__postset: 'Module["initConfig"] = GodotConfig.init_config;',
@@ -148,7 +155,9 @@ const _GodotConfig = {
 autoAddDeps(_GodotConfig, "$GodotConfig");
 addToLibrary(_GodotConfig);
 
+// __emscripten_declare_global_const_start
 export declare const GodotFS: typeof _GodotFS.$GodotFS;
+// __emscripten_declare_global_const_end
 const _GodotFS = {
 	$GodotFS__deps: ["$FS", "$IDBFS", "$GodotRuntime"],
 	$GodotFS__postset: [
@@ -185,7 +194,7 @@ const _GodotFS = {
 				} catch (error) {
 					if (
 						(error as (typeof FS.ErrnoError) | null)?.errno !==
-							GodotFS.ENOENT
+						GodotFS.ENOENT
 					) {
 						GodotRuntime.error(error);
 					}
@@ -262,7 +271,7 @@ const _GodotFS = {
 			} catch (error) {
 				if (
 					(error as (typeof FS.ErrnoError) | null)?.errno !==
-						GodotFS.ENOENT
+					GodotFS.ENOENT
 				) {
 					GodotRuntime.error(error);
 				}
@@ -288,7 +297,9 @@ export type GodotOSOS =
 	| "Haiku"
 	| "Unknown";
 
+// __emscripten_declare_global_const_start
 export declare const GodotOS: typeof _GodotOS.$GodotOS;
+// __emscripten_declare_global_const_end
 const _GodotOS = {
 	$GodotOS__deps: ["$GodotRuntime", "$GodotConfig", "$GodotFS"],
 	$GodotOS__postset: [
@@ -297,7 +308,7 @@ const _GodotOS = {
 		"GodotOS._fs_sync_promise = Promise.resolve();",
 	].join(""),
 	$GodotOS: {
-		requestQuit: () => {},
+		requestQuit: () => { },
 		_asyncCallbacks: [] as Array<() => Promise<void>>,
 		_fsSyncPromise: null as unknown as Promise<Error | null>,
 
@@ -515,8 +526,10 @@ class Handler {
 	}
 }
 
+// __emscripten_declare_global_const_start
 export declare const GodotEventListeners:
 	typeof _GodotEventListeners.$GodotEventListeners;
+// __emscripten_declare_global_const_end
 const _GodotEventListeners = {
 	$GodotEventListeners__deps: ["$GodotOS"],
 	$GodotEventListeners__postset:
@@ -563,7 +576,9 @@ const _GodotEventListeners = {
 autoAddDeps(_GodotEventListeners, "$GodotEventListeners");
 addToLibrary(_GodotEventListeners);
 
+// __emscripten_declare_global_const_start
 export declare const GodotPWA: typeof _GodotPWA.$GodotPWA;
+// __emscripten_declare_global_const_end
 const _GodotPWA = {
 	$GodotPWA__deps: ["$GodotRuntime", "$GodotEventListeners"],
 	$GodotPWA: {

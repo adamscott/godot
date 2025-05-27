@@ -30,16 +30,16 @@
 
 import "+browser/lib.ts";
 
-import {
-	addToLibrary,
-	autoAddDeps,
-	CPointer,
-	HEAP8,
-} from "./emscripten_lib.ts";
+// __emscripten_import_global_const_start
+import { addToLibrary, autoAddDeps, HEAP8 } from "./emscripten_lib.ts";
 import { GodotRuntime } from "./runtime.ts";
-import { IDHandler, IDHandlerId } from "./os.ts";
+import { IDHandler } from "./os.ts";
+// __emscripten_import_global_const_end
 
 import { TypedArray } from "+browser/types/api.ts";
+
+import { CPointer } from "./emscripten_lib.ts";
+import { IDHandlerId } from "./os.ts";
 
 export interface GodotFetchEntry {
 	request: Promise<Response> | null;
@@ -54,7 +54,9 @@ export interface GodotFetchEntry {
 	chunks: Uint8Array<ArrayBufferLike>[];
 }
 
+// __emscripten_declare_global_const_start
 export declare const GodotFetch: typeof _GodotFetch.$GodotFetch;
+// __emscripten_declare_global_const_end
 const _GodotFetch = {
 	$GodotFetch__deps: ["$IDHandler", "$GodotRuntime"],
 	$GodotFetch: {

@@ -38,19 +38,23 @@ export interface ErrnoError extends Error {
 	errno: number;
 }
 
+// __emscripten_declare_global_const_start
 export declare const addToLibrary: (pElementToAdd: object) => void;
 export declare const mergeInto: (
 	pElement: object,
 	pElementToAdd: object,
 ) => void;
 export declare const autoAddDeps: (pTarget: object, pDeps: string) => void;
+// __emscripten_declare_global_const_end
 
+// __emscripten_declare_global_const_start
 // Global objects.
 export declare const wasmTable: Map<CPointer, (...args: unknown[]) => unknown>;
 export declare const err: Console["error"];
 export declare const out: Console["log"];
 export declare const _malloc: (pSize: number) => CPointer;
 export declare const _free: (pPtr: CPointer) => void;
+// __emscripten_declare_global_const_end
 
 export type CPointer = CPointerAlias;
 export type CPointerSize = 8 | 16 | 32 | 64;
@@ -64,13 +68,13 @@ export type CPointerType =
 	| "*";
 export const NULLPTR = 0 as CPointer;
 
+// __emscripten_declare_global_const_start
 export declare const getValue: (pPtr: CPointer, pType: CPointerType) => number;
 export declare const setValue: (
 	pPtr: CPointer,
 	pValue: number,
 	pType: CPointerType,
 ) => void;
-
 export declare const UTF8ToString: (pPtr: CPointer) => string;
 export declare const lengthBytesUTF8: (pString: string) => number;
 export declare const stringToUTF8: (
@@ -84,7 +88,9 @@ export declare const stringToUTF8Array: (
 	pPtr: CPointer,
 	pLength: number,
 ) => number;
+// __emscripten_declare_global_const_end
 
+// __emscripten_declare_global_const_start
 export declare const HEAP8: Int8Array;
 export declare const HEAP16: Int16Array;
 export declare const HEAP32: Int32Array;
@@ -93,7 +99,9 @@ export declare const HEAPU16: Uint16Array;
 export declare const HEAPU32: Uint32Array;
 export declare const HEAPF32: Float32Array;
 export declare const HEAPF64: Float64Array;
+// __emscripten_declare_global_const_end
 
+// __emscripten_declare_global_const_start
 export declare const FS: {
 	mkdir: (pPath: string, pMode?: number) => void;
 	mkdirTree: (pPath: string, pMode?: number) => void;
@@ -140,6 +148,9 @@ export declare const IDBFS: {
 		pCallback: (pError: Error) => void,
 	) => void;
 };
+// __emscripten_declare_global_const_end
 
+// __emscripten_declare_global_const_start
 // TODO: Remove in favor of the new ESM engine module.
 export declare const Module: object;
+// __emscripten_declare_global_const_end

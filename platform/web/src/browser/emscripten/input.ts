@@ -31,15 +31,13 @@
 import "+browser/lib.ts";
 import "+browser/types/extensions/data_transfer_item_get_as_entry.ts";
 
-import {
-	addToLibrary,
-	autoAddDeps,
-	CPointer,
-	FS,
-	NULLPTR,
-} from "./emscripten_lib.ts";
+// __emscripten_import_global_const_start
+import { addToLibrary, autoAddDeps, CPointer, FS } from "./emscripten_lib.ts";
 import { GodotRuntime } from "./runtime.ts";
 import { GodotConfig, GodotEventListeners, GodotFS, GodotOS } from "./os.ts";
+// __emscripten_import_global_const_end
+
+import { NULLPTR } from "./emscripten_lib.ts";
 
 const getModifiers = (pEvent: KeyboardEvent | MouseEvent): number => {
 	return (Number(pEvent.shiftKey) << 0) +
@@ -53,7 +51,9 @@ export const GodotIMECompositionType = Object.freeze({
 	end: 2,
 });
 
+// __emscripten_declare_global_const_start
 export declare const GodotIME: typeof _GodotIME.$GodotIME;
+// __emscripten_declare_global_const_end
 const _GodotIME = {
 	$GodotIME__deps: ["$GodotRuntime", "$GodotEventListeners"],
 	$GodotIME__postset: "GodotOS.atExit(async () => { GodotIME.clear(); });",
@@ -117,7 +117,7 @@ const _GodotIME = {
 						}
 						break;
 					default:
-						// Do nothing.
+					// Do nothing.
 				}
 			};
 
@@ -253,8 +253,10 @@ export interface GodotInputGamepadSample {
 	connected: boolean;
 }
 
+// __emscripten_declare_global_const_start
 export declare const GodotInputGamepads:
 	typeof _GodotInputGamepads.$GodotInputGamepads;
+// __emscripten_declare_global_const_end
 const _GodotInputGamepads = {
 	$GodotInputGamepads__deps: ["$GodotRuntime", "$GodotEventListeners"],
 	$GodotInputGamepads: {
@@ -371,7 +373,7 @@ const _GodotInputGamepads = {
 			let product = "";
 			const [match] = Array.from(
 				id.matchAll(chromiumRegExp) ??
-					id.matchAll(nonChromiumRegExp ?? []),
+				id.matchAll(nonChromiumRegExp ?? []),
 			);
 			if (match != null) {
 				vendor = match[1].padStart(4, "0");
@@ -405,8 +407,10 @@ export interface GodotInputFile {
  * NOTE: The temporary files are removed after the callback. This means that
  * deferred callbacks won't be able to access the files.
  */
+// __emscripten_declare_global_const_start
 export declare const GodotInputDragDrop:
 	typeof _GodotInputDragDrop.$GodotInputDragDrop;
+// __emscripten_declare_global_const_end
 const _GodotInputDragDrop = {
 	$GodotInputDragDrop__deps: ["$FS", "$GodotFS"],
 	$GodotInputDragDrop: {
@@ -500,9 +504,8 @@ const _GodotInputDragDrop = {
 				GodotInputDragDrop.addEntry(entry);
 			}
 			Promise.allSettled(GodotInputDragDrop._promises).then(() => {
-				const dropTemporaryDirectoryPath = `/tmp/drop-${
-					(Math.random() * (1 << 30)).toString(10)
-				}/`;
+				const dropTemporaryDirectoryPath = `/tmp/drop-${(Math.random() * (1 << 30)).toString(10)
+					}/`;
 				const dropPaths = [] as string[];
 				const filePaths = [] as string[];
 
@@ -525,8 +528,8 @@ const _GodotInputDragDrop = {
 						if (
 							index < 0 &&
 							dropPaths.indexOf(
-									dropTemporaryDirectoryPath + subdirectory,
-								) === -1
+								dropTemporaryDirectoryPath + subdirectory,
+							) === -1
 						) {
 							dropPaths.push(
 								dropTemporaryDirectoryPath + subdirectory,
@@ -584,7 +587,9 @@ export const GodotInputTouchType = Object.freeze({
 	cancel: 2,
 	move: 3,
 });
+// __emscripten_declare_global_const_start
 export declare const GodotInput: typeof _GodotInput.$GodotInput;
+// __emscripten_declare_global_const_end
 const _GodotInput = {
 	$GodotInput__deps: [
 		"$GodotRuntime",
@@ -751,7 +756,7 @@ const _GodotInput = {
 				GodotRuntime.setHeapValue(
 					(pCoordsPtr +
 						(i * 2 + 1) *
-							Float64Array.BYTES_PER_ELEMENT) as CPointer,
+						Float64Array.BYTES_PER_ELEMENT) as CPointer,
 					position[1],
 					"double",
 				);

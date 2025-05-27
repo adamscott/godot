@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  emscripten.ts                                                         */
+/*  emscripten_global_const_transform.ts                                  */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,12 +28,52 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import "+browser/emscripten/runtime.ts";
-import "+browser/emscripten/os.ts";
+import "+deno/lib.ts";
 
-import "+browser/emscripten/audio.ts";
-import "+browser/emscripten/fetch.ts";
-import "+browser/emscripten/input.ts";
-import "+browser/emscripten/webrtc.ts";
+import * as esbuild from "npm:esbuild";
 
-import "+browser/emscripten/webmidi.ts";
+import { dirname } from "jsr:@std/path";
+
+export function emscriptenGlobalConstTransformPlugin(): esbuild.Plugin {
+	return {
+		name: "emscripten-global-const-transform-plugin",
+		setup: (pBuild) => {
+			const onTsLoad: Parameters<esbuild.PluginBuild["onLoad"]>[1] =
+				async (pArgs) => {
+					let fileContents = await Deno.readTextFile(pArgs.path);
+
+					fileContents = fileContents.replaceAll(
+						/^\/\/ __emscripten_import_global_const_start\n(.+?)\n^\/\/ __emscripten_import_global_const_end/gms,
+						(_pSubstring, pGroupOne: string): string => {
+							return new Array(pGroupOne.split("\n").length + 2)
+								.map((_) => "\n").join("");
+						},
+					);
+
+					fileContents = fileContents.replaceAll(
+						/^\/\/ __emscripten_declare_global_const_start\n(.+?)\n^\/\/ __emscripten_declare_global_const_end/gms,
+						(_pSubstring, pGroupOne: string): string => {
+							return "declare global {\n" + pGroupOne + "\n}\n";
+						},
+					);
+
+					return {
+						contents: fileContents,
+						loader: "ts",
+						resolveDir: dirname(pArgs.path),
+					};
+				};
+
+			for (const onLoadNamespace of ["file", "http", "https"]) {
+				pBuild.onLoad(
+					{
+						// platform/web/src/browser/**.ts
+						filter: /\/platform\/web\/src\/browser\/.+?\.ts$/,
+						namespace: onLoadNamespace,
+					},
+					onTsLoad,
+				);
+			}
+		},
+	};
+}
