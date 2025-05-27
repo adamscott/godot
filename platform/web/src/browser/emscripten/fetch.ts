@@ -28,15 +28,33 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import "./lib.ts";
-import "./runtime.ts";
-import "./os.ts";
+import "+browser/lib.ts";
+
+import {
+	addToLibrary,
+	autoAddDeps,
+	CPointer,
+	HEAP8,
+} from "./emscripten-lib.ts";
+import { GodotRuntime } from "./runtime.ts";
+import { IDHandler, IDHandlerId } from "./os.ts";
 
 import { TypedArray } from "+browser/types/api.ts";
 
-declare global {
-	const GodotFetch: typeof _GodotFetch.$GodotFetch;
+export interface GodotFetchEntry {
+	request: Promise<Response> | null;
+	response: Response | null;
+	abortController: AbortController | null;
+	reader: ReadableStreamDefaultReader<Uint8Array<ArrayBufferLike>> | null;
+	error: Error | null;
+	done: boolean;
+	reading: boolean;
+	status: number;
+	chunked: boolean;
+	chunks: Uint8Array<ArrayBufferLike>[];
 }
+
+export declare const GodotFetch: typeof _GodotFetch.$GodotFetch;
 const _GodotFetch = {
 	$GodotFetch__deps: ["$IDHandler", "$GodotRuntime"],
 	$GodotFetch: {
@@ -44,7 +62,7 @@ const _GodotFetch = {
 			pId: IDHandlerId,
 			pResult: ReadableStreamReadResult<Uint8Array<ArrayBufferLike>>,
 		): void => {
-			const reference = IDHandler.get(pId);
+			const reference = IDHandler.get<GodotFetchEntry>(pId);
 			if (reference == null) {
 				return;
 			}
@@ -56,7 +74,7 @@ const _GodotFetch = {
 		},
 
 		onResponse: (pId: IDHandlerId, pResponse: Response): void => {
-			const reference = IDHandler.get(pId);
+			const reference = IDHandler.get<GodotFetchEntry>(pId);
 			if (reference == null) {
 				return;
 			}
@@ -97,7 +115,7 @@ const _GodotFetch = {
 			}
 
 			GodotRuntime.error(pError);
-			const reference = IDHandler.get(pId);
+			const reference = IDHandler.get<GodotFetchEntry>(pId);
 			if (reference == null) {
 				return;
 			}
@@ -110,7 +128,7 @@ const _GodotFetch = {
 			pHeaders: HeadersInit,
 			pBody: TypedArray | null,
 		): IDHandlerId => {
-			const reference: IDHandlerReference = {
+			const reference: GodotFetchEntry = {
 				request: null,
 				response: null,
 				abortController: null,
@@ -138,7 +156,7 @@ const _GodotFetch = {
 		},
 
 		free: (pId: IDHandlerId): void => {
-			const reference = IDHandler.get(pId);
+			const reference = IDHandler.get<GodotFetchEntry>(pId);
 			if (reference == null) {
 				return;
 			}
@@ -152,7 +170,7 @@ const _GodotFetch = {
 		},
 
 		read: (pId: IDHandlerId): void => {
-			const reference = IDHandler.get(pId);
+			const reference = IDHandler.get<GodotFetchEntry>(pId);
 			if (reference == null) {
 				return;
 			}
@@ -221,7 +239,7 @@ const _GodotFetch = {
 	godot_js_fetch_state_get__proxy: "sync",
 	godot_js_fetch_state_get__sig: "ii",
 	godot_js_fetch_state_get: (pId: IDHandlerId): number => {
-		const reference = IDHandler.get(pId);
+		const reference = IDHandler.get<GodotFetchEntry>(pId);
 		if (reference == null) {
 			return -1;
 		}
@@ -250,7 +268,7 @@ const _GodotFetch = {
 	godot_js_fetch_http_status_get__proxy: "sync",
 	godot_js_fetch_http_status_get__sig: "ii",
 	godot_js_fetch_http_status_get: (pId: IDHandlerId): number => {
-		const reference = IDHandler.get(pId);
+		const reference = IDHandler.get<GodotFetchEntry>(pId);
 		if (reference?.response == null) {
 			return 0;
 		}
@@ -264,7 +282,7 @@ const _GodotFetch = {
 		pParseCallbackPtr: CPointer,
 		pReference: number,
 	): number => {
-		const reference = IDHandler.get(pId);
+		const reference = IDHandler.get<GodotFetchEntry>(pId);
 		if (reference?.response == null) {
 			return 1;
 		}
@@ -291,7 +309,7 @@ const _GodotFetch = {
 		pBufferPtr: CPointer,
 		pBufferSize: number,
 	): number => {
-		const reference = IDHandler.get(pId);
+		const reference = IDHandler.get<GodotFetchEntry>(pId);
 		if (reference?.response == null) {
 			return 0;
 		}
@@ -326,7 +344,7 @@ const _GodotFetch = {
 	godot_js_fetch_is_chunked__proxy: "sync",
 	godot_js_fetch_is_chunked__sig: "ii",
 	godot_js_fetch_is_chunked: (pId: IDHandlerId): number => {
-		const reference = IDHandler.get(pId);
+		const reference = IDHandler.get<GodotFetchEntry>(pId);
 		if (reference?.response == null) {
 			return -1;
 		}

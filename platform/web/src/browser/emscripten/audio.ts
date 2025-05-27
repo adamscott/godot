@@ -28,9 +28,17 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import "./lib.ts";
-import "./runtime.ts";
-import "./os.ts";
+import "+browser/lib.ts";
+
+import {
+	addToLibrary,
+	autoAddDeps,
+	CPointer,
+	HEAP32,
+	HEAPF32,
+} from "./emscripten-lib.ts";
+import { GodotRuntime } from "./runtime.ts";
+import { GodotConfig, GodotOS } from "./os.ts";
 
 import { throwIfNull } from "+shared/utils/error.ts";
 
@@ -946,7 +954,7 @@ const _GodotAudio = {
 			return Math.exp(pDb * 0.11512925464970228420089957273422);
 		},
 
-		init: (
+		initialize: (
 			pMixRate: number,
 			_pLatency: number,
 			pOnStateChange: (pState: number) => void,
@@ -1198,24 +1206,28 @@ const _GodotAudio = {
 	},
 
 	godot_audio_init__proxy: "sync",
-	godot_audio_init__sig: "iiiii",
+	godot_audio_init__sig: "ipipp",
 	godot_audio_init: (
-		pMixRate: number,
+		pMixRatePtr: CPointer,
 		pLatency: number,
-		pStateChange: number,
-		pLatencyUpdate: number,
+		pOnStateChangeCallbackPtr: CPointer,
+		pOnLatencyUpdateCallbackPtr: CPointer,
 	): number => {
-		const stateChange = GodotRuntime.getFunc(pStateChange);
-		const latencyUpdate = GodotRuntime.getFunc(pLatencyUpdate);
-		const mixRate = GodotRuntime.getHeapValue(pMixRate, "i32");
-		const channels = GodotAudio.init(
+		const onStateChangeCallback = GodotRuntime.getFunction(
+			pOnStateChangeCallbackPtr,
+		);
+		const onLatencyUpdateCallback = GodotRuntime.getFunction(
+			pOnLatencyUpdateCallbackPtr,
+		);
+		const mixRate = GodotRuntime.getHeapValue(pMixRatePtr, "i32");
+		const channels = GodotAudio.initialize(
 			mixRate,
 			pLatency,
-			stateChange,
-			latencyUpdate,
+			onStateChangeCallback,
+			onLatencyUpdateCallback,
 		);
 		GodotRuntime.setHeapValue(
-			pMixRate,
+			pMixRatePtr,
 			GodotAudio.context.sampleRate,
 			"i32",
 		);
@@ -1225,7 +1237,10 @@ const _GodotAudio = {
 	godot_audio_resume__proxy: "sync",
 	godot_audio_resume__sig: "v",
 	godot_audio_resume: (): void => {
-		if (GodotAudio.context && GodotAudio.context.state !== "running") {
+		if (GodotAudio.context == null) {
+			return;
+		}
+		if (GodotAudio.context.state !== "running") {
 			GodotAudio.context.resume();
 		}
 	},
@@ -1508,7 +1523,9 @@ const _GodotAudio = {
 	godot_audio_sample_set_finished_callback: (
 		pCallbackPtr: CPointer,
 	): void => {
-		GodotAudio.sampleFinishedCallback = GodotRuntime.getFunc(pCallbackPtr);
+		GodotAudio.sampleFinishedCallback = GodotRuntime.getFunction(
+			pCallbackPtr,
+		);
 	},
 };
 autoAddDeps(_GodotAudio, "$GodotAudio");
@@ -1616,9 +1633,8 @@ class RingBuffer {
 	}
 }
 
-declare global {
-	const GodotAudioWorklet: typeof _GodotAudioWorklet.$GodotAudioWorklet;
-}
+export declare const GodotAudioWorklet:
+	typeof _GodotAudioWorklet.$GodotAudioWorklet;
 const _GodotAudioWorklet = {
 	$GodotAudioWorklet__deps: ["$GodotAudio", "$GodotConfig"],
 	$GodotAudioWorklet: {
@@ -1791,8 +1807,8 @@ const _GodotAudioWorklet = {
 		pInBufferSize: number,
 		pInCallbackPtr: CPointer,
 	): void => {
-		const outCallback = GodotRuntime.getFunc(pOutCallbackPtr);
-		const inCallback = GodotRuntime.getFunc(pInCallbackPtr);
+		const outCallback = GodotRuntime.getFunction(pOutCallbackPtr);
+		const inCallback = GodotRuntime.getFunction(pInCallbackPtr);
 		GodotAudioWorklet.startNoThreads(
 			pOutBufferPtr,
 			pOutBufferSize,

@@ -28,9 +28,12 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import "./lib.ts";
-import "./runtime.ts";
-import "./os.ts";
+import "+browser/lib.ts";
+import "+browser/types/extensions/dataTransferItemGetAsEntry.ts";
+
+import { addToLibrary, autoAddDeps, CPointer, FS } from "./emscripten-lib.ts";
+import { GodotRuntime } from "./runtime.ts";
+import { GodotConfig, GodotEventListeners, GodotFS, GodotOS } from "./os.ts";
 
 const getModifiers = (pEvent: KeyboardEvent | MouseEvent): number => {
 	return (Number(pEvent.shiftKey) << 0) +
@@ -38,15 +41,13 @@ const getModifiers = (pEvent: KeyboardEvent | MouseEvent): number => {
 		(Number(pEvent.metaKey) << 3);
 };
 
-const GodotIMECompositionType = Object.freeze({
+export const GodotIMECompositionType = Object.freeze({
 	start: 0,
 	update: 1,
 	end: 2,
 });
 
-declare global {
-	const GodotIME: typeof _GodotIME.$GodotIME;
-}
+export declare const GodotIME: typeof _GodotIME.$GodotIME;
 const _GodotIME = {
 	$GodotIME__deps: ["$GodotRuntime", "$GodotEventListeners"],
 	$GodotIME__postset: "GodotOS.atExit(async () => { GodotIME.clear(); });",
@@ -246,9 +247,8 @@ export interface GodotInputGamepadSample {
 	connected: boolean;
 }
 
-declare global {
-	const GodotInputGamepads: typeof _GodotInputGamepads.$GodotInputGamepads;
-}
+export declare const GodotInputGamepads:
+	typeof _GodotInputGamepads.$GodotInputGamepads;
 const _GodotInputGamepads = {
 	$GodotInputGamepads__deps: ["$GodotRuntime", "$GodotEventListeners"],
 	$GodotInputGamepads: {
@@ -381,7 +381,7 @@ const _GodotInputGamepads = {
 autoAddDeps(_GodotInputGamepads, "$GodotInputGamepads");
 addToLibrary(_GodotInputGamepads);
 
-interface GodotInputFile {
+export interface GodotInputFile {
 	path: string;
 	name: string;
 	type: string;
@@ -399,9 +399,8 @@ interface GodotInputFile {
  * NOTE: The temporary files are removed after the callback. This means that
  * deferred callbacks won't be able to access the files.
  */
-declare global {
-	const GodotInputDragDrop: typeof _GodotInputDragDrop.$GodotInputDragDrop;
-}
+export declare const GodotInputDragDrop:
+	typeof _GodotInputDragDrop.$GodotInputDragDrop;
 const _GodotInputDragDrop = {
 	$GodotInputDragDrop__deps: ["$FS", "$GodotFS"],
 	$GodotInputDragDrop: {
@@ -573,15 +572,13 @@ const _GodotInputDragDrop = {
 autoAddDeps(_GodotInputDragDrop, "$GodotInputDragDrop");
 addToLibrary(_GodotInputDragDrop);
 
-const GodotInputTouchType = Object.freeze({
+export const GodotInputTouchType = Object.freeze({
 	start: 0,
 	end: 1,
 	cancel: 2,
 	move: 3,
 });
-declare global {
-	const GodotInput: typeof _GodotInput.$GodotInput;
-}
+export declare const GodotInput: typeof _GodotInput.$GodotInput;
 const _GodotInput = {
 	$GodotInput__deps: [
 		"$GodotRuntime",

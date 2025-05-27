@@ -28,13 +28,31 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import "./lib.ts";
+import "+browser/lib.ts";
+
+import {
+	_free,
+	_malloc,
+	addToLibrary,
+	autoAddDeps,
+	CPointer,
+	CPointerType,
+	err,
+	getValue,
+	HEAP32,
+	HEAP8,
+	lengthBytesUTF8,
+	out,
+	setValue,
+	stringToUTF8,
+	stringToUTF8Array,
+	UTF8ToString,
+	wasmTable,
+} from "./emscripten-lib.ts";
+
 import type { TypedArray } from "+browser/types/api.ts";
 
-declare global {
-	const GodotRuntime: typeof _GodotRuntime.$GodotRuntime;
-}
-
+export declare const GodotRuntime: typeof _GodotRuntime.$GodotRuntime;
 const _GodotRuntime = {
 	$GodotRuntime: {
 		// Functions.

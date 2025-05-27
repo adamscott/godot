@@ -28,116 +28,117 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import "./lib.ts";
+import "+browser/lib.ts";
 
 import type { CPointer as CPointerAlias } from "+shared/types/aliases.ts";
 
 import type { TypedArray } from "+browser/types/api.ts";
 
-interface ErrnoError extends Error {
+export interface ErrnoError extends Error {
 	errno: number;
 }
 
-declare global {
-	const addToLibrary: (pElementToAdd: object) => void;
-	const mergeInto: (pElement: object, pElementToAdd: object) => void;
-	const autoAddDeps: (pTarget: object, pDeps: string) => void;
+export declare const addToLibrary: (pElementToAdd: object) => void;
+export declare const mergeInto: (
+	pElement: object,
+	pElementToAdd: object,
+) => void;
+export declare const autoAddDeps: (pTarget: object, pDeps: string) => void;
 
-	// Global objects.
-	const wasmTable: Map<number, (...args: unknown[]) => unknown>;
-	const err: Console["error"];
-	const out: Console["log"];
-	const _malloc: (pSize: number) => number;
-	const _free: (pPtr: number) => void;
+// Global objects.
+export declare const wasmTable: Map<number, (...args: unknown[]) => unknown>;
+export declare const err: Console["error"];
+export declare const out: Console["log"];
+export declare const _malloc: (pSize: number) => number;
+export declare const _free: (pPtr: number) => void;
 
-	type CPointer = CPointerAlias;
-	type CPointerSize = 8 | 16 | 32 | 64;
-	type SignedIntegerCPointerType = `i${CPointerSize}`;
-	type UnsignedIntegerCPointerType = `u${CPointerSize}`;
-	type FloatCPointerType = "f32" | "float" | "f64" | "double";
-	export type CPointerType =
-		| SignedIntegerCPointerType
-		| UnsignedIntegerCPointerType
-		| FloatCPointerType
-		| "*";
+export type CPointer = CPointerAlias;
+export type CPointerSize = 8 | 16 | 32 | 64;
+export type SignedIntegerCPointerType = `i${CPointerSize}`;
+export type UnsignedIntegerCPointerType = `u${CPointerSize}`;
+export type FloatCPointerType = "f32" | "float" | "f64" | "double";
+export type CPointerType =
+	| SignedIntegerCPointerType
+	| UnsignedIntegerCPointerType
+	| FloatCPointerType
+	| "*";
 
-	const getValue: (pPtr: CPointer, pType: CPointerType) => number;
-	const setValue: (
-		pPtr: CPointer,
-		pValue: number,
-		pType: CPointerType,
+export declare const getValue: (pPtr: CPointer, pType: CPointerType) => number;
+export declare const setValue: (
+	pPtr: CPointer,
+	pValue: number,
+	pType: CPointerType,
+) => void;
+
+export declare const UTF8ToString: (pPtr: CPointer) => string;
+export declare const lengthBytesUTF8: (pString: string) => number;
+export declare const stringToUTF8: (
+	pString: string,
+	pStringPtr: CPointer,
+	pLength: number,
+) => number;
+export declare const stringToUTF8Array: (
+	pString: string,
+	pArray: TypedArray,
+	pPtr: CPointer,
+	pLength: number,
+) => number;
+
+export declare const HEAP8: Int8Array;
+export declare const HEAP16: Int16Array;
+export declare const HEAP32: Int32Array;
+export declare const HEAPU8: Uint8Array;
+export declare const HEAPU16: Uint16Array;
+export declare const HEAPU32: Uint32Array;
+export declare const HEAPF32: Float32Array;
+export declare const HEAPF64: Float64Array;
+
+export declare const FS: {
+	mkdir: (pPath: string, pMode?: number) => void;
+	mkdirTree: (pPath: string, pMode?: number) => void;
+	mount: (pType: object, pOpts: object, pMountPoint: string) => void;
+	rmdir: (pDir: string) => void;
+	stat: (
+		pPath: string,
+		pDontFollow?: boolean,
+	) => {
+		dev: number;
+		ino: number;
+		mode: number;
+		nlink: number;
+		uid: number;
+		gid: number;
+		rdev: number;
+		size: number;
+		atime: number;
+		mtime: number;
+		ctime: number;
+		blksize: number;
+		blocks: number;
+	};
+	syncfs: (
+		pPopulate: boolean | ((pErrCode: Error) => void),
+		pCallback: (pErrCode: Error) => void,
 	) => void;
+	unlink: (pPath: string) => void;
+	unmount: (pPath: string) => void;
+	writeFile: (
+		pPath: string,
+		pTypedArray: TypedArray,
+		pOptions?: { flags?: number },
+	) => void;
+	ErrnoError: ErrnoError;
+};
 
-	const UTF8ToString: (pPtr: CPointer) => string;
-	const lengthBytesUTF8: (pString: string) => number;
-	const stringToUTF8: (
-		pString: string,
-		pStringPtr: CPointer,
-		pLength: number,
-	) => number;
-	const stringToUTF8Array: (
-		pString: string,
-		pArray: TypedArray,
-		pPtr: CPointer,
-		pLength: number,
-	) => number;
+export declare const IDBFS: {
+	dbs: Record<string, IDBDatabase>;
+	mount: (pMount: string) => unknown;
+	syncfs: (
+		pMount: string,
+		pPopulate: boolean,
+		pCallback: (pError: Error) => void,
+	) => void;
+};
 
-	const HEAP8: Int8Array;
-	const HEAP16: Int16Array;
-	const HEAP32: Int32Array;
-	const HEAPU8: Uint8Array;
-	const HEAPU16: Uint16Array;
-	const HEAPU32: Uint32Array;
-	const HEAPF32: Float32Array;
-	const HEAPF64: Float64Array;
-
-	const FS: {
-		mkdir: (pPath: string, pMode?: number) => void;
-		mkdirTree: (pPath: string, pMode?: number) => void;
-		mount: (pType: object, pOpts: object, pMountPoint: string) => void;
-		rmdir: (pDir: string) => void;
-		stat: (
-			pPath: string,
-			pDontFollow?: boolean,
-		) => {
-			dev: number;
-			ino: number;
-			mode: number;
-			nlink: number;
-			uid: number;
-			gid: number;
-			rdev: number;
-			size: number;
-			atime: number;
-			mtime: number;
-			ctime: number;
-			blksize: number;
-			blocks: number;
-		};
-		syncfs: (
-			pPopulate: boolean | ((pErrCode: Error) => void),
-			pCallback: (pErrCode: Error) => void,
-		) => void;
-		unlink: (pPath: string) => void;
-		unmount: (pPath: string) => void;
-		writeFile: (
-			pPath: string,
-			pTypedArray: TypedArray,
-			pOptions?: { flags?: number },
-		) => void;
-		ErrnoError: ErrnoError;
-	};
-
-	const IDBFS: {
-		dbs: Record<string, IDBDatabase>;
-		mount: (pMount: string) => unknown;
-		syncfs: (
-			pMount: string,
-			pPopulate: boolean,
-			pCallback: (pError: Error) => void,
-		) => void;
-	};
-
-	// TODO: Remove in favor of the new ESM engine module.
-	const Module: object;
-}
+// TODO: Remove in favor of the new ESM engine module.
+export declare const Module: object;

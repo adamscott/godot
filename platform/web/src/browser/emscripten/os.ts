@@ -28,41 +28,34 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import "./lib.ts";
-import "./runtime.ts";
+import "+browser/lib.ts";
+
+import {
+	addToLibrary,
+	autoAddDeps,
+	CPointer,
+	FS,
+	HEAP8,
+	IDBFS,
+} from "./emscripten-lib.ts";
+import { GodotRuntime } from "./runtime.ts";
 
 import type { AnyFunction } from "+shared/types/aliases.ts";
 import type { ConfigOptions } from "+browser/types/config.ts";
 
-declare global {
-	type IDHandlerId = number;
-	interface IDHandlerReference {
-		request: Promise<Response> | null;
-		response: Response | null;
-		abortController: AbortController | null;
-		reader: ReadableStreamDefaultReader<Uint8Array<ArrayBufferLike>> | null;
-		error: Error | null;
-		done: boolean;
-		reading: boolean;
-		status: number;
-		chunked: boolean;
-		chunks: Uint8Array<ArrayBufferLike>[];
-	}
-}
+export type IDHandlerId = number;
 
-declare global {
-	const IDHandler: typeof _IDHandler.$IDHandler;
-}
+export declare const IDHandler: typeof _IDHandler.$IDHandler;
 const _IDHandler = {
 	$IDHandler: {
 		_lastId: 0 as IDHandlerId,
-		_references: {} as Record<number, IDHandlerReference>,
+		_references: {} as Record<number, unknown>,
 
-		get: (pId: IDHandlerId): IDHandlerReference => {
-			return IDHandler._references[pId];
+		get: <T extends unknown>(pId: IDHandlerId): T | null => {
+			return IDHandler._references[pId] as T | null;
 		},
 
-		add: (pData: IDHandlerReference): number => {
+		add: (pData: unknown): number => {
 			const id = ++IDHandler._lastId;
 			IDHandler._references[id] = pData;
 			return id;
@@ -76,9 +69,7 @@ const _IDHandler = {
 autoAddDeps(_IDHandler, "$IDHandler");
 addToLibrary(_IDHandler);
 
-declare global {
-	const GodotConfig: typeof _GodotConfig.$GodotConfig;
-}
+export declare const GodotConfig: typeof _GodotConfig.$GodotConfig;
 const _GodotConfig = {
 	// TODO: Rename Module to GodotEngine
 	$GodotConfig__postset: 'Module["initConfig"] = GodotConfig.init_config;',
@@ -157,9 +148,7 @@ const _GodotConfig = {
 autoAddDeps(_GodotConfig, "$GodotConfig");
 addToLibrary(_GodotConfig);
 
-declare global {
-	const GodotFS: typeof _GodotFS.$GodotFS;
-}
+export declare const GodotFS: typeof _GodotFS.$GodotFS;
 const _GodotFS = {
 	$GodotFS__deps: ["$FS", "$IDBFS", "$GodotRuntime"],
 	$GodotFS__postset: [
@@ -198,7 +187,7 @@ const _GodotFS = {
 						(error as (typeof FS.ErrnoError) | null)?.errno !==
 							GodotFS.ENOENT
 					) {
-						GodotRuntime.error(err);
+						GodotRuntime.error(error);
 					}
 					FS.mkdirTree(pDirectory);
 				}
@@ -286,7 +275,7 @@ const _GodotFS = {
 autoAddDeps(_GodotFS, "$GodotFS");
 addToLibrary(_GodotFS);
 
-export type OS =
+export type GodotOSOS =
 	| "Android"
 	| "Linux"
 	| "iOS"
@@ -294,12 +283,12 @@ export type OS =
 	| "Windows"
 	| "ChromeOS"
 	| "FreeBSD"
-	| "*BSD"
+	| "NetBSD"
+	| "OpenBSD"
+	| "Haiku"
 	| "Unknown";
 
-declare global {
-	const GodotOS: typeof _GodotOS.$GodotOS;
-}
+export declare const GodotOS: typeof _GodotOS.$GodotOS;
 const _GodotOS = {
 	$GodotOS__deps: ["$GodotRuntime", "$GodotConfig", "$GodotFS"],
 	$GodotOS__postset: [
@@ -337,9 +326,9 @@ const _GodotOS = {
 			setTimeout(() => pCallback(), 0);
 		},
 
-		getCurrentOS: (): OS => {
+		getCurrentOS: (): GodotOSOS => {
 			const userAgent = navigator.userAgent;
-			let operatingSystem: OS = "Unknown";
+			let operatingSystem: GodotOSOS = "Unknown";
 			if (userAgent.indexOf("Android") >= 0) {
 				operatingSystem = "Android";
 			} else if (userAgent.indexOf("Linux") >= 0) {
@@ -354,12 +343,14 @@ const _GodotOS = {
 				operatingSystem = "macOS";
 			} else if (userAgent.indexOf("Windows") >= 0) {
 				operatingSystem = "Windows";
-			} else if (userAgent.indexOf("BSD") >= 0) {
-				if (userAgent.indexOf("FreeBSD") >= 0) {
-					operatingSystem = "FreeBSD";
-				} else {
-					operatingSystem = "*BSD";
-				}
+			} else if (userAgent.indexOf("FreeBSD") >= 0) {
+				operatingSystem = "FreeBSD";
+			} else if (userAgent.indexOf("NetBSD") >= 0) {
+				operatingSystem = "NetBSD";
+			} else if (userAgent.indexOf("OpenBSD") >= 0) {
+				operatingSystem = "OpenBSD";
+			} else if (userAgent.indexOf("Haiku") >= 0) {
+				operatingSystem = "Haiku";
 			} else if (userAgent.indexOf("CrOS") >= 0) {
 				operatingSystem = "ChromeOS";
 			}
@@ -416,9 +407,12 @@ const _GodotOS = {
 			switch (GodotOS.getCurrentOS()) {
 				case "Linux":
 				case "FreeBSD":
-				case "*BSD":
+				case "OpenBSD":
+				case "NetBSD":
+				case "Haiku":
 				case "ChromeOS":
 					return 1;
+
 				case "Unknown": {
 					const userAgent = navigator.userAgent;
 					return Number(userAgent.indexOf("X11") >= 0);
@@ -520,9 +514,8 @@ class Handler {
 	}
 }
 
-declare global {
-	const GodotEventListeners: typeof _GodotEventListeners.$GodotEventListeners;
-}
+export declare const GodotEventListeners:
+	typeof _GodotEventListeners.$GodotEventListeners;
 const _GodotEventListeners = {
 	$GodotEventListeners__deps: ["$GodotOS"],
 	$GodotEventListeners__postset:
@@ -569,9 +562,7 @@ const _GodotEventListeners = {
 autoAddDeps(_GodotEventListeners, "$GodotEventListeners");
 addToLibrary(_GodotEventListeners);
 
-declare global {
-	const GodotPWA: typeof _GodotPWA.$GodotPWA;
-}
+export declare const GodotPWA: typeof _GodotPWA.$GodotPWA;
 const _GodotPWA = {
 	$GodotPWA__deps: ["$GodotRuntime", "$GodotEventListeners"],
 	$GodotPWA: {
