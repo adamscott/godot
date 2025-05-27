@@ -132,8 +132,8 @@ const _GodotRuntime = {
 		},
 
 		// Memory.
-		malloc: (pSize: number): CPointer => {
-			return _malloc(pSize) as CPointer;
+		malloc: <T extends CPointer>(pSize: number): T => {
+			return _malloc(pSize) as T;
 		},
 
 		free: (pPtr: CPointer): void => {
