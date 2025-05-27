@@ -36,9 +36,12 @@
 extern "C" {
 #endif
 
+typedef void (*WebMIDIOpenMIDIInputsCallback)(const char **p_connected_input_names, int p_connected_input_names_size);
+typedef void (*WebMIDIOpenMIDIInputsOnMIDIMessageCallback)(int p_device_index, int p_status, const uint8_t *p_data, int p_data_len);
+
 extern int godot_js_webmidi_open_midi_inputs(
-		void (*p_callback)(const char **p_connected_input_names, int p_connected_input_names_size),
-		void (*p_on_midi_message)(int p_device_index, int p_status, const uint8_t *p_data, int p_data_len),
+		WebMIDIOpenMIDIInputsCallback p_callback,
+		WebMIDIOpenMIDIInputsOnMIDIMessageCallback p_on_midi_message_callback,
 		const uint8_t *p_data_buffer,
 		const int p_data_buffer_len);
 

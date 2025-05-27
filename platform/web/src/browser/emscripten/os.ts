@@ -41,12 +41,23 @@ import {
 import { GodotRuntime } from "./runtime.ts";
 // __emscripten_import_global_const_end
 
-import { CPointer } from "./emscripten_lib.ts";
+import {
+	CCharPointer,
+	CInt,
+	CUintPointer,
+	CVoidPointer,
+} from "./emscripten_lib.ts";
 
 import { AnyFunction } from "+shared/types/aliases.ts";
 import { ConfigOptions } from "+browser/types/config.ts";
 
 export type IDHandlerId = number;
+
+type OSFinishAsyncCallback = () => void;
+type OSRequestQuitCbCallback = () => void;
+type OSFSSyncCallback = () => void;
+
+type PWACbCallback = () => void;
 
 // __emscripten_declare_global_const_start
 export declare const IDHandler: typeof _IDHandler.$IDHandler;
@@ -137,19 +148,22 @@ const _GodotConfig = {
 		},
 	},
 
+	godot_js_config_locale_get__proxy: "sync",
+	godot_js_config_locale_get__sig: "vpi",
+	godot_js_config_locale_get: (pPtr: CCharPointer, pMaxSize: CInt): void => {
+		GodotRuntime.stringToHeap(GodotConfig.locale, pPtr, pMaxSize);
+	},
+
 	godot_js_config_canvas_id_get__proxy: "sync",
 	godot_js_config_canvas_id_get__sig: "vpi",
-	godot_js_config_canvas_id_get: (pPtr: CPointer, pMaxSize: number): void => {
+	godot_js_config_canvas_id_get: (
+		pPtr: CCharPointer,
+		pMaxSize: CInt,
+	): void => {
 		if (GodotConfig.canvas == null) {
 			throw new Error("Canvas is null.");
 		}
 		GodotRuntime.stringToHeap(`#${GodotConfig.canvas.id}`, pPtr, pMaxSize);
-	},
-
-	godot_js_config_locale_get__proxy: "sync",
-	godot_js_config_locale_get__sig: "vpi",
-	godot_js_config_locale_get: (pPtr: CPointer, pMaxSize: number): void => {
-		GodotRuntime.stringToHeap(GodotConfig.locale, pPtr, pMaxSize);
 	},
 };
 autoAddDeps(_GodotConfig, "$GodotConfig");
@@ -194,7 +208,7 @@ const _GodotFS = {
 				} catch (error) {
 					if (
 						(error as (typeof FS.ErrnoError) | null)?.errno !==
-						GodotFS.ENOENT
+							GodotFS.ENOENT
 					) {
 						GodotRuntime.error(error);
 					}
@@ -271,7 +285,7 @@ const _GodotFS = {
 			} catch (error) {
 				if (
 					(error as (typeof FS.ErrnoError) | null)?.errno !==
-					GodotFS.ENOENT
+						GodotFS.ENOENT
 				) {
 					GodotRuntime.error(error);
 				}
@@ -297,6 +311,15 @@ export type GodotOSOS =
 	| "Haiku"
 	| "Unknown";
 
+const cIntStatus = Object.freeze({
+	OK: 0 as CInt,
+	FAILED: 1 as CInt,
+});
+const cIntBoolean = Object.freeze({
+	TRUE: 0 as CInt,
+	FALSE: 1 as CInt,
+});
+
 // __emscripten_declare_global_const_start
 export declare const GodotOS: typeof _GodotOS.$GodotOS;
 // __emscripten_declare_global_const_end
@@ -308,9 +331,12 @@ const _GodotOS = {
 		"GodotOS._fs_sync_promise = Promise.resolve();",
 	].join(""),
 	$GodotOS: {
-		requestQuit: () => { },
+		requestQuit: () => {},
 		_asyncCallbacks: [] as Array<() => Promise<void>>,
 		_fsSyncPromise: null as unknown as Promise<Error | null>,
+
+		status: cIntStatus,
+		boolean: cIntBoolean,
 
 		atExit: (pPromiseCallback: () => Promise<void>): void => {
 			GodotOS._asyncCallbacks.push(pPromiseCallback);
@@ -371,28 +397,34 @@ const _GodotOS = {
 
 	godot_js_os_finish_async__proxy: "sync",
 	godot_js_os_finish_async__sig: "vp",
-	godot_js_os_finish_async: (pCallbackPtr: CPointer): void => {
-		const callback = GodotRuntime.getFunction<() => void>(pCallbackPtr);
+	godot_js_os_finish_async: (pCallbackPtr: CVoidPointer): void => {
+		const callback = GodotRuntime.getFunction<OSFinishAsyncCallback>(
+			pCallbackPtr,
+		);
 		GodotOS.finishAsync(() => callback());
 	},
 
 	godot_js_os_request_quit_cb__proxy: "sync",
 	godot_js_os_request_quit_cb__sig: "vp",
-	godot_js_os_request_quit_cb: (pCallbackPtr: CPointer): void => {
-		const callback = GodotRuntime.getFunction<() => void>(pCallbackPtr);
+	godot_js_os_request_quit_cb: (pCallbackPtr: CVoidPointer): void => {
+		const callback = GodotRuntime.getFunction<OSRequestQuitCbCallback>(
+			pCallbackPtr,
+		);
 		GodotOS.requestQuit = callback;
 	},
 
 	godot_js_os_fs_is_persistent__proxy: "sync",
 	godot_js_os_fs_is_persistent__sig: "i",
-	godot_js_os_fs_is_persistent: (): number => {
-		return Number(GodotFS.isPersistent());
+	godot_js_os_fs_is_persistent: (): CInt => {
+		return Number(GodotFS.isPersistent()) as CInt;
 	},
 
 	godot_js_os_fs_sync__proxy: "sync",
 	godot_js_os_fs_sync__sig: "vp",
-	godot_js_os_fs_sync: (pCallbackPtr: CPointer): void => {
-		const callback = GodotRuntime.getFunction<() => void>(pCallbackPtr);
+	godot_js_os_fs_sync: (pCallbackPtr: CVoidPointer): void => {
+		const callback = GodotRuntime.getFunction<OSFSSyncCallback>(
+			pCallbackPtr,
+		);
 		GodotOS._fsSyncPromise = GodotFS.sync();
 		GodotOS._fsSyncPromise.then((_error): void => {
 			callback();
@@ -401,19 +433,19 @@ const _GodotOS = {
 
 	godot_js_os_has_feature__proxy: "sync",
 	godot_js_os_has_feature__sig: "ip",
-	godot_js_os_has_feature: (pFeaturePtr: CPointer): number => {
+	godot_js_os_has_feature: (pFeaturePtr: CCharPointer): CInt => {
 		const feature = GodotRuntime.parseString(pFeaturePtr);
 		if (feature === "web_android") {
-			return Number(GodotOS.getCurrentOS() === "Android");
+			return Number(GodotOS.getCurrentOS() === "Android") as CInt;
 		}
 		if (feature === "web_ios") {
-			return Number(GodotOS.getCurrentOS() === "iOS");
+			return Number(GodotOS.getCurrentOS() === "iOS") as CInt;
 		}
 		if (feature === "web_macos") {
-			return Number(GodotOS.getCurrentOS() === "macOS");
+			return Number(GodotOS.getCurrentOS() === "macOS") as CInt;
 		}
 		if (feature === "web_windows") {
-			return Number(GodotOS.getCurrentOS() === "Windows");
+			return Number(GodotOS.getCurrentOS() === "Windows") as CInt;
 		}
 		if (feature === "web_linuxbsd") {
 			switch (GodotOS.getCurrentOS()) {
@@ -423,53 +455,57 @@ const _GodotOS = {
 				case "NetBSD":
 				case "Haiku":
 				case "ChromeOS":
-					return 1;
+					return GodotOS.boolean.TRUE;
 
 				case "Unknown": {
 					const userAgent = navigator.userAgent;
-					return Number(userAgent.indexOf("X11") >= 0);
+					if (userAgent.indexOf("X11") < 0) {
+						return GodotOS.boolean.FALSE;
+					}
+					return GodotOS.boolean.TRUE;
 				}
 
 				default:
-					return 0;
+					return GodotOS.boolean.FALSE;
 			}
 		}
-		return 0;
+
+		return GodotOS.boolean.FALSE;
 	},
 
 	godot_js_os_execute__proxy: "sync",
 	godot_js_os_execute__sig: "ip",
-	godot_js_os_execute: (pJsonPtr: CPointer): number => {
+	godot_js_os_execute: (pJsonPtr: CCharPointer): CInt => {
 		const jsonRaw = GodotRuntime.parseString(pJsonPtr);
 		const args = JSON.parse(jsonRaw);
-		if (GodotConfig.onExecute) {
-			GodotConfig.onExecute(args);
-			return 0;
+		if (GodotConfig.onExecute == null) {
+			return GodotOS.status.FAILED;
 		}
-		return 1;
+		GodotConfig.onExecute(args);
+		return GodotOS.status.OK;
 	},
 
 	godot_js_os_shell_open__proxy: "sync",
 	godot_js_os_shell_open__sig: "vp",
-	godot_js_os_shell_open: (pUriPtr: CPointer): void => {
+	godot_js_os_shell_open: (pUriPtr: CCharPointer): void => {
 		globalThis.open(GodotRuntime.parseString(pUriPtr), "_blank");
 	},
 
 	godot_js_os_hw_concurrency_get__proxy: "sync",
 	godot_js_os_hw_concurrency_get__sig: "i",
-	godot_js_os_hw_concurrency_get: (): number => {
+	godot_js_os_hw_concurrency_get: (): CInt => {
 		// TODO Godot core needs fixing to avoid spawning too many threads (> 24).
-		const concurrency = navigator.hardwareConcurrency || 1;
-		return concurrency < 2 ? concurrency : 2;
+		const concurrency = navigator.hardwareConcurrency ?? 1;
+		return Math.min(concurrency, 2) as CInt;
 	},
 
 	godot_js_os_download_buffer__proxy: "sync",
 	godot_js_os_download_buffer__sig: "vpipp",
 	godot_js_os_download_buffer: (
-		pBufferPtr: CPointer,
-		pBufferSize: number,
-		pBufferNamePtr: CPointer,
-		pBufferMimePtr: CPointer,
+		pBufferPtr: CUintPointer,
+		pBufferSize: CInt,
+		pBufferNamePtr: CCharPointer,
+		pBufferMimePtr: CCharPointer,
 	): void => {
 		const buffer = GodotRuntime.heapSlice(HEAP8, pBufferPtr, pBufferSize);
 		const name = GodotRuntime.parseString(pBufferNamePtr);
@@ -609,10 +645,10 @@ const _GodotPWA = {
 
 	godot_js_pwa_cb__proxy: "sync",
 	godot_js_pwa_cb__sig: "vp",
-	godot_js_pwa_cb: (pUpdateCallbackPtr: CPointer): void => {
+	godot_js_pwa_cb: (pUpdateCallbackPtr: CVoidPointer): void => {
 		if ("serviceWorker" in navigator) {
 			try {
-				const callback = GodotRuntime.getFunction<() => void>(
+				const callback = GodotRuntime.getFunction<PWACbCallback>(
 					pUpdateCallbackPtr,
 				);
 				navigator.serviceWorker.getRegistration().then(
@@ -631,7 +667,7 @@ const _GodotPWA = {
 
 	godot_js_pwa_update__proxy: "sync",
 	godot_js_pwa_update__sig: "i",
-	godot_js_pwa_update: (): number => {
+	godot_js_pwa_update: (): CInt => {
 		if ("serviceWorker" in navigator && GodotPWA.hasUpdate) {
 			try {
 				navigator.serviceWorker.getRegistration().then(
@@ -644,11 +680,11 @@ const _GodotPWA = {
 				);
 			} catch (error) {
 				GodotRuntime.error(error);
-				return 1;
+				return GodotOS.status.FAILED;
 			}
-			return 0;
+			return GodotOS.status.OK;
 		}
-		return 1;
+		return GodotOS.status.FAILED;
 	},
 };
 autoAddDeps(_GodotPWA, "$GodotPWA");

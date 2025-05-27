@@ -37,7 +37,23 @@ import { GodotRuntime } from "./runtime.ts";
 import { GodotEventListeners } from "./os.ts";
 // __emscripten_import_global_const_end
 
-import { CPointer } from "./emscripten_lib.ts";
+import {
+	CCharArrayPointer,
+	CInt,
+	CUintPointer,
+	CVoidPointer,
+} from "./emscripten_lib.ts";
+
+type WebMIDIOpenMIDIInputsCallback = (
+	pConnectedInputNamesPtr: CCharArrayPointer,
+	pConnectedInputNamesSize: CInt,
+) => void;
+type WebMIDIOpenMIDIInputsOnMIDIMessageCallback = (
+	pDeviceIndex: CInt,
+	pStatus: CInt,
+	pDataPtr: CUintPointer,
+	pDataLength: CInt,
+) => void;
 
 // __emscripten_declare_global_const_start
 export declare const GodotWebMidi: typeof _GodotWebMidi.$GodotWebMidi;
@@ -52,29 +68,26 @@ const _GodotWebMidi = {
 	godot_js_webmidi_open_midi_inputs__deps: ["$GodotWebMidi"],
 	godot_js_webmidi_open_midi_inputs__proxy: "sync",
 	godot_js_webmidi_open_midi_inputs__sig: "ipppi",
-	godot_js_webmidi_open_midi_inputs: function (
-		pSetInputNamesCallbackPtr: CPointer,
-		pOnMidiMessageCallbackPtr: CPointer,
-		pDataBufferPtr: CPointer,
-		pDataBufferLength: number,
-	) {
+	godot_js_webmidi_open_midi_inputs: (
+		pSetInputNamesCallbackPtr: CVoidPointer,
+		pOnMidiMessageCallbackPtr: CVoidPointer,
+		pDataBufferPtr: CUintPointer,
+		pDataBufferLength: CInt,
+	): CInt => {
 		if (GodotWebMidi.isListening) {
-			return 0; // OK.
+			// OK.
+			return 0 as CInt;
 		}
 		if (!("requestMIDIAccess" in navigator)) {
-			return 2; // ERR_UNAVAILABLE.
+			// ERR_UNAVAILABLE.
+			return 2 as CInt;
 		}
 
 		const setInputNamesCallback = GodotRuntime.getFunction<
-			(pConnectedInputNamesPtr: CPointer, pSize: number) => void
+			WebMIDIOpenMIDIInputsCallback
 		>(pSetInputNamesCallbackPtr);
 		const onMidiMessageCallback = GodotRuntime.getFunction<
-			(
-				pDeviceIndex: number,
-				pStatus: number,
-				pDataPtr: CPointer,
-				pDataLength: number,
-			) => void
+			WebMIDIOpenMIDIInputsOnMIDIMessageCallback
 		>(pOnMidiMessageCallbackPtr);
 
 		GodotWebMidi.isListening = true;
@@ -83,7 +96,7 @@ const _GodotWebMidi = {
 			const inputNames = inputs.map((pInput) => pInput.name ?? "");
 
 			const inputNamesPtr = GodotRuntime.allocStringArray(inputNames);
-			setInputNamesCallback(inputNamesPtr, inputNames.length);
+			setInputNamesCallback(inputNamesPtr, inputNames.length as CInt);
 			GodotRuntime.freeStringArray(inputNamesPtr, inputNames.length);
 
 			for (const [i, input] of inputs.entries()) {
@@ -112,18 +125,19 @@ const _GodotWebMidi = {
 						HEAPU8.set(data, pDataBufferPtr);
 
 						onMidiMessageCallback(
-							i,
-							status,
+							i as CInt,
+							status as CInt,
 							pDataBufferPtr,
-							data.length,
+							data.length as CInt,
 						);
 					},
 					{ signal: abortController.signal },
 				);
-
-				return 0; // OK.
 			}
 		});
+
+		// OK.
+		return 0 as CInt;
 	},
 
 	godot_js_webmidi_close_midi_inputs__proxy: "sync",

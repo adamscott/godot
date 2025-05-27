@@ -29,5 +29,13 @@
 /**************************************************************************/
 
 declare const __brand: unique symbol;
+declare const __subBrand: unique symbol;
+declare const __subSubBrand: unique symbol;
 
 export type Brand<T, B> = T & { [__brand]: B };
+export type SubBrand<T, B, S> = Brand<T, B> & {
+	[__subBrand]: S;
+};
+export type SubSubBrand<T, B, S, SS> = SubBrand<T, B, S> & {
+	[__subSubBrand]: SS;
+};

@@ -38,7 +38,13 @@ import { IDHandler } from "./os.ts";
 
 import { TypedArray } from "+browser/types/api.ts";
 
-import { CPointer } from "./emscripten_lib.ts";
+import {
+	CCharArrayPointer,
+	CCharPointer,
+	CInt,
+	CUintPointer,
+	CVoidPointer,
+} from "./emscripten_lib.ts";
 import { IDHandlerId } from "./os.ts";
 
 export interface GodotFetchEntry {
@@ -53,6 +59,12 @@ export interface GodotFetchEntry {
 	chunked: boolean;
 	chunks: Uint8Array<ArrayBufferLike>[];
 }
+
+type FetchReadHeadersParseCallback = (
+	pSize: CInt,
+	pHeadersPtr: CCharArrayPointer,
+	pReference: CVoidPointer,
+) => void;
 
 // __emscripten_declare_global_const_start
 export declare const GodotFetch: typeof _GodotFetch.$GodotFetch;
@@ -200,15 +212,15 @@ const _GodotFetch = {
 	},
 
 	godot_js_fetch_create__proxy: "sync",
-	godot_js_fetch_create__sig: "iiiiiii",
+	godot_js_fetch_create__sig: "ipppipi",
 	godot_js_fetch_create: (
-		pMethodPtr: CPointer,
-		pUrlPtr: CPointer,
-		pHeadersPtr: CPointer,
-		pHeadersSize: number,
-		pBodyPtr: CPointer,
-		pBodySize: number,
-	): number => {
+		pMethodPtr: CCharPointer,
+		pUrlPtr: CCharPointer,
+		pHeadersPtr: CCharArrayPointer,
+		pHeadersSize: CInt,
+		pBodyPtr: CUintPointer,
+		pBodySize: CInt,
+	): CInt => {
 		const method = GodotRuntime.parseString(pMethodPtr);
 		const url = GodotRuntime.parseString(pUrlPtr);
 		const headerStrings = GodotRuntime.parseStringArray(
@@ -235,21 +247,21 @@ const _GodotFetch = {
 				return pHeaderKeyValue.length == 2;
 			},
 		);
-		return GodotFetch.create(method, url, headerKeyValues, body);
+		return GodotFetch.create(method, url, headerKeyValues, body) as CInt;
 	},
 
 	godot_js_fetch_state_get__proxy: "sync",
 	godot_js_fetch_state_get__sig: "ii",
-	godot_js_fetch_state_get: (pId: IDHandlerId): number => {
+	godot_js_fetch_state_get: (pId: CInt): CInt => {
 		const reference = IDHandler.get<GodotFetchEntry>(pId);
 		if (reference == null) {
-			return -1;
+			return -1 as CInt;
 		}
 		if (reference.error != null) {
-			return -1;
+			return -1 as CInt;
 		}
 		if (reference.response == null) {
-			return 0;
+			return 0 as CInt;
 		}
 
 		// If the reader is nullish, but there is no body, and the request is not marked as done,
@@ -259,41 +271,37 @@ const _GodotFetch = {
 			reference.reader != null ||
 			(reference.response?.body == null && !reference.done)
 		) {
-			return 1;
+			return 1 as CInt;
 		}
 		if (reference.done) {
-			return 2;
+			return 2 as CInt;
 		}
-		return -1;
+		return -1 as CInt;
 	},
 
 	godot_js_fetch_http_status_get__proxy: "sync",
 	godot_js_fetch_http_status_get__sig: "ii",
-	godot_js_fetch_http_status_get: (pId: IDHandlerId): number => {
+	godot_js_fetch_http_status_get: (pId: CInt): CInt => {
 		const reference = IDHandler.get<GodotFetchEntry>(pId);
 		if (reference?.response == null) {
-			return 0;
+			return 0 as CInt;
 		}
-		return reference.status;
+		return reference.status as CInt;
 	},
 
 	godot_js_fetch_read_headers__proxy: "sync",
 	godot_js_fetch_read_headers__sig: "iipp",
 	godot_js_fetch_read_headers: (
-		pId: IDHandlerId,
-		pParseCallbackPtr: CPointer,
-		pReference: CPointer,
-	): number => {
+		pId: CInt,
+		pParseCallbackPtr: CVoidPointer,
+		pReference: CVoidPointer,
+	): CInt => {
 		const reference = IDHandler.get<GodotFetchEntry>(pId);
 		if (reference?.response == null) {
-			return 1;
+			return 1 as CInt;
 		}
-		const callback = GodotRuntime.getFunction<
-			(
-				pSize: number,
-				pHeadersPtr: CPointer,
-				pReferencePtr: CPointer,
-			) => void
+		const parseCallback = GodotRuntime.getFunction<
+			FetchReadHeadersParseCallback
 		>(pParseCallbackPtr);
 		const headersStringArray: string[] = [];
 		reference.response.headers.forEach((pValue, pKey) => {
@@ -302,24 +310,28 @@ const _GodotFetch = {
 		const headersStringArrayPtr = GodotRuntime.allocStringArray(
 			headersStringArray,
 		);
-		callback(headersStringArray.length, headersStringArrayPtr, pReference);
+		parseCallback(
+			headersStringArray.length as CInt,
+			headersStringArrayPtr,
+			pReference,
+		);
 		GodotRuntime.freeStringArray(
 			headersStringArrayPtr,
 			headersStringArray.length,
 		);
-		return 0;
+		return 0 as CInt;
 	},
 
 	godot_js_fetch_read_chunk__proxy: "sync",
 	godot_js_fetch_read_chunk__sig: "iipi",
 	godot_js_fetch_read_chunk: (
-		pId: IDHandlerId,
-		pBufferPtr: CPointer,
+		pId: CInt,
+		pBufferPtr: CUintPointer,
 		pBufferSize: number,
-	): number => {
+	): CInt => {
 		const reference = IDHandler.get<GodotFetchEntry>(pId);
 		if (reference?.response == null) {
-			return 0;
+			return 0 as CInt;
 		}
 		let toRead = pBufferSize;
 		const chunks = reference.chunks;
@@ -346,23 +358,23 @@ const _GodotFetch = {
 			GodotFetch.read(pId);
 		}
 
-		return pBufferSize - toRead;
+		return pBufferSize - toRead as CInt;
 	},
 
 	godot_js_fetch_is_chunked__proxy: "sync",
 	godot_js_fetch_is_chunked__sig: "ii",
-	godot_js_fetch_is_chunked: (pId: IDHandlerId): number => {
+	godot_js_fetch_is_chunked: (pId: CInt): CInt => {
 		const reference = IDHandler.get<GodotFetchEntry>(pId);
 		if (reference?.response == null) {
-			return -1;
+			return -1 as CInt;
 		}
 
-		return Number(reference.chunked);
+		return Number(reference.chunked) as CInt;
 	},
 
 	godot_js_fetch_free__proxy: "sync",
 	godot_js_fetch_free__sig: "vi",
-	godot_js_fetch_free: (pId: IDHandlerId): void => {
+	godot_js_fetch_free: (pId: CInt): void => {
 		GodotFetch.free(pId);
 	},
 };

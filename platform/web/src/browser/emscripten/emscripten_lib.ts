@@ -30,9 +30,39 @@
 
 import "+browser/lib.ts";
 
-import type { CPointer as CPointerAlias } from "+shared/types/aliases.ts";
+import type {
+	CCharArrayPointer,
+	CCharPointer,
+	CDouble,
+	CDoublePointer,
+	CFloat,
+	CFloatArrayPointer,
+	CFloatPointer,
+	CInt,
+	CIntPointer,
+	CPointer,
+	CUint,
+	CUintPointer,
+	CVoidPointer,
+} from "+shared/types/aliases.ts";
 
 import type { TypedArray } from "+browser/types/api.ts";
+
+export {
+	CCharArrayPointer,
+	CCharPointer,
+	CDouble,
+	CDoublePointer,
+	CFloat,
+	CFloatArrayPointer,
+	CFloatPointer,
+	CInt,
+	CIntPointer,
+	CPointer,
+	CUint,
+	CUintPointer,
+	CVoidPointer,
+};
 
 export interface ErrnoError extends Error {
 	errno: number;
@@ -56,7 +86,6 @@ export declare const _malloc: (pSize: number) => CPointer;
 export declare const _free: (pPtr: CPointer) => void;
 // __emscripten_declare_global_const_end
 
-export type CPointer = CPointerAlias;
 export type CPointerSize = 8 | 16 | 32 | 64;
 export type SignedIntegerCPointerType = `i${CPointerSize}`;
 export type UnsignedIntegerCPointerType = `u${CPointerSize}`;
@@ -66,7 +95,6 @@ export type CPointerType =
 	| UnsignedIntegerCPointerType
 	| FloatCPointerType
 	| "*";
-export const NULLPTR = 0 as CPointer;
 
 // __emscripten_declare_global_const_start
 export declare const getValue: (pPtr: CPointer, pType: CPointerType) => number;

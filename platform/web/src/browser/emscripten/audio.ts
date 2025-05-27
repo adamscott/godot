@@ -41,9 +41,25 @@ import { GodotRuntime } from "./runtime.ts";
 import { GodotConfig, GodotOS } from "./os.ts";
 // __emscripten_import_global_const_end
 
-import { CPointer } from "./emscripten_lib.ts";
+import {
+	CCharPointer,
+	CDouble,
+	CFloat,
+	CFloatPointer,
+	CInt,
+	CIntPointer,
+	CPointer,
+	CVoidPointer,
+} from "./emscripten_lib.ts";
 
 import { throwIfNull } from "+shared/utils/error.ts";
+
+type AudioInitOnStateChangeCallback = (pState: CInt) => void;
+type AudioInitOnLatencyChangeCallback = (pLatency: CFloat) => void;
+
+type AudioSampleSetFinishedCallbackCallback = (
+	pPlaybackObjectId: CPointer,
+) => void;
 
 export type LoopMode = "disabled" | "forward" | "backward" | "pingpong";
 
@@ -939,7 +955,7 @@ const _GodotAudio = {
 		Bus,
 
 		sampleFinishedCallback: null as
-			| ((pPlaybackObjectIdPtr: CPointer) => void)
+			| AudioSampleSetFinishedCallbackCallback
 			| null,
 
 		context: null as unknown as AudioContext,
@@ -1199,31 +1215,31 @@ const _GodotAudio = {
 
 	godot_audio_is_available__sig: "i",
 	godot_audio_is_available__proxy: "sync",
-	godot_audio_is_available: (): number => {
-		return globalThis.AudioContext != null ? 1 : 0;
+	godot_audio_is_available: (): CInt => {
+		return Number(globalThis.AudioContext != null) as CInt;
 	},
 
 	godot_audio_has_worklet__proxy: "sync",
 	godot_audio_has_worklet__sig: "i",
-	godot_audio_has_worklet: (): number => {
-		return GodotAudio.context?.audioWorklet != null ? 1 : 0;
+	godot_audio_has_worklet: (): CInt => {
+		return Number(GodotAudio.context?.audioWorklet != null) as CInt;
 	},
 
 	godot_audio_init__proxy: "sync",
 	godot_audio_init__sig: "ipipp",
 	godot_audio_init: (
-		pMixRatePtr: CPointer,
-		pLatency: number,
-		pOnStateChangeCallbackPtr: CPointer,
-		pOnLatencyUpdateCallbackPtr: CPointer,
-	): number => {
+		pMixRatePtr: CIntPointer,
+		pLatency: CInt,
+		pOnStateChangeCallbackPtr: CVoidPointer,
+		pOnLatencyUpdateCallbackPtr: CVoidPointer,
+	): CInt => {
 		const onStateChangeCallback = GodotRuntime.getFunction<
-			(pState: number) => void
+			AudioInitOnStateChangeCallback
 		>(
 			pOnStateChangeCallbackPtr,
 		);
 		const onLatencyUpdateCallback = GodotRuntime.getFunction<
-			(pLatency: number) => void
+			AudioInitOnLatencyChangeCallback
 		>(
 			pOnLatencyUpdateCallbackPtr,
 		);
@@ -1231,15 +1247,15 @@ const _GodotAudio = {
 		const channels = GodotAudio.initialize(
 			mixRate,
 			pLatency,
-			onStateChangeCallback,
-			onLatencyUpdateCallback,
+			(pState) => onStateChangeCallback(pState as CInt),
+			(pLatency) => onLatencyUpdateCallback(pLatency as CFloat),
 		);
 		GodotRuntime.setHeapValue(
 			pMixRatePtr,
 			GodotAudio.context.sampleRate,
 			"i32",
 		);
-		return channels;
+		return channels as CInt;
 	},
 
 	godot_audio_resume__proxy: "sync",
@@ -1255,7 +1271,7 @@ const _GodotAudio = {
 
 	godot_audio_input_start__proxy: "sync",
 	godot_audio_input_start__sig: "i",
-	godot_audio_input_start: (): number => {
+	godot_audio_input_start: (): CInt => {
 		return GodotAudio.createInput(function (pInput) {
 			throwIfNull(
 				GodotAudio.driver,
@@ -1265,7 +1281,7 @@ const _GodotAudio = {
 			if (worklet != null) {
 				pInput.connect(worklet);
 			}
-		});
+		}) as CInt;
 	},
 
 	godot_audio_input_stop__proxy: "sync",
@@ -1286,25 +1302,24 @@ const _GodotAudio = {
 	godot_audio_sample_stream_is_registered__proxy: "sync",
 	godot_audio_sample_stream_is_registered__sig: "ip",
 	godot_audio_sample_stream_is_registered: (
-		pStreamObjectIdStrPtr: CPointer,
-	): number => {
+		pStreamObjectIdStrPtr: CCharPointer,
+	): CInt => {
 		const streamObjectId = GodotRuntime.parseString(pStreamObjectIdStrPtr);
 		return Number(
 			GodotAudio.Sample.getSampleOrNull(streamObjectId) != null,
-		);
+		) as CInt;
 	},
 
 	godot_audio_sample_register_stream__proxy: "sync",
 	godot_audio_sample_register_stream__sig: "vppipii",
 	godot_audio_sample_register_stream: (
-		pStreamObjectIdStrPtr: CPointer,
-		pFramesPtr: CPointer,
-		pFramesTotal: number,
-		pLoopModeStrPtr: CPointer,
-		pLoopBegin: number,
-		pLoopEnd: number,
+		pStreamObjectIdStrPtr: CCharPointer,
+		pFramesPtr: CFloatPointer,
+		pFramesTotal: CInt,
+		pLoopModeStrPtr: CCharPointer,
+		pLoopBegin: CInt,
+		pLoopEnd: CInt,
 	): void => {
-		const BYTES_PER_FLOAT32 = 4;
 		const streamObjectId = GodotRuntime.parseString(pStreamObjectIdStrPtr);
 		const loopMode = GodotRuntime.parseString(pLoopModeStrPtr);
 		const numberOfChannels = 2;
@@ -1313,7 +1328,8 @@ const _GodotAudio = {
 		const subLeft = GodotRuntime.heapSub(HEAPF32, pFramesPtr, pFramesTotal);
 		const subRight = GodotRuntime.heapSub(
 			HEAPF32,
-			(pFramesPtr + pFramesTotal * BYTES_PER_FLOAT32) as CPointer,
+			(pFramesPtr +
+				pFramesTotal * Float32Array.BYTES_PER_ELEMENT) as CPointer,
 			pFramesTotal,
 		);
 
@@ -1343,7 +1359,7 @@ const _GodotAudio = {
 	godot_audio_sample_unregister_stream__proxy: "sync",
 	godot_audio_sample_unregister_stream__sig: "vp",
 	godot_audio_sample_unregister_stream: (
-		pStreamObjectIdStrPtr: CPointer,
+		pStreamObjectIdStrPtr: CCharPointer,
 	): void => {
 		const streamObjectId = GodotRuntime.parseString(pStreamObjectIdStrPtr);
 		const sample = GodotAudio.Sample.getSampleOrNull(streamObjectId);
@@ -1355,12 +1371,12 @@ const _GodotAudio = {
 	godot_audio_sample_start__proxy: "sync",
 	godot_audio_sample_start__sig: "vppiffp",
 	godot_audio_sample_start: (
-		pPlaybackObjectIdStrPtr: CPointer,
-		pStreamObjectIdStrPtr: CPointer,
-		pBusIndex: number,
-		pOffset: number,
-		pPitchScale: number,
-		pVolumePtr: CPointer,
+		pPlaybackObjectIdStrPtr: CCharPointer,
+		pStreamObjectIdStrPtr: CCharPointer,
+		pBusIndex: CInt,
+		pOffset: CFloat,
+		pPitchScale: CFloat,
+		pVolumePtr: CFloatPointer,
 	): void => {
 		const playbackObjectId = GodotRuntime.parseString(
 			pPlaybackObjectIdStrPtr,
@@ -1386,7 +1402,7 @@ const _GodotAudio = {
 
 	godot_audio_sample_stop__proxy: "sync",
 	godot_audio_sample_stop__sig: "vp",
-	godot_audio_sample_stop: (pPlaybackObjectIdStrPtr: CPointer): void => {
+	godot_audio_sample_stop: (pPlaybackObjectIdStrPtr: CCharPointer): void => {
 		const playbackObjectId = GodotRuntime.parseString(
 			pPlaybackObjectIdStrPtr,
 		);
@@ -1396,31 +1412,31 @@ const _GodotAudio = {
 	godot_audio_sample_set_pause__proxy: "sync",
 	godot_audio_sample_set_pause__sig: "vpi",
 	godot_audio_sample_set_pause: (
-		pPlaybackObjectIdStrPtr: CPointer,
-		pause: number,
+		pPlaybackObjectIdStrPtr: CCharPointer,
+		pPause: CInt,
 	): void => {
 		const playbackObjectId = GodotRuntime.parseString(
 			pPlaybackObjectIdStrPtr,
 		);
-		GodotAudio.sampleSetPause(playbackObjectId, Boolean(pause));
+		GodotAudio.sampleSetPause(playbackObjectId, Boolean(pPause));
 	},
 
 	godot_audio_sample_is_active__proxy: "sync",
 	godot_audio_sample_is_active__sig: "ip",
 	godot_audio_sample_is_active: (
-		pPlaybackObjectIdStrPtr: CPointer,
-	): number => {
+		pPlaybackObjectIdStrPtr: CCharPointer,
+	): CInt => {
 		const playbackObjectId = GodotRuntime.parseString(
 			pPlaybackObjectIdStrPtr,
 		);
-		return Number(GodotAudio.sampleNodes.has(playbackObjectId));
+		return Number(GodotAudio.sampleNodes.has(playbackObjectId)) as CInt;
 	},
 
 	godot_audio_get_sample_playback_position__proxy: "sync",
 	godot_audio_get_sample_playback_position__sig: "dp",
 	godot_audio_get_sample_playback_position: (
-		pPlaybackObjectIdStrPtr: CPointer,
-	): number => {
+		pPlaybackObjectIdStrPtr: CCharPointer,
+	): CDouble => {
 		const playbackObjectId = GodotRuntime.parseString(
 			pPlaybackObjectIdStrPtr,
 		);
@@ -1428,16 +1444,16 @@ const _GodotAudio = {
 			playbackObjectId,
 		);
 		if (sampleNode == null) {
-			return 0;
+			return 0 as CDouble;
 		}
-		return sampleNode.getPlaybackPosition();
+		return sampleNode.getPlaybackPosition() as CDouble;
 	},
 
 	godot_audio_sample_update_pitch_scale__proxy: "sync",
 	godot_audio_sample_update_pitch_scale__sig: "vpf",
 	godot_audio_sample_update_pitch_scale: (
-		pPlaybackObjectIdStrPtr: CPointer,
-		pPitchScale: number,
+		pPlaybackObjectIdStrPtr: CCharPointer,
+		pPitchScale: CFloat,
 	): void => {
 		const playbackObjectId = GodotRuntime.parseString(
 			pPlaybackObjectIdStrPtr,
@@ -1448,11 +1464,11 @@ const _GodotAudio = {
 	godot_audio_sample_set_volumes_linear__proxy: "sync",
 	godot_audio_sample_set_volumes_linear__sig: "vppipi",
 	godot_audio_sample_set_volumes_linear: (
-		pPlaybackObjectIdStrPtr: CPointer,
-		pBusesPtr: CPointer,
-		pBusesSize: number,
-		pVolumesPtr: CPointer,
-		pVolumesSize: number,
+		pPlaybackObjectIdStrPtr: CCharPointer,
+		pBusesPtr: CIntPointer,
+		pBusesSize: CInt,
+		pVolumesPtr: CFloatPointer,
+		pVolumesSize: CInt,
 	): void => {
 		const playbackObjectId = GodotRuntime.parseString(
 			pPlaybackObjectIdStrPtr,
@@ -1532,7 +1548,7 @@ const _GodotAudio = {
 		pCallbackPtr: CPointer,
 	): void => {
 		GodotAudio.sampleFinishedCallback = GodotRuntime.getFunction<
-			(pPlaybackObjectIdPtr: CPointer) => void
+			AudioSampleSetFinishedCallbackCallback
 		>(
 			pCallbackPtr,
 		);
@@ -1776,14 +1792,14 @@ const _GodotAudioWorklet = {
 
 	godot_audio_worklet_create__proxy: "sync",
 	godot_audio_worklet_create__sig: "ii",
-	godot_audio_worklet_create: (pChannels: number): number => {
+	godot_audio_worklet_create: (pChannels: number): CInt => {
 		try {
 			GodotAudioWorklet.create(pChannels);
 		} catch (pError) {
 			GodotRuntime.error("Error starting AudioDriverWorklet", pError);
-			return 1;
+			return 1 as CInt;
 		}
-		return 0;
+		return 0 as CInt;
 	},
 
 	godot_audio_worklet_start__proxy: "sync",
@@ -1841,9 +1857,9 @@ const _GodotAudioWorklet = {
 		pIndex: number,
 		pExpected: number,
 		pTimeout: number,
-	) => {
+	): CInt => {
 		Atomics.wait(HEAP32, (pStatePtr >> 2) + pIndex, pExpected, pTimeout);
-		return Atomics.load(HEAP32, (pStatePtr >> 2) + pIndex);
+		return Atomics.load(HEAP32, (pStatePtr >> 2) + pIndex) as CInt;
 	},
 
 	godot_audio_worklet_state_add__sig: "ipii",
@@ -1851,16 +1867,16 @@ const _GodotAudioWorklet = {
 		pStatePtr: CPointer,
 		pIndex: number,
 		pValue: number,
-	): number => {
-		return Atomics.add(HEAP32, (pStatePtr >> 2) + pIndex, pValue);
+	): CInt => {
+		return Atomics.add(HEAP32, (pStatePtr >> 2) + pIndex, pValue) as CInt;
 	},
 
 	godot_audio_worklet_state_get__sig: "ipi",
 	godot_audio_worklet_state_get: (
 		pStatePtr: CPointer,
 		pIdx: number,
-	): number => {
-		return Atomics.load(HEAP32, (pStatePtr >> 2) + pIdx);
+	): CInt => {
+		return Atomics.load(HEAP32, (pStatePtr >> 2) + pIdx) as CInt;
 	},
 };
 autoAddDeps(_GodotAudioWorklet, "$GodotAudioWorklet");

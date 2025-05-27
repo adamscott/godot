@@ -36,10 +36,12 @@
 extern "C" {
 #endif
 
+typedef void (*AudioInitOnStateChangeCallback)(int p_state);
+typedef void (*AudioInitOnLatencyChangeCallback)(float p_latency);
+
 extern int godot_audio_is_available();
 extern int godot_audio_has_worklet();
-extern int godot_audio_has_script_processor();
-extern int godot_audio_init(int *p_mix_rate, int p_latency, void (*_state_cb)(int p_state), void (*_latency_cb)(float p_latency));
+extern int godot_audio_init(int *p_mix_rate, int p_latency, AudioInitOnStateChangeCallback p_on_state_change_callback, AudioInitOnLatencyChangeCallback p_on_latency_change_callback);
 
 extern void godot_audio_resume();
 
@@ -47,6 +49,8 @@ extern int godot_audio_input_start();
 extern void godot_audio_input_stop();
 
 // Samples
+typedef void (*AudioSampleSetFinishedCallbackCallback)(const char *p_playback_object_id);
+
 extern int godot_audio_sample_stream_is_registered(const char *p_stream_object_id);
 extern void godot_audio_sample_register_stream(const char *p_stream_object_id, float *p_frames_buf, int p_frames_total, const char *p_loop_mode, int p_loop_begin, int p_loop_end);
 extern void godot_audio_sample_unregister_stream(const char *p_stream_object_id);
@@ -57,7 +61,7 @@ extern int godot_audio_sample_is_active(const char *p_playback_object_id);
 extern double godot_audio_get_sample_playback_position(const char *p_playback_object_id);
 extern void godot_audio_sample_update_pitch_scale(const char *p_playback_object_id, float p_pitch_scale);
 extern void godot_audio_sample_set_volumes_linear(const char *p_playback_object_id, int *p_buses_buf, int p_buses_size, float *p_volumes_buf, int p_volumes_size);
-extern void godot_audio_sample_set_finished_callback(void (*p_callback)(const char *p_playback_object_id));
+extern void godot_audio_sample_set_finished_callback(AudioSampleSetFinishedCallbackCallback p_callback);
 
 extern void godot_audio_sample_bus_set_count(int p_count);
 extern void godot_audio_sample_bus_remove(int p_index);
@@ -69,10 +73,13 @@ extern void godot_audio_sample_bus_set_solo(int p_bus, bool p_enable);
 extern void godot_audio_sample_bus_set_mute(int p_bus, bool p_enable);
 
 // Worklet
+typedef void (*AudioWorkletStateAddOnOutCallback)(int p_pos, int p_frames);
+typedef void (*AudioWorkletStateAddOnInCallback)(int p_pos, int p_frames);
+
 typedef int32_t GodotAudioState[4];
 extern int godot_audio_worklet_create(int p_channels);
 extern void godot_audio_worklet_start(float *p_in_buf, int p_in_size, float *p_out_buf, int p_out_size, GodotAudioState p_state);
-extern void godot_audio_worklet_start_no_threads(float *p_out_buf, int p_out_size, void (*p_out_cb)(int p_pos, int p_frames), float *p_in_buf, int p_in_size, void (*p_in_cb)(int p_pos, int p_frames));
+extern void godot_audio_worklet_start_no_threads(float *p_out_buf, int p_out_size, AudioWorkletStateAddOnOutCallback p_on_out_callback, float *p_in_buf, int p_in_size, AudioWorkletStateAddOnOutCallback p_on_in_callback);
 extern int godot_audio_worklet_state_add(GodotAudioState p_state, int p_idx, int p_value);
 extern int godot_audio_worklet_state_get(GodotAudioState p_state, int p_idx);
 extern int godot_audio_worklet_state_wait(int32_t *p_state, int p_idx, int32_t p_expected, int p_timeout);

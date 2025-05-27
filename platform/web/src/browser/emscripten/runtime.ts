@@ -50,16 +50,67 @@ import {
 } from "./emscripten_lib.ts";
 // __emscripten_import_global_const_end
 
-import { CPointer, CPointerType } from "./emscripten_lib.ts";
+import {
+	CCharArrayPointer,
+	CCharPointer,
+	CDouble,
+	CDoublePointer,
+	CFloat,
+	CFloatPointer,
+	CInt,
+	CIntPointer,
+	CPointer,
+	CPointerType,
+} from "./emscripten_lib.ts";
 
 import { TypedArray } from "+browser/types/api.ts";
 import { AnyFunction } from "+shared/types/aliases.ts";
+
+interface GetHeapValue {
+	(
+		pPtr: CIntPointer,
+		pType: Extract<CPointerType, "i8" | "i16" | "i32" | "i64">,
+	): CInt;
+	(
+		pPtr: CFloatPointer,
+		pType: Extract<CPointerType, "f32" | "float">,
+	): CFloat;
+	(
+		pPtr: CDoublePointer,
+		pType: Extract<CPointerType, "f64" | "double">,
+	): CDouble;
+	(pPtr: CPointer, pType: CPointerType): number;
+}
+interface SetHeapValue {
+	(
+		pPtr: CIntPointer,
+		pValue: CInt,
+		pType: Extract<CPointerType, "i18" | "i16" | "i32" | "i64">,
+	): void;
+	(
+		pPtr: CFloatPointer,
+		pValue: CFloat,
+		pType: Extract<CPointerType, "f32" | "float">,
+	): void;
+	(
+		pPtr: CDoublePointer,
+		pValue: CDouble,
+		pType: Extract<CPointerType, "f64" | "double">,
+	): void;
+	(
+		pPtr: CPointer,
+		pValue: number,
+		pType: CPointerType,
+	): void;
+}
 
 // __emscripten_declare_global_const_start
 export declare const GodotRuntime: typeof _GodotRuntime.$GodotRuntime;
 // __emscripten_declare_global_const_end
 const _GodotRuntime = {
 	$GodotRuntime: {
+		NULLPTR: 0 as CPointer,
+
 		// Functions.
 		getFunction: <T extends AnyFunction>(
 			pPtr: CPointer,
@@ -89,17 +140,17 @@ const _GodotRuntime = {
 			_free(pPtr);
 		},
 
-		getHeapValue: (pPtr: CPointer, pType: CPointerType): number => {
+		getHeapValue: ((pPtr, pType) => {
 			return getValue(pPtr, pType);
-		},
+		}) as GetHeapValue,
 
-		setHeapValue: (
+		setHeapValue: ((
 			pPtr: CPointer,
 			pValue: number,
 			pType: CPointerType,
 		): void => {
 			setValue(pPtr, pValue, pType);
-		},
+		}) as SetHeapValue,
 
 		heapSub: <T extends TypedArray>(
 			pHeap: T,
@@ -132,32 +183,35 @@ const _GodotRuntime = {
 		},
 
 		// Strings.
-		parseString: (pPtr: CPointer): string => {
+		parseString: (pPtr: CCharPointer): string => {
 			return UTF8ToString(pPtr);
 		},
 
-		parseStringArray: (pPtr: CPointer, pSize: number): string[] => {
+		parseStringArray: (
+			pPtr: CCharArrayPointer,
+			pSize: number,
+		): string[] => {
 			return Array.from(GodotRuntime.heapSub(HEAP32, pPtr, pSize)).map((
 				pMappedPtr,
-			) => GodotRuntime.parseString(pMappedPtr as CPointer));
+			) => GodotRuntime.parseString(pMappedPtr as CCharPointer));
 		},
 
 		strlen: (pString: string): number => {
 			return lengthBytesUTF8(pString);
 		},
 
-		allocString: (pString: string): CPointer => {
+		allocString: (pString: string): CCharPointer => {
 			const length = GodotRuntime.strlen(pString);
 			const cStringPtr = GodotRuntime.malloc(length);
 			stringToUTF8(pString, cStringPtr, length);
-			return cStringPtr;
+			return cStringPtr as CCharPointer;
 		},
 
-		allocStringArray: (pStrings: string[]): CPointer => {
+		allocStringArray: (pStrings: string[]): CCharArrayPointer => {
 			const size = pStrings.length;
 			const cStringArrayPointer = GodotRuntime.malloc(
 				size * Uint32Array.BYTES_PER_ELEMENT,
-			);
+			) as CCharArrayPointer;
 			for (let i = 0; i < size; i++) {
 				HEAP32[(cStringArrayPointer >> 2) + i] = GodotRuntime
 					.allocString(
@@ -167,7 +221,10 @@ const _GodotRuntime = {
 			return cStringArrayPointer;
 		},
 
-		freeStringArray: (pStringArrayPtr: CPointer, pLength: number): void => {
+		freeStringArray: (
+			pStringArrayPtr: CCharArrayPointer,
+			pLength: number,
+		): void => {
 			for (let i = 0; i < pLength; i++) {
 				GodotRuntime.free(
 					HEAP32[((pStringArrayPtr as number) >> 2) + i] as CPointer,
@@ -178,10 +235,10 @@ const _GodotRuntime = {
 
 		stringToHeap: (
 			pString: string,
-			pPtr: CPointer,
+			pPtr: CCharPointer,
 			pLength: number,
-		): number => {
-			return stringToUTF8Array(pString, HEAP8, pPtr, pLength);
+		): CInt => {
+			return stringToUTF8Array(pString, HEAP8, pPtr, pLength) as CInt;
 		},
 	},
 };
