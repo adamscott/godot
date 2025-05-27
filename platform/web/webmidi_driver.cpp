@@ -55,9 +55,9 @@ MIDIDriverWebMidi::~MIDIDriverWebMidi() {
 	close();
 }
 
-void MIDIDriverWebMidi::set_input_names_callback(int p_size, const char **p_input_names) {
+void MIDIDriverWebMidi::set_input_names_callback(const char **p_input_names, int p_input_names_size) {
 	Vector<String> input_names;
-	for (int i = 0; i < p_size; i++) {
+	for (int i = 0; i < p_input_names_size; i++) {
 		input_names.append(String::utf8(p_input_names[i]));
 	}
 #ifdef PROXY_TO_PTHREAD_ENABLED

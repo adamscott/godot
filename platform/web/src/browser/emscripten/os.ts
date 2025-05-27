@@ -482,7 +482,7 @@ class Handler {
 	target: EventTarget;
 	event: string;
 	method: AnyFunction;
-	capture: boolean | undefined;
+	capture: Parameters<EventTarget["addEventListener"]>[2];
 
 	constructor(
 		pTarget: typeof this.target,

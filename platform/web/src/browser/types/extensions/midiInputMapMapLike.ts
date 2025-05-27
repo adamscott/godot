@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  api.ts                                                                */
+/*  midiInputMapMapLike.ts                                                */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,26 +28,11 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-export type TypedArray =
-	| Int8Array
-	| Uint8Array
-	| Uint8ClampedArray
-	| Int16Array
-	| Uint16Array
-	| Int32Array
-	| Uint32Array
-	| Float32Array
-	| Float64Array;
+import "+browser/lib.ts";
 
-export interface MapLike<K, V> {
-	size: Map<K, V>["size"];
-	entries: Map<K, V>["entries"];
-	get: Map<K, V>["get"];
-	has: Map<K, V>["has"];
-	keys: Map<K, V>["keys"];
-	values: Map<K, V>["values"];
-	[Symbol.iterator]: IterableIterator<Map<K, V>>;
-	clear: Map<K, V>["clear"];
-	delete: Map<K, V>["delete"];
-	set: Map<K, V>["set"];
+import { MapLike } from "../api.ts";
+
+declare global {
+	interface MIDIInputMap extends MapLike<string, MIDIInput> {
+	}
 }

@@ -50,7 +50,7 @@ public:
 	MIDIDriverWebMidi() = default;
 	virtual ~MIDIDriverWebMidi();
 
-	WASM_EXPORT static void set_input_names_callback(int p_size, const char **p_input_names);
+	WASM_EXPORT static void set_input_names_callback(const char **p_input_names, int p_input_names_size);
 	static void _set_input_names_callback(const Vector<String> &p_input_names);
 
 	WASM_EXPORT static void on_midi_message(int p_device_index, int p_status, const uint8_t *p_data, int p_data_len);
