@@ -39,7 +39,6 @@ import { IDHandler } from "./os.ts";
 import {
 	CCharPointer,
 	CInt,
-	CPointer,
 	CUintPointer,
 	CVoidPointer,
 } from "./emscripten_lib.ts";
@@ -112,7 +111,7 @@ const _GodotRTCDataChannel = {
 
 				const outPtr = GodotRuntime.malloc(buffer.byteLength);
 				HEAPU8.set(buffer, outPtr);
-				pOnMessage(outPtr, buffer.byteLength, isString);
+				pOnMessage(outPtr as CUintPointer, buffer.byteLength, isString);
 				GodotRuntime.free(outPtr);
 			};
 		},
@@ -185,8 +184,8 @@ const _GodotRTCDataChannel = {
 		const bytesArray = new Uint8Array(pBufferLength);
 		for (let i = 0; i < pBufferLength; i++) {
 			bytesArray[i] = GodotRuntime.getHeapValue(
-				(pBufferPtr + i) as CPointer,
-				"i8",
+				(pBufferPtr + i) as CUintPointer,
+				"u8",
 			);
 		}
 
