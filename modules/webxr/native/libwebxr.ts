@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  webxr.ts                                                              */
+/*  libwebxr.ts                                                           */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -49,9 +49,9 @@ import {
 	MainLoop,
 	runtimeKeepalivePop,
 	runtimeKeepalivePush,
-} from "./emscripten_lib.ts";
-import { GodotRuntime } from "./runtime.ts";
-import { GodotEventListeners } from "./os.ts";
+} from "+browser/emscripten/emscripten_lib.ts";
+import { GodotRuntime } from "+browser/emscripten/libruntime.ts";
+import { GodotEventListeners } from "+browser/emscripten/libos.ts";
 // __emscripten_import_global_const_end
 
 import {
@@ -64,7 +64,7 @@ import {
 	CUint,
 	CVoidPointer,
 	GLTexture,
-} from "./emscripten_lib.ts";
+} from "+browser/emscripten/emscripten_lib.ts";
 
 type GodotWebXRSupportedCallback = (
 	pSessionMode: CCharPointer,
@@ -669,7 +669,7 @@ const _GodotWebXR = {
 	},
 
 	godot_webxr_get_projection_for_view__proxy: "sync",
-	godot_webxr_get_projection_for_view__sig: "iii",
+	godot_webxr_get_projection_for_view__sig: "iip",
 	godot_webxr_get_projection_for_view: (
 		pView: CInt,
 		rTransform: CFloatPointer,

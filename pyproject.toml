@@ -61,7 +61,8 @@ skip = [
 	"DONORS.md",
 	"editor/project_converter_3_to_4.cpp",
 	"platform/android/java/lib/src/com/*",
-	"platform/web/package-lock.json",
+	"deno.jsonc",
+	"deno.lock"
 ]
 ignore-words-list = [
 	"breaked",

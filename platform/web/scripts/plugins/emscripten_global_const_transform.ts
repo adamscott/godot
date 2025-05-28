@@ -34,7 +34,9 @@ import * as esbuild from "npm:esbuild";
 
 import { dirname } from "jsr:@std/path";
 
-export function emscriptenGlobalConstTransformPlugin(): esbuild.Plugin {
+export function emscriptenGlobalConstTransformPlugin(
+	filter = /\/platform\/web\/src\/browser\/.+?\.ts$/,
+): esbuild.Plugin {
 	return {
 		name: "emscripten-global-const-transform-plugin",
 		setup: (pBuild) => {
@@ -67,8 +69,7 @@ export function emscriptenGlobalConstTransformPlugin(): esbuild.Plugin {
 			for (const onLoadNamespace of ["file", "http", "https"]) {
 				pBuild.onLoad(
 					{
-						// platform/web/src/browser/**.ts
-						filter: /\/platform\/web\/src\/browser\/.+?\.ts$/,
+						filter,
 						namespace: onLoadNamespace,
 					},
 					onTsLoad,

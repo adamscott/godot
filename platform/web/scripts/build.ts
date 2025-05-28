@@ -28,14 +28,17 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
+import "+deno/lib.ts";
+
 import { exists } from "jsr:@std/fs";
 import { dirname, join, resolve } from "jsr:@std/path";
-import { parseArgs } from "node:util";
 
 import browserslist from "npm:browserslist";
 import * as esbuild from "npm:esbuild";
 import { resolveToEsbuildTarget } from "npm:esbuild-plugin-browserslist";
 import { sassPlugin } from "npm:esbuild-sass-plugin";
+// @ts-types="npm:@types/yargs"
+import yargs from "npm:yargs";
 
 import {
 	denoLoaderPlugin,
@@ -77,16 +80,23 @@ export async function buildJavaScriptTarget(
 	settings: {
 		target: string | string[];
 		sourceMap: boolean;
+		isEmscripten?: boolean;
+		emscriptenFilter?: RegExp;
 	},
 ): Promise<Record<string, string>> {
 	const prefixEntryPoint = (entryPoint: string): string => `./${entryPoint}`;
 
-	const { target, sourceMap } = settings;
+	const { target, sourceMap, isEmscripten = false, emscriptenFilter } =
+		settings;
 
 	const result = await esbuild.build({
 		plugins: [
 			denoResolverPlugin(),
-			emscriptenGlobalConstTransformPlugin(),
+			...isEmscripten
+				? [emscriptenGlobalConstTransformPlugin(
+					emscriptenFilter,
+				)]
+				: [],
 			denoLoaderPlugin(),
 		],
 		entryPoints: entryPoints.map(prefixEntryPoint),
@@ -228,18 +238,18 @@ export async function buildEditor(
 }
 
 export async function buildServiceWorker(
-	directory: string,
-	options: {
+	pDirectory: string,
+	pOptions: {
 		target?: string | string[];
 		sourceMap?: boolean;
 	} = {},
 ): Promise<Record<string, string>> {
-	const { target = defaultTarget, sourceMap = false } = options;
+	const { target = defaultTarget, sourceMap = false } = pOptions;
 	const serviceWorkerEntryPoint =
 		"misc/dist/html/src/entry/service-worker.ts";
 
 	return await buildJavaScriptTarget(
-		directory,
+		pDirectory,
 		[serviceWorkerEntryPoint],
 		{
 			target,
@@ -249,100 +259,168 @@ export async function buildServiceWorker(
 }
 
 export async function buildEmscriptenLibraries(
-	directory: string,
-	options: { target?: string | string[]; sourceMap?: boolean } = {},
+	pTargetDirectory: string,
+	pImportMapName: string,
+	pEntryPoints: string[],
+	pOptions: { target?: string | string[]; sourceMap?: boolean } = {},
 ): Promise<void> {
-	const { target = defaultTarget, sourceMap = false } = options;
-	const emscriptenLibrariesEntryPoint =
-		"platform/web/src/browser/entry/emscripten.ts";
+	const { target = defaultTarget, sourceMap = false } = pOptions;
 
-	await buildJavaScriptTarget(
-		directory,
-		[emscriptenLibrariesEntryPoint],
+	const filter = new RegExp(
+		[
+			...pEntryPoints,
+			// `dummy.ts` will be stripped out.
+			"/platform/web/src/browser/dummy.ts",
+		].map(
+			(pEntryPoint) => {
+				return dirname(pEntryPoint)
+					.replaceAll("/", "\/")
+					.replaceAll("\\", "\\\\")
+					.replaceAll(".", "\.");
+			},
+		).reduce((pPreviousValue, pCurrentValue, pCurrentIndex, pArray) => {
+			if (pCurrentIndex === 0) {
+				return pPreviousValue + pCurrentValue;
+			} else if (pCurrentIndex === pArray.length - 1) {
+				return `${pPreviousValue}|${pCurrentValue})\/.+?\.ts$`;
+			}
+			return `${pPreviousValue}|${pCurrentValue}`;
+		}, "(?:"),
+	);
+
+	const importMap = await buildJavaScriptTarget(
+		pTargetDirectory,
+		pEntryPoints,
 		{
 			target,
 			sourceMap,
+			isEmscripten: true,
+			emscriptenFilter: filter,
 		},
+	);
+
+	await Deno.writeTextFile(
+		join(pTargetDirectory, `importmap.${pImportMapName}.json`),
+		JSON.stringify(importMap),
 	);
 }
 
 async function main() {
-	const args = parseArgs({
-		allowPositionals: true,
-		options: {
-			target: {
-				type: "string",
-				default: "",
+	const y = yargs(Deno.args)
+		.scriptName("deno run esbuild");
+
+	const addBuildCommand = (pTarget: "shell" | "editor"): void => {
+		y.command(
+			pTarget,
+			`build the ${pTarget}`,
+			(pYargs) => {
+				return pYargs
+					.option("target", {
+						description:
+							"overrides the current default target property used by esbuild.",
+						array: true,
+						string: true,
+						default: [],
+					})
+					.option("source-map", {
+						boolean: true,
+						default: false,
+					})
+					.option("clear", {
+						boolean: true,
+						default: false,
+					});
 			},
-			"source-map": {
-				type: "boolean",
-				default: false,
+			async (pArgv) => {
+				const directory = `platform/web/dist/${pTarget}/`;
+				if (pArgv.clear) {
+					await clearDirectory(directory);
+				}
+				const importMap = await buildShell(directory, {
+					target: pArgv.target,
+					sourceMap: pArgv.sourceMap,
+				});
+				Object.assign(
+					importMap,
+					await buildServiceWorker(directory, {
+						target: pArgv.target,
+						sourceMap: pArgv.sourceMap,
+					}),
+				);
+				await Deno.writeTextFile(
+					join(directory, "importmap.json"),
+					JSON.stringify(importMap),
+				);
 			},
-			clear: {
-				type: "boolean",
-				default: false,
+		);
+	};
+
+	addBuildCommand("editor");
+	addBuildCommand("shell");
+
+	y
+		.command(
+			"emscripten <import-map-name> <files...>",
+			"build an emscripten library",
+			(pYargs) => {
+				return pYargs
+					.option("target", {
+						description:
+							"overrides the current default target property used by esbuild.",
+						array: true,
+						string: true,
+						default: [],
+					})
+					.option("source-map", {
+						boolean: true,
+						default: false,
+					})
+					.option("clear", {
+						boolean: true,
+						default: false,
+					})
+					.positional("import-map-name", {
+						description:
+							"name of the import map (i.e. `importmap.<import-map-name>.json`)",
+						type: "string",
+					})
+					.positional("files", {
+						description: "an emscripten library",
+						array: true,
+						type: "string",
+					});
 			},
-		},
-	});
+			async (pArgv) => {
+				if (pArgv.importMapName == null) {
+					console.error(
+						"[ERROR]: <import-map-name> argument missing",
+					);
+					y.showHelp();
+					return;
+				}
 
-	if (args.positionals.length !== 1) {
-		errorAndExit("Invalid number of positional arguments.");
-	}
+				if (pArgv.files == null) {
+					console.error("[ERROR]: <files...> argument missing");
+					y.showHelp();
+					return;
+				}
 
-	const target = args.values.target;
-	const sourceMap = args.values["source-map"];
-	const clear = args.values.clear;
+				await buildEmscriptenLibraries(
+					"platform/web/dist/emscripten/",
+					pArgv.importMapName,
+					pArgv.files,
+					{
+						target: pArgv.target,
+						sourceMap: pArgv.sourceMap,
+					},
+				);
+			},
+		)
+		.demandCommand(1, "you need to specify a command.")
+		.help("help")
+		.alias("help", "h");
 
-	let directory = "platform/web/dist/";
-	const buildTarget = args.positionals[0].toLowerCase();
-	switch (buildTarget) {
-		case "shell":
-			directory += "shell/";
-			break;
-		case "editor":
-			directory += "editor/";
-			break;
-		case "emscripten":
-			directory += "emscripten/";
-			break;
-		default:
-			errorAndExit("Invalid build target.");
-	}
-
-	if (clear) {
-		await clearDirectory(directory);
-	}
-
-	if (buildTarget === "emscripten") {
-		await buildEmscriptenLibraries(directory, { target, sourceMap });
-		Deno.exit(0);
-	}
-
-	const importMap = {};
-	switch (buildTarget) {
-		case "shell":
-			Object.assign(
-				importMap,
-				await buildShell(directory, { target, sourceMap }),
-			);
-			break;
-		case "editor":
-			Object.assign(
-				importMap,
-				await buildEditor(directory, { target, sourceMap }),
-			);
-			break;
-		default:
-			errorAndExit("Invalid build target.");
-	}
-	Object.assign(
-		importMap,
-		await buildServiceWorker(directory, { target, sourceMap }),
-	);
-	await Deno.writeTextFile(
-		join(directory, "importmap.json"),
-		JSON.stringify(importMap),
-	);
+	await y.parse();
 }
 
 if (import.meta.main) {
@@ -362,10 +440,9 @@ if (import.meta.main) {
 		);
 		Deno.chdir(rootDir);
 		await main();
-		Deno.exit(0);
-	} catch (err) {
-		errorAndExit(err);
-	} finally {
 		esbuild.stop();
+	} catch (err) {
+		esbuild.stop();
+		errorAndExit(err);
 	}
 }
