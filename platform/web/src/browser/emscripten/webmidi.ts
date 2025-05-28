@@ -29,7 +29,7 @@
 /**************************************************************************/
 
 import "+browser/lib.ts";
-import "+browser/types/extensions/midi_input_map_map_like.ts";
+import "+browser/types/extensions/midiinputmap_maplike.ts";
 
 // __emscripten_import_global_const_start
 import { addToLibrary, autoAddDeps, HEAPU8 } from "./emscripten_lib.ts";

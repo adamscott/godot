@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  emscripten.ts                                                         */
+/*  xrinputsource_name.ts                                                 */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,13 +28,13 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import "+browser/emscripten/runtime.ts";
-import "+browser/emscripten/os.ts";
+// __emscripten_import_global_const_start
+import "npm:@types/webxr";
+// __emscripten_import_global_const_end
 
-import "+browser/emscripten/audio.ts";
-import "+browser/emscripten/fetch.ts";
-import "+browser/emscripten/input.ts";
-import "+browser/emscripten/webrtc.ts";
-
-import "+browser/emscripten/webmidi.ts";
-import "+browser/emscripten/webxr.ts";
+declare global {
+	interface XRInputSource {
+		name?: number;
+		touchIndex?: number;
+	}
+}

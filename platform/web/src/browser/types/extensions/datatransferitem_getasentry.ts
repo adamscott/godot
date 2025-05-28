@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  xr_input_source_name.ts                                               */
+/*  datatransferitem_getasentry.ts                                        */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -29,10 +29,7 @@
 /**************************************************************************/
 
 declare global {
-	import "npm:@types/webxr";
-
-	interface XRInputSource {
-		name?: number;
-		touchIndex?: number;
+	interface DataTransferItem {
+		getAsEntry?: DataTransferItem["webkitGetAsEntry"];
 	}
 }

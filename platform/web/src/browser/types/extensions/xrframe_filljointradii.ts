@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  data_transfer_item_get_as_entry.ts                                    */
+/*  xrframe_filljointradii.ts                                             */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,8 +28,15 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
+// __emscripten_import_global_const_start
+import "npm:@types/webxr";
+// __emscripten_import_global_const_end
+
 declare global {
-	interface DataTransferItem {
-		getAsEntry?: DataTransferItem["webkitGetAsEntry"];
+	interface XRFrame {
+		fillJointRadii?: (
+			jointSpaces: XRJointSpace[],
+			radii: Float32Array,
+		) => boolean;
 	}
 }

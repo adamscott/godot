@@ -240,6 +240,10 @@ const _GodotRuntime = {
 		): CInt => {
 			return stringToUTF8Array(pString, HEAP8, pPtr, pLength) as CInt;
 		},
+
+		boolean: (pValue: boolean): CInt => {
+			return Number(pValue) as CInt;
+		},
 	},
 };
 autoAddDeps(_GodotRuntime, "$GodotRuntime");

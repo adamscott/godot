@@ -30,8 +30,14 @@
 
 import "+browser/lib.ts";
 
+// __emscripten_import_global_const_start
 import "npm:@types/webxr";
-import "+browser/types/extensions/xr_input_source_name.ts";
+// __emscripten_import_global_const_end
+
+import "+browser/types/extensions/xrinputsource_name.ts";
+import "+browser/types/extensions/xrwebglsubimage_motionvectortexture.ts";
+import "+browser/types/extensions/xrframe_fillposes.ts";
+import "+browser/types/extensions/xrframe_filljointradii.ts";
 
 // __emscripten_import_global_const_start
 import {
@@ -39,6 +45,7 @@ import {
 	addToLibrary,
 	autoAddDeps,
 	GL,
+	HEAPF32,
 	MainLoop,
 	runtimeKeepalivePop,
 	runtimeKeepalivePush,
@@ -49,10 +56,12 @@ import { GodotEventListeners } from "./os.ts";
 
 import {
 	CCharPointer,
+	CFloat,
 	CFloatArrayPointer,
 	CFloatPointer,
 	CInt,
 	CIntPointer,
+	CUint,
 	CVoidPointer,
 	GLTexture,
 } from "./emscripten_lib.ts";
@@ -87,16 +96,19 @@ const _GodotWebXR = {
 		"$runtimeKeepalivePop",
 	],
 	$GodotWebXR__postset: [
-		"GodotWebXR.inputSources = new Array(16);",
-		"GodotWebXR.touches = new Array(5);",
+		"GodotWebXR.inputSources = new Array(16).fill(null);",
+		"GodotWebXR.touches = new Array(5).fill(null);",
 	].join(";"),
 	$GodotWebXR: {
 		gl: null as WebGL2RenderingContext | null,
 
-		session: null as unknown as XRSession,
+		session: null as unknown as XRSession | null,
 		glBinding: null as XRWebGLBinding | null,
 		layer: null as XRProjectionLayer | null,
-		referenceSpace: null as XRReferenceSpace | null,
+		referenceSpace: null as
+			| XRReferenceSpace
+			| XRBoundedReferenceSpace
+			| null,
 		frame: null as XRFrame | null,
 		viewerPose: null as XRViewerPose | null,
 		viewCount: 1,
@@ -566,4 +578,443 @@ const _GodotWebXR = {
 			GodotRuntime.free(messagePtr);
 		});
 	},
+
+	godot_webxr_uninitialize__proxy: "sync",
+	godot_webxr_uninitialize__sig: "v",
+	godot_webxr_uninitialize: (): void => {
+		if (GodotWebXR.session != null) {
+			GodotWebXR.session.end()
+				// Prevent exception when session has already ended.
+				.catch((_error) => {});
+		}
+
+		GodotWebXR.session = null;
+		GodotWebXR.glBinding = null;
+		GodotWebXR.layer = null;
+		GodotWebXR.referenceSpace = null;
+		GodotWebXR.frame = null;
+		GodotWebXR.viewerPose = null;
+		GodotWebXR.viewCount = 1;
+		GodotWebXR.inputSources = new Array(16).fill(null);
+		GodotWebXR.touches = new Array(5).fill(null);
+		GodotWebXR.onSimpleEvent = null;
+
+		// Disable the monkey-patched window.requestAnimationFrame() and
+		// pause/restart the main loop to activate it on all platforms.
+		GodotWebXR.monkeyPatchRequestAnimationFrame(false);
+		GodotWebXR.pauseResumeMainLoop();
+	},
+
+	godot_webxr_get_view_count__proxy: "sync",
+	godot_webxr_get_view_count__sig: "i",
+	godot_webxr_get_view_count: (): CInt => {
+		if (GodotWebXR.session == null || GodotWebXR.viewerPose == null) {
+			return 1 as CInt;
+		}
+		const viewCount = GodotWebXR.viewerPose.views.length;
+		return Math.max(viewCount, 1) as CInt;
+	},
+
+	godot_webxr_get_render_target_size__proxy: "sync",
+	godot_webxr_get_render_target_size__sig: "ii",
+	godot_webxr_get_render_target_size: (rSize: CIntPointer): CInt => {
+		const subimage = GodotWebXR.getSubImage();
+		if (subimage == null) {
+			return GodotRuntime.boolean(false);
+		}
+
+		GodotRuntime.setHeapValue(
+			(rSize + (Int32Array.BYTES_PER_ELEMENT * 0)) as CIntPointer,
+			subimage.viewport.width,
+			"i32",
+		);
+		GodotRuntime.setHeapValue(
+			(rSize + (Int32Array.BYTES_PER_ELEMENT * 1)) as CIntPointer,
+			subimage.viewport.width,
+			"i32",
+		);
+
+		return GodotRuntime.boolean(true);
+	},
+
+	godot_webxr_get_transform_for_view__proxy: "sync",
+	godot_webxr_get_transform_for_view__sig: "iip",
+	godot_webxr_get_transform_for_view: (
+		pView: CInt,
+		rTransform: CFloatPointer,
+	): CInt => {
+		if (GodotWebXR.session == null || GodotWebXR.viewerPose == null) {
+			return GodotRuntime.boolean(false);
+		}
+
+		const views = GodotWebXR.viewerPose.views;
+		let matrix: Float32Array;
+		if (pView >= 0) {
+			matrix = views[pView].transform.matrix;
+		} else {
+			// For -1 (or any other negative value) return the HMD transform.
+			matrix = GodotWebXR.viewerPose.transform.matrix;
+		}
+
+		for (let i = 0; i < 16; i++) {
+			GodotRuntime.setHeapValue(
+				(rTransform +
+					(i * Float32Array.BYTES_PER_ELEMENT)) as CFloatPointer,
+				matrix[i],
+				"float",
+			);
+		}
+
+		return GodotRuntime.boolean(true);
+	},
+
+	godot_webxr_get_projection_for_view__proxy: "sync",
+	godot_webxr_get_projection_for_view__sig: "iii",
+	godot_webxr_get_projection_for_view: (
+		pView: CInt,
+		rTransform: CFloatPointer,
+	): CInt => {
+		if (GodotWebXR.session == null || GodotWebXR.viewerPose == null) {
+			return GodotRuntime.boolean(false);
+		}
+
+		const matrix = GodotWebXR.viewerPose.views[pView].projectionMatrix;
+		for (let i = 0; i < 16; i++) {
+			GodotRuntime.setHeapValue(
+				(rTransform +
+					(i * Float32Array.BYTES_PER_ELEMENT)) as CFloatPointer,
+				matrix[i],
+				"float",
+			);
+		}
+
+		return GodotRuntime.boolean(true);
+	},
+
+	godot_webxr_get_color_texture__proxy: "sync",
+	godot_webxr_get_color_texture__sig: "i",
+	godot_webxr_get_color_texture: (): CUint => {
+		const subimage = GodotWebXR.getSubImage();
+		if (subimage == null) {
+			return 0 as CUint;
+		}
+		return GodotWebXR.getTextureId(subimage.colorTexture) as CUint;
+	},
+
+	godot_webxr_get_depth_texture__proxy: "sync",
+	godot_webxr_get_depth_texture__sig: "i",
+	godot_webxr_get_depth_texture: (): CUint => {
+		const subimage = GodotWebXR.getSubImage();
+		if (subimage == null) {
+			return 0 as CUint;
+		}
+		if (subimage.depthStencilTexture == null) {
+			return 0 as CUint;
+		}
+		return GodotWebXR.getTextureId(subimage.depthStencilTexture) as CUint;
+	},
+
+	godot_webxr_get_velocity_texture__proxy: "sync",
+	godot_webxr_get_velocity_texture__sig: "i",
+	godot_webxr_get_velocity_texture: (): CUint => {
+		const subimage = GodotWebXR.getSubImage();
+		if (subimage == null) {
+			return 0 as CUint;
+		}
+		if (subimage.motionVectorTexture == null) {
+			return 0 as CUint;
+		}
+		return GodotWebXR.getTextureId(subimage.motionVectorTexture) as CUint;
+	},
+
+	godot_webxr_update_input_source__proxy: "sync",
+	godot_webxr_update_input_source__sig: "iippppppppppppp",
+	godot_webxr_update_input_source: (
+		pInputSourceId: CInt,
+		rTargetPose: CFloatPointer,
+		rTargetRayMode: CIntPointer,
+		rTouchIndex: CIntPointer,
+		rHasGripPose: CIntPointer,
+		rGripPose: CFloatPointer,
+		rHasStandardMapping: CIntPointer,
+		rButtonCount: CIntPointer,
+		rButtons: CFloatPointer,
+		rAxesCount: CIntPointer,
+		rAxes: CFloatPointer,
+		rHasHandData: CIntPointer,
+		rHandJoints: CFloatPointer,
+		rHandRadii: CFloatPointer,
+	): CInt => {
+		if (GodotWebXR.session == null || GodotWebXR.frame == null) {
+			return GodotRuntime.boolean(false);
+		}
+
+		if (
+			pInputSourceId < 0 ||
+			pInputSourceId >= GodotWebXR.inputSources.length ||
+			GodotWebXR.inputSources[pInputSourceId] == null
+		) {
+			return GodotRuntime.boolean(false);
+		}
+
+		const inputSource = GodotWebXR.inputSources[pInputSourceId];
+		const frame = GodotWebXR.frame;
+		const referenceSpace = GodotWebXR.referenceSpace;
+
+		// Target pose.
+		// TODO: Check if this fix is OK:
+		if (referenceSpace == null) {
+			return GodotRuntime.boolean(false);
+		}
+		const targetPose = frame.getPose(
+			inputSource.targetRaySpace,
+			referenceSpace,
+		);
+		if (targetPose == null) {
+			// This can mean that the controller lost tracking.
+			return GodotRuntime.boolean(false);
+		}
+
+		const target_pose_matrix = targetPose.transform.matrix;
+		for (let i = 0; i < 16; i++) {
+			GodotRuntime.setHeapValue(
+				(rTargetPose +
+					(i * Float32Array.BYTES_PER_ELEMENT)) as CFloatPointer,
+				target_pose_matrix[i],
+				"float",
+			);
+		}
+
+		// Target ray mode.
+		let targetRayMode = 0;
+		switch (inputSource.targetRayMode) {
+			case "gaze":
+				targetRayMode = 1;
+				break;
+			case "tracked-pointer":
+				targetRayMode = 2;
+				break;
+			case "screen":
+				targetRayMode = 3;
+				break;
+			default:
+				// Do nothing.
+		}
+		GodotRuntime.setHeapValue(rTargetRayMode, targetRayMode, "i32");
+
+		// Touch index.
+		GodotRuntime.setHeapValue(
+			rTouchIndex,
+			GodotWebXR.getTouchIndex(inputSource),
+			"i32",
+		);
+
+		// Grip pose.
+		let hasGripPose = false;
+		if (inputSource.gripSpace != null) {
+			const gripPose = frame.getPose(
+				inputSource.gripSpace,
+				referenceSpace,
+			);
+			if (gripPose != null) {
+				const gripPoseMatrix = gripPose.transform.matrix;
+				for (let i = 0; i < 16; i++) {
+					GodotRuntime.setHeapValue(
+						(rGripPose +
+							(i *
+								Float32Array
+									.BYTES_PER_ELEMENT)) as CFloatPointer,
+						gripPoseMatrix[i],
+						"float",
+					);
+					hasGripPose = true;
+				}
+			}
+		}
+		GodotRuntime.setHeapValue(
+			rHasGripPose,
+			GodotRuntime.boolean(hasGripPose),
+			"i32",
+		);
+
+		// Gamepad data (mapping, buttons and axes).
+		let hasStandardMapping = false;
+		let buttonCount = 0;
+		let axesCount = 0;
+		if (inputSource.gamepad != null) {
+			if (inputSource.gamepad.mapping === "xr-standard") {
+				hasStandardMapping = true;
+			}
+
+			buttonCount = Math.min(inputSource.gamepad!.buttons.length, 10);
+			for (let i = 0; i < buttonCount; i++) {
+				GodotRuntime.setHeapValue(
+					(rButtons +
+						(i * Float32Array.BYTES_PER_ELEMENT)) as CFloatPointer,
+					inputSource.gamepad!.buttons[i].value,
+					"float",
+				);
+			}
+
+			axesCount = Math.min(inputSource.gamepad!.buttons.length, 10);
+			for (let i = 0; i < axesCount; i++) {
+				GodotRuntime.setHeapValue(
+					(rAxes +
+						(i * Float32Array.BYTES_PER_ELEMENT)) as CFloatPointer,
+					inputSource.gamepad!.axes[i],
+					"float",
+				);
+			}
+		}
+		GodotRuntime.setHeapValue(
+			rHasStandardMapping,
+			GodotRuntime.boolean(hasStandardMapping),
+			"i32",
+		);
+		GodotRuntime.setHeapValue(rButtonCount, buttonCount, "i32");
+		GodotRuntime.setHeapValue(rAxesCount, axesCount, "i32");
+
+		// Hand tracking data.
+		let hasHandData = false;
+		if (
+			inputSource.hand != null && rHandJoints !== GodotRuntime.NULLPTR &&
+			rHandJoints !== GodotRuntime.NULLPTR
+		) {
+			const handJointArray = new Float32Array(25 * 16);
+			const handRadiiArray = new Float32Array(25);
+
+			if (
+				(frame.fillPoses?.(
+					Array.from(inputSource.hand!.values()),
+					referenceSpace,
+					handJointArray,
+				) ?? false) &&
+				(frame.fillJointRadii?.(
+					Array.from(inputSource.hand!.values()),
+					handRadiiArray,
+				) ?? false)
+			) {
+				GodotRuntime.heapCopy(HEAPF32, handJointArray, rHandJoints);
+				GodotRuntime.heapCopy(HEAPF32, handRadiiArray, rHandRadii);
+				hasHandData = true;
+			}
+		}
+		GodotRuntime.setHeapValue(
+			rHasHandData,
+			GodotRuntime.boolean(hasHandData),
+			"i32",
+		);
+
+		return GodotRuntime.boolean(true);
+	},
+
+	godot_webxr_get_visibility_state__proxy: "sync",
+	godot_webxr_get_visibility_state__sig: "p",
+	godot_webxr_get_visibility_state: (): CCharPointer => {
+		if (GodotWebXR.session == null) {
+			return GodotRuntime.NULLPTR as CCharPointer;
+		}
+		return GodotRuntime.allocString(GodotWebXR.session.visibilityState);
+	},
+
+	godot_webxr_get_bounds_geometry__proxy: "sync",
+	godot_webxr_get_bounds_geometry__sig: "ip",
+	godot_webxr_get_bounds_geometry: (rPoints: CFloatArrayPointer): CInt => {
+		if (!(GodotWebXR.referenceSpace instanceof XRBoundedReferenceSpace)) {
+			return 0 as CInt;
+		}
+
+		const pointCount = GodotWebXR.referenceSpace.boundsGeometry.length;
+		if (pointCount === 0) {
+			return 0 as CInt;
+		}
+
+		const bufferPtr = GodotRuntime.malloc<CFloatPointer>(
+			pointCount * 3 * Float32Array.BYTES_PER_ELEMENT,
+		);
+		for (let i = 0; i < pointCount; i++) {
+			const point = GodotWebXR.referenceSpace.boundsGeometry[i];
+			GodotRuntime.setHeapValue(
+				(bufferPtr +
+					((i * 3) + 0) *
+						Float32Array.BYTES_PER_ELEMENT) as CFloatPointer,
+				point.x,
+				"float",
+			);
+			GodotRuntime.setHeapValue(
+				(bufferPtr +
+					((i * 3) + 1) *
+						Float32Array.BYTES_PER_ELEMENT) as CFloatPointer,
+				point.y,
+				"float",
+			);
+			GodotRuntime.setHeapValue(
+				(bufferPtr +
+					((i * 3) + 2) *
+						Float32Array.BYTES_PER_ELEMENT) as CFloatPointer,
+				point.z,
+				"float",
+			);
+		}
+		GodotRuntime.setHeapValue(rPoints, bufferPtr, "*");
+
+		return pointCount as CInt;
+	},
+
+	godot_webxr_get_frame_rate__proxy: "sync",
+	godot_webxr_get_frame_rate__sig: "f",
+	godot_webxr_get_frame_rate: (): CFloat => {
+		if (GodotWebXR.session?.frameRate == null) {
+			return 0 as CFloat;
+		}
+		return GodotWebXR.session.frameRate as CFloat;
+	},
+
+	godot_webxr_update_target_frame_rate__proxy: "sync",
+	godot_webxr_update_target_frame_rate__sig: "vf",
+	godot_webxr_update_target_frame_rate: (pFrameRate: CFloat): void => {
+		if (GodotWebXR.session == null) {
+			return;
+		}
+
+		GodotWebXR.session.updateTargetFrameRate(pFrameRate).then(() => {
+			const simpleEventPtr = GodotRuntime.allocString(
+				"display_refresh_rate_changed",
+			);
+			GodotWebXR.onSimpleEvent!(simpleEventPtr);
+			GodotRuntime.free(simpleEventPtr);
+		});
+	},
+
+	godot_webxr_get_supported_frame_rates__proxy: "sync",
+	godot_webxr_get_supported_frame_rates__sig: "ip",
+	godot_webxr_get_supported_frame_rates: (
+		rFrameRates: CFloatArrayPointer,
+	): CInt => {
+		if (GodotWebXR.session?.supportedFrameRates == null) {
+			return 0 as CInt;
+		}
+
+		const frameRateCount = GodotWebXR.session.supportedFrameRates.length;
+		if (frameRateCount === 0) {
+			return 0 as CInt;
+		}
+
+		const bufferPtr = GodotRuntime.malloc<CFloatPointer>(
+			frameRateCount * Float32Array.BYTES_PER_ELEMENT,
+		);
+		for (let i = 0; i < frameRateCount; i++) {
+			GodotRuntime.setHeapValue(
+				(bufferPtr +
+					(i * Float32Array.BYTES_PER_ELEMENT)) as CFloatPointer,
+				GodotWebXR.session.supportedFrameRates[i],
+				"float",
+			);
+		}
+		GodotRuntime.setHeapValue(rFrameRates, bufferPtr, "*");
+
+		return frameRateCount as CInt;
+	},
 };
+autoAddDeps(_GodotWebXR, "$GodotWebXR");
+addToLibrary(_GodotWebXR);

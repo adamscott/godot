@@ -29,7 +29,7 @@
 /**************************************************************************/
 
 import "+browser/lib.ts";
-import "+browser/types/extensions/data_transfer_item_get_as_entry.ts";
+import "+browser/types/extensions/datatransferitem_getasentry.ts";
 
 // __emscripten_import_global_const_start
 import { addToLibrary, autoAddDeps, CPointer, FS } from "./emscripten_lib.ts";
