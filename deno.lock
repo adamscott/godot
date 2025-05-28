@@ -12,7 +12,9 @@
     "jsr:@std/path@^1.0.6": "1.0.9",
     "jsr:@std/path@^1.0.9": "1.0.9",
     "npm:@types/node@*": "22.12.0",
+    "npm:@types/serviceworker@*": "0.0.135",
     "npm:@types/serviceworker@^0.0.135": "0.0.135",
+    "npm:@types/webxr@~0.5.22": "0.5.22",
     "npm:browserslist@*": "4.24.5",
     "npm:esbuild-plugin-browserslist@*": "1.0.1_browserslist@4.24.5_esbuild@0.25.4",
     "npm:esbuild-sass-plugin@*": "3.3.1_esbuild@0.25.4_sass-embedded@1.89.0",
@@ -196,6 +198,9 @@
     },
     "@types/serviceworker@0.0.135": {
       "integrity": "sha512-QiqsfFiABLc9MHozQ2v5aXVVPzprpwh6cQ4yfcOwxZXrlBcljMeBRFpyVAaoKmQg3mGuQHZQRDMdh6sHdb8g/w=="
+    },
+    "@types/webxr@0.5.22": {
+      "integrity": "sha512-Vr6Stjv5jPRqH690f5I5GLjVk8GSsoQSYJ2FVd/3jJF7KaqfwPi3ehfBS96mlQ2kPCwZaX6U0rG2+NGHBKkA/A=="
     },
     "braces@3.0.3": {
       "integrity": "sha512-yQbXgO/OSZVD2IsiLlro+7Hf6Q18EJrKSEsdoMzKePKXct3gvD8oLcOQdIzGupr5Fj+EDe8gO/lxc1BzfMpxvA==",
@@ -532,6 +537,7 @@
       "jsr:@std/fs@^1.0.17",
       "jsr:@std/path@^1.0.9",
       "npm:@types/serviceworker@^0.0.135",
+      "npm:@types/webxr@~0.5.22",
       "npm:esbuild-sass-plugin@^3.3.1",
       "npm:esbuild@~0.25.4"
     ]

@@ -176,6 +176,36 @@ export declare const IDBFS: {
 		pCallback: (pError: Error) => void,
 	) => void;
 };
+
+export declare const MainLoop: {
+	requestAnimationFrame: typeof requestAnimationFrame;
+	pause: () => void;
+	resume: () => void;
+};
+
+export declare const runtimeKeepalivePush: () => void;
+export declare const runtimeKeepalivePop: () => void;
+// __emscripten_declare_global_const_end
+
+export type GLContextHandle = unknown;
+export type GLTexture = WebGLTexture & {
+	name?: number;
+};
+interface GLContext {
+	handle: unknown;
+	attributes: unknown;
+	version: unknown;
+	GLctx: WebGL2RenderingContext;
+}
+// __emscripten_declare_global_const_start
+export declare const GL: {
+	getContext: (pContextHandle: GLContextHandle) => GLContext;
+	getNewId: (pTable: unknown[]) => number;
+	textures: GLTexture[];
+};
+
+export declare const _emscripten_webgl_get_current_context: () =>
+	GLContextHandle;
 // __emscripten_declare_global_const_end
 
 // __emscripten_declare_global_const_start

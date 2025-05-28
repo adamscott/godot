@@ -28,6 +28,7 @@
 		"@std/fs": "jsr:@std/fs@^1.0.17",
 		"@std/path": "jsr:@std/path@^1.0.9",
 		"@types/serviceworker": "npm:@types/serviceworker@^0.0.135",
+		"@types/webxr": "npm:@types/webxr@^0.5.22",
 		"esbuild": "npm:esbuild@^0.25.4",
 		"esbuild-sass-plugin": "npm:esbuild-sass-plugin@^3.3.1"
 	},
