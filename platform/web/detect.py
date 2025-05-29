@@ -227,8 +227,8 @@ def configure(env: "SConsEnvironment"):
     cc_semver = (cc_version["major"], cc_version["minor"], cc_version["patch"])
 
     # Minimum emscripten requirements.
-    if cc_semver < (3, 1, 62):
-        print_error("The minimum emscripten version to build Godot is 3.1.62, detected: %s.%s.%s" % cc_semver)
+    if cc_semver < (4, 0, 9):
+        print_error("The minimum emscripten version to build Godot is 4.0.9, detected: %s.%s.%s" % cc_semver)
         sys.exit(255)
 
     env.Prepend(CPPPATH=["#platform/web"])

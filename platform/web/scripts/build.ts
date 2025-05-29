@@ -80,6 +80,7 @@ export async function buildJavaScriptTarget(
 	settings: {
 		target: string | string[];
 		sourceMap: boolean;
+		minify: boolean;
 		isEmscripten?: boolean;
 		emscriptenFilter?: RegExp;
 		entryNames?: string;
@@ -90,6 +91,7 @@ export async function buildJavaScriptTarget(
 	const {
 		target,
 		sourceMap,
+		minify,
 		isEmscripten = false,
 		emscriptenFilter,
 		entryNames,
@@ -107,6 +109,7 @@ export async function buildJavaScriptTarget(
 		],
 		entryPoints: entryPoints.map(prefixEntryPoint),
 		entryNames,
+		minify,
 		metafile: true,
 		outdir: distDir,
 		bundle: true,
@@ -145,9 +148,10 @@ export async function buildShell(
 	options: {
 		target?: string | string[];
 		sourceMap?: boolean;
+		minify?: boolean;
 	} = {},
 ): Promise<void> {
-	const { target = [], sourceMap = false } = options;
+	const { target = [], sourceMap = false, minify = false } = options;
 	const shellEntryPoint = "misc/dist/html/src/entry/shell.ts";
 	const engineEntryPoint = "platform/web/src/browser/entry/engine.ts";
 
@@ -157,6 +161,7 @@ export async function buildShell(
 	], {
 		target,
 		sourceMap,
+		minify,
 	});
 	await buildCssTarget(directory, [
 		"misc/dist/html/assets/scss/main/shell.scss",
@@ -168,9 +173,11 @@ export async function buildEditor(
 	options: {
 		target?: string | string[];
 		sourceMap?: boolean;
+		minify?: boolean;
 	} = {},
 ): Promise<void> {
-	const { target = defaultTarget, sourceMap = false } = options;
+	const { target = defaultTarget, sourceMap = false, minify = false } =
+		options;
 	const editorEntryPoint = "misc/dist/html/src/entry/editor.ts";
 	const engineEntryPoint = "platform/web/src/browser/entry/engine.ts";
 
@@ -180,6 +187,7 @@ export async function buildEditor(
 	], {
 		target,
 		sourceMap,
+		minify,
 	});
 
 	await buildCssTarget(directory, [
@@ -192,9 +200,11 @@ export async function buildServiceWorker(
 	pOptions: {
 		target?: string | string[];
 		sourceMap?: boolean;
+		minify?: boolean;
 	} = {},
 ): Promise<void> {
-	const { target = defaultTarget, sourceMap = false } = pOptions;
+	const { target = defaultTarget, sourceMap = false, minify = false } =
+		pOptions;
 	const serviceWorkerEntryPoint =
 		"misc/dist/html/src/entry/service-worker.ts";
 
@@ -204,6 +214,7 @@ export async function buildServiceWorker(
 		{
 			target,
 			sourceMap,
+			minify,
 		},
 	);
 }
@@ -212,9 +223,14 @@ export async function buildEmscriptenLibraries(
 	pTargetDirectory: string,
 	pImportMapName: string,
 	pEntryPoints: string[],
-	pOptions: { target?: string | string[]; sourceMap?: boolean } = {},
+	pOptions: {
+		target?: string | string[];
+		sourceMap?: boolean;
+		minify?: boolean;
+	} = {},
 ): Promise<void> {
-	const { target = defaultTarget, sourceMap = false } = pOptions;
+	const { target = defaultTarget, sourceMap = false, minify = false } =
+		pOptions;
 
 	const filter = new RegExp(
 		[
@@ -244,6 +260,7 @@ export async function buildEmscriptenLibraries(
 		{
 			target,
 			sourceMap,
+			minify,
 			isEmscripten: true,
 			emscriptenFilter: filter,
 			entryNames: pImportMapName,
@@ -272,6 +289,10 @@ async function main() {
 						boolean: true,
 						default: false,
 					})
+					.option("minify", {
+						boolean: true,
+						default: false,
+					})
 					.option("clear", {
 						boolean: true,
 						default: false,
@@ -285,10 +306,12 @@ async function main() {
 				await buildShell(directory, {
 					target: pArgv.target,
 					sourceMap: pArgv.sourceMap,
+					minify: pArgv.minify,
 				});
 				await buildServiceWorker(directory, {
 					target: pArgv.target,
 					sourceMap: pArgv.sourceMap,
+					minify: pArgv.minify,
 				});
 			},
 		);
@@ -311,6 +334,10 @@ async function main() {
 						default: [],
 					})
 					.option("source-map", {
+						boolean: true,
+						default: false,
+					})
+					.option("minify", {
 						boolean: true,
 						default: false,
 					})
@@ -351,6 +378,7 @@ async function main() {
 					{
 						target: pArgv.target,
 						sourceMap: pArgv.sourceMap,
+						minify: pArgv.minify,
 					},
 				);
 			},

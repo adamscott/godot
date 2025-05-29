@@ -55,6 +55,9 @@ def run_esbuild(target, source, env, for_signature):
     elif esbuild_type == "editor":
         cmd.append("editor")
 
+    if env["target"] == "template_release":
+        cmd.append("--minify")
+
     return " ".join(cmd)
 
 
