@@ -41,9 +41,9 @@ def run_esbuild(target, source, env, for_signature):
 
     if esbuild_type == "emscripten":
         cmd.append("emscripten")
-        esbuild_emscripten_name = cast(str, env.get("ESBUILD_EMSCRIPTEN_NAME", "")).lower()
-        esbuild_emscripten_source = cast(str, env.get("ESBUILD_EMSCRIPTEN_SOURCE", ""))
-        esbuild_emscripten_output_dir = cast(str, env.get("ESBUILD_EMSCRIPTEN_OUTPUT_DIR", ""))
+        esbuild_emscripten_name = str(env.get("ESBUILD_EMSCRIPTEN_NAME", "")).lower()
+        esbuild_emscripten_source = str(env.get("ESBUILD_EMSCRIPTEN_SOURCE", ""))
+        esbuild_emscripten_output_dir = str(env.get("ESBUILD_EMSCRIPTEN_OUTPUT_DIR", ""))
 
         esbuild_emscripten_source = str(env.File(esbuild_emscripten_source))
         esbuild_emscripten_output_dir = str(env.Dir(esbuild_emscripten_output_dir))

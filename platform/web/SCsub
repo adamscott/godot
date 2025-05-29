@@ -75,7 +75,6 @@ emscripten_env = sys_env.Clone(
     ESBUILD_EMSCRIPTEN_NAME="libbase",
     ESBUILD_EMSCRIPTEN_SOURCE="#platform/web/src/browser/entry/emscripten.ts",
     ESBUILD_EMSCRIPTEN_OUTPUT_DIR="#platform/web/dist/emscripten/",
-    ESBUILD_TARGET_GLOB=["#platform/web/dist/emscripten/**.ts"],
 )
 emscripten_base_lib = emscripten_env.RunEsbuild(
     target=["#platform/web/dist/emscripten/libbase.js"],
