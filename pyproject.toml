@@ -94,5 +94,4 @@ ignore-words-list = [
 	"thirdparty",
 	"vai",
 	"Masia",
-	"pEvent",
 ]
