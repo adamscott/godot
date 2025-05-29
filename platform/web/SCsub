@@ -36,23 +36,23 @@ if env["target"] == "editor":
     env.add_source_files(web_files, "editor/*.cpp")
 
 sys_env = env.Clone()
-sys_env.AddJSLibraries(
-    [
-        "js/libs/library_godot_audio.js",
-        "js/libs/library_godot_display.js",
-        "js/libs/library_godot_fetch.js",
-        "js/libs/library_godot_webmidi.js",
-        "js/libs/library_godot_os.js",
-        "js/libs/library_godot_runtime.js",
-        "js/libs/library_godot_input.js",
-        "js/libs/library_godot_webgl2.js",
-    ]
-)
-sys_env.AddJSExterns(
-    [
-        "js/libs/library_godot_webgl2.externs.js",
-    ]
-)
+# sys_env.AddJSLibraries(
+#     [
+#         "js/libs/library_godot_audio.js",
+#         "js/libs/library_godot_display.js",
+#         "js/libs/library_godot_fetch.js",
+#         "js/libs/library_godot_webmidi.js",
+#         "js/libs/library_godot_os.js",
+#         "js/libs/library_godot_runtime.js",
+#         "js/libs/library_godot_input.js",
+#         "js/libs/library_godot_webgl2.js",
+#     ]
+# )
+# sys_env.AddJSExterns(
+#     [
+#         "js/libs/library_godot_webgl2.externs.js",
+#     ]
+# )
 
 sys_env.AddJSPost(
     [
@@ -61,13 +61,31 @@ sys_env.AddJSPost(
 )
 
 # esbuild Web files using Deno.
-sys_env.RunEsbuild(
-    source=[
-        sys_env.Glob("#misc/dist/html/src/**.ts"),
-        sys_env.Glob("#platform/web/src/browser/**.ts"),
-        sys_env.Glob("#platform/web/src/shared/**.ts"),
-    ]
+# sys_env.RunEsbuild(
+#     source=[
+#         sys_env.Glob("#misc/dist/html/src/**.ts"),
+#         sys_env.Glob("#platform/web/src/browser/**.ts"),
+#         sys_env.Glob("#platform/web/src/shared/**.ts"),
+#     ],
+# )
+
+# esbuild Emscripten libraries.
+emscripten_env = sys_env.Clone(
+    ESBUILD_TYPE="emscripten",
+    ESBUILD_EMSCRIPTEN_NAME="libbase",
+    ESBUILD_EMSCRIPTEN_SOURCE="#platform/web/src/browser/entry/emscripten.ts",
+    ESBUILD_EMSCRIPTEN_OUTPUT_DIR="#platform/web/dist/emscripten/",
+    ESBUILD_TARGET_GLOB=["#platform/web/dist/emscripten/**.ts"],
 )
+emscripten_base_lib = emscripten_env.RunEsbuild(
+    target=["#platform/web/dist/emscripten/libbase.js"],
+    source=[
+        emscripten_env.Glob("#platform/web/src/shared/**.ts"),
+        emscripten_env.Glob("#platform/web/src/browser/emscripten/**.ts"),
+        emscripten_env.Glob("#platform/web/src/browser/entry/emscripten.ts"),
+    ],
+)
+sys_env.AddJSLibraries([emscripten_base_lib])
 
 if env["javascript_eval"]:
     sys_env.AddJSLibraries(["js/libs/library_godot_javascript_singleton.js"])

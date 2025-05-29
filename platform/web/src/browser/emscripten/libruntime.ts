@@ -110,6 +110,10 @@ export declare const GodotRuntime: typeof _GodotRuntime.$GodotRuntime;
 const _GodotRuntime = {
 	$GodotRuntime: {
 		NULLPTR: 0 as CPointer,
+		status: Object.freeze({
+			OK: 0 as CInt,
+			FAILED: 1 as CInt,
+		}),
 
 		// Functions.
 		getFunction: <T extends AnyFunction>(

@@ -41,6 +41,7 @@ typedef void (*AudioInitOnLatencyChangeCallback)(float p_latency);
 
 extern int godot_audio_is_available();
 extern int godot_audio_has_worklet();
+extern int godot_audio_has_script_processor();
 extern int godot_audio_init(int *p_mix_rate, int p_latency, AudioInitOnStateChangeCallback p_on_state_change_callback, AudioInitOnLatencyChangeCallback p_on_latency_change_callback);
 
 extern void godot_audio_resume();
@@ -85,8 +86,10 @@ extern int godot_audio_worklet_state_get(GodotAudioState p_state, int p_idx);
 extern int godot_audio_worklet_state_wait(int32_t *p_state, int p_idx, int32_t p_expected, int p_timeout);
 
 // Script
+typedef void (*AudioScriptStartCallback)();
+
 extern int godot_audio_script_create(int *p_buffer_size, int p_channels);
-extern void godot_audio_script_start(float *p_in_buf, int p_in_size, float *p_out_buf, int p_out_size, void (*p_cb)());
+extern void godot_audio_script_start(float *p_in_buf, int p_in_size, float *p_out_buf, int p_out_size, AudioScriptStartCallback p_callback);
 
 #ifdef __cplusplus
 }

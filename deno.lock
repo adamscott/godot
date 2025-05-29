@@ -1,11 +1,14 @@
 {
   "version": "4",
   "specifiers": {
+    "jsr:@luca/esbuild-deno-loader@*": "0.11.1",
     "jsr:@luca/esbuild-deno-loader@~0.11.1": "0.11.1",
     "jsr:@std/bytes@^1.0.2": "1.0.6",
     "jsr:@std/cli@^1.0.17": "1.0.18",
     "jsr:@std/encoding@^1.0.5": "1.0.10",
+    "jsr:@std/fs@*": "1.0.17",
     "jsr:@std/fs@^1.0.17": "1.0.17",
+    "jsr:@std/path@*": "1.1.0",
     "jsr:@std/path@^1.0.6": "1.1.0",
     "jsr:@std/path@^1.0.9": "1.1.0",
     "npm:@types/serviceworker@^0.0.135": "0.0.135",

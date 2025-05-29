@@ -28,13 +28,13 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import "+browser/emscripten/runtime.ts";
-import "+browser/emscripten/os.ts";
+import "+browser/emscripten/libruntime.ts";
+import "+browser/emscripten/libos.ts";
 
-import "+browser/emscripten/audio.ts";
-import "+browser/emscripten/fetch.ts";
-import "+browser/emscripten/input.ts";
-import "+browser/emscripten/webrtc.ts";
+import "+browser/emscripten/libaudio.ts";
+import "+browser/emscripten/libfetch.ts";
+import "+browser/emscripten/libinput.ts";
+import "+browser/emscripten/libdisplay.ts";
 
-import "+browser/emscripten/webmidi.ts";
-import "+browser/emscripten/webxr.ts";
+import "+browser/emscripten/libwebmidi.ts";
+import "+browser/emscripten/libwebgl2.ts";

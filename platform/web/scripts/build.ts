@@ -82,14 +82,20 @@ export async function buildJavaScriptTarget(
 		sourceMap: boolean;
 		isEmscripten?: boolean;
 		emscriptenFilter?: RegExp;
+		entryNames?: string;
 	},
-): Promise<Record<string, string>> {
+): Promise<void> {
 	const prefixEntryPoint = (entryPoint: string): string => `./${entryPoint}`;
 
-	const { target, sourceMap, isEmscripten = false, emscriptenFilter } =
-		settings;
+	const {
+		target,
+		sourceMap,
+		isEmscripten = false,
+		emscriptenFilter,
+		entryNames,
+	} = settings;
 
-	const result = await esbuild.build({
+	await esbuild.build({
 		plugins: [
 			denoResolverPlugin(),
 			...isEmscripten
@@ -100,7 +106,7 @@ export async function buildJavaScriptTarget(
 			denoLoaderPlugin(),
 		],
 		entryPoints: entryPoints.map(prefixEntryPoint),
-		entryNames: "[name]-[hash]",
+		entryNames,
 		metafile: true,
 		outdir: distDir,
 		bundle: true,
@@ -109,23 +115,6 @@ export async function buildJavaScriptTarget(
 		target,
 		format: "esm",
 	});
-
-	const targetFileRegExp = /^\/?([^/]+?)-[A-Z\d]{8}\.(.+?)$/m;
-	const importMap: Record<string, string> = {};
-	const outputFilePaths = Object.keys(result.metafile.outputs);
-	for (const outFilePath of outputFilePaths) {
-		const outFileName = outFilePath.substring(distDir.length);
-		const targetFileMatch = outFileName.match(targetFileRegExp);
-		if (targetFileMatch == null) {
-			errorAndExit(
-				"Could not generate target name of the out file name.",
-			);
-		}
-		const targetFileName = `${targetFileMatch[1]}.${targetFileMatch[2]}`;
-		importMap[targetFileName] = outFileName;
-	}
-
-	return importMap;
 }
 
 export async function buildCssTarget(
@@ -135,38 +124,20 @@ export async function buildCssTarget(
 		target: string | string[];
 		sourceMap: boolean;
 	},
-): Promise<Record<string, string>> {
+): Promise<void> {
 	const prefixEntryPoint = (entryPoint: string): string => `./${entryPoint}`;
 
 	const { target = defaultTarget, sourceMap = false } = settings;
 
-	const result = await esbuild.build({
+	await esbuild.build({
 		plugins: [sassPlugin()],
 		entryPoints: entryPoints.map(prefixEntryPoint),
-		entryNames: "[name]-[hash]",
 		metafile: true,
 		outdir: distDir,
 		bundle: true,
 		sourcemap: sourceMap,
 		target,
 	});
-
-	const targetFileRegExp = /^\/?([^/]+?)-[A-Z\d]{8}\.(.+?)$/m;
-	const importMap: Record<string, string> = {};
-	const outputFilePaths = Object.keys(result.metafile.outputs);
-	for (const outFilePath of outputFilePaths) {
-		const outFileName = outFilePath.substring(distDir.length);
-		const targetFileMatch = outFileName.match(targetFileRegExp);
-		if (targetFileMatch == null) {
-			errorAndExit(
-				"Could not generate target name of the out file name.",
-			);
-		}
-		const targetFileName = `${targetFileMatch[1]}.${targetFileMatch[2]}`;
-		importMap[targetFileName] = outFileName;
-	}
-
-	return importMap;
 }
 
 export async function buildShell(
@@ -175,32 +146,21 @@ export async function buildShell(
 		target?: string | string[];
 		sourceMap?: boolean;
 	} = {},
-): Promise<Record<string, string>> {
+): Promise<void> {
 	const { target = [], sourceMap = false } = options;
 	const shellEntryPoint = "misc/dist/html/src/entry/shell.ts";
 	const engineEntryPoint = "platform/web/src/browser/entry/engine.ts";
 
-	const importMap = {};
-
-	Object.assign(
-		importMap,
-		await buildJavaScriptTarget(directory, [
-			shellEntryPoint,
-			engineEntryPoint,
-		], {
-			target,
-			sourceMap,
-		}),
-	);
-
-	Object.assign(
-		importMap,
-		await buildCssTarget(directory, [
-			"misc/dist/html/assets/scss/main/shell.scss",
-		], { target, sourceMap }),
-	);
-
-	return importMap;
+	await buildJavaScriptTarget(directory, [
+		shellEntryPoint,
+		engineEntryPoint,
+	], {
+		target,
+		sourceMap,
+	});
+	await buildCssTarget(directory, [
+		"misc/dist/html/assets/scss/main/shell.scss",
+	], { target, sourceMap });
 }
 
 export async function buildEditor(
@@ -209,32 +169,22 @@ export async function buildEditor(
 		target?: string | string[];
 		sourceMap?: boolean;
 	} = {},
-): Promise<Record<string, string>> {
+): Promise<void> {
 	const { target = defaultTarget, sourceMap = false } = options;
 	const editorEntryPoint = "misc/dist/html/src/entry/editor.ts";
 	const engineEntryPoint = "platform/web/src/browser/entry/engine.ts";
 
-	const importMap = {};
+	await buildJavaScriptTarget(directory, [
+		editorEntryPoint,
+		engineEntryPoint,
+	], {
+		target,
+		sourceMap,
+	});
 
-	Object.assign(
-		importMap,
-		await buildJavaScriptTarget(directory, [
-			editorEntryPoint,
-			engineEntryPoint,
-		], {
-			target,
-			sourceMap,
-		}),
-	);
-
-	Object.assign(
-		importMap,
-		await buildCssTarget(directory, [
-			"misc/dist/html/assets/scss/main/editor.scss",
-		], { target, sourceMap }),
-	);
-
-	return importMap;
+	await buildCssTarget(directory, [
+		"misc/dist/html/assets/scss/main/editor.scss",
+	], { target, sourceMap });
 }
 
 export async function buildServiceWorker(
@@ -243,12 +193,12 @@ export async function buildServiceWorker(
 		target?: string | string[];
 		sourceMap?: boolean;
 	} = {},
-): Promise<Record<string, string>> {
+): Promise<void> {
 	const { target = defaultTarget, sourceMap = false } = pOptions;
 	const serviceWorkerEntryPoint =
 		"misc/dist/html/src/entry/service-worker.ts";
 
-	return await buildJavaScriptTarget(
+	await buildJavaScriptTarget(
 		pDirectory,
 		[serviceWorkerEntryPoint],
 		{
@@ -288,7 +238,7 @@ export async function buildEmscriptenLibraries(
 		}, "(?:"),
 	);
 
-	const importMap = await buildJavaScriptTarget(
+	await buildJavaScriptTarget(
 		pTargetDirectory,
 		pEntryPoints,
 		{
@@ -296,12 +246,8 @@ export async function buildEmscriptenLibraries(
 			sourceMap,
 			isEmscripten: true,
 			emscriptenFilter: filter,
+			entryNames: pImportMapName,
 		},
-	);
-
-	await Deno.writeTextFile(
-		join(pTargetDirectory, `importmap.${pImportMapName}.json`),
-		JSON.stringify(importMap),
 	);
 }
 
@@ -336,21 +282,14 @@ async function main() {
 				if (pArgv.clear) {
 					await clearDirectory(directory);
 				}
-				const importMap = await buildShell(directory, {
+				await buildShell(directory, {
 					target: pArgv.target,
 					sourceMap: pArgv.sourceMap,
 				});
-				Object.assign(
-					importMap,
-					await buildServiceWorker(directory, {
-						target: pArgv.target,
-						sourceMap: pArgv.sourceMap,
-					}),
-				);
-				await Deno.writeTextFile(
-					join(directory, "importmap.json"),
-					JSON.stringify(importMap),
-				);
+				await buildServiceWorker(directory, {
+					target: pArgv.target,
+					sourceMap: pArgv.sourceMap,
+				});
 			},
 		);
 	};

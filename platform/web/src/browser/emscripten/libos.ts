@@ -38,7 +38,7 @@ import {
 	HEAP8,
 	IDBFS,
 } from "./emscripten_lib.ts";
-import { GodotRuntime } from "./runtime.ts";
+import { GodotRuntime } from "./libruntime.ts";
 // __emscripten_import_global_const_end
 
 import {

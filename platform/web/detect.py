@@ -27,7 +27,13 @@ def get_name():
 
 
 def can_build():
-    return WhereIs("emcc") is not None and WhereIs("deno") is not None
+    emcc = WhereIs("emcc")
+    if emcc is None:
+        print_error("`emcc` was not detected. Make sure emscripten is set up correctly.")
+    deno = WhereIs("deno")
+    if deno is None:
+        print_error("`deno` was not detected. Make sure Deno is set up correctly.")
+    return emcc is not None and deno is not None
 
 
 def get_tools(env: "SConsEnvironment"):

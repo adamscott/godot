@@ -196,11 +196,15 @@ interface GLContext {
 	attributes: unknown;
 	version: unknown;
 	GLctx: WebGL2RenderingContext;
+	multiviewExt?: OVR_multiview2;
+	oculusMultiviewExt?: OCULUS_multiview;
 }
 // __emscripten_declare_global_const_start
 export declare const GL: {
 	getContext: (pContextHandle: GLContextHandle) => GLContext;
 	getNewId: (pTable: unknown[]) => number;
+	resizeOffscreenFramebuffer: (pGLContext: GLContext) => void;
+	currentContext: GLContext;
 	textures: GLTexture[];
 };
 

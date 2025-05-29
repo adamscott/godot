@@ -1,7 +1,7 @@
 import json
 import os
-import subprocess
 
+from SCons.Errors import BuildError
 from SCons.Util import WhereIs
 
 from platform_methods import get_build_version
@@ -25,16 +25,37 @@ def run_closure_compiler(target, source, env, for_signature):
 
 
 def run_esbuild(target, source, env, for_signature):
-    deno_bin = WhereIs("deno")
-    cmd = [deno_bin, "run", "esbuild"]
+    from typing import cast
 
-    if not for_signature:
-        subprocess.run(cmd)
+    esbuild_type = cast(str, env.get("ESBUILD_TYPE", "").lower())
+    valid_esbuild_types = ["emscripten", "shell", "editor"]
+    if esbuild_type not in valid_esbuild_types:
+        raise BuildError(errstr=f'Invalid ESBUILD_TYPE. "{esbuild_type}" not in {repr(valid_esbuild_types)}')
 
-    if env.editor_build:
-        return env.Glob("#platform/web/dist/editor/**")
+    deno_bin = WhereIs("deno") or ""
+    cmd = [deno_bin, "task", "esbuild"]
 
-    return env.Glob("#platform/web/dist/shell/**")
+    esbuild_emscripten_name = ""
+    esbuild_emscripten_source = ""
+    esbuild_emscripten_output_dir = ""
+
+    if esbuild_type == "emscripten":
+        cmd.append("emscripten")
+        esbuild_emscripten_name = cast(str, env.get("ESBUILD_EMSCRIPTEN_NAME", "")).lower()
+        esbuild_emscripten_source = cast(str, env.get("ESBUILD_EMSCRIPTEN_SOURCE", ""))
+        esbuild_emscripten_output_dir = cast(str, env.get("ESBUILD_EMSCRIPTEN_OUTPUT_DIR", ""))
+
+        esbuild_emscripten_source = str(env.File(esbuild_emscripten_source))
+        esbuild_emscripten_output_dir = str(env.Dir(esbuild_emscripten_output_dir))
+
+        cmd.append(esbuild_emscripten_name)
+        cmd.append(esbuild_emscripten_source)
+    elif esbuild_type == "shell":
+        cmd.append("shell")
+    elif esbuild_type == "editor":
+        cmd.append("editor")
+
+    return " ".join(cmd)
 
 
 def create_engine_file(env, target, source, externs, threads_enabled):
