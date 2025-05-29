@@ -47,7 +47,7 @@ import {
 	stringToUTF8Array,
 	UTF8ToString,
 	wasmTable,
-} from "./emscripten_lib.ts";
+} from "./libemscripten.ts";
 // __emscripten_import_global_const_end
 
 import {
@@ -61,7 +61,7 @@ import {
 	CIntPointer,
 	CPointer,
 	CPointerType,
-} from "./emscripten_lib.ts";
+} from "./libemscripten.ts";
 
 import { TypedArray } from "+browser/types/api.ts";
 import { AnyFunction } from "+shared/types/aliases.ts";

@@ -41,16 +41,11 @@ import {
 	autoAddDeps,
 	GL,
 	HEAPU8,
-} from "+browser/emscripten/emscripten_lib.ts";
-import { GodotRuntime } from "+browser/emscripten/libruntime.ts";
+} from "./libemscripten.ts";
+import { GodotRuntime } from "./libruntime.ts";
 // __emscripten_import_global_const_end
 
-import {
-	CInt,
-	CIntPointer,
-	CUint,
-	CVoidPointer,
-} from "+browser/emscripten/emscripten_lib.ts";
+import { CInt, CIntPointer, CUint, CVoidPointer } from "./libemscripten.ts";
 
 // __emscripten_declare_global_const_start
 export declare const GodotWebGL2: typeof _GodotWebGL2.$GodotWebGL2;

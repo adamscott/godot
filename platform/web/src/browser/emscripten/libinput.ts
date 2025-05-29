@@ -32,9 +32,9 @@ import "+browser/lib.ts";
 import "+browser/types/extensions/datatransferitem_getasentry.ts";
 
 // __emscripten_import_global_const_start
-import { addToLibrary, autoAddDeps, CPointer, FS } from "./emscripten_lib.ts";
-import { GodotRuntime } from "./runtime.ts";
-import { GodotConfig, GodotEventListeners, GodotFS, GodotOS } from "./os.ts";
+import { addToLibrary, autoAddDeps, CPointer, FS } from "./libemscripten.ts";
+import { GodotRuntime } from "./libruntime.ts";
+import { GodotConfig, GodotEventListeners, GodotFS, GodotOS } from "./libos.ts";
 // __emscripten_import_global_const_end
 
 import {
@@ -47,7 +47,7 @@ import {
 	CIntPointer,
 	CUintPointer,
 	CVoidPointer,
-} from "./emscripten_lib.ts";
+} from "./libemscripten.ts";
 
 const getModifiers = (pEvent: KeyboardEvent | MouseEvent): number => {
 	return (Number(pEvent.shiftKey) << 0) +

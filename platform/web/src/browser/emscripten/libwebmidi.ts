@@ -32,9 +32,9 @@ import "+browser/lib.ts";
 import "+browser/types/extensions/midiinputmap_maplike.ts";
 
 // __emscripten_import_global_const_start
-import { addToLibrary, autoAddDeps, HEAPU8 } from "./emscripten_lib.ts";
-import { GodotRuntime } from "./runtime.ts";
-import { GodotEventListeners } from "./os.ts";
+import { addToLibrary, autoAddDeps, HEAPU8 } from "./libemscripten.ts";
+import { GodotRuntime } from "./libruntime.ts";
+import { GodotEventListeners } from "./libos.ts";
 // __emscripten_import_global_const_end
 
 import {
@@ -42,7 +42,7 @@ import {
 	CInt,
 	CUintPointer,
 	CVoidPointer,
-} from "./emscripten_lib.ts";
+} from "./libemscripten.ts";
 
 type WebMIDIOpenMIDIInputsCallback = (
 	pConnectedInputNamesPtr: CCharArrayPointer,

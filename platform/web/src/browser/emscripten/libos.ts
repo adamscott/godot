@@ -37,7 +37,7 @@ import {
 	FS,
 	HEAP8,
 	IDBFS,
-} from "./emscripten_lib.ts";
+} from "./libemscripten.ts";
 import { GodotRuntime } from "./libruntime.ts";
 // __emscripten_import_global_const_end
 
@@ -46,7 +46,7 @@ import {
 	CInt,
 	CUintPointer,
 	CVoidPointer,
-} from "./emscripten_lib.ts";
+} from "./libemscripten.ts";
 
 import { AnyFunction } from "+shared/types/aliases.ts";
 import { ConfigOptions } from "+browser/types/config.ts";

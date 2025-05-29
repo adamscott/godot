@@ -16,7 +16,7 @@ if env["platform"] == "web":
         source=[
             emscripten_env.Glob("#platform/web/src/shared/**.ts"),
             emscripten_env.Glob("#platform/web/src/browser/emscripten/**.ts"),
-            emscripten_env.Glob("native/libwebxr.ts"),
+            "native/libwebxr.ts",
         ],
     )
     env.AddJSLibraries([emscripten_webxr_lib])

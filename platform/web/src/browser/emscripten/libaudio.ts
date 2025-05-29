@@ -31,12 +31,7 @@
 import "+browser/lib.ts";
 
 // __emscripten_import_global_const_start
-import {
-	addToLibrary,
-	autoAddDeps,
-	HEAP32,
-	HEAPF32,
-} from "./emscripten_lib.ts";
+import { addToLibrary, autoAddDeps, HEAP32, HEAPF32 } from "./libemscripten.ts";
 import { GodotRuntime } from "./libruntime.ts";
 import { GodotConfig, GodotOS } from "./libos.ts";
 // __emscripten_import_global_const_end
@@ -50,7 +45,7 @@ import {
 	CIntPointer,
 	CPointer,
 	CVoidPointer,
-} from "./emscripten_lib.ts";
+} from "./libemscripten.ts";
 
 import { throwIfNull } from "+shared/utils/error.ts";
 

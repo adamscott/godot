@@ -29,9 +29,13 @@
 /**************************************************************************/
 
 // __emscripten_import_global_const_start
-import { addToLibrary, autoAddDeps, HEAPU8 } from "./emscripten_lib.ts";
-import { GodotRuntime } from "./runtime.ts";
-import { IDHandler } from "./os.ts";
+import {
+	addToLibrary,
+	autoAddDeps,
+	HEAPU8,
+} from "+browser/emscripten/libemscripten.ts";
+import { GodotRuntime } from "+browser/emscripten/libruntime.ts";
+import { IDHandler } from "+browser/emscripten/libos.ts";
 // __emscripten_import_global_const_end
 
 import {
@@ -39,8 +43,8 @@ import {
 	CInt,
 	CUintPointer,
 	CVoidPointer,
-} from "./emscripten_lib.ts";
-import { IDHandlerId } from "./os.ts";
+} from "+browser/emscripten/libemscripten.ts";
+import { IDHandlerId } from "+browser/emscripten/libos.ts";
 
 type WSOnOpen = (
 	pReferencePtr: CVoidPointer,

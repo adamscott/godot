@@ -31,9 +31,9 @@
 import "+browser/lib.ts";
 
 // __emscripten_import_global_const_start
-import { addToLibrary, autoAddDeps, HEAP8 } from "./emscripten_lib.ts";
-import { GodotRuntime } from "./runtime.ts";
-import { IDHandler } from "./os.ts";
+import { addToLibrary, autoAddDeps, HEAP8 } from "./libemscripten.ts";
+import { GodotRuntime } from "./libruntime.ts";
+import { IDHandler } from "./libos.ts";
 // __emscripten_import_global_const_end
 
 import { TypedArray } from "+browser/types/api.ts";
@@ -44,8 +44,8 @@ import {
 	CInt,
 	CUintPointer,
 	CVoidPointer,
-} from "./emscripten_lib.ts";
-import { IDHandlerId } from "./os.ts";
+} from "./libemscripten.ts";
+import { IDHandlerId } from "./libos.ts";
 
 export interface GodotFetchEntry {
 	request: Promise<Response> | null;

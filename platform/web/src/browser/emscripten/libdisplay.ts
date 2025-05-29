@@ -37,13 +37,9 @@ import {
 	autoAddDeps,
 	GL,
 	HEAPU8,
-} from "+browser/emscripten/emscripten_lib.ts";
-import { GodotRuntime } from "+browser/emscripten/libruntime.ts";
-import {
-	GodotConfig,
-	GodotEventListeners,
-	GodotOS,
-} from "+browser/emscripten/libos.ts";
+} from "./libemscripten.ts";
+import { GodotRuntime } from "./libruntime.ts";
+import { GodotConfig, GodotEventListeners, GodotOS } from "./libos.ts";
 // __emscripten_import_global_const_end
 
 import {
@@ -54,7 +50,7 @@ import {
 	CIntPointer,
 	CUintPointer,
 	CVoidPointer,
-} from "+browser/emscripten/emscripten_lib.ts";
+} from "./libemscripten.ts";
 
 type TTSGetVoicesCallback = (pSize: CInt, pVoices: CCharArrayPointer) => void;
 type TTSSpeakCallback = (pEvent: CInt, pId: CInt, pPosition: CInt) => void;
@@ -557,7 +553,7 @@ const _GodotDisplay = {
 		GodotEventListeners.add(
 			utterance,
 			"end",
-			(pEvent: SpeechSynthesisEvent): void => {
+			(_pEvent: SpeechSynthesisEvent): void => {
 				// TTS_UTTERANCE_ENDED.
 				callback(1 as CInt, pUtteranceId as CInt, 0 as CInt);
 			},
@@ -566,7 +562,7 @@ const _GodotDisplay = {
 		GodotEventListeners.add(
 			utterance,
 			"start",
-			(pEvent: SpeechSynthesisEvent): void => {
+			(_pEvent: SpeechSynthesisEvent): void => {
 				// TTS_UTTERANCE_STARTED.
 				callback(0 as CInt, pUtteranceId as CInt, 0 as CInt);
 			},
@@ -575,7 +571,7 @@ const _GodotDisplay = {
 		GodotEventListeners.add(
 			utterance,
 			"error",
-			(pEvent: SpeechSynthesisEvent): void => {
+			(_pEvent: SpeechSynthesisEvent): void => {
 				// TTS_UTTERANCE_CANCELED.
 				callback(2 as CInt, pUtteranceId as CInt, 0 as CInt);
 			},

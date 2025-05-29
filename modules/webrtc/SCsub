@@ -8,6 +8,20 @@ env_webrtc = env_modules.Clone()
 
 if env["platform"] == "web":
     # Our JavaScript/C++ interface.
-    env.AddJSLibraries(["library_godot_webrtc.js"])
+    emscripten_env = env.Clone(
+        ESBUILD_TYPE="emscripten",
+        ESBUILD_EMSCRIPTEN_NAME="libwebrtc",
+        ESBUILD_EMSCRIPTEN_SOURCE=env.File("emscripten/libwebrtc.ts"),
+        ESBUILD_EMSCRIPTEN_OUTPUT_DIR="#platform/web/dist/emscripten/",
+    )
+    emscripten_webrtc_lib = emscripten_env.RunEsbuild(
+        target=["#platform/web/dist/emscripten/libwebrtc.js"],
+        source=[
+            emscripten_env.Glob("#platform/web/src/shared/**.ts"),
+            emscripten_env.Glob("#platform/web/src/browser/emscripten/**.ts"),
+            "emscripten/libwebrtc.ts",
+        ],
+    )
+    env.AddJSLibraries([emscripten_webrtc_lib])
 
 env_webrtc.add_source_files(env.modules_sources, "*.cpp")

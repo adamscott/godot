@@ -49,7 +49,7 @@ import {
 	MainLoop,
 	runtimeKeepalivePop,
 	runtimeKeepalivePush,
-} from "+browser/emscripten/emscripten_lib.ts";
+} from "+browser/emscripten/libemscripten.ts";
 import { GodotRuntime } from "+browser/emscripten/libruntime.ts";
 import { GodotEventListeners } from "+browser/emscripten/libos.ts";
 // __emscripten_import_global_const_end
@@ -64,7 +64,7 @@ import {
 	CUint,
 	CVoidPointer,
 	GLTexture,
-} from "+browser/emscripten/emscripten_lib.ts";
+} from "+browser/emscripten/libemscripten.ts";
 
 type GodotWebXRSupportedCallback = (
 	pSessionMode: CCharPointer,
