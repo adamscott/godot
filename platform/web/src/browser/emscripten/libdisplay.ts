@@ -46,10 +46,10 @@ import {
 	CCharArrayPointer,
 	CCharPointer,
 	CFloat,
+	CFunctionPointer,
 	CInt,
 	CIntPointer,
 	CUintPointer,
-	CVoidPointer,
 } from "./libemscripten.ts";
 
 type TTSGetVoicesCallback = (pSize: CInt, pVoices: CCharArrayPointer) => void;
@@ -507,8 +507,10 @@ const _GodotDisplay = {
 
 	godot_js_tts_get_voices__proxy: "sync",
 	godot_js_tts_get_voices__sig: "vp",
-	godot_js_tts_get_voices: (pCallbackPtr: CVoidPointer): void => {
-		const callback = GodotRuntime.getFunction<TTSGetVoicesCallback>(
+	godot_js_tts_get_voices: (
+		pCallbackPtr: CFunctionPointer<TTSGetVoicesCallback>,
+	): void => {
+		const callback = GodotRuntime.getFunction(
 			pCallbackPtr,
 		);
 		try {
@@ -538,11 +540,9 @@ const _GodotDisplay = {
 		pPitch: CFloat,
 		pRate: CFloat,
 		pUtteranceId: CInt,
-		pCallbackPtr: CVoidPointer,
+		pCallbackPtr: CFunctionPointer<TTSSpeakCallback>,
 	) => {
-		const callback = GodotRuntime.getFunction<TTSSpeakCallback>(
-			pCallbackPtr,
-		);
+		const callback = GodotRuntime.getFunction(pCallbackPtr);
 
 		const utterance = new SpeechSynthesisUtterance(
 			GodotRuntime.parseString(pTextPtr),
@@ -769,8 +769,10 @@ const _GodotDisplay = {
 
 	godot_js_display_clipboard_get__proxy: "sync",
 	godot_js_display_clipboard_get__sig: "ip",
-	godot_js_display_clipboard_get: (pCallbackPtr: CVoidPointer): CInt => {
-		const callback = GodotRuntime.getFunction<DisplayClipboardGetCallback>(
+	godot_js_display_clipboard_get: (
+		pCallbackPtr: CFunctionPointer<DisplayClipboardGetCallback>,
+	): CInt => {
+		const callback = GodotRuntime.getFunction(
 			pCallbackPtr,
 		);
 		navigator.clipboard.readText().then((pResult) => {
@@ -910,9 +912,11 @@ const _GodotDisplay = {
 	//
 	godot_js_display_fullscreen_cb__proxy: "sync",
 	godot_js_display_fullscreen_cb__sig: "vp",
-	godot_js_display_fullscreen_cb: (pCallbackPtr: CVoidPointer): void => {
+	godot_js_display_fullscreen_cb: (
+		pCallbackPtr: CFunctionPointer<DisplayFullscreenCbCallback>,
+	): void => {
 		const canvas = GodotConfig.canvas;
-		const callback = GodotRuntime.getFunction<DisplayFullscreenCbCallback>(
+		const callback = GodotRuntime.getFunction(
 			pCallbackPtr,
 		);
 		GodotEventListeners.add(
@@ -931,8 +935,10 @@ const _GodotDisplay = {
 
 	godot_js_display_window_blur_cb__proxy: "sync",
 	godot_js_display_window_blur_cb__sig: "vp",
-	godot_js_display_window_blur_cb: (pCallbackPtr: CVoidPointer): void => {
-		const callback = GodotRuntime.getFunction<DisplayWindowBlurCbCallback>(
+	godot_js_display_window_blur_cb: (
+		pCallbackPtr: CFunctionPointer<DisplayWindowBlurCbCallback>,
+	): void => {
+		const callback = GodotRuntime.getFunction(
 			pCallbackPtr,
 		);
 		GodotEventListeners.add(window, "blur", () => {
@@ -943,16 +949,14 @@ const _GodotDisplay = {
 	godot_js_display_notification_cb__proxy: "sync",
 	godot_js_display_notification_cb__sig: "vpiiii",
 	godot_js_display_notification_cb: (
-		pCallbackPtr: CVoidPointer,
+		pCallbackPtr: CFunctionPointer<DisplayNotificationCbCallback>,
 		pEnter: CInt,
 		pExit: CInt,
 		pIn: CInt,
 		pOut: CInt,
 	): void => {
 		const canvas = GodotConfig.canvas;
-		const callback = GodotRuntime.getFunction<
-			DisplayNotificationCbCallback
-		>(pCallbackPtr);
+		const callback = GodotRuntime.getFunction(pCallbackPtr);
 		for (
 			const [code, event] of [
 				[pEnter, "mouseover"],
@@ -1055,10 +1059,10 @@ const _GodotDisplay = {
 
 	godot_js_display_vk_cb__proxy: "sync",
 	godot_js_display_vk_cb__sig: "vp",
-	godot_js_display_vk_cb: (pInputCallbackPtr: CVoidPointer): void => {
-		const inputCallback = GodotRuntime.getFunction<DisplayVkCbCallback>(
-			pInputCallbackPtr,
-		);
+	godot_js_display_vk_cb: (
+		pInputCallbackPtr: CFunctionPointer<DisplayVkCbCallback>,
+	): void => {
+		const inputCallback = GodotRuntime.getFunction(pInputCallbackPtr);
 		if (GodotDisplayVK.isAvailable()) {
 			GodotDisplayVK.initialize((pInputPtr, pSelectionEnd) => {
 				inputCallback(pInputPtr, pSelectionEnd as CInt);

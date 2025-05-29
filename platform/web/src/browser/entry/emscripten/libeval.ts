@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  emscripten.ts                                                         */
+/*  libeval.ts                                                            */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,13 +28,4 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import "+browser/emscripten/libruntime.ts";
-import "+browser/emscripten/libos.ts";
-
-import "+browser/emscripten/libaudio.ts";
-import "+browser/emscripten/libfetch.ts";
-import "+browser/emscripten/libinput.ts";
-import "+browser/emscripten/libdisplay.ts";
-
-import "+browser/emscripten/libwebmidi.ts";
-import "+browser/emscripten/libwebgl2.ts";
+import "+browser/emscripten/libeval.ts";

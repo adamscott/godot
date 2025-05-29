@@ -49,6 +49,9 @@ typedef union {
 
 typedef int (*GodotJSWrapperVariant2JSCallback)(const void **p_args, int p_pos, godot_js_wrapper_ex *r_val, void **p_lock);
 typedef void (*GodotJSWrapperFreeLockCallback)(void **p_lock, int p_type);
+typedef void (*GodotJSWrapperCreateCbCallback)(void *p_ref, int p_arg_id, int p_argc);
+typedef void *(*GodotJSWrapperObjectTransferBufferCallback)(void *p_ptr, void *p_ptr2, int p_len);
+
 extern int godot_js_wrapper_interface_get(const char *p_name);
 extern int godot_js_wrapper_object_call(int p_id, const char *p_method, void **p_args, int p_argc, GodotJSWrapperVariant2JSCallback p_variant2js_callback, godot_js_wrapper_ex *p_cb_rval, void **p_lock, GodotJSWrapperFreeLockCallback p_lock_callback);
 extern int godot_js_wrapper_object_get(int p_id, godot_js_wrapper_ex *p_val, const char *p_prop);
@@ -56,11 +59,11 @@ extern int godot_js_wrapper_object_getvar(int p_id, int p_type, godot_js_wrapper
 extern int godot_js_wrapper_object_setvar(int p_id, int p_key_type, godot_js_wrapper_ex *p_key_ex, int p_val_type, godot_js_wrapper_ex *p_val_ex);
 extern void godot_js_wrapper_object_set(int p_id, const char *p_name, int p_type, godot_js_wrapper_ex *p_val);
 extern void godot_js_wrapper_object_unref(int p_id);
-extern int godot_js_wrapper_create_cb(void *p_ref, void (*p_callback)(void *p_ref, int p_arg_id, int p_argc));
+extern int godot_js_wrapper_create_cb(void *p_ref, GodotJSWrapperCreateCbCallback p_callback);
 extern void godot_js_wrapper_object_set_cb_ret(int p_type, godot_js_wrapper_ex *p_val);
 extern int godot_js_wrapper_create_object(const char *p_method, void **p_args, int p_argc, GodotJSWrapperVariant2JSCallback p_variant2js_callback, godot_js_wrapper_ex *p_cb_rval, void **p_lock, GodotJSWrapperFreeLockCallback p_lock_callback);
 extern int godot_js_wrapper_object_is_buffer(int p_id);
-extern int godot_js_wrapper_object_transfer_buffer(int p_id, void *p_byte_arr, void *p_byte_arr_write, void *(*p_callback)(void *p_ptr, void *p_ptr2, int p_len));
+extern int godot_js_wrapper_object_transfer_buffer(int p_id, void *p_byte_arr, void *p_byte_arr_write, GodotJSWrapperObjectTransferBufferCallback p_callback);
 };
 
 class JavaScriptObjectImpl : public JavaScriptObject {
@@ -334,7 +337,9 @@ union js_eval_ret {
 	char *s;
 };
 
-extern int godot_js_eval(const char *p_js, int p_use_global_ctx, union js_eval_ret *p_union_ptr, void *p_byte_arr, void *p_byte_arr_write, void *(*p_callback)(void *p_ptr, void *p_ptr2, int p_len));
+typedef void *(*GodotJSEvalCallback)(void *p_ptr, void *p_ptr2, int p_len);
+
+extern int godot_js_eval(const char *p_js, int p_use_global_ctx, union js_eval_ret *p_union_ptr, void *p_byte_arr, void *p_byte_arr_write, GodotJSEvalCallback p_callback);
 }
 
 void *resize_PackedByteArray_and_open_write(void *p_arr, void *r_write, int p_len) {

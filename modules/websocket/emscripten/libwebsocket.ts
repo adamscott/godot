@@ -40,11 +40,14 @@ import { IDHandler } from "+browser/emscripten/libos.ts";
 
 import {
 	CCharPointer,
+	CFunctionPointer,
+	CIDHandlerId,
 	CInt,
 	CUintPointer,
 	CVoidPointer,
 } from "+browser/emscripten/libemscripten.ts";
-import { IDHandlerId } from "+browser/emscripten/libos.ts";
+
+type WebSocketId = CIDHandlerId<WebSocket>;
 
 type WSOnOpen = (
 	pReferencePtr: CVoidPointer,
@@ -86,28 +89,28 @@ const _GodotWebSocket = {
 	$GodotWebSocket: {
 		// Connection opened, report selected protocol
 		_onOpen: (
-			pId: IDHandlerId,
+			pId: WebSocketId,
 			pCallback: OnOpenCallback,
 			_pEvent: Event,
 		): void => {
-			const reference = IDHandler.get<WebSocket>(pId);
-			if (reference == null) {
+			const webSocket = IDHandler.get(pId);
+			if (webSocket == null) {
 				return;
 			}
 			const protocolPtr = GodotRuntime.allocString(
-				reference.protocol,
+				webSocket.protocol,
 			);
 			pCallback(protocolPtr);
 			GodotRuntime.free(protocolPtr);
 		},
 
 		_onMessage: (
-			pId: IDHandlerId,
+			pId: WebSocketId,
 			pCallback: OnMessageCallback,
 			pEvent: MessageEvent,
 		): void => {
-			const reference = IDHandler.get<WebSocket>(pId);
-			if (reference == null) {
+			const webSocket = IDHandler.get(pId);
+			if (webSocket == null) {
 				return;
 			}
 			let buffer: Uint8Array;
@@ -133,11 +136,11 @@ const _GodotWebSocket = {
 		},
 
 		_onError: (
-			pId: IDHandlerId,
+			pId: WebSocketId,
 			pCallback: OnErrorCallback,
 			_pEvent: Event,
 		): void => {
-			const reference = IDHandler.get<WebSocket>(pId);
+			const reference = IDHandler.get(pId);
 			if (reference == null) {
 				return;
 			}
@@ -145,12 +148,12 @@ const _GodotWebSocket = {
 		},
 
 		_onClose: (
-			pId: IDHandlerId,
+			pId: WebSocketId,
 			pCallback: OnCloseCallback,
 			pEvent: CloseEvent,
 		): void => {
-			const reference = IDHandler.get<WebSocket>(pId);
-			if (reference == null) {
+			const webSocket = IDHandler.get(pId);
+			if (webSocket == null) {
 				return;
 			}
 			const reasonStringPtr = GodotRuntime.allocString(pEvent.reason);
@@ -163,7 +166,7 @@ const _GodotWebSocket = {
 			pOnMessage: OnMessageCallback,
 			pOnError: OnErrorCallback,
 			pOnClose: OnCloseCallback,
-		): number => {
+		): WebSocketId => {
 			const id = IDHandler.add(pSocket);
 			pSocket.onopen = (pEvent) => {
 				GodotWebSocket._onOpen(id, pOnOpen, pEvent);
@@ -180,56 +183,56 @@ const _GodotWebSocket = {
 			return id;
 		},
 
-		getBufferedAmount: (pId: IDHandlerId): number => {
-			const reference = IDHandler.get<WebSocket>(pId);
-			if (reference == null) {
+		getBufferedAmount: (pId: WebSocketId): number => {
+			const webSocket = IDHandler.get(pId);
+			if (webSocket == null) {
 				// Godot object is gone.
 				return 0;
 			}
-			return reference.bufferedAmount;
+			return webSocket.bufferedAmount;
 		},
 
 		send: (
-			pId: IDHandlerId,
+			pId: WebSocketId,
 			pData: Parameters<WebSocket["send"]>[0],
 		): boolean => {
-			const reference = IDHandler.get<WebSocket>(pId);
-			if (reference == null) {
+			const webSocket = IDHandler.get(pId);
+			if (webSocket == null) {
 				return false;
 			}
-			if (reference.readyState !== WebSocket.OPEN) {
+			if (webSocket.readyState !== WebSocket.OPEN) {
 				// Godot object is gone or socket is not in a ready state.
 				return false;
 			}
-			reference.send(pData);
+			webSocket.send(pData);
 			return true;
 		},
 
 		// Closes the JavaScript WebSocket (if not already closing) associated to a given C++ object.
-		close: (pId: IDHandlerId, pCode: number, pReason: string): void => {
-			const reference = IDHandler.get<WebSocket>(pId);
-			if (reference == null) {
+		close: (pId: WebSocketId, pCode: number, pReason: string): void => {
+			const webSocket = IDHandler.get(pId);
+			if (webSocket == null) {
 				return;
 			}
-			if (reference.readyState >= WebSocket.CLOSING) {
+			if (webSocket.readyState >= WebSocket.CLOSING) {
 				return;
 			}
-			reference.close(pCode, pReason);
+			webSocket.close(pCode, pReason);
 		},
 
 		// Deletes the reference to a C++ object (closing any connected socket if necessary).
-		destroy: (pId: IDHandlerId): void => {
-			const reference = IDHandler.get<WebSocket>(pId);
-			if (reference == null) {
+		destroy: (pId: WebSocketId): void => {
+			const webSocket = IDHandler.get(pId);
+			if (webSocket == null) {
 				return;
 			}
 			GodotWebSocket.close(pId, 3001, "destroyed");
 
 			IDHandler.remove(pId);
-			reference.onopen = null;
-			reference.onmessage = null;
-			reference.onerror = null;
-			reference.onclose = null;
+			webSocket.onopen = null;
+			webSocket.onmessage = null;
+			webSocket.onerror = null;
+			webSocket.onclose = null;
 		},
 	},
 
@@ -239,23 +242,17 @@ const _GodotWebSocket = {
 		pReferencePtr: CVoidPointer,
 		pUrlPtr: CCharPointer,
 		pProtoPtr: CCharPointer,
-		pOnOpenCallbackPtr: CVoidPointer,
-		pOnMessageCallbackPtr: CVoidPointer,
-		pOnErrorCallbackPtr: CVoidPointer,
-		pOnCloseCallbackPtr: CVoidPointer,
+		pOnOpenCallbackPtr: CFunctionPointer<WSOnOpen>,
+		pOnMessageCallbackPtr: CFunctionPointer<WSOnMessage>,
+		pOnErrorCallbackPtr: CFunctionPointer<WSOnError>,
+		pOnCloseCallbackPtr: CFunctionPointer<WSOnClose>,
 	): CInt => {
-		const onOpenCallback = GodotRuntime.getFunction<WSOnOpen>(
-			pOnOpenCallbackPtr,
-		);
-		const onMessageCallback = GodotRuntime.getFunction<WSOnMessage>(
+		const onOpenCallback = GodotRuntime.getFunction(pOnOpenCallbackPtr);
+		const onMessageCallback = GodotRuntime.getFunction(
 			pOnMessageCallbackPtr,
 		);
-		const onErrorCallback = GodotRuntime.getFunction<WSOnError>(
-			pOnErrorCallbackPtr,
-		);
-		const onCloseCallback = GodotRuntime.getFunction<WSOnClose>(
-			pOnCloseCallbackPtr,
-		);
+		const onErrorCallback = GodotRuntime.getFunction(pOnErrorCallbackPtr);
+		const onCloseCallback = GodotRuntime.getFunction(pOnCloseCallbackPtr);
 
 		const url = GodotRuntime.parseString(pUrlPtr);
 		const proto = GodotRuntime.parseString(pProtoPtr);
@@ -310,7 +307,7 @@ const _GodotWebSocket = {
 	godot_js_websocket_send__proxy: "sync",
 	godot_js_websocket_send__sig: "iipii",
 	godot_js_websocket_send: (
-		pId: CInt,
+		pId: WebSocketId,
 		pBufferPtr: CUintPointer,
 		pBufferLength: CInt,
 		pRaw: CInt,
@@ -332,14 +329,14 @@ const _GodotWebSocket = {
 
 	godot_js_websocket_buffered_amount__proxy: "sync",
 	godot_js_websocket_buffered_amount__sig: "ii",
-	godot_js_websocket_buffered_amount: (pId: CInt): CInt => {
+	godot_js_websocket_buffered_amount: (pId: WebSocketId): CInt => {
 		return GodotWebSocket.getBufferedAmount(pId) as CInt;
 	},
 
 	godot_js_websocket_close__proxy: "sync",
 	godot_js_websocket_close__sig: "viip",
 	godot_js_websocket_close: (
-		pId: CInt,
+		pId: WebSocketId,
 		pCode: CInt,
 		pReasonPtr: CCharPointer,
 	): void => {
@@ -349,7 +346,7 @@ const _GodotWebSocket = {
 
 	godot_js_websocket_destroy__proxy: "sync",
 	godot_js_websocket_destroy__sig: "vi",
-	godot_js_websocket_destroy: (pId: CInt): void => {
+	godot_js_websocket_destroy: (pId: WebSocketId): void => {
 		GodotWebSocket.destroy(pId);
 	},
 };

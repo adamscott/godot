@@ -41,10 +41,10 @@ import {
 	CDouble,
 	CFloat,
 	CFloatPointer,
+	CFunctionPointer,
 	CInt,
 	CIntPointer,
 	CPointer,
-	CVoidPointer,
 } from "./libemscripten.ts";
 
 import { throwIfNull } from "+shared/utils/error.ts";
@@ -1237,17 +1237,17 @@ const _GodotAudio = {
 	godot_audio_init: (
 		pMixRatePtr: CIntPointer,
 		pLatency: CInt,
-		pOnStateChangeCallbackPtr: CVoidPointer,
-		pOnLatencyUpdateCallbackPtr: CVoidPointer,
-	): CInt => {
-		const onStateChangeCallback = GodotRuntime.getFunction<
+		pOnStateChangeCallbackPtr: CFunctionPointer<
 			AudioInitOnStateChangeCallback
-		>(
+		>,
+		pOnLatencyUpdateCallbackPtr: CFunctionPointer<
+			AudioInitOnLatencyChangeCallback
+		>,
+	): CInt => {
+		const onStateChangeCallback = GodotRuntime.getFunction(
 			pOnStateChangeCallbackPtr,
 		);
-		const onLatencyUpdateCallback = GodotRuntime.getFunction<
-			AudioInitOnLatencyChangeCallback
-		>(
+		const onLatencyUpdateCallback = GodotRuntime.getFunction(
 			pOnLatencyUpdateCallbackPtr,
 		);
 		const mixRate = GodotRuntime.getHeapValue(pMixRatePtr, "i32");
@@ -2006,11 +2006,9 @@ const _GodotAudioScript = {
 		pInBufferSize: CInt,
 		pOutBufferPtr: CFloatPointer,
 		pOutBufferSize: CInt,
-		pCallbackPtr: CVoidPointer,
+		pCallbackPtr: CFunctionPointer<AudioScriptStartCallback>,
 	): void => {
-		const onProcess = GodotRuntime.getFunction<AudioScriptStartCallback>(
-			pCallbackPtr,
-		);
+		const onProcess = GodotRuntime.getFunction(pCallbackPtr);
 		GodotAudioScript.start(
 			pInBufferPtr,
 			pInBufferSize,

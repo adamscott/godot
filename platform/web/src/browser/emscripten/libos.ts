@@ -43,6 +43,8 @@ import { GodotRuntime } from "./libruntime.ts";
 
 import {
 	CCharPointer,
+	CIDHandlerId,
+	CIDHandlerIdExtract,
 	CInt,
 	CUintPointer,
 	CVoidPointer,
@@ -50,8 +52,6 @@ import {
 
 import { AnyFunction } from "+shared/types/aliases.ts";
 import { ConfigOptions } from "+browser/types/config.ts";
-
-export type IDHandlerId = number;
 
 type OSFinishAsyncCallback = () => void;
 type OSRequestQuitCbCallback = () => void;
@@ -64,20 +64,25 @@ export declare const IDHandler: typeof _IDHandler.$IDHandler;
 // __emscripten_declare_global_const_end
 const _IDHandler = {
 	$IDHandler: {
-		_lastId: 0 as IDHandlerId,
+		_lastId: 0 as CIDHandlerId<unknown>,
 		_references: {} as Record<number, unknown>,
 
-		get: <T extends unknown>(pId: IDHandlerId): T | null => {
-			return IDHandler._references[pId] as T | null;
+		get: <
+			T extends CIDHandlerId<unknown>,
+			U extends CIDHandlerIdExtract<T>,
+		>(
+			pId: T,
+		): U | null => {
+			return IDHandler._references[pId] as U | null;
 		},
 
-		add: (pData: unknown): number => {
+		add: <T extends unknown, U extends CIDHandlerId<T>>(pData: T): U => {
 			const id = ++IDHandler._lastId;
 			IDHandler._references[id] = pData;
-			return id;
+			return id as U;
 		},
 
-		remove: (pId: IDHandlerId): void => {
+		remove: (pId: CIDHandlerId<unknown>): void => {
 			delete IDHandler._references[pId];
 		},
 	},
@@ -525,6 +530,9 @@ const _GodotOS = {
 autoAddDeps(_GodotOS, "$GodotOS");
 addToLibrary(_GodotOS);
 
+//
+// GodotEventListeners.
+//
 class Handler {
 	target: EventTarget;
 	event: string;
@@ -545,12 +553,75 @@ class Handler {
 
 	isSame(
 		pTarget: typeof this.target,
+	): boolean;
+	isSame(
+		pTarget: typeof this.target,
+		pEvent: typeof this.event,
+	): boolean;
+	isSame(
+		pTarget: typeof this.target,
 		pEvent: typeof this.event,
 		pMethod: typeof this.method,
+	): boolean;
+	isSame(
+		pTarget: typeof this.target,
+		pEvent: typeof this.event,
+		pMethod: typeof this.method,
+		pCapture: typeof this.capture,
+	): boolean;
+	isSame(
+		pTarget: typeof this.target,
+		pEvent?: typeof this.event,
+		pMethod?: typeof this.method,
 		pCapture?: typeof this.capture,
 	): boolean {
-		return this.target === pTarget && this.event === pEvent &&
-			this.method === pMethod && this.capture === pCapture;
+		if (this.target !== pTarget) {
+			return false;
+		}
+		if (pEvent == null) {
+			return true;
+		}
+		if (this.event !== pEvent) {
+			return false;
+		}
+		if (pMethod == null) {
+			return true;
+		}
+		if (this.method !== pMethod) {
+			return false;
+		}
+		if (pCapture == null) {
+			return true;
+		}
+		return this.isCaptureSame(pCapture);
+	}
+
+	isCaptureSame(pCapture: typeof this.capture) {
+		if (pCapture == null) {
+			return this.capture == null;
+		}
+
+		if (typeof pCapture === "boolean") {
+			if (typeof this.capture !== "boolean") {
+				return false;
+			}
+			return pCapture === this.capture;
+		}
+
+		// `pCapture` is of type `AddEventListenerOptions`
+		if (typeof this.capture !== "object") {
+			return false;
+		}
+		const captureKeys = Object.keys(pCapture) as (keyof typeof pCapture)[];
+		if (captureKeys.length !== Object.keys(this.capture).length) {
+			return false;
+		}
+		for (const key of captureKeys) {
+			if (pCapture[key] !== this.capture[key]) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	addTargetEventListnener(): void {
@@ -560,6 +631,27 @@ class Handler {
 	removeTargetEventListener(): void {
 		this.target.removeEventListener(this.event, this.method, this.capture);
 	}
+}
+
+interface RemoveEventListeners {
+	(
+		pTarget: InstanceType<typeof Handler>["target"],
+	): void;
+	(
+		pTarget: InstanceType<typeof Handler>["target"],
+		pEvent: InstanceType<typeof Handler>["event"],
+	): void;
+	(
+		pTarget: InstanceType<typeof Handler>["target"],
+		pEvent: InstanceType<typeof Handler>["event"],
+		pMethod: InstanceType<typeof Handler>["method"],
+	): void;
+	(
+		pTarget: InstanceType<typeof Handler>["target"],
+		pEvent: InstanceType<typeof Handler>["event"],
+		pMethod: InstanceType<typeof Handler>["method"],
+		pCapture: InstanceType<typeof Handler>["capture"],
+	): void;
 }
 
 // __emscripten_declare_global_const_start
@@ -575,31 +667,43 @@ const _GodotEventListeners = {
 		Handler,
 
 		has: (
-			target: InstanceType<typeof Handler>["target"],
-			event: InstanceType<typeof Handler>["event"],
-			method: InstanceType<typeof Handler>["method"],
-			capture?: InstanceType<typeof Handler>["capture"],
+			pTarget: InstanceType<typeof Handler>["target"],
+			pEvent: InstanceType<typeof Handler>["event"],
+			pMethod: InstanceType<typeof Handler>["method"],
+			pCapture?: InstanceType<typeof Handler>["capture"],
 		) => {
 			return (
 				GodotEventListeners.handlers.findIndex(function (pHandler) {
-					return pHandler.isSame(target, event, method, capture);
+					return pHandler.isSame(pTarget, pEvent, pMethod, pCapture);
 				}) !== -1
 			);
 		},
 
 		add: (
-			target: InstanceType<typeof Handler>["target"],
-			event: InstanceType<typeof Handler>["event"],
-			method: InstanceType<typeof Handler>["method"],
-			capture?: InstanceType<typeof Handler>["capture"],
+			pTarget: InstanceType<typeof Handler>["target"],
+			pEvent: InstanceType<typeof Handler>["event"],
+			pMethod: InstanceType<typeof Handler>["method"],
+			pCapture?: InstanceType<typeof Handler>["capture"],
 		) => {
-			if (GodotEventListeners.has(target, event, method, capture)) {
+			if (GodotEventListeners.has(pTarget, pEvent, pMethod, pCapture)) {
 				return;
 			}
-			const handler = new Handler(target, event, method, capture);
+			const handler = new Handler(pTarget, pEvent, pMethod, pCapture);
 			GodotEventListeners.handlers.push(handler);
 			handler.addTargetEventListnener();
 		},
+
+		remove: ((pTarget, pEvent, pMethod, pCapture) => {
+			GodotEventListeners.handlers = GodotEventListeners.handlers.filter(
+				(pHandler) => {
+					if (pHandler.isSame(pTarget, pEvent, pMethod, pCapture)) {
+						pHandler.removeTargetEventListener();
+						return false;
+					}
+					return true;
+				},
+			);
+		}) as RemoveEventListeners,
 
 		clear: () => {
 			for (const handler of GodotEventListeners.handlers) {

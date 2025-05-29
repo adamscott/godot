@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  aliases.ts                                                            */
+/*  libbase.ts                                                            */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,74 +28,13 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import type { Brand, SubBrand, SubSubBrand, SubSubSubBrand } from "./brand.ts";
+import "+browser/emscripten/libruntime.ts";
+import "+browser/emscripten/libos.ts";
 
-// deno-lint-ignore no-explicit-any
-export type AnyFunction = (...args: any[]) => any;
+import "+browser/emscripten/libaudio.ts";
+import "+browser/emscripten/libfetch.ts";
+import "+browser/emscripten/libinput.ts";
+import "+browser/emscripten/libdisplay.ts";
 
-export type CInt = Brand<number, "CInt">;
-export type CUint = Brand<number, "CUint">;
-export type CFloat = Brand<number, "CFloat">;
-export type CDouble = Brand<number, "CDouble">;
-export type CPointer = Brand<number, "CPointer">;
-
-export type CInt64 = SubBrand<bigint, "CInt", "CInt64">;
-
-export type CVoidPointer = SubBrand<number, "CPointer", "CVoidPointer">;
-export type CCharPointer = SubBrand<number, "CPointer", "CCharPointer">;
-export type CIntPointer = SubBrand<number, "CPointer", "CIntPointer">;
-export type CInt64Pointer = SubBrand<number, "CPointer", "CInt64Pointer">;
-export type CUintPointer = SubBrand<number, "CPointer", "CUintPointer">;
-export type CFloatPointer = SubBrand<number, "CPointer", "CFloatPointer">;
-export type CDoublePointer = SubBrand<number, "CPointer", "CDoublePointer">;
-
-export type CIDHandlerId<T> = SubSubBrand<number, "CInt", "CIDHandlerId", T>;
-export type CIDHandlerIdExtract<TKey> = TKey extends CIDHandlerId<infer T> ? T
-	: never;
-
-export type CFunctionPointer<T extends AnyFunction> = SubSubSubBrand<
-	number,
-	"CPointer",
-	"CVoidPointer",
-	"CFunctionPointer",
-	T
->;
-export type CFunctionPointerExtract<TKey> = TKey extends
-	CFunctionPointer<infer T> ? T : never;
-
-export type CVoidArrayPointer = SubSubBrand<
-	number,
-	"CPointer",
-	"CVoidPointer",
-	"CVoidArrayPointer"
->;
-export type CCharArrayPointer = SubSubBrand<
-	number,
-	"CPointer",
-	"CCharPointer",
-	"CCharArrayPointer"
->;
-export type CIntArrayPointer = SubSubBrand<
-	number,
-	"CPointer",
-	"CIntPointer",
-	"CIntArrayPointer"
->;
-export type CUintArrayPointer = SubSubBrand<
-	number,
-	"CPointer",
-	"CUintPointer",
-	"CUintArrayPointer"
->;
-export type CFloatArrayPointer = SubSubBrand<
-	number,
-	"CPointer",
-	"CFloatPointer",
-	"CFloatArrayPointer"
->;
-export type CDoubleArrayPointer = SubSubBrand<
-	number,
-	"CPointer",
-	"CDoublePointer",
-	"CDoubleArrayPointer"
->;
+import "+browser/emscripten/libwebmidi.ts";
+import "+browser/emscripten/libwebgl2.ts";

@@ -70,24 +70,39 @@ sys_env.AddJSPost(
 # )
 
 # esbuild Emscripten libraries.
-emscripten_env = sys_env.Clone(
+libbase_env = sys_env.Clone(
     ESBUILD_TYPE="emscripten",
     ESBUILD_EMSCRIPTEN_NAME="libbase",
-    ESBUILD_EMSCRIPTEN_SOURCE="#platform/web/src/browser/entry/emscripten.ts",
+    ESBUILD_EMSCRIPTEN_SOURCE="#platform/web/src/browser/entry/emscripten/libbase.ts",
     ESBUILD_EMSCRIPTEN_OUTPUT_DIR="#platform/web/dist/emscripten/",
 )
-emscripten_base_lib = emscripten_env.RunEsbuild(
+libbase_lib = libbase_env.RunEsbuild(
     target=["#platform/web/dist/emscripten/libbase.js"],
     source=[
-        emscripten_env.Glob("#platform/web/src/shared/**.ts"),
-        emscripten_env.Glob("#platform/web/src/browser/emscripten/**.ts"),
-        emscripten_env.Glob("#platform/web/src/browser/entry/emscripten.ts"),
+        libbase_env.Glob("#platform/web/src/shared/**.ts"),
+        libbase_env.Glob("#platform/web/src/browser/emscripten/**.ts"),
+        "#platform/web/src/browser/entry/emscripten/libbase.ts",
     ],
 )
-sys_env.AddJSLibraries([emscripten_base_lib])
+sys_env.AddJSLibraries([libbase_lib])
 
 if env["javascript_eval"]:
-    sys_env.AddJSLibraries(["js/libs/library_godot_javascript_singleton.js"])
+    libeval_env = sys_env.Clone(
+        ESBUILD_TYPE="emscripten",
+        ESBUILD_EMSCRIPTEN_NAME="libeval",
+        ESBUILD_EMSCRIPTEN_SOURCE="#platform/web/src/browser/entry/emscripten/libeval.ts",
+        ESBUILD_EMSCRIPTEN_OUTPUT_DIR="#platform/web/dist/emscripten/",
+    )
+    libeval_lib = libeval_env.RunEsbuild(
+        target=["#platform/web/dist/emscripten/libeval.js"],
+        source=[
+            libeval_env.Glob("#platform/web/src/shared/**.ts"),
+            libeval_env.Glob("#platform/web/src/browser/emscripten/**.ts"),
+            "#platform/web/src/browser/entry/emscripten/libeval.ts",
+        ],
+    )
+    sys_env.AddJSLibraries([libeval_lib])
+
 
 for lib in sys_env["JS_LIBS"]:
     sys_env.Append(LINKFLAGS=["--js-library", lib.abspath])

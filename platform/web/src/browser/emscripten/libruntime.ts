@@ -57,7 +57,11 @@ import {
 	CDoublePointer,
 	CFloat,
 	CFloatPointer,
+	CFunctionPointer,
+	CFunctionPointerExtract,
 	CInt,
+	CInt64,
+	CInt64Pointer,
 	CIntPointer,
 	CPointer,
 	CPointerType,
@@ -69,8 +73,12 @@ import { AnyFunction } from "+shared/types/aliases.ts";
 interface GetHeapValue {
 	(
 		pPtr: CIntPointer,
-		pType: Extract<CPointerType, "i8" | "i16" | "i32" | "i64">,
+		pType: Extract<CPointerType, "i8" | "i16" | "i32">,
 	): CInt;
+	(
+		pPtr: CInt64Pointer,
+		pType: Extract<CPointerType, "i64">,
+	): CInt64;
 	(
 		pPtr: CFloatPointer,
 		pType: Extract<CPointerType, "f32" | "float">,
@@ -85,7 +93,12 @@ interface SetHeapValue {
 	(
 		pPtr: CIntPointer,
 		pValue: CInt,
-		pType: Extract<CPointerType, "i18" | "i16" | "i32" | "i64">,
+		pType: Extract<CPointerType, "i18" | "i16" | "i32">,
+	): void;
+	(
+		pPtr: CInt64Pointer,
+		pValue: CInt64,
+		pType: Extract<CPointerType, "i64">,
 	): void;
 	(
 		pPtr: CFloatPointer,
@@ -116,14 +129,14 @@ const _GodotRuntime = {
 		}),
 
 		// Functions.
-		getFunction: <T extends AnyFunction>(
-			pPtr: CPointer,
-		): T => {
+		getFunction: <T extends CFunctionPointer<AnyFunction>>(
+			pPtr: T,
+		): CFunctionPointerExtract<T> => {
 			const func = wasmTable.get(pPtr);
 			if (func == null) {
 				throw new Error("Function is null");
 			}
-			return func as T;
+			return func as CFunctionPointerExtract<T>;
 		},
 
 		// Print.

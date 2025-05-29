@@ -30,6 +30,10 @@
 
 import "+browser/lib.ts";
 
+// __emscripten_import_global_const_start
+import "npm:@types/webxr";
+// __emscripten_import_global_const_end
+
 import type {
 	CCharArrayPointer,
 	CCharPointer,
@@ -38,11 +42,18 @@ import type {
 	CFloat,
 	CFloatArrayPointer,
 	CFloatPointer,
+	CFunctionPointer,
+	CFunctionPointerExtract,
+	CIDHandlerId,
+	CIDHandlerIdExtract,
 	CInt,
+	CInt64,
+	CInt64Pointer,
 	CIntPointer,
 	CPointer,
 	CUint,
 	CUintPointer,
+	CVoidArrayPointer,
 	CVoidPointer,
 } from "+shared/types/aliases.ts";
 
@@ -56,11 +67,18 @@ export {
 	CFloat,
 	CFloatArrayPointer,
 	CFloatPointer,
+	CFunctionPointer,
+	CFunctionPointerExtract,
+	CIDHandlerId,
+	CIDHandlerIdExtract,
 	CInt,
+	CInt64,
+	CInt64Pointer,
 	CIntPointer,
 	CPointer,
 	CUint,
 	CUintPointer,
+	CVoidArrayPointer,
 	CVoidPointer,
 };
 

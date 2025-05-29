@@ -59,10 +59,10 @@ import {
 	CFloat,
 	CFloatArrayPointer,
 	CFloatPointer,
+	CFunctionPointer,
 	CInt,
 	CIntPointer,
 	CUint,
-	CVoidPointer,
 	GLTexture,
 } from "+browser/emscripten/libemscripten.ts";
 
@@ -332,14 +332,12 @@ const _GodotWebXR = {
 	godot_webxr_is_session_supported__sig: "vpp",
 	godot_webxr_is_session_supported: (
 		pSessionModePtr: CCharPointer,
-		pCallbackPtr: CVoidPointer,
+		pCallbackPtr: CFunctionPointer<GodotWebXRSupportedCallback>,
 	): void => {
 		const sessionMode = GodotRuntime.parseString(
 			pSessionModePtr,
 		) as XRSessionMode;
-		const callback = GodotRuntime.getFunction<GodotWebXRSupportedCallback>(
-			pCallbackPtr,
-		);
+		const callback = GodotRuntime.getFunction(pCallbackPtr);
 
 		if (!("xr" in navigator)) {
 			// TODO: Check if necessary to realloc string.
@@ -365,11 +363,17 @@ const _GodotWebXR = {
 		pRequiredFeaturesPtr: CCharPointer,
 		pOptionalFeaturesPtr: CCharPointer,
 		pRequestedReferenceSpaceTypesPtr: CCharPointer,
-		pOnSessionStartedCallbackPtr: CVoidPointer,
-		pOnSessionEndedCallbackPtr: CVoidPointer,
-		pOnSessionFailedCallbackPtr: CVoidPointer,
-		pOnInputEventCallbackPtr: CVoidPointer,
-		pOnSimpleEventCallbackPtr: CVoidPointer,
+		pOnSessionStartedCallbackPtr: CFunctionPointer<
+			GodotWebXRStartedCallback
+		>,
+		pOnSessionEndedCallbackPtr: CFunctionPointer<GodotWebXREndedCallback>,
+		pOnSessionFailedCallbackPtr: CFunctionPointer<GodotWebXRFailedCallback>,
+		pOnInputEventCallbackPtr: CFunctionPointer<
+			GodotWebXRInputEventCallback
+		>,
+		pOnSimpleEventCallbackPtr: CFunctionPointer<
+			GodotWebXRSimpleEventCallback
+		>,
 	): void => {
 		GodotWebXR.monkeyPatchRequestAnimationFrame(true);
 
@@ -383,21 +387,21 @@ const _GodotWebXR = {
 		const requestedReferenceSpaceTypes = GodotRuntime.parseString(
 			pRequestedReferenceSpaceTypesPtr,
 		).split(",").map((s) => s.trim());
-		const onSessionStartedCallback = GodotRuntime.getFunction<
-			GodotWebXRStartedCallback
-		>(pOnSessionStartedCallbackPtr);
-		const onSessionEndedCallback = GodotRuntime.getFunction<
-			GodotWebXREndedCallback
-		>(pOnSessionEndedCallbackPtr);
-		const onSessionFailedCallback = GodotRuntime.getFunction<
-			GodotWebXRFailedCallback
-		>(pOnSessionFailedCallbackPtr);
-		const onInputEventCallback = GodotRuntime.getFunction<
-			GodotWebXRInputEventCallback
-		>(pOnInputEventCallbackPtr);
-		const onSimpleEventCallback = GodotRuntime.getFunction<
-			GodotWebXRSimpleEventCallback
-		>(pOnSimpleEventCallbackPtr);
+		const onSessionStartedCallback = GodotRuntime.getFunction(
+			pOnSessionStartedCallbackPtr,
+		);
+		const onSessionEndedCallback = GodotRuntime.getFunction(
+			pOnSessionEndedCallbackPtr,
+		);
+		const onSessionFailedCallback = GodotRuntime.getFunction(
+			pOnSessionFailedCallbackPtr,
+		);
+		const onInputEventCallback = GodotRuntime.getFunction(
+			pOnInputEventCallbackPtr,
+		);
+		const onSimpleEventCallback = GodotRuntime.getFunction(
+			pOnSimpleEventCallbackPtr,
+		);
 
 		const sessionInit: XRSessionInit = {};
 		if (requiredFeatures.length > 0) {
