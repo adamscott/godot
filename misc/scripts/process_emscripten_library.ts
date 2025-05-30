@@ -33,10 +33,9 @@ import { dirname, resolve } from "@std/path";
 
 import { parseArgs } from "node:util";
 
-import { errorAndExit, which } from "+deno/os.ts";
+import { errorAndExit, which } from "+deno/os";
 
 interface ParseFileOptions {
-	settings: string;
 	file: string;
 	emscriptenPath: string;
 	emscriptenSettings: string;

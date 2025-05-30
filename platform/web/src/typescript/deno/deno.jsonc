@@ -1,0 +1,14 @@
+{
+	"name": "+deno",
+	"compilerOptions": {
+		"lib": [
+			"deno.window",
+			"esnext"
+		]
+	},
+	"exports": {
+		".": "./mod.ts",
+		"./os": "./os/mod.ts",
+		"./utils": "./utils/mod.ts"
+	}
+}

@@ -28,8 +28,6 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import "+deno/lib.ts";
-
 import * as esbuild from "npm:esbuild";
 
 import { dirname } from "jsr:@std/path";

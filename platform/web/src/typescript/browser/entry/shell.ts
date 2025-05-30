@@ -28,9 +28,9 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import { Engine, init as engineInit } from "+browser/entry/engine.ts";
-import type { ShellConfig } from "+browser/shell/types.ts";
-import { fetchWithRetry } from "+shared/utils/fetch.ts";
+import { Engine, init as engineInit } from "#/entry/engine.ts";
+import type { ShellConfig } from "#/shell/types.ts";
+import { fetchWithRetry } from "+shared/utils/fetch";
 
 class Shell extends EventTarget {
 	engine: Engine | null = null;

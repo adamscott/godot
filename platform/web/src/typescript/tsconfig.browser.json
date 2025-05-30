@@ -1,7 +1,0 @@
-{
-	"extends": "./tsconfig.base.browser.json",
-	"compilerOptions": {
-		"lib": ["DOM", "DOM.AsyncIterable", "ESNext"]
-	},
-	"include": ["src/browser/**/*.ts"]
-}

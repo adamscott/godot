@@ -28,10 +28,8 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import "+deno/lib.ts";
-
 import { exists } from "jsr:@std/fs";
-import { dirname, join, resolve } from "jsr:@std/path";
+import { dirname, isAbsolute, join, relative, resolve } from "jsr:@std/path";
 
 import browserslist from "npm:browserslist";
 import * as esbuild from "npm:esbuild";
@@ -45,7 +43,7 @@ import {
 	denoResolverPlugin,
 } from "jsr:@luca/esbuild-deno-loader";
 
-import { errorAndExit } from "+deno/os.ts";
+import { errorAndExit } from "+deno/os";
 import { emscriptenGlobalConstTransformPlugin } from "./plugins/emscripten_global_const_transform.ts";
 
 const defaultTarget = resolveToEsbuildTarget(
@@ -374,7 +372,7 @@ async function main() {
 				await buildEmscriptenLibraries(
 					"platform/web/dist/emscripten/",
 					pArgv.importMapName,
-					pArgv.files,
+					pArgv.files.map((pFile) => relative(Deno.cwd(), pFile)),
 					{
 						target: pArgv.target,
 						sourceMap: pArgv.sourceMap,

@@ -28,16 +28,6 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-// __emscripten_import_global_const_start
-import {
-	addToLibrary,
-	autoAddDeps,
-	HEAPU8,
-} from "+browser/emscripten/libemscripten.ts";
-import { GodotRuntime } from "+browser/emscripten/libruntime.ts";
-import { IDHandler } from "+browser/emscripten/libos.ts";
-// __emscripten_import_global_const_end
-
 import {
 	CCharPointer,
 	CFunctionPointer,
@@ -45,7 +35,7 @@ import {
 	CInt,
 	CUintPointer,
 	CVoidPointer,
-} from "+browser/emscripten/libemscripten.ts";
+} from "+emscripten/libraries";
 
 type WebSocketId = CIDHandlerId<WebSocket>;
 
@@ -80,10 +70,7 @@ type OnCloseCallback = (
 	pWasClean: boolean,
 ) => void;
 
-// __emscripten_declare_global_const_start
-export declare const GodotWebSocket: typeof _GodotWebSocket.$GodotWebSocket;
-// __emscripten_declare_global_const_end
-const _GodotWebSocket = {
+export const _GodotWebSocket = {
 	// Our socket implementation that forwards events to C++.
 	$GodotWebSocket__deps: ["$IDHandler", "$GodotRuntime"],
 	$GodotWebSocket: {

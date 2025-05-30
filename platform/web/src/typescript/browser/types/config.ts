@@ -28,8 +28,6 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import "+browser/lib.ts";
-
 export interface ConfigOptions {
 	canvas: HTMLCanvasElement | null;
 	canvasResizePolicy: number;

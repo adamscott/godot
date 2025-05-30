@@ -28,4 +28,4 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import "+browser/emscripten/libeval.ts";
+import "#/emscripten/libeval.ts";

@@ -1,5 +1,0 @@
-{
-	"extends": "./tsconfig.base.browser.serviceworker.json",
-	"compilerOptions": {},
-	"include": ["./src/service-worker.ts"]
-}

@@ -1,0 +1,23 @@
+{
+	"name": "+browser",
+	"compilerOptions": {
+		"strict": true,
+		"lib": [
+			"dom",
+			"dom.asynciterable",
+			"esnext"
+		],
+		"types": [
+			"npm:@types/webxr",
+			"./global.d.ts"
+		]
+	},
+	"imports": {
+		"#/": "./"
+	},
+	"exports": {
+		".": "./mod.ts",
+		"./types": "./types/mod.ts",
+		"./global.d.ts": "./global.d.ts"
+	}
+}

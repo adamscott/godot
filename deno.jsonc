@@ -1,4 +1,16 @@
 {
+	"workspace": [
+		"./misc/scripts",
+		"./platform/web/scripts",
+		"./platform/web/src/typescript/browser",
+		"./platform/web/src/typescript/deno",
+		"./platform/web/src/typescript/emscripten",
+		"./platform/web/src/typescript/service-worker",
+		"./platform/web/src/typescript/shared",
+		"./modules/webrtc/emscripten/",
+		"./modules/websocket/emscripten/",
+		"./modules/webxr/native/"
+	],
 	"tasks": {
 		"esbuild": {
 			"description": "Build Godot Engine Web files",
@@ -19,9 +31,6 @@
 		"proseWrap": "preserve"
 	},
 	"imports": {
-		"+shared/": "./platform/web/src/typescript/shared/",
-		"+browser/": "./platform/web/src/typescript/browser/",
-		"+deno/": "./platform/web/src/typescript/deno/",
 		"@luca/esbuild-deno-loader": "jsr:@luca/esbuild-deno-loader@^0.11.1",
 		"@std/cli": "jsr:@std/cli@^1.0.17",
 		"@std/fs": "jsr:@std/fs@^1.0.17",
@@ -32,8 +41,5 @@
 		"esbuild": "npm:esbuild@^0.25.5",
 		"esbuild-sass-plugin": "npm:esbuild-sass-plugin@^3.3.1",
 		"yargs": "npm:yargs@^18.0.0"
-	},
-	"compilerOptions": {
-		"lib": []
 	}
 }

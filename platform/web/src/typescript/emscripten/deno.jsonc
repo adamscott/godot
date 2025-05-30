@@ -1,0 +1,24 @@
+{
+	"name": "+emscripten",
+	"compilerOptions": {
+		"strict": true,
+		"lib": [
+			"dom",
+			"dom.asynciterable",
+			"esnext"
+		],
+		"types": [
+			"npm:@types/webxr",
+			"+browser/global.d.ts",
+			"./global.d.ts"
+		]
+	},
+	"imports": {
+		"#/": "./"
+	},
+	"exports": {
+		".": "./mod.ts",
+		"./libraries": "./libraries/mod.ts",
+		"./global.d.ts": "./global.d.ts"
+	}
+}

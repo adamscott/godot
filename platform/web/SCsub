@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 from misc.utility.scons_hints import *
 
-from methods import add_emscripten_library, print_error
+from methods import print_error
+from misc.utility.platform.web import add_emscripten_library
 
 Import("env")
 
@@ -70,9 +71,9 @@ sys_env.AddJSPost(
 # )
 
 # esbuild Emscripten libraries.
-add_emscripten_library(sys_env, lib_name="base", entry_point="src/typescript/browser/entry/emscripten/libbase.ts")
+add_emscripten_library(sys_env, "base", sys_env.File("src/typescript/browser/entry/emscripten/libbase.ts"))
 if env["javascript_eval"]:
-    add_emscripten_library(sys_env, lib_name="eval", entry_point="src/typescript/browser/entry/emscripten/libeval.ts")
+    add_emscripten_library(sys_env, "eval", sys_env.File("src/typescript/browser/entry/emscripten/libeval.ts"))
 
 for lib in sys_env["JS_LIBS"]:
     sys_env.Append(LINKFLAGS=["--js-library", lib.abspath])

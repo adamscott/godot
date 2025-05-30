@@ -28,17 +28,6 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import "+browser/lib.ts";
-
-// __emscripten_import_global_const_start
-import {
-	addToLibrary,
-	autoAddDeps,
-	HEAPU8,
-} from "+browser/emscripten/libemscripten.ts";
-import { GodotRuntime } from "+browser/emscripten/libruntime.ts";
-import { GodotEventListeners, IDHandler } from "+browser/emscripten/libos.ts";
-// __emscripten_import_global_const_end
 
 import {
 	CCharPointer,
@@ -47,7 +36,7 @@ import {
 	CInt,
 	CUintPointer,
 	CVoidPointer,
-} from "+browser/emscripten/libemscripten.ts";
+} from "+emscripten/libraries";
 
 type RTCDataChannelId = CIDHandlerId<RTCDataChannel>;
 type RTCPeerConnectionId = CIDHandlerId<RTCPeerConnection>;
@@ -93,11 +82,7 @@ type RTCOnError = (
 	pReferencePtr: CVoidPointer,
 ) => void;
 
-// __emscripten_declare_global_const_start
-export declare const GodotRTCDataChannel:
-	typeof _GodotRTCDataChannel.$GodotRTCDataChannel;
-// __emscripten_declare_global_const_end
-const _GodotRTCDataChannel = {
+export const _GodotRTCDataChannel = {
 	// Our socket implementation that forwards events to C++.
 	$GodotRTCDataChannel__deps: [
 		"$IDHandler",
@@ -469,11 +454,7 @@ const SignalingState = Object.freeze({
 type SignalingStateValues =
 	(typeof SignalingState)[keyof typeof SignalingState];
 
-// __emscripten_declare_global_const_start
-export declare const GodotRTCPeerConnection:
-	typeof _GodotRTCPeerConnection.$GodotRTCPeerConnection;
-// __emscripten_declare_global_const_end
-const _GodotRTCPeerConnection = {
+export const _GodotRTCPeerConnection = {
 	// Our socket implementation that forwards events to C++.
 	$GodotRTCPeerConnection__deps: [
 		"$IDHandler",
@@ -527,7 +508,7 @@ const _GodotRTCPeerConnection = {
 						pOnConnectionChange(
 							GodotRTCPeerConnection
 								.ConnectionState[connection.connectionState] ??
-								0,
+							0,
 						);
 					},
 				);
@@ -545,8 +526,8 @@ const _GodotRTCPeerConnection = {
 						pOnConnectionChange(
 							GodotRTCPeerConnection
 								.ConnectionStateCompat[
-									connection.iceConnectionState
-								] ?? 0,
+							connection.iceConnectionState
+							] ?? 0,
 						);
 					},
 				);
@@ -562,7 +543,7 @@ const _GodotRTCPeerConnection = {
 					pOnIceGatheringChange(
 						GodotRTCPeerConnection
 							.IceGatheringState[connection.iceGatheringState] ??
-							0,
+						0,
 					);
 				},
 			);
@@ -577,7 +558,7 @@ const _GodotRTCPeerConnection = {
 					pOnSignalingChange(
 						GodotRTCPeerConnection
 							.SignalingState[connection.signalingState] ??
-							0,
+						0,
 					);
 				},
 			);

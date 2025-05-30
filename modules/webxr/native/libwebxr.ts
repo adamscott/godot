@@ -28,32 +28,6 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import "+browser/lib.ts";
-
-// __emscripten_import_global_const_start
-import "npm:@types/webxr";
-// __emscripten_import_global_const_end
-
-import "+browser/types/extensions/xrinputsource_name.ts";
-import "+browser/types/extensions/xrwebglsubimage_motionvectortexture.ts";
-import "+browser/types/extensions/xrframe_fillposes.ts";
-import "+browser/types/extensions/xrframe_filljointradii.ts";
-
-// __emscripten_import_global_const_start
-import {
-	_emscripten_webgl_get_current_context,
-	addToLibrary,
-	autoAddDeps,
-	GL,
-	HEAPF32,
-	MainLoop,
-	runtimeKeepalivePop,
-	runtimeKeepalivePush,
-} from "+browser/emscripten/libemscripten.ts";
-import { GodotRuntime } from "+browser/emscripten/libruntime.ts";
-import { GodotEventListeners } from "+browser/emscripten/libos.ts";
-// __emscripten_import_global_const_end
-
 import {
 	CCharPointer,
 	CFloat,
@@ -64,7 +38,7 @@ import {
 	CIntPointer,
 	CUint,
 	GLTexture,
-} from "+browser/emscripten/libemscripten.ts";
+} from "+emscripten/libraries";
 
 type GodotWebXRSupportedCallback = (
 	pSessionMode: CCharPointer,
@@ -83,10 +57,7 @@ type GodotWebXRInputEventCallback = (
 ) => void;
 type GodotWebXRSimpleEventCallback = (pSignalName: CCharPointer) => void;
 
-// __emscripten_declare_global_const_start
-export declare const GodotWebXR: typeof _GodotWebXR.$GodotWebXR;
-// __emscripten_declare_global_const_end
-const _GodotWebXR = {
+export const _GodotWebXR = {
 	$GodotWebXR__deps: [
 		"$MainLoop",
 		"$GL",
@@ -144,7 +115,7 @@ const _GodotWebXR = {
 				GodotWebXR.frame = pFrame;
 				GodotWebXR.viewerPose =
 					pFrame.getViewerPose(GodotWebXR.referenceSpace) ??
-						null;
+					null;
 				pCallback(pTime);
 				GodotWebXR.frame = null;
 				GodotWebXR.viewerPose = null;
@@ -589,7 +560,7 @@ const _GodotWebXR = {
 		if (GodotWebXR.session != null) {
 			GodotWebXR.session.end()
 				// Prevent exception when session has already ended.
-				.catch((_error) => {});
+				.catch((_error) => { });
 		}
 
 		GodotWebXR.session = null;
@@ -802,7 +773,7 @@ const _GodotWebXR = {
 				targetRayMode = 3;
 				break;
 			default:
-				// Do nothing.
+			// Do nothing.
 		}
 		GodotRuntime.setHeapValue(rTargetRayMode, targetRayMode, "i32");
 
@@ -941,21 +912,21 @@ const _GodotWebXR = {
 			GodotRuntime.setHeapValue(
 				(bufferPtr +
 					((i * 3) + 0) *
-						Float32Array.BYTES_PER_ELEMENT) as CFloatPointer,
+					Float32Array.BYTES_PER_ELEMENT) as CFloatPointer,
 				point.x,
 				"float",
 			);
 			GodotRuntime.setHeapValue(
 				(bufferPtr +
 					((i * 3) + 1) *
-						Float32Array.BYTES_PER_ELEMENT) as CFloatPointer,
+					Float32Array.BYTES_PER_ELEMENT) as CFloatPointer,
 				point.y,
 				"float",
 			);
 			GodotRuntime.setHeapValue(
 				(bufferPtr +
 					((i * 3) + 2) *
-						Float32Array.BYTES_PER_ELEMENT) as CFloatPointer,
+					Float32Array.BYTES_PER_ELEMENT) as CFloatPointer,
 				point.z,
 				"float",
 			);

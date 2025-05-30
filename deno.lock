@@ -747,6 +747,38 @@
       "npm:esbuild-sass-plugin@^3.3.1",
       "npm:esbuild@~0.25.5",
       "npm:yargs@18"
-    ]
+    ],
+    "members": {
+      "modules/webrtc/emscripten": {
+        "dependencies": [
+          "npm:@types/webxr@*"
+        ]
+      },
+      "modules/websocket/emscripten": {
+        "dependencies": [
+          "npm:@types/webxr@*"
+        ]
+      },
+      "modules/webxr/native": {
+        "dependencies": [
+          "npm:@types/webxr@*"
+        ]
+      },
+      "platform/web/src/typescript/browser": {
+        "dependencies": [
+          "npm:@types/webxr@*"
+        ]
+      },
+      "platform/web/src/typescript/emscripten": {
+        "dependencies": [
+          "npm:@types/webxr@*"
+        ]
+      },
+      "platform/web/src/typescript/service-worker": {
+        "dependencies": [
+          "npm:@types/serviceworker@*"
+        ]
+      }
+    }
   }
 }

@@ -1,0 +1,21 @@
+{
+	"name": "+serive-worker",
+	"compilerOptions": {
+		"lib": [
+			"dom",
+			"dom.asynciterable",
+			"esnext"
+		],
+		"types": [
+			"npm:@types/serviceworker"
+		]
+	},
+	"imports": {
+		"#/": "./"
+	},
+	"exports": {
+		".": "./mod.ts",
+		"./types": "./types/mod.ts",
+		"./utils": "./utils/utils.ts"
+	}
+}

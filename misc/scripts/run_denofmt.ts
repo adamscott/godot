@@ -33,8 +33,9 @@ import { basename, dirname, extname, join, relative, resolve } from "@std/path";
 
 import { parseArgs } from "node:util";
 
-import { getDenoMajorVersion } from "+deno/utils.ts";
-import { errorAndExit } from "+deno/os.ts";
+import { getDenoMajorVersion } from "+deno/utils";
+import { errorAndExit } from "+deno/os";
+import { rejects } from "node:assert";
 
 if (import.meta.filename == null || getDenoMajorVersion() < 2) {
 	errorAndExit("Incompatible Deno version.");
@@ -134,37 +135,39 @@ export async function lintEmscriptenLibraryFile(
 				`${fileWithoutExt}.preprocessed${settingMiddlePart}${fileExt}`,
 			);
 
-			await new Promise(async (resolve, _reject) => {
-				const preprocess_script = join(
-					"misc",
-					"scripts",
-					"preprocess_emscripten_library.mjs",
-				);
-				const commandExec = Deno.execPath();
-				const commandArgs = [
-					preprocess_script,
-					settingFile,
-					file,
-					"-o",
-					preprocessed,
-				];
-				if (verbose) {
-					const commandString = [commandExec, ...commandArgs].join(
-						" ",
+			await new Promise((resolve, reject) => {
+				(async () => {
+					const preprocess_script = join(
+						"misc",
+						"scripts",
+						"preprocess_emscripten_library.mjs",
 					);
-					console.log(`Executing: ${commandString}`);
-				}
-				const command = new Deno.Command(commandExec, {
-					args: commandArgs,
-				});
-				const { success, stderr } = await command.output();
-				if (success) {
-					resolve(undefined);
-					return;
-				}
+					const commandExec = Deno.execPath();
+					const commandArgs = [
+						preprocess_script,
+						settingFile,
+						file,
+						"-o",
+						preprocessed,
+					];
+					if (verbose) {
+						const commandString = [commandExec, ...commandArgs].join(
+							" ",
+						);
+						console.log(`Executing: ${commandString}`);
+					}
+					const command = new Deno.Command(commandExec, {
+						args: commandArgs,
+					});
+					const { success, stderr } = await command.output();
+					if (success) {
+						resolve(undefined);
+						return;
+					}
 
-				console.error(new TextDecoder().decode(stderr));
-				Deno.exit(1);
+					console.error(new TextDecoder().decode(stderr));
+					Deno.exit(1);
+				})().catch((pError) => reject(pError));
 			});
 
 			const success = (await runDenoLintOrFmt("lint", preprocessed)) &&
