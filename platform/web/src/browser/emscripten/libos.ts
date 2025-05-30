@@ -95,7 +95,7 @@ export declare const GodotConfig: typeof _GodotConfig.$GodotConfig;
 // __emscripten_declare_global_const_end
 const _GodotConfig = {
 	// TODO: Rename Module to GodotEngine
-	$GodotConfig__postset: 'Module["initConfig"] = GodotConfig.init_config;',
+	$GodotConfig__postset: 'Module["initConfig"] = GodotConfig.initialize;',
 	$GodotConfig__deps: ["$GodotRuntime"],
 	$GodotConfig: {
 		canvas: null as unknown as HTMLCanvasElement,
@@ -107,7 +107,7 @@ const _GodotConfig = {
 		onExecute: null as ((pArgs: Record<string, unknown>) => void) | null,
 		onExit: null as ((pExitCode: number) => void) | null,
 
-		initConfig: (pOptions: Partial<ConfigOptions>): void => {
+		initialize: (pOptions: Partial<ConfigOptions>): void => {
 			const {
 				canvas,
 				canvasResizePolicy,
@@ -180,8 +180,8 @@ export declare const GodotFS: typeof _GodotFS.$GodotFS;
 const _GodotFS = {
 	$GodotFS__deps: ["$FS", "$IDBFS", "$GodotRuntime"],
 	$GodotFS__postset: [
-		'Module["initFS"] = GodotFS.init;',
-		'Module["copyToFS"] = GodotFS.copy_to_fs;',
+		'Module["initFS"] = GodotFS.initialize;',
+		'Module["copyToFS"] = GodotFS.copyToFS;',
 	].join(""),
 	$GodotFS: {
 		ENOENT: 44,
@@ -661,7 +661,7 @@ export declare const GodotEventListeners:
 const _GodotEventListeners = {
 	$GodotEventListeners__deps: ["$GodotOS"],
 	$GodotEventListeners__postset:
-		"GodotOS.atexit(function(resolve, reject) { GodotEventListeners.clear(); resolve(); });",
+		"GodotOS.atExit(async() => { GodotEventListeners.clear(); });",
 	$GodotEventListeners: {
 		handlers: [] as Handler[],
 		Handler,
@@ -688,7 +688,12 @@ const _GodotEventListeners = {
 			if (GodotEventListeners.has(pTarget, pEvent, pMethod, pCapture)) {
 				return;
 			}
-			const handler = new Handler(pTarget, pEvent, pMethod, pCapture);
+			const handler = new GodotEventListeners.Handler(
+				pTarget,
+				pEvent,
+				pMethod,
+				pCapture,
+			);
 			GodotEventListeners.handlers.push(handler);
 			handler.addTargetEventListnener();
 		},

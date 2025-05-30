@@ -706,7 +706,7 @@ const _GodotDisplay = {
 	godot_js_display_has_webgl__proxy: "sync",
 	godot_js_display_has_webgl__sig: "ii",
 	godot_js_display_has_webgl: (pVersion: CInt): CInt => {
-		if (!(pVersion in [1, 2])) {
+		if (![1, 2].includes(pVersion)) {
 			return GodotRuntime.boolean(false);
 		}
 		try {
