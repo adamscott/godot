@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 from misc.utility.scons_hints import *
 
+from methods import add_emscripten_library
+
 Import("env")
 Import("env_modules")
 
@@ -10,21 +12,7 @@ thirdparty_obj = []
 
 if env["platform"] == "web":
     # Our JavaScript/C++ interface.
-    emscripten_env = env.Clone(
-        ESBUILD_TYPE="emscripten",
-        ESBUILD_EMSCRIPTEN_NAME="libwebsocket",
-        ESBUILD_EMSCRIPTEN_SOURCE=env.File("emscripten/libwebsocket.ts"),
-        ESBUILD_EMSCRIPTEN_OUTPUT_DIR="#platform/web/dist/emscripten/",
-    )
-    emscripten_websocket_lib = emscripten_env.RunEsbuild(
-        target=["#platform/web/dist/emscripten/libwebsocket.js"],
-        source=[
-            emscripten_env.Glob("#platform/web/src/shared/**.ts"),
-            emscripten_env.Glob("#platform/web/src/browser/emscripten/**.ts"),
-            "emscripten/libwebsocket.ts",
-        ],
-    )
-    env.AddJSLibraries([emscripten_websocket_lib])
+    add_emscripten_library(env, "websocket", "emscripten/libwebsocket.ts")
 
 elif env["builtin_wslay"]:
     # Thirdparty source files

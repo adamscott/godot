@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from misc.utility.scons_hints import *
 
-from methods import print_error
+from methods import add_emscripten_library, print_error
 
 Import("env")
 
@@ -70,39 +70,9 @@ sys_env.AddJSPost(
 # )
 
 # esbuild Emscripten libraries.
-libbase_env = sys_env.Clone(
-    ESBUILD_TYPE="emscripten",
-    ESBUILD_EMSCRIPTEN_NAME="libbase",
-    ESBUILD_EMSCRIPTEN_SOURCE="#platform/web/src/browser/entry/emscripten/libbase.ts",
-    ESBUILD_EMSCRIPTEN_OUTPUT_DIR="#platform/web/dist/emscripten/",
-)
-libbase_lib = libbase_env.RunEsbuild(
-    target=["#platform/web/dist/emscripten/libbase.js"],
-    source=[
-        libbase_env.Glob("#platform/web/src/shared/**.ts"),
-        libbase_env.Glob("#platform/web/src/browser/emscripten/**.ts"),
-        "#platform/web/src/browser/entry/emscripten/libbase.ts",
-    ],
-)
-sys_env.AddJSLibraries([libbase_lib])
-
+add_emscripten_library(sys_env, lib_name="base", entry_point="src/typescript/browser/entry/emscripten/libbase.ts")
 if env["javascript_eval"]:
-    libeval_env = sys_env.Clone(
-        ESBUILD_TYPE="emscripten",
-        ESBUILD_EMSCRIPTEN_NAME="libeval",
-        ESBUILD_EMSCRIPTEN_SOURCE="#platform/web/src/browser/entry/emscripten/libeval.ts",
-        ESBUILD_EMSCRIPTEN_OUTPUT_DIR="#platform/web/dist/emscripten/",
-    )
-    libeval_lib = libeval_env.RunEsbuild(
-        target=["#platform/web/dist/emscripten/libeval.js"],
-        source=[
-            libeval_env.Glob("#platform/web/src/shared/**.ts"),
-            libeval_env.Glob("#platform/web/src/browser/emscripten/**.ts"),
-            "#platform/web/src/browser/entry/emscripten/libeval.ts",
-        ],
-    )
-    sys_env.AddJSLibraries([libeval_lib])
-
+    add_emscripten_library(sys_env, lib_name="eval", entry_point="src/typescript/browser/entry/emscripten/libeval.ts")
 
 for lib in sys_env["JS_LIBS"]:
     sys_env.Append(LINKFLAGS=["--js-library", lib.abspath])

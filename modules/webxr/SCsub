@@ -1,25 +1,13 @@
 #!/usr/bin/env python
 from misc.utility.scons_hints import *
 
+from methods import add_emscripten_library
+
 Import("env")
 Import("env_modules")
 
 if env["platform"] == "web":
-    emscripten_env = env.Clone(
-        ESBUILD_TYPE="emscripten",
-        ESBUILD_EMSCRIPTEN_NAME="libwebxr",
-        ESBUILD_EMSCRIPTEN_SOURCE=env.File("native/libwebxr.ts"),
-        ESBUILD_EMSCRIPTEN_OUTPUT_DIR="#platform/web/dist/emscripten/",
-    )
-    emscripten_webxr_lib = emscripten_env.RunEsbuild(
-        target=["#platform/web/dist/emscripten/libwebxr.js"],
-        source=[
-            emscripten_env.Glob("#platform/web/src/shared/**.ts"),
-            emscripten_env.Glob("#platform/web/src/browser/emscripten/**.ts"),
-            "native/libwebxr.ts",
-        ],
-    )
-    env.AddJSLibraries([emscripten_webxr_lib])
+    add_emscripten_library(env, "webxr", "native/libwebxr.ts")
 
 env_webxr = env_modules.Clone()
 env_webxr.add_source_files(env.modules_sources, "*.cpp")

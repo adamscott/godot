@@ -19,10 +19,9 @@
 		"proseWrap": "preserve"
 	},
 	"imports": {
-		"+shared/": "./platform/web/src/shared/",
-		"+browser/": "./platform/web/src/browser/",
-		"+deno/": "./platform/web/src/deno/",
-		"+dist-src/": "./misc/dist/html/src/",
+		"+shared/": "./platform/web/src/typescript/shared/",
+		"+browser/": "./platform/web/src/typescript/browser/",
+		"+deno/": "./platform/web/src/typescript/deno/",
 		"@luca/esbuild-deno-loader": "jsr:@luca/esbuild-deno-loader@^0.11.1",
 		"@std/cli": "jsr:@std/cli@^1.0.17",
 		"@std/fs": "jsr:@std/fs@^1.0.17",
