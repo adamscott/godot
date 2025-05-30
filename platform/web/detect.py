@@ -317,4 +317,4 @@ def configure(env: "SConsEnvironment"):
     # Tell Emscripten to output ES6 modules (ESM).
     env.Append(LINKFLAGS=["-sEXPORT_ES6"])
     env.Append(LINKFLAGS=["-sMODULARIZE=1"])
-    env.Append(LINKFLAGS=["-sEXPORT_NAME='GodotEngine'"])
+    env.Append(LINKFLAGS=["-sEXPORT_NAME='Godot'"])
