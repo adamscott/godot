@@ -1,7 +1,8 @@
 {
 	"workspace": [
-		"./misc/scripts",
-		"./platform/web/scripts",
+		"./misc/scripts/",
+		"./platform/web/",
+		"./platform/web/src/typescript/scripts",
 		"./platform/web/src/typescript/browser",
 		"./platform/web/src/typescript/deno",
 		"./platform/web/src/typescript/emscripten",
@@ -11,12 +12,7 @@
 		"./modules/websocket/emscripten/",
 		"./modules/webxr/native/"
 	],
-	"tasks": {
-		"esbuild": {
-			"description": "Build Godot Engine Web files",
-			"command": "deno run --allow-env --allow-read --allow-run --allow-write platform/web/scripts/build.ts"
-		}
-	},
+	"tasks": {},
 	"lint": {
 		"rules": {
 			"tags": ["recommended"]

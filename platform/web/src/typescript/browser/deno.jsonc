@@ -1,5 +1,5 @@
 {
-	"name": "+browser",
+	"name": "+platform-web-browser",
 	"compilerOptions": {
 		"strict": true,
 		"lib": [

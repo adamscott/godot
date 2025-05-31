@@ -37,8 +37,8 @@ import {
 	CFunctionPointer
 } from "./emscripten.ts";
 
-import { AnyFunction } from "+shared/types";
-import { ConfigOptions } from "+browser/types";
+import { AnyFunction } from "+platform-web-shared/types";
+import { ConfigOptions } from "+platform-web-browser/types";
 
 type OSFinishAsyncCallback = () => void;
 type OSRequestQuitCbCallback = () => void;

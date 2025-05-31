@@ -45,8 +45,8 @@ import {
 	CPointerType,
 } from "./emscripten.ts";
 
-import { TypedArray } from "+browser/types";
-import { AnyFunction } from "+shared/types";
+import { TypedArray } from "+platform-web-browser/types";
+import { AnyFunction } from "+platform-web-shared/types";
 
 interface GetHeapValue {
 	(

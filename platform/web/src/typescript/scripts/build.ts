@@ -43,8 +43,7 @@ import {
 	denoResolverPlugin,
 } from "jsr:@luca/esbuild-deno-loader";
 
-import { errorAndExit } from "+deno/os";
-import { emscriptenGlobalConstTransformPlugin } from "./plugins/emscripten_global_const_transform.ts";
+import { errorAndExit } from "+platform-web-deno/os";
 
 const defaultTarget = resolveToEsbuildTarget(
 	browserslist([
@@ -79,9 +78,9 @@ export async function buildJavaScriptTarget(
 		target: string | string[];
 		sourceMap: boolean;
 		minify: boolean;
-		isEmscripten?: boolean;
-		emscriptenFilter?: RegExp;
+		verbose: boolean;
 		entryNames?: string;
+		format?: esbuild.Format;
 	},
 ): Promise<void> {
 	const prefixEntryPoint = (entryPoint: string): string => `./${entryPoint}`;
@@ -90,32 +89,32 @@ export async function buildJavaScriptTarget(
 		target,
 		sourceMap,
 		minify,
-		isEmscripten = false,
-		emscriptenFilter,
+		verbose,
 		entryNames,
+		format = "esm",
 	} = settings;
 
-	await esbuild.build({
+	const result = await esbuild.build({
 		plugins: [
 			denoResolverPlugin(),
-			...isEmscripten
-				? [emscriptenGlobalConstTransformPlugin(
-					emscriptenFilter,
-				)]
-				: [],
 			denoLoaderPlugin(),
 		],
+		absWorkingDir: Deno.cwd(),
 		entryPoints: entryPoints.map(prefixEntryPoint),
 		entryNames,
 		minify,
 		metafile: true,
 		outdir: distDir,
 		bundle: true,
-		splitting: true,
+		...format === "esm" && { splitting: true },
 		sourcemap: sourceMap,
 		target,
-		format: "esm",
+		format,
 	});
+
+	if (verbose) {
+		console.log(result);
+	}
 }
 
 export async function buildCssTarget(
@@ -124,6 +123,7 @@ export async function buildCssTarget(
 	settings: {
 		target: string | string[];
 		sourceMap: boolean;
+		verbose: boolean;
 	},
 ): Promise<void> {
 	const prefixEntryPoint = (entryPoint: string): string => `./${entryPoint}`;
@@ -147,9 +147,11 @@ export async function buildShell(
 		target?: string | string[];
 		sourceMap?: boolean;
 		minify?: boolean;
+		verbose?: boolean;
 	} = {},
 ): Promise<void> {
-	const { target = [], sourceMap = false, minify = false } = options;
+	const { target = [], sourceMap = false, minify = false, verbose = false } =
+		options;
 	const shellEntryPoint = "misc/dist/html/src/entry/shell.ts";
 	const engineEntryPoint = "platform/web/src/browser/entry/engine.ts";
 
@@ -160,10 +162,11 @@ export async function buildShell(
 		target,
 		sourceMap,
 		minify,
+		verbose,
 	});
 	await buildCssTarget(directory, [
 		"misc/dist/html/assets/scss/main/shell.scss",
-	], { target, sourceMap });
+	], { target, sourceMap, verbose });
 }
 
 export async function buildEditor(
@@ -172,11 +175,16 @@ export async function buildEditor(
 		target?: string | string[];
 		sourceMap?: boolean;
 		minify?: boolean;
+		verbose?: boolean;
 	} = {},
 ): Promise<void> {
-	const { target = defaultTarget, sourceMap = false, minify = false } =
-		options;
-	const editorEntryPoint = "misc/dist/html/src/entry/editor.ts";
+	const {
+		target = defaultTarget,
+		sourceMap = false,
+		minify = false,
+		verbose = false,
+	} = options;
+	const editorEntryPoint = "platform/web/src/browser/entry/editor.ts";
 	const engineEntryPoint = "platform/web/src/browser/entry/engine.ts";
 
 	await buildJavaScriptTarget(directory, [
@@ -186,11 +194,12 @@ export async function buildEditor(
 		target,
 		sourceMap,
 		minify,
+		verbose,
 	});
 
 	await buildCssTarget(directory, [
 		"misc/dist/html/assets/scss/main/editor.scss",
-	], { target, sourceMap });
+	], { target, sourceMap, verbose });
 }
 
 export async function buildServiceWorker(
@@ -199,10 +208,15 @@ export async function buildServiceWorker(
 		target?: string | string[];
 		sourceMap?: boolean;
 		minify?: boolean;
+		verbose?: boolean;
 	} = {},
 ): Promise<void> {
-	const { target = defaultTarget, sourceMap = false, minify = false } =
-		pOptions;
+	const {
+		target = defaultTarget,
+		sourceMap = false,
+		minify = false,
+		verbose = false,
+	} = pOptions;
 	const serviceWorkerEntryPoint =
 		"misc/dist/html/src/entry/service-worker.ts";
 
@@ -213,45 +227,32 @@ export async function buildServiceWorker(
 			target,
 			sourceMap,
 			minify,
+			verbose,
 		},
 	);
 }
 
 export async function buildEmscriptenLibraries(
 	pTargetDirectory: string,
-	pImportMapName: string,
+	pLibraryName: string,
 	pEntryPoints: string[],
 	pOptions: {
 		target?: string | string[];
 		sourceMap?: boolean;
 		minify?: boolean;
+		verbose?: boolean;
+		suffix?: string;
 	} = {},
 ): Promise<void> {
-	const { target = defaultTarget, sourceMap = false, minify = false } =
-		pOptions;
+	const {
+		target = defaultTarget,
+		sourceMap = false,
+		minify = false,
+		verbose = false,
+		suffix = "",
+	} = pOptions;
 
-	const filter = new RegExp(
-		[
-			...pEntryPoints,
-			// `dummy.ts` will be stripped out.
-			"/platform/web/src/browser/dummy.ts",
-		].map(
-			(pEntryPoint) => {
-				return dirname(pEntryPoint)
-					.replaceAll("/", "\/")
-					.replaceAll("\\", "\\\\")
-					.replaceAll(".", "\.");
-			},
-		).reduce((pPreviousValue, pCurrentValue, pCurrentIndex, pArray) => {
-			if (pCurrentIndex === 0) {
-				return pPreviousValue + pCurrentValue;
-			} else if (pCurrentIndex === pArray.length - 1) {
-				return `${pPreviousValue}|${pCurrentValue})\/.+?\.ts$`;
-			}
-			return `${pPreviousValue}|${pCurrentValue}`;
-		}, "(?:"),
-	);
-
+	const entryNames = `lib${pLibraryName}${suffix}`;
 	await buildJavaScriptTarget(
 		pTargetDirectory,
 		pEntryPoints,
@@ -259,9 +260,8 @@ export async function buildEmscriptenLibraries(
 			target,
 			sourceMap,
 			minify,
-			isEmscripten: true,
-			emscriptenFilter: filter,
-			entryNames: pImportMapName,
+			verbose,
+			entryNames,
 		},
 	);
 }
@@ -294,6 +294,10 @@ async function main() {
 					.option("clear", {
 						boolean: true,
 						default: false,
+					})
+					.option("verbose", {
+						boolean: true,
+						default: false,
 					});
 			},
 			async (pArgv) => {
@@ -305,11 +309,13 @@ async function main() {
 					target: pArgv.target,
 					sourceMap: pArgv.sourceMap,
 					minify: pArgv.minify,
+					verbose: pArgv.verbose,
 				});
 				await buildServiceWorker(directory, {
 					target: pArgv.target,
 					sourceMap: pArgv.sourceMap,
 					minify: pArgv.minify,
+					verbose: pArgv.verbose,
 				});
 			},
 		);
@@ -320,7 +326,7 @@ async function main() {
 
 	y
 		.command(
-			"emscripten <import-map-name> <files...>",
+			"emscripten <library-name> <files...>",
 			"build an emscripten library",
 			(pYargs) => {
 				return pYargs
@@ -343,9 +349,17 @@ async function main() {
 						boolean: true,
 						default: false,
 					})
-					.positional("import-map-name", {
+					.option("verbose", {
+						boolean: true,
+						default: false,
+					})
+					.option("suffix", {
+						string: true,
+						default: "",
+					})
+					.positional("library-name", {
 						description:
-							"name of the import map (i.e. `importmap.<import-map-name>.json`)",
+							'name of the library to build (without the "lib-" prefix)',
 						type: "string",
 					})
 					.positional("files", {
@@ -355,9 +369,9 @@ async function main() {
 					});
 			},
 			async (pArgv) => {
-				if (pArgv.importMapName == null) {
+				if (pArgv.libraryName == null) {
 					console.error(
-						"[ERROR]: <import-map-name> argument missing",
+						"[ERROR]: <library-name> argument missing",
 					);
 					y.showHelp();
 					return;
@@ -370,13 +384,15 @@ async function main() {
 				}
 
 				await buildEmscriptenLibraries(
-					"platform/web/dist/emscripten/",
-					pArgv.importMapName,
+					"bin/obj/platform/web/dist/emscripten/",
+					pArgv.libraryName,
 					pArgv.files.map((pFile) => relative(Deno.cwd(), pFile)),
 					{
 						target: pArgv.target,
 						sourceMap: pArgv.sourceMap,
 						minify: pArgv.minify,
+						verbose: pArgv.verbose,
+						suffix: pArgv.suffix,
 					},
 				);
 			},
@@ -396,12 +412,10 @@ if (import.meta.main) {
 		) {
 			errorAndExit("Incompatible Deno version. Please use Deno >= 2.");
 		}
-		// platform/web/scripts/build.ts
+		// platform/web/src/typescript/scripts/build.ts
 		const rootDir = resolve(
 			dirname(import.meta.filename),
-			"..",
-			"..",
-			"..",
+			...new Array(5).fill(".."),
 		);
 		Deno.chdir(rootDir);
 		await main();

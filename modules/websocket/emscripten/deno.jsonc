@@ -1,5 +1,5 @@
 {
-	"name": "+websocket",
+	"name": "+modules-websocket",
 	"compilerOptions": {
 		"strict": true,
 		"lib": [
@@ -9,10 +9,10 @@
 		],
 		"types": [
 			"npm:@types/webxr",
-			"+browser/global.d.ts",
-			"+emscripten/global.d.ts",
+			"+platform-web-browser/global.d.ts",
+			"+platform-web-emscripten/global.d.ts",
 			"./global.d.ts"
 		]
 	},
-
+	"exports": {}
 }

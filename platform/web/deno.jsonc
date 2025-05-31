@@ -1,0 +1,10 @@
+{
+	"name": "+platform-web",
+	"tasks": {
+		"esbuild": {
+			"description": "Build Godot Engine Web files",
+			"command": "deno run --allow-env --allow-read --allow-run --allow-write src/typescript/scripts/build.ts"
+		}
+	},
+	"exports": {}
+}

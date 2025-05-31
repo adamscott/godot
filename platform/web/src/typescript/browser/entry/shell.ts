@@ -30,7 +30,7 @@
 
 import { Engine, init as engineInit } from "#/entry/engine.ts";
 import type { ShellConfig } from "#/shell/types.ts";
-import { fetchWithRetry } from "+shared/utils/fetch";
+import { fetchWithRetry } from "+platform-web-shared/utils/fetch";
 
 class Shell extends EventTarget {
 	engine: Engine | null = null;

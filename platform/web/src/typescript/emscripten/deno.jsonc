@@ -1,5 +1,5 @@
 {
-	"name": "+emscripten",
+	"name": "+platform-web-emscripten",
 	"compilerOptions": {
 		"strict": true,
 		"lib": [
@@ -9,7 +9,7 @@
 		],
 		"types": [
 			"npm:@types/webxr",
-			"+browser/global.d.ts",
+			"+platform-web-browser/global.d.ts",
 			"./global.d.ts"
 		]
 	},

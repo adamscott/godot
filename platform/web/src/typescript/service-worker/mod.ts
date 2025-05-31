@@ -28,4 +28,4 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import { } from "+deno"
+import { } from "+platform-web-deno"

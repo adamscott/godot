@@ -50,9 +50,9 @@ import type {
 	CUintPointer,
 	CVoidArrayPointer,
 	CVoidPointer,
-} from "+shared/types";
+} from "+platform-web-shared/types";
 
-export type { TypedArray } from "+browser/types";
+export type { TypedArray } from "+platform-web-browser/types";
 
 export {
 	CCharArrayPointer,

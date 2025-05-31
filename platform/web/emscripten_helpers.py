@@ -33,7 +33,7 @@ def run_esbuild(target, source, env, for_signature):
         raise BuildError(errstr=f'Invalid ESBUILD_TYPE. "{esbuild_type}" not in {repr(valid_esbuild_types)}')
 
     deno_bin = WhereIs("deno") or ""
-    cmd = [deno_bin, "task", "esbuild"]
+    cmd = [deno_bin, "task", "--cwd=platform/web", "esbuild"]
 
     esbuild_emscripten_name = ""
     esbuild_emscripten_source = ""
@@ -44,12 +44,17 @@ def run_esbuild(target, source, env, for_signature):
         esbuild_emscripten_name = str(env.get("ESBUILD_EMSCRIPTEN_NAME", "")).lower()
         esbuild_emscripten_source = str(env.get("ESBUILD_EMSCRIPTEN_SOURCE", ""))
         esbuild_emscripten_output_dir = str(env.get("ESBUILD_EMSCRIPTEN_OUTPUT_DIR", ""))
+        esbuild_emscripten_suffix = str(env.get("ESBUILD_EMSCRIPTEN_SUFFIX", ""))
 
         esbuild_emscripten_source = str(env.File(esbuild_emscripten_source).abspath)
         esbuild_emscripten_output_dir = str(env.Dir(esbuild_emscripten_output_dir).abspath)
 
         cmd.append(esbuild_emscripten_name)
         cmd.append(esbuild_emscripten_source)
+
+        if len(esbuild_emscripten_suffix) > 0:
+            cmd.append(f"--suffix={esbuild_emscripten_suffix}")
+
     elif esbuild_type == "shell":
         cmd.append("shell")
     elif esbuild_type == "editor":

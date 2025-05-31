@@ -1,5 +1,5 @@
 {
-	"name": "+deno",
+	"name": "+platform-web-deno",
 	"compilerOptions": {
 		"lib": [
 			"deno.window",

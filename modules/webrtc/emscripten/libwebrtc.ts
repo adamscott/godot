@@ -28,7 +28,6 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-
 import {
 	CCharPointer,
 	CFunctionPointer,
@@ -36,7 +35,7 @@ import {
 	CInt,
 	CUintPointer,
 	CVoidPointer,
-} from "+emscripten/libraries";
+} from "+platform-web-emscripten/libraries";
 
 type RTCDataChannelId = CIDHandlerId<RTCDataChannel>;
 type RTCPeerConnectionId = CIDHandlerId<RTCPeerConnection>;
@@ -508,7 +507,7 @@ export const _GodotRTCPeerConnection = {
 						pOnConnectionChange(
 							GodotRTCPeerConnection
 								.ConnectionState[connection.connectionState] ??
-							0,
+								0,
 						);
 					},
 				);
@@ -526,8 +525,8 @@ export const _GodotRTCPeerConnection = {
 						pOnConnectionChange(
 							GodotRTCPeerConnection
 								.ConnectionStateCompat[
-							connection.iceConnectionState
-							] ?? 0,
+									connection.iceConnectionState
+								] ?? 0,
 						);
 					},
 				);
@@ -543,7 +542,7 @@ export const _GodotRTCPeerConnection = {
 					pOnIceGatheringChange(
 						GodotRTCPeerConnection
 							.IceGatheringState[connection.iceGatheringState] ??
-						0,
+							0,
 					);
 				},
 			);
@@ -558,7 +557,7 @@ export const _GodotRTCPeerConnection = {
 					pOnSignalingChange(
 						GodotRTCPeerConnection
 							.SignalingState[connection.signalingState] ??
-						0,
+							0,
 					);
 				},
 			);

@@ -33,8 +33,8 @@ import { basename, dirname, extname, join, relative, resolve } from "@std/path";
 
 import { parseArgs } from "node:util";
 
-import { getDenoMajorVersion } from "+deno/utils";
-import { errorAndExit } from "+deno/os";
+import { getDenoMajorVersion } from "+platform-web-deno/utils";
+import { errorAndExit } from "+platform-web-deno/os";
 import { rejects } from "node:assert";
 
 if (import.meta.filename == null || getDenoMajorVersion() < 2) {

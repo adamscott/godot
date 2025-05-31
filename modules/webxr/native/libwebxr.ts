@@ -38,7 +38,7 @@ import {
 	CIntPointer,
 	CUint,
 	GLTexture,
-} from "+emscripten/libraries";
+} from "+platform-web-emscripten/libraries";
 
 type GodotWebXRSupportedCallback = (
 	pSessionMode: CCharPointer,

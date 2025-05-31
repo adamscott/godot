@@ -33,7 +33,7 @@ import { dirname, resolve } from "@std/path";
 
 import { parseArgs } from "node:util";
 
-import { errorAndExit, which } from "+deno/os";
+import { errorAndExit, which } from "+platform-web-deno/os";
 
 interface ParseFileOptions {
 	file: string;

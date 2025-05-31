@@ -1,5 +1,5 @@
 {
-	"name": "+misc-scripts",
+	"name": "+platform-web-scripts",
 	"compilerOptions": {
 		"strict": true,
 		"lib": [

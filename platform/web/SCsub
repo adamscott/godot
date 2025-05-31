@@ -71,9 +71,9 @@ sys_env.AddJSPost(
 # )
 
 # esbuild Emscripten libraries.
-add_emscripten_library(sys_env, "base", sys_env.File("src/typescript/browser/entry/emscripten/libbase.ts"))
+add_emscripten_library(sys_env, "base", sys_env.File("src/typescript/emscripten/entry/libbase.ts"))
 if env["javascript_eval"]:
-    add_emscripten_library(sys_env, "eval", sys_env.File("src/typescript/browser/entry/emscripten/libeval.ts"))
+    add_emscripten_library(sys_env, "eval", sys_env.File("src/typescript/emscripten/entry/libeval.ts"))
 
 for lib in sys_env["JS_LIBS"]:
     sys_env.Append(LINKFLAGS=["--js-library", lib.abspath])

@@ -28,7 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import { TypedArray } from "+browser/types";
+import { TypedArray } from "+platform-web-browser/types";
 
 import {
 	CCharArrayPointer,

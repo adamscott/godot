@@ -40,7 +40,7 @@ import {
 	CPointer,
 } from "./emscripten.ts";
 
-import { throwIfNull } from "+shared/utils/error";
+import { throwIfNull } from "+platform-web-shared/utils/error";
 
 type AudioInitOnStateChangeCallback = (pState: CInt) => void;
 type AudioInitOnLatencyChangeCallback = (pLatency: CFloat) => void;

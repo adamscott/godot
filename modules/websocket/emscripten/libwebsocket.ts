@@ -35,7 +35,7 @@ import {
 	CInt,
 	CUintPointer,
 	CVoidPointer,
-} from "+emscripten/libraries";
+} from "+platform-web-emscripten/libraries";
 
 type WebSocketId = CIDHandlerId<WebSocket>;
 
