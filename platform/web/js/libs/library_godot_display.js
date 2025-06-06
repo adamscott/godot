@@ -40,7 +40,7 @@ const GodotDisplayVK = {
 			return GodotConfig.virtual_keyboard && 'ontouchstart' in window;
 		},
 
-		init: function (input_cb) {
+		init: function (inputCallback, keyCallback) {
 			function create(what) {
 				const elem = document.createElement(what);
 				elem.style.display = 'none';
@@ -56,10 +56,25 @@ const GodotDisplayVK = {
 				elem.style.outline = 'none';
 				elem.readonly = true;
 				elem.disabled = true;
-				GodotEventListeners.add(elem, 'input', function (evt) {
-					const c_str = GodotRuntime.allocString(elem.value);
-					input_cb(c_str, elem.selectionEnd);
-					GodotRuntime.free(c_str);
+
+				const keyEventHandler = (pEvent) => {
+					// https://developer.mozilla.org/en-US/docs/Web/API/Element/keydown_event#keydown_events_with_ime
+					if (pEvent.isComposing || pEvent.keyCode === 229) {
+						return;
+					}
+					const codePtr = GodotRuntime.allocString(pEvent.code);
+					const keyPtr = GodotRuntime.allocString(pEvent.key);
+					keyCallback(Number(pEvent.type === 'keydown'), codePtr, keyPtr, Number(pEvent.repeat));
+					GodotRuntime.free(codePtr);
+					GodotRuntime.free(keyPtr);
+				};
+				GodotEventListeners.add(elem, 'keydown', keyEventHandler);
+				GodotEventListeners.add(elem, 'keyup', keyEventHandler);
+
+				GodotEventListeners.add(elem, 'input', function (pEvent) {
+					const inputPtr = GodotRuntime.allocString(elem.value);
+					inputCallback(inputPtr, elem.selectionEnd);
+					GodotRuntime.free(inputPtr);
 				}, false);
 				GodotEventListeners.add(elem, 'blur', function (evt) {
 					elem.style.display = 'none';
@@ -788,11 +803,12 @@ const GodotDisplay = {
 	},
 
 	godot_js_display_vk_cb__proxy: 'sync',
-	godot_js_display_vk_cb__sig: 'vi',
-	godot_js_display_vk_cb: function (p_input_cb) {
-		const input_cb = GodotRuntime.get_func(p_input_cb);
+	godot_js_display_vk_cb__sig: 'vpp',
+	godot_js_display_vk_cb: function (pInputCallbackPtr, pKeyCallbackPtr) {
+		const inputCallback = GodotRuntime.get_func(pInputCallbackPtr);
+		const keyCallback = GodotRuntime.get_func(pKeyCallbackPtr);
 		if (GodotDisplayVK.available()) {
-			GodotDisplayVK.init(input_cb);
+			GodotDisplayVK.init(inputCallback, keyCallback);
 		}
 	},
 };
