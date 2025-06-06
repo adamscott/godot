@@ -753,41 +753,82 @@ bool DisplayServerWeb::is_touchscreen_available() const {
 }
 
 // Virtual Keyboard
-void DisplayServerWeb::vk_input_text_callback(const char *p_text, int p_cursor) {
-	String text = String::utf8(p_text);
+void DisplayServerWeb::vk_input_text_input_callback(const char *p_input, int p_cursor) {
+	String input = String::utf8(p_input);
 
 #ifdef PROXY_TO_PTHREAD_ENABLED
 	if (!Thread::is_main_thread()) {
-		callable_mp_static(DisplayServerWeb::_vk_input_text_callback).call_deferred(text, p_cursor);
+		callable_mp_static(DisplayServerWeb::_vk_input_text_input_callback).call_deferred(text, p_cursor);
 		return;
 	}
 #endif
 
-	_vk_input_text_callback(text, p_cursor);
+	_vk_input_text_input_callback(input, p_cursor);
 }
 
-void DisplayServerWeb::_vk_input_text_callback(const String &p_text, int p_cursor) {
+void DisplayServerWeb::_vk_input_text_input_callback(const String &p_input, int p_cursor) {
 	DisplayServerWeb *ds = DisplayServerWeb::get_singleton();
 	if (!ds || !ds->input_text_callback.is_valid()) {
 		return;
 	}
-	// Call input_text
-	ds->input_text_callback.call(p_text);
+
+	ds->input_text_callback.call(p_input);
+
 	// Insert key right to reach position.
-	Input *input = Input::get_singleton();
-	Ref<InputEventKey> k;
+	Ref<InputEventKey> key;
 	for (int i = 0; i < p_cursor; i++) {
-		k.instantiate();
-		k->set_pressed(true);
-		k->set_echo(false);
-		k->set_keycode(Key::RIGHT);
-		input->parse_input_event(k);
-		k.instantiate();
-		k->set_pressed(false);
-		k->set_echo(false);
-		k->set_keycode(Key::RIGHT);
-		input->parse_input_event(k);
+		key.instantiate();
+		key->set_pressed(true);
+		key->set_echo(false);
+		key->set_keycode(Key::RIGHT);
+		Input::get_singleton()->parse_input_event(key);
+		key.instantiate();
+		key->set_pressed(false);
+		key->set_echo(false);
+		key->set_keycode(Key::RIGHT);
+		Input::get_singleton()->parse_input_event(key);
 	}
+}
+
+void DisplayServerWeb::vk_input_text_key_callback(int p_key_down, const char *p_code, const char *p_key, int p_repeat) {
+	String code = String::utf8(p_code);
+	String key = String::utf8(p_key);
+
+#ifdef PROXY_TO_PTHREAD_ENABLED
+	if (!Thread::is_main_thread()) {
+		callable_mp_static(DisplayServerWeb::_vk_input_text_key_callback).call_deferred(p_key_down, code, key, p_repeat);
+		return;
+	}
+#endif
+
+	_vk_input_text_key_callback(p_key_down, code, key, p_repeat);
+}
+
+void DisplayServerWeb::_vk_input_text_key_callback(bool p_key_down, const String &p_code, const String &p_key, bool p_repeat) {
+	DisplayServerWeb *ds = DisplayServerWeb::get_singleton();
+	if (!ds || !ds->input_text_callback.is_valid()) {
+		return;
+	}
+
+	const char *code = p_code.utf8().get_data();
+	const char *key = p_key.utf8().get_data();
+
+	Key keycode = dom_code2godot_scancode(code, key, false);
+	Key scancode = dom_code2godot_scancode(code, key, true);
+	KeyLocation location = dom_code2godot_key_location(code);
+
+	if (keycode == Key::NONE) {
+		return;
+	}
+
+	Ref<InputEventKey> input_key;
+	input_key.instantiate();
+	input_key->set_pressed(p_key_down);
+	input_key->set_echo(p_repeat);
+	input_key->set_keycode(keycode);
+	input_key->set_physical_keycode(scancode);
+	input_key->set_location(location);
+	Input::get_singleton()->parse_input_event(input_key);
 }
 
 void DisplayServerWeb::virtual_keyboard_show(const String &p_existing_text, const Rect2 &p_screen_rect, VirtualKeyboardType p_type, int p_max_input_length, int p_cursor_start, int p_cursor_end) {
@@ -1146,7 +1187,7 @@ DisplayServerWeb::DisplayServerWeb(const String &p_rendering_driver, WindowMode 
 			WINDOW_EVENT_MOUSE_EXIT,
 			WINDOW_EVENT_FOCUS_IN,
 			WINDOW_EVENT_FOCUS_OUT);
-	godot_js_display_vk_cb(&DisplayServerWeb::vk_input_text_callback);
+	godot_js_display_vk_cb(&DisplayServerWeb::vk_input_text_input_callback, &DisplayServerWeb::vk_input_text_key_callback);
 
 	Input::get_singleton()->set_event_dispatch_function(_dispatch_input_event);
 }
