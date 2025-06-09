@@ -30,6 +30,7 @@
 
 #include "display_server_web.h"
 
+#include "core/error/error_macros.h"
 #include "dom_keys.inc"
 #include "godot_js.h"
 #include "os_web.h"
@@ -753,40 +754,42 @@ bool DisplayServerWeb::is_touchscreen_available() const {
 }
 
 // Virtual Keyboard
-void DisplayServerWeb::vk_input_text_input_callback(const char *p_input, int p_cursor) {
+void DisplayServerWeb::vk_input_text_input_callback(const char *p_input) {
 	String input = String::utf8(p_input);
 
 #ifdef PROXY_TO_PTHREAD_ENABLED
 	if (!Thread::is_main_thread()) {
-		callable_mp_static(DisplayServerWeb::_vk_input_text_input_callback).call_deferred(text, p_cursor);
+		callable_mp_static(DisplayServerWeb::_vk_input_text_input_callback).call_deferred(text);
 		return;
 	}
 #endif
 
-	_vk_input_text_input_callback(input, p_cursor);
+	_vk_input_text_input_callback(input);
 }
 
-void DisplayServerWeb::_vk_input_text_input_callback(const String &p_input, int p_cursor) {
+void DisplayServerWeb::_vk_input_text_input_callback(const String &p_input) {
 	DisplayServerWeb *ds = DisplayServerWeb::get_singleton();
-	if (!ds || !ds->input_text_callback.is_valid()) {
+	if (!ds) {
 		return;
 	}
 
-	ds->input_text_callback.call(p_input);
+	String text = p_input;
+	for (int i = 0; i < text.length(); i++) {
+		DisplayServerWeb::KeyEvent key_event;
 
-	// Insert key right to reach position.
-	Ref<InputEventKey> key;
-	for (int i = 0; i < p_cursor; i++) {
-		key.instantiate();
-		key->set_pressed(true);
-		key->set_echo(false);
-		key->set_keycode(Key::RIGHT);
-		Input::get_singleton()->parse_input_event(key);
-		key.instantiate();
-		key->set_pressed(false);
-		key->set_echo(false);
-		key->set_keycode(Key::RIGHT);
-		Input::get_singleton()->parse_input_event(key);
+		key_event.pressed = true;
+		key_event.echo = false;
+		key_event.raw = false;
+		key_event.keycode = Key::NONE;
+		key_event.physical_keycode = Key::NONE;
+		key_event.key_label = Key::NONE;
+		key_event.unicode = text[i];
+		key_event.mod = 0;
+
+		if (ds->key_event_pos >= ds->key_event_buffer.size()) {
+			ds->key_event_buffer.resize(1 + ds->key_event_pos);
+		}
+		ds->key_event_buffer.write[ds->key_event_pos++] = key_event;
 	}
 }
 
@@ -829,6 +832,44 @@ void DisplayServerWeb::_vk_input_text_key_callback(bool p_key_down, const String
 	input_key->set_physical_keycode(scancode);
 	input_key->set_location(location);
 	Input::get_singleton()->parse_input_event(input_key);
+}
+
+void DisplayServerWeb::vk_input_text_delete_backwards_callback(int p_times) {
+#ifdef PROXY_TO_PTHREAD_ENABLED
+	if (!Thread::is_main_thread()) {
+		callable_mp_static(DisplayServerWeb::_vk_input_text_delete_backwards_callback).call_deferred(p_times);
+		return;
+	}
+#endif
+
+	_vk_input_text_delete_backwards_callback(p_times);
+}
+
+void DisplayServerWeb::_vk_input_text_delete_backwards_callback(int p_times) {
+	ERR_FAIL_COND(p_times < 0);
+
+	DisplayServerWeb *ds = DisplayServerWeb::get_singleton();
+	if (!ds) {
+		return;
+	}
+
+	for (int i = 0; i < p_times; i++) {
+		DisplayServerWeb::KeyEvent key_event;
+
+		key_event.pressed = true;
+		key_event.echo = false;
+		key_event.raw = false;
+		key_event.keycode = Key::NONE;
+		key_event.physical_keycode = Key::NONE;
+		key_event.key_label = Key::NONE;
+		key_event.keycode = Key::BACKSPACE;
+		key_event.mod = 0;
+
+		if (ds->key_event_pos >= ds->key_event_buffer.size()) {
+			ds->key_event_buffer.resize(1 + ds->key_event_pos);
+		}
+		ds->key_event_buffer.write[ds->key_event_pos++] = key_event;
+	}
 }
 
 void DisplayServerWeb::virtual_keyboard_show(const String &p_existing_text, const Rect2 &p_screen_rect, VirtualKeyboardType p_type, int p_max_input_length, int p_cursor_start, int p_cursor_end) {
@@ -1187,7 +1228,7 @@ DisplayServerWeb::DisplayServerWeb(const String &p_rendering_driver, WindowMode 
 			WINDOW_EVENT_MOUSE_EXIT,
 			WINDOW_EVENT_FOCUS_IN,
 			WINDOW_EVENT_FOCUS_OUT);
-	godot_js_display_vk_cb(&DisplayServerWeb::vk_input_text_input_callback, &DisplayServerWeb::vk_input_text_key_callback);
+	godot_js_display_vk_cb(&DisplayServerWeb::vk_input_text_input_callback, &DisplayServerWeb::vk_input_text_key_callback, &DisplayServerWeb::vk_input_text_delete_backwards_callback);
 
 	Input::get_singleton()->set_event_dispatch_function(_dispatch_input_event);
 }

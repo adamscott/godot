@@ -40,7 +40,7 @@ const GodotDisplayVK = {
 			return GodotConfig.virtual_keyboard && 'ontouchstart' in window;
 		},
 
-		init: function (inputCallback, keyCallback) {
+		init: function (inputCallback, keyCallback, deleteBackwardsCallback) {
 			function create(what) {
 				const elem = document.createElement(what);
 				elem.style.display = 'none';
@@ -57,11 +57,27 @@ const GodotDisplayVK = {
 				elem.readonly = true;
 				elem.disabled = true;
 
+				// So we need to know if we need to rely on the keydown/keyup events
+				// or if we need to rely on the beforeinput/input events.
+				let keyHandled = false;
+
 				const keyEventHandler = (pEvent) => {
+					console.log(pEvent);
+					const handleKey = (pHandleKey) => {
+						if (pEvent.type === 'keyup') {
+							keyHandled = false;
+							return;
+						}
+						keyHandled = pHandleKey;
+					};
+
 					// https://developer.mozilla.org/en-US/docs/Web/API/Element/keydown_event#keydown_events_with_ime
 					if (pEvent.isComposing || pEvent.keyCode === 229) {
+						handleKey(false);
 						return;
 					}
+					handleKey(true);
+
 					const codePtr = GodotRuntime.allocString(pEvent.code);
 					const keyPtr = GodotRuntime.allocString(pEvent.key);
 					keyCallback(Number(pEvent.type === 'keydown'), codePtr, keyPtr, Number(pEvent.repeat));
@@ -71,10 +87,51 @@ const GodotDisplayVK = {
 				GodotEventListeners.add(elem, 'keydown', keyEventHandler);
 				GodotEventListeners.add(elem, 'keyup', keyEventHandler);
 
-				GodotEventListeners.add(elem, 'input', function (pEvent) {
-					const inputPtr = GodotRuntime.allocString(elem.value);
-					inputCallback(inputPtr, elem.selectionEnd);
-					GodotRuntime.free(inputPtr);
+				const selectionBeforeDelete = {
+					start: 0,
+					end: 0,
+				};
+				GodotEventListeners.add(elem, 'beforeinput', (pEvent) => {
+					console.log(pEvent);
+					if (keyHandled) {
+						return;
+					}
+					switch (pEvent.inputType) {
+					case 'deleteContentBackward':
+						{
+							selectionBeforeDelete.start = elem.selectionStart;
+							selectionBeforeDelete.end = elem.selectionEnd;
+						}
+						break;
+					}
+				});
+				GodotEventListeners.add(elem, 'input', (pEvent) => {
+					console.log(pEvent);
+					if (keyHandled) {
+						return;
+					}
+					switch (pEvent.inputType) {
+					case 'insertText':
+					case 'insertCompositionText':
+						{
+							const inputPtr = GodotRuntime.allocString(pEvent.data);
+							inputCallback(inputPtr, 0);
+							GodotRuntime.free(inputPtr);
+						}
+						break;
+					case 'deleteContentBackward':
+						{
+							if (selectionBeforeDelete.start < selectionBeforeDelete.end) {
+								// The text is highlighted, so we just to delete once.
+								deleteBackwardsCallback(1);
+							} else {
+								deleteBackwardsCallback(selectionBeforeDelete.end - elem.selectionEnd);
+							}
+							selectionBeforeDelete.start = 0;
+							selectionBeforeDelete.end = 0;
+						}
+						break;
+					}
 				}, false);
 				GodotEventListeners.add(elem, 'blur', function (evt) {
 					elem.style.display = 'none';
@@ -803,12 +860,13 @@ const GodotDisplay = {
 	},
 
 	godot_js_display_vk_cb__proxy: 'sync',
-	godot_js_display_vk_cb__sig: 'vpp',
-	godot_js_display_vk_cb: function (pInputCallbackPtr, pKeyCallbackPtr) {
+	godot_js_display_vk_cb__sig: 'vppp',
+	godot_js_display_vk_cb: function (pInputCallbackPtr, pKeyCallbackPtr, pDeleteBackwardsCallbackPtr) {
 		const inputCallback = GodotRuntime.get_func(pInputCallbackPtr);
 		const keyCallback = GodotRuntime.get_func(pKeyCallbackPtr);
+		const deleteBackwardsCallback = GodotRuntime.get_func(pDeleteBackwardsCallbackPtr);
 		if (GodotDisplayVK.available()) {
-			GodotDisplayVK.init(inputCallback, keyCallback);
+			GodotDisplayVK.init(inputCallback, keyCallback, deleteBackwardsCallback);
 		}
 	},
 };

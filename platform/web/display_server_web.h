@@ -128,10 +128,12 @@ private:
 	static void _touch_callback(int p_type, int p_count);
 	WASM_EXPORT static void key_callback(int p_pressed, int p_repeat, int p_modifiers);
 	static void _key_callback(const String &p_key_event_code, const String &p_key_event_key, int p_pressed, int p_repeat, int p_modifiers);
-	WASM_EXPORT static void vk_input_text_input_callback(const char *p_input, int p_cursor);
-	static void _vk_input_text_input_callback(const String &p_input, int p_cursor);
+	WASM_EXPORT static void vk_input_text_input_callback(const char *p_input);
+	static void _vk_input_text_input_callback(const String &p_input);
 	WASM_EXPORT static void vk_input_text_key_callback(int p_key_down, const char *p_code, const char *p_key, int p_repeat);
 	static void _vk_input_text_key_callback(bool p_key_down, const String &p_code, const String &p_key, bool p_repeat);
+	WASM_EXPORT static void vk_input_text_delete_backwards_callback(int p_times);
+	static void _vk_input_text_delete_backwards_callback(int p_times);
 	WASM_EXPORT static void gamepad_callback(int p_index, int p_connected, const char *p_id, const char *p_guid);
 	static void _gamepad_callback(int p_index, int p_connected, const String &p_id, const String &p_guid);
 	WASM_EXPORT static void js_utterance_callback(int p_event, int p_id, int p_pos);

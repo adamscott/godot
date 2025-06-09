@@ -126,12 +126,13 @@ extern void godot_js_display_window_blur_cb(void (*p_callback)());
 extern void godot_js_display_notification_cb(void (*p_callback)(int p_notification), int p_enter, int p_exit, int p_in, int p_out);
 
 // Display Virtual Keyboard
-typedef void (*GODOT_JS_DISPLAY_VK_CB_INPUT_CALLBACK)(const char *p_input, int p_cursor);
+typedef void (*GODOT_JS_DISPLAY_VK_CB_INPUT_CALLBACK)(const char *p_input);
 typedef void (*GODOT_JS_DISPLAY_VK_CB_KEY_CALLBACK)(int p_is_down, const char *p_code, const char *p_key, int p_is_repeat);
+typedef void (*GODOT_JS_DISPLAY_VK_CB_DELETE_BACKWARDS_CALLBACK)(int p_times);
 
 extern int godot_js_display_vk_available();
 extern int godot_js_display_tts_available();
-extern void godot_js_display_vk_cb(GODOT_JS_DISPLAY_VK_CB_INPUT_CALLBACK p_input_callback, GODOT_JS_DISPLAY_VK_CB_KEY_CALLBACK p_key_callback);
+extern void godot_js_display_vk_cb(GODOT_JS_DISPLAY_VK_CB_INPUT_CALLBACK p_input_callback, GODOT_JS_DISPLAY_VK_CB_KEY_CALLBACK p_key_callback, GODOT_JS_DISPLAY_VK_CB_DELETE_BACKWARDS_CALLBACK p_delete_backwards_callback);
 extern void godot_js_display_vk_show(const char *p_text, int p_type, int p_start, int p_end);
 extern void godot_js_display_vk_hide();
 
