@@ -258,6 +258,10 @@ private:
 	bool execution_error = false;
 	bool _execute(const Array &p_inputs, Object *p_instance, Expression::ENode *p_node, Variant &r_ret, bool p_const_calls_only, String &r_error_str);
 
+	Dictionary ast;
+	bool ast_error = false;
+	Variant _parse_node_for_ast(ENode *p_node) const;
+
 protected:
 	static void _bind_methods();
 
@@ -266,6 +270,9 @@ public:
 	Variant execute(const Array &p_inputs = Array(), Object *p_base = nullptr, bool p_show_error = true, bool p_const_calls_only = false);
 	bool has_execute_failed() const;
 	String get_error_text() const;
+
+	Dictionary get_ast();
+	bool has_ast_failed() const;
 
 	Expression() {}
 	~Expression();
