@@ -1471,6 +1471,9 @@ Error Expression::parse(const String &p_expression, const Vector<String> &p_inpu
 		root = nullptr;
 	}
 
+	ast.clear();
+	ast_error = false;
+
 	error_str = String();
 	error_set = false;
 	str_ofs = 0;
@@ -1515,11 +1518,137 @@ String Expression::get_error_text() const {
 	return error_str;
 }
 
+Variant Expression::_parse_node_for_ast(ENode *p_node) const {
+	if (p_node == nullptr) {
+		return Variant();
+	}
+
+	Dictionary node;
+
+	switch (p_node->type) {
+		case ENode::Type::TYPE_INPUT: {
+			InputNode *input_node = static_cast<InputNode *>(p_node);
+			node["type"] = "InputNode";
+			node["index"] = input_node->index;
+		} break;
+		case ENode::Type::TYPE_CONSTANT: {
+			ConstantNode *constant_node = static_cast<ConstantNode *>(p_node);
+			node["type"] = "ConstantNode";
+			node["value"] = constant_node->value;
+		} break;
+		case ENode::Type::TYPE_SELF: {
+			node["type"] = "SelfNode";
+		} break;
+		case ENode::Type::TYPE_OPERATOR: {
+			OperatorNode *operator_node = static_cast<OperatorNode *>(p_node);
+			node["type"] = "OperatorNode";
+			node["operator"] = Variant(Variant::get_operator_name(operator_node->op));
+			Array nodes;
+			nodes.resize(2);
+			nodes[0] = _parse_node_for_ast(operator_node->nodes[0]);
+			nodes[1] = _parse_node_for_ast(operator_node->nodes[1]);
+			node["nodes"] = nodes;
+		} break;
+		case ENode::Type::TYPE_INDEX: {
+			IndexNode *index_node = static_cast<IndexNode *>(p_node);
+			node["type"] = "IndexNode";
+			node["base"] = _parse_node_for_ast(index_node->base);
+			node["index"] = _parse_node_for_ast(index_node->index);
+		} break;
+		case ENode::Type::TYPE_NAMED_INDEX: {
+			NamedIndexNode *named_index_node = static_cast<NamedIndexNode *>(p_node);
+			node["type"] = "NamedIndexNode";
+			node["base"] = _parse_node_for_ast(named_index_node->base);
+			node["name"] = named_index_node->name;
+		} break;
+		case ENode::Type::TYPE_ARRAY: {
+			ArrayNode *array_node = static_cast<ArrayNode *>(p_node);
+			node["type"] = "ArrayNode";
+			Array array;
+			for (ENode *node : array_node->array) {
+				array.push_back(_parse_node_for_ast(node));
+			}
+			node["array"] = array;
+		} break;
+		case ENode::Type::TYPE_DICTIONARY: {
+			DictionaryNode *dictionary_node = static_cast<DictionaryNode *>(p_node);
+			node["type"] = "DictionaryNode";
+			Array dict;
+			for (ENode *node : dictionary_node->dict) {
+				dict.push_back(_parse_node_for_ast(node));
+			}
+			node["dict"] = dict;
+		} break;
+		case ENode::Type::TYPE_CONSTRUCTOR: {
+			ConstructorNode *constructor_node = static_cast<ConstructorNode *>(p_node);
+			node["type"] = "ConstructorNode";
+			node["data_type"] = Variant(Variant::get_type_name(constructor_node->data_type));
+			Array arguments;
+			for (ENode *node : constructor_node->arguments) {
+				arguments.push_back(_parse_node_for_ast(node));
+			}
+			node["arguments"] = arguments;
+		} break;
+		case ENode::Type::TYPE_BUILTIN_FUNC: {
+			BuiltinFuncNode *builtin_func_node = static_cast<BuiltinFuncNode *>(p_node);
+			node["type"] = "BuiltinFuncNode";
+			node["func"] = builtin_func_node->func;
+			Array arguments;
+			for (ENode *node : builtin_func_node->arguments) {
+				arguments.push_back(_parse_node_for_ast(node));
+			}
+			node["arguments"] = arguments;
+		} break;
+		case ENode::Type::TYPE_CALL: {
+			CallNode *call_node = static_cast<CallNode *>(p_node);
+			node["type"] = "CallNode";
+			node["base"] = _parse_node_for_ast(call_node->base);
+			node["method"] = call_node->method;
+			Array arguments;
+			for (ENode *node : call_node->arguments) {
+				arguments.push_back(_parse_node_for_ast(node));
+			}
+			node["arguments"] = arguments;
+		} break;
+	}
+
+	return node;
+}
+
+Dictionary Expression::get_ast() {
+	ERR_FAIL_COND_V_MSG(error_set, Dictionary(), vformat("There was previously a parse error: %s.", error_str));
+	ERR_FAIL_COND_V_MSG(ast_error, Dictionary(), vformat("There was previously an AST error."));
+
+	if (!ast.is_empty()) {
+		return ast;
+	}
+
+	Variant root_node = _parse_node_for_ast(root);
+	if (root_node.get_type() != Variant::Type::DICTIONARY) {
+		ast_error = true;
+		ERR_FAIL_V(Dictionary());
+	}
+	Dictionary root_node_dict = root_node;
+
+	for (const KeyValue<Variant, Variant> &kv : root_node_dict) {
+		ast[kv.key] = kv.value;
+	}
+
+	ast_error = false;
+	return ast;
+}
+
+bool Expression::has_ast_failed() const {
+	return ast_error;
+}
+
 void Expression::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("parse", "expression", "input_names"), &Expression::parse, DEFVAL(Vector<String>()));
 	ClassDB::bind_method(D_METHOD("execute", "inputs", "base_instance", "show_error", "const_calls_only"), &Expression::execute, DEFVAL(Array()), DEFVAL(Variant()), DEFVAL(true), DEFVAL(false));
 	ClassDB::bind_method(D_METHOD("has_execute_failed"), &Expression::has_execute_failed);
 	ClassDB::bind_method(D_METHOD("get_error_text"), &Expression::get_error_text);
+	ClassDB::bind_method(D_METHOD("get_ast"), &Expression::get_ast);
+	ClassDB::bind_method(D_METHOD("has_ast_failed"), &Expression::has_ast_failed);
 }
 
 Expression::~Expression() {
