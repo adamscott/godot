@@ -440,13 +440,27 @@ function clearPersistence() { // eslint-disable-line no-unused-vars
 			};
 		});
 	}
+	async function removeServiceWorker() {
+		const registrations = await navigator.serviceWorker.getRegistrations();
+		for (const registration of registrations) {
+			// eslint-disable-next-line no-await-in-loop
+			for (const key of await (caches?.keys() ?? [])) {
+				console.log(`Deleting cache "${key}"`);
+				await caches.delete(key); // eslint-disable-line no-await-in-loop
+			}
+			await registration.unregister(); // eslint-disable-line no-await-in-loop
+			console.log('Removed service worker');
+		}
+	}
 	if (!window.confirm('Are you sure you want to delete all the locally stored files?\nClicking "OK" will permanently remove your projects and editor settings!')) {
 		return;
 	}
 	Promise.all([
 		deleteDB('/home/web_user'),
+		removeServiceWorker(),
 	]).then(function (results) {
 		alert('Done.');
+		window.location.reload();
 	}).catch(function (err) {
 		alert('Error deleting local files. Please retry after reloading the page.');
 	});
