@@ -61,7 +61,7 @@ class OS_LinuxBSD : public OS_Unix {
 	int _stretch_to_fc(int p_stretch) const;
 #endif
 
-#ifdef SDL_ENABLED
+#if defined(SDL_ENABLED) && defined(SDL_JOYPAD_ENABLED)
 	JoypadSDL *joypad_sdl = nullptr;
 #endif
 

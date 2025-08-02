@@ -32,8 +32,8 @@
 
 #include "core/io/certs_compressed.gen.h"
 #include "core/io/dir_access.h"
-#ifdef SDL_ENABLED
-#include "drivers/sdl/joypad_sdl.h"
+#if defined(SDL_ENABLED) && defined(SDL_JOYPAD_ENABLED)
+#include "drivers/sdl/joypad/joypad_sdl.h"
 #endif
 #include "main/main.h"
 #include "servers/display_server.h"
@@ -161,7 +161,7 @@ void OS_LinuxBSD::initialize() {
 }
 
 void OS_LinuxBSD::initialize_joypads() {
-#ifdef SDL_ENABLED
+#if defined(SDL_ENABLED) && defined(SDL_JOYPAD_ENABLED)
 	joypad_sdl = memnew(JoypadSDL());
 	if (joypad_sdl->initialize() != OK) {
 		ERR_PRINT("Couldn't initialize SDL joypad input driver.");
@@ -249,7 +249,7 @@ void OS_LinuxBSD::finalize() {
 	driver_alsamidi.close();
 #endif
 
-#ifdef SDL_ENABLED
+#if defined(SDL_ENABLED) && defined(SDL_JOYPAD_ENABLED)
 	if (joypad_sdl) {
 		memdelete(joypad_sdl);
 	}
@@ -981,7 +981,7 @@ void OS_LinuxBSD::run() {
 
 	while (true) {
 		DisplayServer::get_singleton()->process_events(); // get rid of pending events
-#ifdef SDL_ENABLED
+#if defined(SDL_ENABLED) && defined(SDL_JOYPAD_ENABLED)
 		if (joypad_sdl) {
 			joypad_sdl->process_events();
 		}

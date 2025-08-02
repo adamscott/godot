@@ -43,8 +43,8 @@
 #include "drivers/apple/os_log_logger.h"
 #include "main/main.h"
 
-#ifdef SDL_ENABLED
-#include "drivers/sdl/joypad_sdl.h"
+#if defined(SDL_ENABLED) && defined(SDL_JOYPAD_ENABLED)
+#include "drivers/sdl/joypad/joypad_sdl.h"
 #endif
 
 #include <dlfcn.h>
@@ -234,7 +234,7 @@ void OS_MacOS::finalize() {
 
 	delete_main_loop();
 
-#ifdef SDL_ENABLED
+#if defined(SDL_ENABLED) && defined(SDL_JOYPAD_ENABLED)
 	if (joypad_sdl) {
 		memdelete(joypad_sdl);
 	}
@@ -242,7 +242,7 @@ void OS_MacOS::finalize() {
 }
 
 void OS_MacOS::initialize_joypads() {
-#ifdef SDL_ENABLED
+#if defined(SDL_ENABLED) && defined(SDL_JOYPAD_ENABLED)
 	joypad_sdl = memnew(JoypadSDL());
 	if (joypad_sdl->initialize() != OK) {
 		ERR_PRINT("Couldn't initialize SDL joypad input driver.");
@@ -1093,7 +1093,7 @@ void OS_MacOS_NSApp::start_main() {
 							} else if (ds) {
 								ds->process_events();
 							}
-#ifdef SDL_ENABLED
+#if defined(SDL_ENABLED) && defined(SDL_JOYPAD_ENABLED)
 							if (joypad_sdl) {
 								joypad_sdl->process_events();
 							}

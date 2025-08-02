@@ -201,7 +201,18 @@ opts.Add(BoolVariable("metal", "Enable the Metal rendering driver on supported p
 opts.Add(BoolVariable("use_volk", "Use the volk library to load the Vulkan loader dynamically", True))
 opts.Add(BoolVariable("accesskit", "Use AccessKit C SDK", True))
 opts.Add(("accesskit_sdk_path", "Path to the AccessKit C SDK", ""))
-opts.Add(BoolVariable("sdl", "Enable the SDL3 input driver", True))
+
+# SDL
+opts.Add(
+    BoolVariable(
+        "sdl",
+        "Enable the SDL3 driver. Disabling it disables every SDL module. Disabled if no SDL module is enabled",
+        True,
+    )
+)
+sdl_modules = [("sdl_joypad", "[SDL module] Enable the SDL3 joypad driver", True)]
+for sdl_module in sdl_modules:
+    opts.Add(BoolVariable(*sdl_module))
 
 # Advanced options
 opts.Add(
@@ -388,6 +399,15 @@ for key, value in flag_list.items():
 
 # Update the environment to take platform-specific options into account.
 opts.Update(env, {**ARGUMENTS, **env.Dictionary()})
+
+# SDL modules check.
+has_any_sdl_module = False
+for sdl_module in sdl_modules:
+    if env[sdl_module[0]]:
+        has_any_sdl_module = True
+        break
+if not has_any_sdl_module:
+    env["sdl"] = False
 
 # Detect modules.
 modules_detected = OrderedDict()

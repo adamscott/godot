@@ -43,8 +43,8 @@
 #include "main/main.h"
 #include "scene/resources/texture.h"
 
-#ifdef SDL_ENABLED
-#include "drivers/sdl/joypad_sdl.h"
+#if defined(SDL_ENABLED) && defined(SDL_JOYPAD_ENABLED)
+#include "drivers/sdl/joypad/joypad_sdl.h"
 #endif
 
 #include "servers/rendering/dummy/rasterizer_dummy.h"
@@ -3775,7 +3775,7 @@ void DisplayServerWindows::process_events() {
 	ERR_FAIL_COND(!Thread::is_main_thread());
 
 	if (!drop_events) {
-#ifdef SDL_ENABLED
+#if defined(SDL_ENABLED) && defined(SDL_JOYPAD_ENABLED)
 		if (joypad_sdl) {
 			joypad_sdl->process_events();
 		}
@@ -7160,7 +7160,7 @@ DisplayServerWindows::DisplayServerWindows(const String &p_rendering_driver, Win
 		ERR_FAIL_MSG("Failed to create main window.");
 	}
 
-#ifdef SDL_ENABLED
+#if defined(SDL_ENABLED) && defined(SDL_JOYPAD_ENABLED)
 	joypad_sdl = memnew(JoypadSDL());
 	if (joypad_sdl->initialize() == OK) {
 		joypad_sdl->setup_sdl_helper_window(windows[MAIN_WINDOW_ID].hWnd);
@@ -7323,7 +7323,7 @@ DisplayServerWindows::~DisplayServerWindows() {
 		E->erase();
 	}
 
-#ifdef SDL_ENABLED
+#if defined(SDL_ENABLED) && defined(SDL_JOYPAD_ENABLED)
 	if (joypad_sdl) {
 		memdelete(joypad_sdl);
 	}
