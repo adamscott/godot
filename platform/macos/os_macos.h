@@ -63,7 +63,7 @@ protected:
 	int argc = 0;
 	char **argv = nullptr;
 
-#ifdef SDL_ENABLED
+#if defined(SDL_ENABLED) && defined(SDL_JOYPAD_ENABLED)
 	JoypadSDL *joypad_sdl = nullptr;
 #endif
 	MainLoop *main_loop = nullptr;

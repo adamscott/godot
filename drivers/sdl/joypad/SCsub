@@ -3,6 +3,8 @@ from misc.utility.scons_hints import *
 
 Import("env")
 
+env.Append(CPPDEFINES=["SDL_JOYPAD_ENABLED"])
+
 env_sdl = env.Clone()
 
 # Thirdparty source files
@@ -22,7 +24,7 @@ if env["builtin_sdl"]:
             thirdparty_dir,
             thirdparty_dir + "include",
             thirdparty_dir + "include/build_config",
-            ".",  # SDL_build_config_private.h
+            "#/drivers/sdl/build_config",  # SDL_build_config_private.h
         ]
     )
 

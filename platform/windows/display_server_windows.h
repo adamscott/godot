@@ -376,7 +376,7 @@ class DisplayServerWindows : public DisplayServer {
 		HWND parent_hwnd = 0;
 	};
 
-#ifdef SDL_ENABLED
+#if defined(SDL_ENABLED) && defined(SDL_JOYPAD_ENABLED)
 	JoypadSDL *joypad_sdl = nullptr;
 #endif
 	HHOOK mouse_monitor = nullptr;
