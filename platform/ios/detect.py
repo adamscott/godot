@@ -52,6 +52,7 @@ def get_flags():
         "metal": True,
         "supported": ["metal", "mono"],
         "builtin_pcre2_with_jit": False,
+        "sdl_input": False,
     }
 
 

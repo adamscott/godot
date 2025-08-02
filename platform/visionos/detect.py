@@ -53,6 +53,7 @@ def get_flags():
         "builtin_pcre2_with_jit": False,
         "vulkan": False,
         "opengl3": False,
+        "sdl_input": False,
     }
 
 
