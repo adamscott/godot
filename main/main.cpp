@@ -70,6 +70,7 @@
 #include "servers/audio/audio_server.h"
 #include "servers/camera/camera_server.h"
 #include "servers/display/display_server.h"
+#include "servers/microphone/microphone_server.h"
 #include "servers/movie_writer/movie_writer.h"
 #include "servers/register_server_types.h"
 #include "servers/rendering/rendering_server_default.h"
@@ -171,6 +172,7 @@ static SteamTracker *steam_tracker = nullptr;
 // Initialized in setup2()
 static AudioServer *audio_server = nullptr;
 static CameraServer *camera_server = nullptr;
+static MicrophoneServer *microphone_server = nullptr;
 static DisplayServer *display_server = nullptr;
 static RenderingServer *rendering_server = nullptr;
 static TextServerManager *tsman = nullptr;
@@ -191,6 +193,7 @@ static bool _start_success = false;
 
 // Drivers
 
+String microphone_driver = "";
 String display_driver = "";
 String tablet_driver = "";
 String text_driver = "";
@@ -290,6 +293,7 @@ bool profile_gpu = false;
 static const String NULL_DISPLAY_DRIVER("headless");
 static const String EMBEDDED_DISPLAY_DRIVER("embedded");
 static const String NULL_AUDIO_DRIVER("Dummy");
+static const String NULL_MICROPHONE_DRIVER("dummy");
 
 // The length of the longest column in the command-line help we should align to
 // (excluding the 2-space left and right margins).
@@ -1408,6 +1412,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 
 			audio_driver = NULL_AUDIO_DRIVER;
 			display_driver = NULL_DISPLAY_DRIVER;
+			microphone_driver = NULL_MICROPHONE_DRIVER;
 
 		} else if (arg == "--embedded") { // Enable embedded mode.
 #ifdef MACOS_ENABLED
@@ -3609,6 +3614,31 @@ Error Main::setup2(bool p_show_boot_logo) {
 
 	camera_server = CameraServer::create();
 
+	/* Initialize Microphone Server */
+	{
+		int microphone_driver_idx = -1;
+
+		if (microphone_driver.is_empty() || microphone_driver == NULL_MICROPHONE_DRIVER) {
+			microphone_driver_idx = 0;
+		} else {
+			for (int i = 0; i < MicrophoneServer::get_create_function_count(); i++) {
+				String name = MicrophoneServer::get_create_function_name(i);
+				if (microphone_driver == name) {
+					microphone_driver_idx = i;
+					break;
+				}
+			}
+
+			if (microphone_driver_idx < 0) {
+				// If the requested driver wasn't found, pick the first entry.
+				// If all else failed it would be the headless server.
+				microphone_driver_idx = 0;
+			}
+		}
+
+		microphone_server = MicrophoneServer::create(microphone_driver_idx);
+	}
+
 	MAIN_PRINT("Main: Load Physics");
 
 	initialize_physics();
@@ -4992,6 +5022,11 @@ void Main::cleanup(bool p_force) {
 		memdelete(xr_server);
 	}
 #endif // XR_DISABLED
+
+	if (microphone_server) {
+		// Depends on AudioServer (AudioDriver).
+		memdelete(microphone_server);
+	}
 
 	if (audio_server) {
 		audio_server->finish();

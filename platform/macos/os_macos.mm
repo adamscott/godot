@@ -37,6 +37,7 @@
 #import "display_server_macos.h"
 #import "godot_application.h"
 #import "godot_application_delegate.h"
+#include "microphone_macos.h"
 
 #include "core/crypto/crypto_core.h"
 #include "core/io/file_access.h"
@@ -1060,6 +1061,7 @@ OS_MacOS::OS_MacOS(const char *p_execpath, int p_argc, char **p_argv) {
 
 #ifdef COREAUDIO_ENABLED
 	AudioDriverManager::add_driver(&audio_driver);
+	MicrophoneServerMacOS::register_macos_driver();
 #endif
 
 	DisplayServerMacOS::register_macos_driver();
