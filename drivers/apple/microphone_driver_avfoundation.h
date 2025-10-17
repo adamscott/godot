@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  microphone_driver_apple.mm                                            */
+/*  microphone_driver_avfoundation.h                                      */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,14 +28,21 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#include "microphone_driver_apple.h"
+#pragma once
 
-void MicrophoneDriverApple::set_monitoring_feeds(bool p_monitoring_feeds) {
-}
+#include "servers/microphone/microphone_driver.h"
 
-bool MicrophoneDriverApple::get_monitoring_feeds() const {
-	return false;
-}
+#include <AVFoundation/AVFoundation.h>
 
-MicrophoneDriverApple::MicrophoneDriverApple() {}
-MicrophoneDriverApple::~MicrophoneDriverApple() {}
+class MicrophoneDriverAVFoundation : public MicrophoneDriver {
+public:
+	virtual LocalVector<Device> get_devices() const override;
+
+	virtual void set_monitoring_feeds(bool p_monitoring_feeds) override;
+	virtual bool get_monitoring_feeds() const override;
+
+	virtual String get_name() const override { return String("AVFoundation"); }
+
+	MicrophoneDriverAVFoundation();
+	~MicrophoneDriverAVFoundation();
+};

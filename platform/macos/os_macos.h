@@ -33,7 +33,7 @@
 #include "crash_handler_macos.h"
 
 #include "core/input/input.h"
-#include "drivers/apple/microphone_driver_apple.h"
+#include "drivers/apple/microphone_driver_avfoundation.h"
 #import "drivers/coreaudio/audio_driver_coreaudio.h"
 #import "drivers/coremidi/midi_driver_coremidi.h"
 #include "drivers/unix/os_unix.h"
@@ -49,7 +49,7 @@ class OS_MacOS : public OS_Unix {
 	MIDIDriverCoreMidi midi_driver;
 #endif
 
-	MicrophoneDriverApple microphone_driver;
+	MicrophoneDriverAVFoundation microphone_driver;
 
 	CrashHandler crash_handler;
 

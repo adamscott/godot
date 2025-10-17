@@ -93,7 +93,7 @@ void MicrophoneDriverManager::initialize(int p_driver) {
 		}
 	}
 
-	if (driver_count > 1 && String(MicrophoneDriver::get_singleton()->get_name()) == "dummy") {
+	if (driver_count > 1 && String(MicrophoneDriver::get_singleton()->get_name()) == "Dummy") {
 		WARN_PRINT("All audio drivers failed, falling back to the dummy driver.");
 	}
 }

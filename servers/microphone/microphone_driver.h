@@ -31,19 +31,40 @@
 #pragma once
 
 #include "core/error/error_list.h"
-#include "core/string/string_name.h"
+#include "core/string/ustring.h"
+#include "core/templates/local_vector.h"
 
 class MicrophoneDriver {
 	static MicrophoneDriver *singleton;
 
 public:
+	enum DataFormatId {
+		DATA_FORMAT_ID_LINEAR_PCM,
+		DATA_FORMAT_ID_MAX,
+	};
+
+	struct DeviceFormat {
+		DataFormatId data_format_id;
+		double sample_rate;
+		int32_t bytes_per_frame;
+		int32_t channels_per_frame;
+	};
+
+	struct Device {
+		String name;
+		String description;
+		DeviceFormat defaultFormatValues;
+	};
+
 	static MicrophoneDriver *get_singleton() { return singleton; }
 	void set_singleton() { singleton = this; }
+
+	virtual LocalVector<Device> get_devices() const = 0;
 
 	virtual void set_monitoring_feeds(bool p_monitoring_feeds) = 0;
 	virtual bool get_monitoring_feeds() const = 0;
 
-	virtual StringName get_name() const = 0;
+	virtual String get_name() const = 0;
 	virtual Error init();
 
 	MicrophoneDriver();
@@ -52,10 +73,12 @@ public:
 
 class MicrophoneDriverDummy : public MicrophoneDriver {
 public:
+	virtual LocalVector<Device> get_devices() const { return LocalVector<Device>(); }
+
 	virtual void set_monitoring_feeds(bool p_monitoring_feeds) {}
 	virtual bool get_monitoring_feeds() const { return false; }
 
-	virtual StringName get_name() const { return SNAME("dummy"); }
+	virtual String get_name() const { return String("Dummy"); }
 
 	MicrophoneDriverDummy() {}
 	~MicrophoneDriverDummy() {}
@@ -75,4 +98,7 @@ public:
 	static void initialize(int p_driver);
 	static int get_driver_count();
 	static MicrophoneDriver *get_driver(int p_driver);
+
+	MicrophoneDriverManager() {}
+	~MicrophoneDriverManager() {}
 };

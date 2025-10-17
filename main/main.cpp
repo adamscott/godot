@@ -295,7 +295,7 @@ bool profile_gpu = false;
 static const String NULL_DISPLAY_DRIVER("headless");
 static const String EMBEDDED_DISPLAY_DRIVER("embedded");
 static const String NULL_AUDIO_DRIVER("Dummy");
-static const String NULL_MICROPHONE_DRIVER("dummy");
+static const String NULL_MICROPHONE_DRIVER("Dummy");
 
 // The length of the longest column in the command-line help we should align to
 // (excluding the 2-space left and right margins).
@@ -591,7 +591,7 @@ void Main::print_help(const char *p_binary) {
 		if (i > 0) {
 			OS::get_singleton()->print(", ");
 		}
-		OS::get_singleton()->print("\"%s\"", MicrophoneDriverManager::get_driver(i)->get_name().operator String().utf8().get_data());
+		OS::get_singleton()->print("\"%s\"", MicrophoneDriverManager::get_driver(i)->get_name().utf8().get_data());
 	}
 	OS::get_singleton()->print("].\n");
 
