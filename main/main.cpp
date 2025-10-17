@@ -70,6 +70,7 @@
 #include "servers/audio/audio_server.h"
 #include "servers/camera/camera_server.h"
 #include "servers/display/display_server.h"
+#include "servers/microphone/microphone_driver.h"
 #include "servers/microphone/microphone_server.h"
 #include "servers/movie_writer/movie_writer.h"
 #include "servers/register_server_types.h"
@@ -201,6 +202,7 @@ String rendering_driver = "";
 String rendering_method = "";
 static int text_driver_idx = -1;
 static int audio_driver_idx = -1;
+static int microphone_driver_idx = -1;
 
 // Engine config/tools
 
@@ -581,6 +583,15 @@ void Main::print_help(const char *p_binary) {
 			OS::get_singleton()->print(", ");
 		}
 		OS::get_singleton()->print("\"%s\"", AudioDriverManager::get_driver(i)->get_name());
+	}
+	OS::get_singleton()->print("].\n");
+
+	print_help_option("--microphone-driver <driver>", "Audio driver [");
+	for (int i = 0; i < MicrophoneDriverManager::get_driver_count(); i++) {
+		if (i > 0) {
+			OS::get_singleton()->print(", ");
+		}
+		OS::get_singleton()->print("\"%s\"", MicrophoneDriverManager::get_driver(i)->get_name().operator String().utf8().get_data());
 	}
 	OS::get_singleton()->print("].\n");
 
@@ -1183,6 +1194,41 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 				OS::get_singleton()->print("Missing audio driver argument, aborting.\n");
 				goto error;
 			}
+		} else if (arg == "--microphone-driver") { // Microphone driver.
+			if (N) {
+				microphone_driver = N->get();
+
+				bool found = false;
+				for (int i = 0; i < MicrophoneDriverManager::get_driver_count(); i++) {
+					if (microphone_driver == MicrophoneDriverManager::get_driver(i)->get_name()) {
+						found = true;
+					}
+				}
+
+				if (!found) {
+					OS::get_singleton()->print("Unknown microphone driver '%s', aborting.\nValid options are ",
+							audio_driver.utf8().get_data());
+
+					for (int i = 0; i < AudioDriverManager::get_driver_count(); i++) {
+						if (i == AudioDriverManager::get_driver_count() - 1) {
+							OS::get_singleton()->print(" and ");
+						} else if (i != 0) {
+							OS::get_singleton()->print(", ");
+						}
+
+						OS::get_singleton()->print("'%s'", AudioDriverManager::get_driver(i)->get_name());
+					}
+
+					OS::get_singleton()->print(".\n");
+
+					goto error;
+				}
+
+				N = N->next();
+			} else {
+				OS::get_singleton()->print("Missing microphone driver argument, aborting.\n");
+				goto error;
+			}
 		} else if (arg == "--audio-output-latency") {
 			if (N) {
 				audio_output_latency = N->get().to_int();
@@ -1632,6 +1678,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 			// and speed up class reference generation.
 			audio_driver = NULL_AUDIO_DRIVER;
 			display_driver = NULL_DISPLAY_DRIVER;
+			microphone_driver = NULL_MICROPHONE_DRIVER;
 			main_args.push_back(arg);
 #ifdef MODULE_GDSCRIPT_ENABLED
 		} else if (arg == "--gdscript-docs") {
@@ -2114,6 +2161,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	if (ProjectSettings::get_singleton()->has_custom_feature("dedicated_server")) {
 		audio_driver = NULL_AUDIO_DRIVER;
 		display_driver = NULL_DISPLAY_DRIVER;
+		microphone_driver = NULL_MICROPHONE_DRIVER;
 	}
 
 	GLOBAL_DEF(PropertyInfo(Variant::INT, "network/limits/debugger/max_chars_per_second", PROPERTY_HINT_RANGE, "256,4096,1,or_greater"), 32768);
@@ -2620,37 +2668,71 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	GLOBAL_DEF_NOVAL(PropertyInfo(Variant::STRING, "display/display_server/driver.visionos", PROPERTY_HINT_ENUM_SUGGESTION, "default,visionOS,headless"), "default");
 	GLOBAL_DEF_NOVAL(PropertyInfo(Variant::STRING, "display/display_server/driver.macos", PROPERTY_HINT_ENUM_SUGGESTION, "default,macos,headless"), "default");
 
-	GLOBAL_DEF_RST_NOVAL("audio/driver/driver", AudioDriverManager::get_driver(0)->get_name());
-	if (audio_driver.is_empty()) { // Specified in project.godot.
-		if (project_manager) {
-			// The project manager doesn't need to play sound (TTS audio output is not emitted by Godot, but by the system itself).
-			// Disable audio output so it doesn't appear in the list of applications outputting sound in the OS.
-			// On macOS, this also prevents the project manager from inhibiting suspend.
-			audio_driver = "Dummy";
-		} else {
-			audio_driver = GLOBAL_GET("audio/driver/driver");
+	{
+		// Audio driver.
+
+		GLOBAL_DEF_RST_NOVAL("audio/driver/driver", AudioDriverManager::get_driver(0)->get_name());
+		if (audio_driver.is_empty()) { // Specified in project.godot.
+			if (project_manager) {
+				// The project manager doesn't need to play sound (TTS audio output is not emitted by Godot, but by the system itself).
+				// Disable audio output so it doesn't appear in the list of applications outputting sound in the OS.
+				// On macOS, this also prevents the project manager from inhibiting suspend.
+				audio_driver = "Dummy";
+			} else {
+				audio_driver = GLOBAL_GET("audio/driver/driver");
+			}
+		}
+
+		// Make sure that dummy is the last one, which it is assumed to be by design.
+		DEV_ASSERT(NULL_AUDIO_DRIVER == AudioDriverManager::get_driver(AudioDriverManager::get_driver_count() - 1)->get_name());
+		for (int i = 0; i < AudioDriverManager::get_driver_count(); i++) {
+			if (audio_driver == AudioDriverManager::get_driver(i)->get_name()) {
+				audio_driver_idx = i;
+				break;
+			}
+		}
+
+		if (audio_driver_idx < 0) {
+			// If the requested driver wasn't found, pick the first entry.
+			// If all else failed it would be the dummy driver (no sound).
+			audio_driver_idx = 0;
 		}
 	}
 
-	// Make sure that dummy is the last one, which it is assumed to be by design.
-	DEV_ASSERT(NULL_AUDIO_DRIVER == AudioDriverManager::get_driver(AudioDriverManager::get_driver_count() - 1)->get_name());
-	for (int i = 0; i < AudioDriverManager::get_driver_count(); i++) {
-		if (audio_driver == AudioDriverManager::get_driver(i)->get_name()) {
-			audio_driver_idx = i;
-			break;
-		}
-	}
+	{
+		// Microphone driver.
 
-	if (audio_driver_idx < 0) {
-		// If the requested driver wasn't found, pick the first entry.
-		// If all else failed it would be the dummy driver (no sound).
-		audio_driver_idx = 0;
+		GLOBAL_DEF_RST_NOVAL("audio/driver/microphone_driver", MicrophoneDriverManager::get_driver(0)->get_name());
+		if (microphone_driver.is_empty()) {
+			if (project_manager) {
+				microphone_driver = "dummy";
+			} else {
+				microphone_driver = GLOBAL_GET("audio/driver/microphone_server_driver");
+			}
+		}
+
+		// Make sure that dummy is the last one, which it is assumed to be by design.
+		DEV_ASSERT(NULL_MICROPHONE_DRIVER == MicrophoneDriverManager::get_driver(MicrophoneDriverManager::get_driver_count() - 1)->get_name());
+		for (int i = 0; i < MicrophoneDriverManager::get_driver_count(); i++) {
+			if (microphone_driver == MicrophoneDriverManager::get_driver(i)->get_name()) {
+				microphone_driver_idx = i;
+				break;
+			}
+		}
+
+		if (microphone_driver_idx < 0) {
+			// If the requested driver wasn't found, pick the first entry.
+			// If all else failed it would be the dummy driver (no sound).
+			microphone_driver_idx = 0;
+		}
 	}
 
 	if (Engine::get_singleton()->get_write_movie_path() != String()) {
 		// Always use dummy driver for audio driver (which is last), also in no threaded mode.
 		audio_driver_idx = AudioDriverManager::get_driver_count() - 1;
 		AudioDriverDummy::get_dummy_singleton()->set_use_threads(false);
+
+		microphone_driver_idx = MicrophoneDriverManager::get_driver_count() - 1;
 	}
 
 	{
@@ -3353,6 +3435,18 @@ Error Main::setup2(bool p_show_boot_logo) {
 		OS::get_singleton()->benchmark_end_measure("Servers", "Audio");
 	}
 
+	/* Initialize Microphone Driver */
+	{
+		OS::get_singleton()->benchmark_begin_measure("Servers", "Microphone");
+
+		MicrophoneDriverManager::initialize(microphone_driver_idx);
+
+		microphone_server = memnew(MicrophoneServer);
+		microphone_server->init();
+
+		OS::get_singleton()->benchmark_end_measure("Servers", "Microphone");
+	}
+
 #ifndef XR_DISABLED
 	/* Initialize XR Server */
 
@@ -3613,31 +3707,6 @@ Error Main::setup2(bool p_show_boot_logo) {
 	OS::get_singleton()->benchmark_begin_measure("Startup", "Finalize Setup");
 
 	camera_server = CameraServer::create();
-
-	/* Initialize Microphone Server */
-	{
-		int microphone_driver_idx = -1;
-
-		if (microphone_driver.is_empty() || microphone_driver == NULL_MICROPHONE_DRIVER) {
-			microphone_driver_idx = 0;
-		} else {
-			for (int i = 0; i < MicrophoneServer::get_create_function_count(); i++) {
-				String name = MicrophoneServer::get_create_function_name(i);
-				if (microphone_driver == name) {
-					microphone_driver_idx = i;
-					break;
-				}
-			}
-
-			if (microphone_driver_idx < 0) {
-				// If the requested driver wasn't found, pick the first entry.
-				// If all else failed it would be the headless server.
-				microphone_driver_idx = 0;
-			}
-		}
-
-		microphone_server = MicrophoneServer::create(microphone_driver_idx);
-	}
 
 	MAIN_PRINT("Main: Load Physics");
 

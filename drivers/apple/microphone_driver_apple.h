@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  microphone_server.h                                                   */
+/*  microphone_driver_apple.h                                             */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -30,50 +30,17 @@
 
 #pragma once
 
-#include "core/object/class_db.h"
-#include "core/os/thread_safe.h"
+#include "servers/microphone/microphone_driver.h"
 
-class MicrophoneFeed;
-template <typename T>
-class TypedArray;
+#include <AVFoundation/AVFoundation.h>
 
-class MicrophoneServer : public Object {
-	GDCLASS(MicrophoneServer, Object);
-	_THREAD_SAFE_CLASS_
-
-private:
-protected:
-	static MicrophoneServer *singleton;
-	static void _bind_methods();
-
-	bool monitoring_feeds = false;
-	Vector<Ref<MicrophoneFeed>> feeds;
-
+class MicrophoneDriverApple : public MicrophoneDriver {
 public:
-	static MicrophoneServer *get_singleton() { return singleton; }
+	virtual void set_monitoring_feeds(bool p_monitoring_feeds) override;
+	virtual bool get_monitoring_feeds() const override;
 
-	virtual void set_monitoring_feeds(bool p_monitoring_feeds) { monitoring_feeds = p_monitoring_feeds; }
-	_FORCE_INLINE_ bool is_monitoring_feeds() const { return monitoring_feeds; }
+	virtual StringName get_name() const override { return SNAME("apple"); }
 
-	// Right now we identify our feed by it's ID when it's used in the background.
-	// May see if we can change this to purely relying on MicrophoneFeed objects or by name.
-	int get_free_id();
-	int get_feed_index(int p_id);
-	Ref<MicrophoneFeed> get_feed_by_id(int p_id);
-
-	// Add and remove feeds.
-	void add_feed(const Ref<MicrophoneFeed> &p_feed);
-	void remove_feed(const Ref<MicrophoneFeed> &p_feed);
-
-	// Get our feeds.
-	Ref<MicrophoneFeed> get_feed(int p_index);
-	int get_feed_count();
-	TypedArray<MicrophoneFeed> get_feeds();
-
-	MicrophoneServer *create(int p_microphone_driver_index);
-
-	void init();
-
-	MicrophoneServer();
-	~MicrophoneServer();
+	MicrophoneDriverApple();
+	~MicrophoneDriverApple();
 };

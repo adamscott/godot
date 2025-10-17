@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  microphone_server.h                                                   */
+/*  microphone_driver.h                                                   */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -30,50 +30,49 @@
 
 #pragma once
 
-#include "core/object/class_db.h"
-#include "core/os/thread_safe.h"
+#include "core/error/error_list.h"
+#include "core/string/string_name.h"
 
-class MicrophoneFeed;
-template <typename T>
-class TypedArray;
-
-class MicrophoneServer : public Object {
-	GDCLASS(MicrophoneServer, Object);
-	_THREAD_SAFE_CLASS_
-
-private:
-protected:
-	static MicrophoneServer *singleton;
-	static void _bind_methods();
-
-	bool monitoring_feeds = false;
-	Vector<Ref<MicrophoneFeed>> feeds;
+class MicrophoneDriver {
+	static MicrophoneDriver *singleton;
 
 public:
-	static MicrophoneServer *get_singleton() { return singleton; }
+	static MicrophoneDriver *get_singleton() { return singleton; }
+	void set_singleton() { singleton = this; }
 
-	virtual void set_monitoring_feeds(bool p_monitoring_feeds) { monitoring_feeds = p_monitoring_feeds; }
-	_FORCE_INLINE_ bool is_monitoring_feeds() const { return monitoring_feeds; }
+	virtual void set_monitoring_feeds(bool p_monitoring_feeds) = 0;
+	virtual bool get_monitoring_feeds() const = 0;
 
-	// Right now we identify our feed by it's ID when it's used in the background.
-	// May see if we can change this to purely relying on MicrophoneFeed objects or by name.
-	int get_free_id();
-	int get_feed_index(int p_id);
-	Ref<MicrophoneFeed> get_feed_by_id(int p_id);
+	virtual StringName get_name() const = 0;
+	virtual Error init();
 
-	// Add and remove feeds.
-	void add_feed(const Ref<MicrophoneFeed> &p_feed);
-	void remove_feed(const Ref<MicrophoneFeed> &p_feed);
+	MicrophoneDriver();
+	virtual ~MicrophoneDriver();
+};
 
-	// Get our feeds.
-	Ref<MicrophoneFeed> get_feed(int p_index);
-	int get_feed_count();
-	TypedArray<MicrophoneFeed> get_feeds();
+class MicrophoneDriverDummy : public MicrophoneDriver {
+public:
+	virtual void set_monitoring_feeds(bool p_monitoring_feeds) {}
+	virtual bool get_monitoring_feeds() const { return false; }
 
-	MicrophoneServer *create(int p_microphone_driver_index);
+	virtual StringName get_name() const { return SNAME("dummy"); }
 
-	void init();
+	MicrophoneDriverDummy() {}
+	~MicrophoneDriverDummy() {}
+};
 
-	MicrophoneServer();
-	~MicrophoneServer();
+class MicrophoneDriverManager {
+	static inline const int MAX_DRIVERS = 10;
+	static MicrophoneDriver *drivers[MAX_DRIVERS];
+	static int driver_count;
+
+	static MicrophoneDriverDummy dummy_driver;
+
+public:
+	static MicrophoneDriverDummy *get_dummy_singleton() { return &dummy_driver; }
+
+	static void add_driver(MicrophoneDriver *p_driver);
+	static void initialize(int p_driver);
+	static int get_driver_count();
+	static MicrophoneDriver *get_driver(int p_driver);
 };

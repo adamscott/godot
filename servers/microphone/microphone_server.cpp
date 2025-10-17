@@ -32,13 +32,8 @@
 
 #include "core/variant/typed_array.h"
 #include "servers/microphone/microphone_feed.h"
-#include "servers/microphone/microphone_server_dummy.h"
 
 MicrophoneServer *MicrophoneServer::singleton = nullptr;
-MicrophoneServer::MicrophoneServerCreate MicrophoneServer::server_create_functions[MicrophoneServer::MAX_SERVERS] = {
-	{ "dummy", &MicrophoneServerDummy::create_function }
-};
-int MicrophoneServer::server_create_count = 1;
 
 int MicrophoneServer::get_free_id() {
 	bool id_exists = true;
@@ -136,36 +131,12 @@ TypedArray<MicrophoneFeed> MicrophoneServer::get_feeds() {
 	return return_feeds;
 }
 
-void MicrophoneServer::register_create_function(const char *p_name, CreateFunction p_function) {
-	ERR_FAIL_COND(server_create_count == MAX_SERVERS);
-	// Dummy display server is always last
-	server_create_functions[server_create_count] = server_create_functions[server_create_count - 1];
-	server_create_functions[server_create_count - 1].name = p_name;
-	server_create_functions[server_create_count - 1].create_function = p_function;
-	server_create_count += 1;
+void MicrophoneServer::init() {
+	// TODO: Init.
 }
 
-int MicrophoneServer::get_create_function_count() {
-	return server_create_count;
-}
-
-const char *MicrophoneServer::get_create_function_name(int p_index) {
-	ERR_FAIL_INDEX_V(p_index, server_create_count, nullptr);
-	return server_create_functions[p_index].name;
-}
-
-MicrophoneServer *MicrophoneServer::create(int p_index) {
-	ERR_FAIL_INDEX_V(p_index, server_create_count, nullptr);
-	return server_create_functions[p_index].create_function();
-}
-
-MicrophoneServer::MicrophoneServer() {
-	singleton = this;
-}
-
-MicrophoneServer::~MicrophoneServer() {
-	singleton = nullptr;
-}
+MicrophoneServer::MicrophoneServer() {}
+MicrophoneServer::~MicrophoneServer() {}
 
 void MicrophoneServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_monitoring_feeds", "is_monitoring_feeds"), &MicrophoneServer::set_monitoring_feeds);

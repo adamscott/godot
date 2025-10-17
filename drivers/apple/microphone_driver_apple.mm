@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  microphone_server_dummy.cpp                                           */
+/*  microphone_driver_apple.mm                                            */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,11 +28,14 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#include "microphone_server_dummy.h"
+#include "microphone_driver_apple.h"
 
-MicrophoneServer *MicrophoneServerDummy::create_function() {
-	return memnew(MicrophoneServerDummy);
+void MicrophoneDriverApple::set_monitoring_feeds(bool p_monitoring_feeds) {
 }
 
-MicrophoneServerDummy::MicrophoneServerDummy() {}
-MicrophoneServerDummy::~MicrophoneServerDummy() {}
+bool MicrophoneDriverApple::get_monitoring_feeds() const {
+	return false;
+}
+
+MicrophoneDriverApple::MicrophoneDriverApple() {}
+MicrophoneDriverApple::~MicrophoneDriverApple() {}

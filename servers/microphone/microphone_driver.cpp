@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  microphone_server.h                                                   */
+/*  microphone_driver.cpp                                                 */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,52 +28,77 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#pragma once
+#include "microphone_driver.h"
 
-#include "core/object/class_db.h"
-#include "core/os/thread_safe.h"
+#include "core/config/project_settings.h"
 
-class MicrophoneFeed;
-template <typename T>
-class TypedArray;
+/*
+ * MicrophoneDriver
+ */
+MicrophoneDriver *MicrophoneDriver::singleton = nullptr;
 
-class MicrophoneServer : public Object {
-	GDCLASS(MicrophoneServer, Object);
-	_THREAD_SAFE_CLASS_
+Error MicrophoneDriver::init() {
+	return OK;
+}
 
-private:
-protected:
-	static MicrophoneServer *singleton;
-	static void _bind_methods();
+MicrophoneDriver::MicrophoneDriver() {}
+MicrophoneDriver::~MicrophoneDriver() {}
 
-	bool monitoring_feeds = false;
-	Vector<Ref<MicrophoneFeed>> feeds;
-
-public:
-	static MicrophoneServer *get_singleton() { return singleton; }
-
-	virtual void set_monitoring_feeds(bool p_monitoring_feeds) { monitoring_feeds = p_monitoring_feeds; }
-	_FORCE_INLINE_ bool is_monitoring_feeds() const { return monitoring_feeds; }
-
-	// Right now we identify our feed by it's ID when it's used in the background.
-	// May see if we can change this to purely relying on MicrophoneFeed objects or by name.
-	int get_free_id();
-	int get_feed_index(int p_id);
-	Ref<MicrophoneFeed> get_feed_by_id(int p_id);
-
-	// Add and remove feeds.
-	void add_feed(const Ref<MicrophoneFeed> &p_feed);
-	void remove_feed(const Ref<MicrophoneFeed> &p_feed);
-
-	// Get our feeds.
-	Ref<MicrophoneFeed> get_feed(int p_index);
-	int get_feed_count();
-	TypedArray<MicrophoneFeed> get_feeds();
-
-	MicrophoneServer *create(int p_microphone_driver_index);
-
-	void init();
-
-	MicrophoneServer();
-	~MicrophoneServer();
+/*
+ * MicrophoneDriverManager
+ */
+MicrophoneDriverDummy MicrophoneDriverManager::dummy_driver;
+MicrophoneDriver *MicrophoneDriverManager::drivers[MAX_DRIVERS] = {
+	&MicrophoneDriverManager::dummy_driver,
 };
+int MicrophoneDriverManager::driver_count = 1;
+
+void MicrophoneDriverManager::add_driver(MicrophoneDriver *p_driver) {
+	ERR_FAIL_COND(driver_count >= MAX_DRIVERS);
+	drivers[driver_count - 1] = p_driver;
+
+	// Last driver is always our dummy driver
+	drivers[driver_count++] = &MicrophoneDriverManager::dummy_driver;
+}
+
+int MicrophoneDriverManager::get_driver_count() {
+	return driver_count;
+}
+
+void MicrophoneDriverManager::initialize(int p_driver) {
+	GLOBAL_DEF_RST("audio/driver/enable_microphone_server", false);
+
+	int failed_driver = -1;
+
+	// Check if there is a selected driver
+	if (p_driver >= 0 && p_driver < driver_count) {
+		if (drivers[p_driver]->init() == OK) {
+			drivers[p_driver]->set_singleton();
+			return;
+		} else {
+			failed_driver = p_driver;
+		}
+	}
+
+	// No selected driver, try them all in order
+	for (int i = 0; i < driver_count; i++) {
+		// Don't re-init the driver if it failed above
+		if (i == failed_driver) {
+			continue;
+		}
+
+		if (drivers[i]->init() == OK) {
+			drivers[i]->set_singleton();
+			break;
+		}
+	}
+
+	if (driver_count > 1 && String(MicrophoneDriver::get_singleton()->get_name()) == "dummy") {
+		WARN_PRINT("All audio drivers failed, falling back to the dummy driver.");
+	}
+}
+
+MicrophoneDriver *MicrophoneDriverManager::get_driver(int p_driver) {
+	ERR_FAIL_INDEX_V(p_driver, driver_count, nullptr);
+	return drivers[p_driver];
+}
