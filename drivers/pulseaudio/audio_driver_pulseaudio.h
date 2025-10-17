@@ -97,6 +97,9 @@ class AudioDriverPulseAudio : public AudioDriver {
 	static void thread_func(void *p_udata);
 
 public:
+	pa_mainloop *get_pulseaudio_mainloop() { return pa_ml; }
+	pa_context *get_pulseaudio_context() { return pa_ctx; }
+
 	virtual const char *get_name() const override {
 		return "PulseAudio";
 	}

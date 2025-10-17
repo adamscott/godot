@@ -11,6 +11,8 @@ common_linuxbsd = [
     "freedesktop_portal_desktop.cpp",
     "freedesktop_screensaver.cpp",
     "freedesktop_at_spi_monitor.cpp",
+    "microphone_linuxbsd_alsa.cpp",
+    "microphone_linuxbsd_pulseaudio.cpp",
 ]
 
 if env["library_type"] == "executable":

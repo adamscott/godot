@@ -72,6 +72,14 @@
 #include "drivers/gles3/rasterizer_gles3.h"
 #endif
 
+#ifdef ALSA_ENABLED
+#include "microphone_linuxbsd_alsa.h"
+#endif // ALSA_ENABLED
+
+#ifdef PULSEAUDIO_ENABLED
+#include "microphone_linuxbsd_pulseaudio.h"
+#endif // PULSEAUDIO_ENABLED
+
 #include <dlfcn.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -1283,10 +1291,12 @@ OS_LinuxBSD::OS_LinuxBSD() {
 
 #ifdef PULSEAUDIO_ENABLED
 	AudioDriverManager::add_driver(&driver_pulseaudio);
+	MicrophoneServerLinuxBSDPulseAudio::register_linuxbsd_driver();
 #endif
 
 #ifdef ALSA_ENABLED
 	AudioDriverManager::add_driver(&driver_alsa);
+	MicrophoneServerLinuxBSDALSA::register_linuxbsd_driver();
 #endif
 
 #ifdef X11_ENABLED
