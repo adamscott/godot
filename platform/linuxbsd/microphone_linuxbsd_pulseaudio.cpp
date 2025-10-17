@@ -29,6 +29,7 @@
 /**************************************************************************/
 
 #include "microphone_linuxbsd_pulseaudio.h"
+#include "pulse/context.h"
 
 #ifdef PULSEAUDIO_ENABLED
 
@@ -45,49 +46,49 @@
  */
 
 void MicrophoneServerLinuxBSDPulseAudio::notifications_enable() {
-	if (notifications_pulseaudio_subscription != nullptr) {
-		return;
-	}
-	pa_mainloop *_pa_mainloop = driver_pulseaudio->get_pulseaudio_mainloop();
-	ERR_FAIL_NULL(_pa_mainloop);
-	pa_context *_pa_context = driver_pulseaudio->get_pulseaudio_context();
-	ERR_FAIL_NULL(_pa_context);
+	// if (notifications_pulseaudio_subscription != nullptr) {
+	// 	return;
+	// }
+	// pa_mainloop *_pa_mainloop = driver_pulseaudio->get_pulseaudio_mainloop();
+	// ERR_FAIL_NULL(_pa_mainloop);
+	// pa_context *_pa_context = driver_pulseaudio->get_pulseaudio_context();
+	// ERR_FAIL_NULL(_pa_context);
 
-	notifications_pulseaudio_subscription = pa_context_subscribe(_pa_context, PA_SUBSCRIPTION_MASK_SOURCE, nullptr, this);
-	pa_operation_state _pa_operation_state = PA_OPERATION_RUNNING;
-	while (_pa_operation_state == PA_OPERATION_RUNNING) {
-		int ret = pa_mainloop_iterate(_pa_mainloop, 1, nullptr);
-		if (ret < 0) {
-			ERR_PRINT("error while iterating the PulseAudio main loop");
-			break;
-		}
-		_pa_operation_state = pa_operation_get_state(notifications_pulseaudio_subscription);
-	}
-	String operation_state;
-	switch (_pa_operation_state) {
-		case PA_OPERATION_RUNNING: {
-			operation_state = "PA_OPERATION_RUNNING";
-		} break;
-		case PA_OPERATION_CANCELLED: {
-			operation_state = "PA_OPERATION_CANCELLED";
-		} break;
-		case PA_OPERATION_DONE: {
-			operation_state = "PA_OPERATION_DONE";
-		} break;
-	}
+	// notifications_pulseaudio_subscription = pa_context_subscribe(_pa_context, PA_SUBSCRIPTION_MASK_SOURCE, nullptr, this);
+	// pa_operation_state _pa_operation_state = PA_OPERATION_RUNNING;
+	// while (_pa_operation_state == PA_OPERATION_RUNNING) {
+	// 	int ret = pa_mainloop_iterate(_pa_mainloop, 1, nullptr);
+	// 	if (ret < 0) {
+	// 		ERR_PRINT("error while iterating the PulseAudio main loop");
+	// 		break;
+	// 	}
+	// 	_pa_operation_state = pa_operation_get_state(notifications_pulseaudio_subscription);
+	// }
+	// String operation_state;
+	// switch (_pa_operation_state) {
+	// 	case PA_OPERATION_RUNNING: {
+	// 		operation_state = "PA_OPERATION_RUNNING";
+	// 	} break;
+	// 	case PA_OPERATION_CANCELLED: {
+	// 		operation_state = "PA_OPERATION_CANCELLED";
+	// 	} break;
+	// 	case PA_OPERATION_DONE: {
+	// 		operation_state = "PA_OPERATION_DONE";
+	// 	} break;
+	// }
 
-	if (pa_operation_get_state(notifications_pulseaudio_subscription) == PA_OPERATION_DONE) {
-		pa_context_set_subscribe_callback(_pa_context, &MicrophoneServerLinuxBSDPulseAudio::notifications_callback, this);
-	}
+	// if (pa_operation_get_state(notifications_pulseaudio_subscription) == PA_OPERATION_DONE) {
+	// 	pa_context_set_subscribe_callback(_pa_context, &MicrophoneServerLinuxBSDPulseAudio::notifications_callback, this);
+	// }
 }
 
 void MicrophoneServerLinuxBSDPulseAudio::notifications_disable() {
-	if (notifications_pulseaudio_subscription == nullptr) {
-		return;
-	}
-	pa_operation_cancel(notifications_pulseaudio_subscription);
-	pa_operation_unref(notifications_pulseaudio_subscription);
-	notifications_pulseaudio_subscription = nullptr;
+	// if (notifications_pulseaudio_subscription == nullptr) {
+	// 	return;
+	// }
+	// pa_operation_cancel(notifications_pulseaudio_subscription);
+	// pa_operation_unref(notifications_pulseaudio_subscription);
+	// notifications_pulseaudio_subscription = nullptr;
 }
 
 void MicrophoneServerLinuxBSDPulseAudio::notifications_callback(pa_context *p_pa_context, pa_subscription_event_type p_subscription_event_type, uint32_t p_index, void *p_userdata) {
@@ -98,28 +99,28 @@ void MicrophoneServerLinuxBSDPulseAudio::notifications_callback(pa_context *p_pa
 }
 
 void MicrophoneServerLinuxBSDPulseAudio::update_feeds() {
-	print_line(vformat("MicrophoneServerLinuxBSDPulseAudio::update_feeds_pulseaudio"));
-	ERR_FAIL_NULL(driver_pulseaudio);
-	print_line(vformat("MicrophoneServerLinuxBSDPulseAudio::update_feeds_pulseaudio"));
+	// print_line(vformat("MicrophoneServerLinuxBSDPulseAudio::update_feeds_pulseaudio"));
+	// ERR_FAIL_NULL(driver_pulseaudio);
+	// print_line(vformat("MicrophoneServerLinuxBSDPulseAudio::update_feeds_pulseaudio"));
 
-	pa_mainloop *_pa_mainloop = driver_pulseaudio->get_pulseaudio_mainloop();
-	ERR_FAIL_NULL(_pa_mainloop);
-	pa_context *_pa_context = driver_pulseaudio->get_pulseaudio_context();
-	ERR_FAIL_NULL(_pa_context);
+	// pa_mainloop *_pa_mainloop = driver_pulseaudio->get_pulseaudio_mainloop();
+	// ERR_FAIL_NULL(_pa_mainloop);
+	// pa_context *_pa_context = driver_pulseaudio->get_pulseaudio_context();
+	// ERR_FAIL_NULL(_pa_context);
 
-	pa_operation *_update_feeds_operation = pa_context_get_source_info_list(_pa_context, &MicrophoneServerLinuxBSDPulseAudio::update_feeds_sourcelist_callback, this);
-	pa_operation_state _pa_operation_state = PA_OPERATION_RUNNING;
-	while (_pa_operation_state == PA_OPERATION_RUNNING) {
-		int ret = pa_mainloop_iterate(_pa_mainloop, 1, nullptr);
-		if (ret < 0) {
-			ERR_PRINT("error while iterating the PulseAudio main loop");
-			break;
-		}
-		_pa_operation_state = pa_operation_get_state(_update_feeds_operation);
-	}
-	pa_operation_unref(_update_feeds_operation);
-	_update_feeds_operation = nullptr;
-	print_line(vformat("MicrophoneServerLinuxBSDPulseAudio::update_feeds_pulseaudio [END]"));
+	// pa_operation *_update_feeds_operation = pa_context_get_source_info_list(_pa_context, &MicrophoneServerLinuxBSDPulseAudio::update_feeds_sourcelist_callback, this);
+	// pa_operation_state _pa_operation_state = PA_OPERATION_RUNNING;
+	// while (_pa_operation_state == PA_OPERATION_RUNNING) {
+	// 	int ret = pa_mainloop_iterate(_pa_mainloop, 1, nullptr);
+	// 	if (ret < 0) {
+	// 		ERR_PRINT("error while iterating the PulseAudio main loop");
+	// 		break;
+	// 	}
+	// 	_pa_operation_state = pa_operation_get_state(_update_feeds_operation);
+	// }
+	// pa_operation_unref(_update_feeds_operation);
+	// _update_feeds_operation = nullptr;
+	// print_line(vformat("MicrophoneServerLinuxBSDPulseAudio::update_feeds_pulseaudio [END]"));
 }
 
 void MicrophoneServerLinuxBSDPulseAudio::update_feeds_sourcelist_callback(pa_context *p_pa_context, const pa_source_info *p_source_info, int p_eol, void *p_userdata) {
@@ -150,7 +151,20 @@ void MicrophoneServerLinuxBSDPulseAudio::set_monitoring_feeds(bool p_monitoring_
 }
 
 MicrophoneServerLinuxBSDPulseAudio::MicrophoneServerLinuxBSDPulseAudio() {
+	_pa_t_mainloop = pa_threaded_mainloop_new();
+	ERR_FAIL_NULL(_pa_t_mainloop);
 }
-MicrophoneServerLinuxBSDPulseAudio::~MicrophoneServerLinuxBSDPulseAudio() {}
+MicrophoneServerLinuxBSDPulseAudio::~MicrophoneServerLinuxBSDPulseAudio() {
+	if (_pa_context) {
+		pa_context_unref(_pa_context);
+		_pa_context = nullptr;
+	}
+
+	if (_pa_t_mainloop) {
+		pa_threaded_mainloop_stop(_pa_t_mainloop);
+		pa_threaded_mainloop_free(_pa_t_mainloop);
+		_pa_t_mainloop = nullptr;
+	}
+}
 
 #endif // PULSEAUDIO_ENABLED

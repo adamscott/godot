@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  microphone_linuxbsd_pulseaudio.h                                      */
+/*  microphone_driver_pulseaudio.cpp                                      */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,54 +28,4 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#pragma once
-
-#include "pulse/context.h"
-#ifdef PULSEAUDIO_ENABLED
-
-#include "servers/microphone/microphone_feed.h"
-#include "servers/microphone/microphone_server.h"
-
-#ifdef SOWRAP_ENABLED
-#include "drivers/pulseaudio/audio_driver_pulseaudio.h"
-#else
-#include <pulse/pulseaudio.h>
-#endif
-
-class MicrophoneServerLinuxBSDPulseAudio : public MicrophoneServer {
-	GDSOFTCLASS(MicrophoneServerLinuxBSDPulseAudio, MicrophoneServer);
-	_THREAD_SAFE_CLASS_
-
-private:
-	pa_threaded_mainloop *_pa_t_mainloop = nullptr;
-	pa_context *_pa_context = nullptr;
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-private-field"
-	pa_operation *notifications_pulseaudio_subscription = nullptr;
-#pragma GCC diagnostic pop
-
-	void notifications_enable();
-	void notifications_disable();
-
-	static void notifications_callback(pa_context *p_pa_context, pa_subscription_event_type p_subscription_event_type, uint32_t p_index, void *p_userdata);
-	static void update_feeds_sourcelist_callback(pa_context *p_pa_context, const pa_source_info *p_source_info, int p_eol, void *p_userdata);
-
-public:
-	static MicrophoneServer *create_function();
-	static void register_linuxbsd_driver();
-
-	void update_feeds();
-	void set_monitoring_feeds(bool p_monitoring_feeds) override;
-
-	MicrophoneServerLinuxBSDPulseAudio();
-	~MicrophoneServerLinuxBSDPulseAudio();
-};
-
-class MicrophoneFeedLinuxBSD : public MicrophoneFeed {
-	GDSOFTCLASS(MicrophoneFeedLinuxBSD, MicrophoneFeed);
-
-private:
-};
-
-#endif // PULSEAUDIO_ENABLED
+#include "microphone_driver_pulseaudio.h"
