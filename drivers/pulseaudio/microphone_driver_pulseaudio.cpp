@@ -29,3 +29,52 @@
 /**************************************************************************/
 
 #include "microphone_driver_pulseaudio.h"
+
+#ifdef PULSEAUDIO_ENABLED
+
+#include "core/error/error_macros.h"
+#include "servers/microphone/microphone_feed.h"
+#include "servers/microphone/microphone_server.h"
+
+#ifdef SOWRAP_ENABLED
+#include "pulse-so_wrap.h"
+#else
+#include <pulse/pulseaudio.h>
+#endif
+
+LocalVector<Ref<MicrophoneFeed>> MicrophoneDriverPulseAudio::get_feeds() const {
+	LocalVector<Ref<MicrophoneFeed>> feeds;
+	return feeds;
+}
+
+uint32_t MicrophoneDriverPulseAudio::get_feed_count() const {
+	return 0;
+}
+
+void MicrophoneDriverPulseAudio::update_feeds() {
+}
+
+bool MicrophoneDriverPulseAudio::activate_feed(Ref<MicrophoneFeed> p_feed) {
+	return false;
+}
+
+void MicrophoneDriverPulseAudio::deactivate_feed(Ref<MicrophoneFeed> p_feed) {
+}
+
+bool MicrophoneDriverPulseAudio::is_feed_active(Ref<MicrophoneFeed> p_feed) const {
+	return false;
+}
+
+void MicrophoneDriverPulseAudio::set_feed_active(Ref<MicrophoneFeed> p_feed, bool p_active) const {
+}
+
+void MicrophoneDriverPulseAudio::set_monitoring_feeds(bool p_monitoring_feeds) {
+}
+
+bool MicrophoneDriverPulseAudio::is_monitoring_feeds() const {
+}
+
+MicrophoneDriverPulseAudio::MicrophoneDriverPulseAudio() {}
+MicrophoneDriverPulseAudio::~MicrophoneDriverPulseAudio() {}
+
+#endif // PULSEAUDIO_ENABLED

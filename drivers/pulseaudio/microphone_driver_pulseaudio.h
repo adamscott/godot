@@ -29,3 +29,32 @@
 /**************************************************************************/
 
 #pragma once
+
+#ifdef PULSEAUDIO_ENABLED
+
+#include "servers/microphone/microphone_driver.h"
+
+#include "core/object/ref_counted.h"
+
+class MicrophoneFeed;
+
+class MicrophoneDriverPulseAudio : public MicrophoneDriver {
+public:
+	virtual LocalVector<Ref<MicrophoneFeed>> get_feeds() const override;
+	virtual uint32_t get_feed_count() const override;
+	virtual void update_feeds() override;
+	virtual bool activate_feed(Ref<MicrophoneFeed> p_feed) override;
+	virtual void deactivate_feed(Ref<MicrophoneFeed> p_feed) override;
+	virtual bool is_feed_active(Ref<MicrophoneFeed> p_feed) const override;
+	virtual void set_feed_active(Ref<MicrophoneFeed> p_feed, bool p_active) override;
+
+	virtual void set_monitoring_feeds(bool p_monitoring_feeds) override;
+	virtual bool is_monitoring_feeds() const override;
+
+	virtual String get_name() const override { return String("PulseAudio"); }
+
+	MicrophoneDriverPulseAudio();
+	~MicrophoneDriverPulseAudio();
+};
+
+#endif // PULSEAUDIO_ENABLED
