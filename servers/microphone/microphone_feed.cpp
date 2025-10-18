@@ -34,25 +34,25 @@
 #include "servers/microphone/microphone_driver.h"
 #include "servers/microphone/microphone_server.h"
 
-void MicrophoneFeed::update_buffer_size() {
-	uint64_t new_buffer_size = (uint64_t)(buffer_length * sample_rate) * channels_per_frame * bytes_per_frame;
-	if (new_buffer_size == buffer_size) {
+void MicrophoneFeed::update_ring_buffer_size() {
+	uint64_t new_ring_buffer_size = (uint64_t)(buffer_length * sample_rate) * channels_per_frame * bytes_per_frame;
+	if (new_ring_buffer_size == ring_buffer_size) {
 		return;
 	}
-	buffer_size = new_buffer_size;
+	ring_buffer_size = new_ring_buffer_size;
 	resize_buffer();
 }
 
 void MicrophoneFeed::resize_buffer() {
-	ring_buffer.resize(nearest_shift(buffer_size));
+	ring_buffer.resize(nearest_shift(ring_buffer_size));
 }
 
 PackedByteArray MicrophoneFeed::get_buffer() const {
 	PackedByteArray data;
-	data.resize_initialized(buffer_size);
+	data.resize_initialized(ring_buffer_size);
 	uint32_t data_left = ring_buffer.data_left();
-	if (data_left > buffer_size) {
-		ring_buffer.advance_read(data_left - buffer_size);
+	if (data_left > ring_buffer_size) {
+		ring_buffer.advance_read(data_left - ring_buffer_size);
 	}
 	ring_buffer.read(data.ptrw(), ring_buffer.data_left());
 	return data;

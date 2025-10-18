@@ -57,11 +57,13 @@ protected:
 	String description;
 	MicrophoneFeedFormatId format_id = MICROPHONE_FEED_FORMAT_ID_LINEAR_PCM;
 	double sample_rate = 44100;
-	float buffer_length = 0.5;
-	uint64_t buffer_size = 0;
 	uint32_t channels_per_frame = 1;
 	uint32_t bytes_per_frame = sizeof(float);
+
 	mutable RingBuffer<uint8_t> ring_buffer;
+	uint64_t ring_buffer_size = 0;
+
+	float buffer_length = 0.5;
 
 	inline uint32_t get_bits_per_channel() {
 		return (8 * bytes_per_frame) / channels_per_frame;
@@ -69,7 +71,7 @@ protected:
 
 	static void _bind_methods();
 	void resize_buffer();
-	void update_buffer_size();
+	void update_ring_buffer_size();
 
 public:
 	int get_id() const { return id; }
@@ -88,7 +90,7 @@ public:
 			return;
 		}
 		sample_rate = p_sample_rate;
-		update_buffer_size();
+		update_ring_buffer_size();
 	}
 
 	float get_buffer_length() const { return buffer_length; }
@@ -97,7 +99,7 @@ public:
 			return;
 		}
 		buffer_length = p_buffer_length;
-		update_buffer_size();
+		update_ring_buffer_size();
 	}
 
 	uint32_t get_channels_per_frame() const { return channels_per_frame; }
@@ -106,7 +108,7 @@ public:
 			return;
 		}
 		channels_per_frame = p_channels_per_frame;
-		update_buffer_size();
+		update_ring_buffer_size();
 	}
 
 	uint32_t get_bytes_per_frame() const { return bytes_per_frame; }
@@ -115,7 +117,7 @@ public:
 			return;
 		}
 		bytes_per_frame = p_bytes_per_frame;
-		update_buffer_size();
+		update_ring_buffer_size();
 	}
 
 	PackedByteArray get_buffer() const;

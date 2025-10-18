@@ -42,8 +42,8 @@ Error MicrophoneDriver::init() {
 	return OK;
 }
 
-RingBuffer<uint8_t> &MicrophoneDriver::get_ring_buffer(Ref<MicrophoneFeed> p_microphone_feed) {
-	return p_microphone_feed->ring_buffer;
+RingBuffer<uint8_t> &MicrophoneDriver::get_ring_buffer(Ref<MicrophoneFeed> p_feed) {
+	return p_feed->ring_buffer;
 }
 
 MicrophoneDriver::MicrophoneDriver() {}

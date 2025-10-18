@@ -41,20 +41,29 @@ class MicrophoneFeed;
 @class MicrophoneDeviceCaptureSession;
 
 class MicrophoneDriverAVFoundation : public MicrophoneDriver {
-private:
-	void setup_feed_to_device_settings(Ref<MicrophoneFeed> p_feed, AVCaptureDevice *p_device);
-
 protected:
 	bool monitoring_feeds = false;
 	MicrophoneDeviceNotification *device_notifications = nullptr;
 
-	struct FeedEntry {
-		Ref<MicrophoneFeed> feed;
-		AVCaptureDevice *device;
-		MicrophoneDeviceCaptureSession *capture_session;
-	};
-
+	struct FeedEntry;
 	mutable LocalVector<FeedEntry> _feed_entries;
+
+	struct FeedEntry {
+		AVCaptureDevice *device = nil;
+		MicrophoneDeviceCaptureSession *capture_session = nil;
+		Ref<MicrophoneFeed> feed;
+
+		void remove() {
+		}
+	};
+	FeedEntry *get_feed_entry_from_feed(Ref<MicrophoneFeed> p_feed);
+
+private:
+	void setup_feed_to_device_settings(Ref<MicrophoneFeed> p_feed, AVCaptureDevice *p_device);
+
+	void remove_feed_entry(FeedEntry *p_feed_entry);
+	bool activate_feed_entry(FeedEntry *p_feed_entry);
+	void deactivate_feed_entry(FeedEntry *p_feed_entry);
 
 public:
 	virtual LocalVector<Ref<MicrophoneFeed>> get_feeds() const override;
@@ -67,8 +76,8 @@ public:
 
 	virtual String get_name() const override { return String("AVFoundation"); }
 
-	MicrophoneDriverAVFoundation();
-	~MicrophoneDriverAVFoundation();
+	MicrophoneDriverAVFoundation() {}
+	~MicrophoneDriverAVFoundation() {}
 };
 
 @interface MicrophoneDeviceNotification : NSObject {

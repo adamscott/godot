@@ -34,6 +34,40 @@
 #include "servers/microphone/microphone_feed.h"
 #include <CoreAudioTypes/CoreAudioBaseTypes.h>
 
+MicrophoneDriverAVFoundation::FeedEntry *MicrophoneDriverAVFoundation::get_feed_entry_from_feed(Ref<MicrophoneFeed> p_feed) {
+	for (FeedEntry &feed_entry : _feed_entries) {
+		if (feed_entry.feed == p_feed) {
+			return &feed_entry;
+		}
+	}
+	return nil;
+}
+
+void MicrophoneDriverAVFoundation::setup_feed_to_device_settings(Ref<MicrophoneFeed> p_feed, AVCaptureDevice *p_device) {
+	AVCaptureDeviceFormat *active_format = p_device.activeFormat;
+	CMFormatDescriptionRef format_description = active_format.formatDescription;
+	ERR_FAIL_COND(CMFormatDescriptionGetMediaType(format_description) != kCMMediaType_Audio);
+	const AudioStreamBasicDescription *audio_format_stream_basic_description = CMAudioFormatDescriptionGetStreamBasicDescription(format_description);
+	ERR_FAIL_COND(audio_format_stream_basic_description == nullptr);
+
+	p_feed->set_sample_rate(audio_format_stream_basic_description->mSampleRate);
+	p_feed->set_channels_per_frame(audio_format_stream_basic_description->mChannelsPerFrame);
+	p_feed->set_bytes_per_frame(audio_format_stream_basic_description->mBytesPerFrame);
+
+	switch (audio_format_stream_basic_description->mFormatID) {
+		case kAudioFormatLinearPCM: {
+			p_feed->set_format_id(MicrophoneFeed::MICROPHONE_FEED_FORMAT_ID_LINEAR_PCM);
+		} break;
+
+		default: {
+			// Do nothing.
+		} break;
+	}
+
+	// format_id = audio_format_stream_basic_description->mFormatID;
+	// format_flags = audio_format_stream_basic_description->mFormatFlags;
+}
+
 void MicrophoneDriverAVFoundation::set_monitoring_feeds(bool p_monitoring_feeds) {
 	if (monitoring_feeds == p_monitoring_feeds) {
 		return;
@@ -83,25 +117,24 @@ void MicrophoneDriverAVFoundation::update_feeds() {
 
 	// Remove outdated devices.
 	for (uint32_t i = _feed_entries.size() - 1; i >= 0; i--) {
-		FeedEntry &feed_entry = _feed_entries[i];
-		if (feed_entry.feed.is_null()) {
+		FeedEntry *feed_entry = &_feed_entries[i];
+		if (feed_entry->feed.is_null()) {
 			continue;
 		}
 
-		if (![devices containsObject:feed_entry.device]) {
-			// remove_feed(feed);
-			_feed_entries.remove_at(i);
+		if (![devices containsObject:feed_entry->device]) {
+			remove_feed_entry(feed_entry);
 		}
 	};
 
 	for (AVCaptureDevice *device in devices) {
 		bool found = false;
 		for (uint32_t i = 0; i < _feed_entries.size(); i++) {
-			FeedEntry &feed_entry = _feed_entries[i];
-			if (feed_entry.feed.is_null()) {
+			FeedEntry *feed_entry = &_feed_entries[i];
+			if (feed_entry->feed.is_null()) {
 				continue;
 			}
-			if (feed_entry.device == device) {
+			if (feed_entry->device == device) {
 				found = true;
 			}
 		}
@@ -117,48 +150,25 @@ void MicrophoneDriverAVFoundation::update_feeds() {
 	}
 }
 
-void MicrophoneDriverAVFoundation::setup_feed_to_device_settings(Ref<MicrophoneFeed> p_feed, AVCaptureDevice *p_device) {
-	AVCaptureDeviceFormat *active_format = p_device.activeFormat;
-	CMFormatDescriptionRef format_description = active_format.formatDescription;
-	ERR_FAIL_COND(CMFormatDescriptionGetMediaType(format_description) != kCMMediaType_Audio);
-	const AudioStreamBasicDescription *audio_format_stream_basic_description = CMAudioFormatDescriptionGetStreamBasicDescription(format_description);
-	ERR_FAIL_COND(audio_format_stream_basic_description == nullptr);
-
-	p_feed->set_sample_rate(audio_format_stream_basic_description->mSampleRate);
-	p_feed->set_channels_per_frame(audio_format_stream_basic_description->mChannelsPerFrame);
-	p_feed->set_bytes_per_frame(audio_format_stream_basic_description->mBytesPerFrame);
-
-	switch (audio_format_stream_basic_description->mFormatID) {
-		case kAudioFormatLinearPCM: {
-			p_feed->set_format_id(MicrophoneFeed::MICROPHONE_FEED_FORMAT_ID_LINEAR_PCM);
-		} break;
-
-		default: {
-			// Do nothing.
-		} break;
-	}
-
-	// format_id = audio_format_stream_basic_description->mFormatID;
-	// format_flags = audio_format_stream_basic_description->mFormatFlags;
-}
-
-bool MicrophoneDriverAVFoundation::activate_feed(Ref<MicrophoneFeed> p_feed) {
-	FeedEntry *feed_entry = nullptr;
-	for (FeedEntry &_feed_entry : _feed_entries) {
-		if (_feed_entry.feed == p_feed) {
-			feed_entry = &_feed_entry;
+void MicrophoneDriverAVFoundation::remove_feed_entry(FeedEntry *p_feed_entry) {
+	deactivate_feed_entry(p_feed_entry);
+	for (uint32_t i = 0; i < _feed_entries.size(); i++) {
+		if (&_feed_entries[i] == p_feed_entry) {
+			_feed_entries.remove_at(i);
 			break;
 		}
 	}
-	ERR_FAIL_NULL_V(feed_entry, false);
+}
 
-	if (feed_entry->capture_session) {
+bool MicrophoneDriverAVFoundation::activate_feed_entry(FeedEntry *p_feed_entry) {
+	if (p_feed_entry->capture_session) {
 		return true;
 	}
 
-	auto init_device_capture_session = [feed_entry]() -> void {
-		feed_entry->capture_session = [[MicrophoneDeviceCaptureSession alloc] initForFeed:feed_entry->feed andDevice:feed_entry->device];
-		feed_entry->feed->emit_signal(SNAME("feed_activated"));
+	auto init_device_capture_session = [p_feed_entry]() -> void {
+		p_feed_entry->capture_session = [[MicrophoneDeviceCaptureSession alloc] initForFeed:p_feed_entry->feed
+																				  andDevice:p_feed_entry->device];
+		p_feed_entry->feed->emit_signal(SNAME("feed_activated"));
 	};
 
 	if (@available(macOS 10.14, *)) {
@@ -176,7 +186,7 @@ bool MicrophoneDriverAVFoundation::activate_feed(Ref<MicrophoneFeed> p_feed) {
 				[AVCaptureDevice requestAccessForMediaType:AVMediaTypeAudio
 										 completionHandler:^(BOOL granted) {
 											 if (granted) {
-												 activate_feed(feed_entry->feed);
+												 activate_feed_entry(p_feed_entry);
 											 }
 										 }];
 				return false;
@@ -192,26 +202,27 @@ bool MicrophoneDriverAVFoundation::activate_feed(Ref<MicrophoneFeed> p_feed) {
 	}
 }
 
-void MicrophoneDriverAVFoundation::deactivate_feed(Ref<MicrophoneFeed> p_feed) {
-	FeedEntry *feed_entry = nullptr;
-	for (FeedEntry &_feed_entry : _feed_entries) {
-		if (_feed_entry.feed == p_feed) {
-			feed_entry = &_feed_entry;
-			break;
-		}
-	}
-	ERR_FAIL_NULL(feed_entry);
+void MicrophoneDriverAVFoundation::deactivate_feed_entry(FeedEntry *p_feed_entry) {
+	ERR_FAIL_NULL(p_feed_entry);
 
-	if (feed_entry->capture_session == nil) {
-		return;
+	if (p_feed_entry->capture_session) {
+		[p_feed_entry->capture_session cleanup];
+		p_feed_entry->capture_session = nil;
 	}
-
-	[feed_entry->capture_session cleanup];
-	feed_entry->capture_session = nil;
 }
 
-MicrophoneDriverAVFoundation::MicrophoneDriverAVFoundation() {}
-MicrophoneDriverAVFoundation::~MicrophoneDriverAVFoundation() {}
+bool MicrophoneDriverAVFoundation::activate_feed(Ref<MicrophoneFeed> p_feed) {
+	FeedEntry *feed_entry = get_feed_entry_from_feed(p_feed);
+	ERR_FAIL_NULL_V(feed_entry, false);
+	return activate_feed_entry(feed_entry);
+}
+
+void MicrophoneDriverAVFoundation::deactivate_feed(Ref<MicrophoneFeed> p_feed) {
+	FeedEntry *feed_entry = get_feed_entry_from_feed(p_feed);
+	ERR_FAIL_NULL(feed_entry);
+	deactivate_feed_entry(feed_entry);
+}
+
 /*
  * MicrophoneDeviceNotification
  */
@@ -272,8 +283,16 @@ MicrophoneDriverAVFoundation::~MicrophoneDriverAVFoundation() {}
 	dataOutput = [AVCaptureAudioDataOutput new];
 	ERR_FAIL_COND_V_MSG(!dataOutput, self, vformat(R"*(could not get data output for MicrophoneFeed "%s")*", feed->get_name()));
 
+	AudioFormatID formatId;
+	switch (pFeed->get_format_id()) {
+		case MicrophoneFeed::MICROPHONE_FEED_FORMAT_ID_LINEAR_PCM:
+		default: {
+			formatId = kAudioFormatLinearPCM;
+		} break;
+	}
+
 	NSDictionary<NSString *, id> *settings = @{
-		AVFormatIDKey : [NSNumber numberWithInt:kAudioFormatLinearPCM],
+		AVFormatIDKey : [NSNumber numberWithInt:formatId],
 		AVSampleRateKey : [NSNumber numberWithFloat:feed->get_sample_rate()],
 		AVNumberOfChannelsKey : [NSNumber numberWithInt:feed->get_channels_per_frame()]
 	};
