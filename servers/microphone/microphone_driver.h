@@ -49,6 +49,8 @@ public:
 
 	virtual LocalVector<Ref<MicrophoneFeed>> get_feeds() const = 0;
 	virtual void update_feeds() = 0;
+	virtual bool activate_feed(Ref<MicrophoneFeed> p_feed) = 0;
+	virtual void deactivate_feed(Ref<MicrophoneFeed> p_feed) = 0;
 
 	virtual void set_monitoring_feeds(bool p_monitoring_feeds) = 0;
 	virtual bool get_monitoring_feeds() const = 0;
@@ -67,6 +69,8 @@ public:
 
 	virtual void set_monitoring_feeds(bool p_monitoring_feeds) {}
 	virtual bool get_monitoring_feeds() const { return false; }
+	virtual bool activate_feed(Ref<MicrophoneFeed> p_feed) { return false; }
+	virtual void deactivate_feed(Ref<MicrophoneFeed> p_feed) {}
 
 	virtual String get_name() const { return String("Dummy"); }
 

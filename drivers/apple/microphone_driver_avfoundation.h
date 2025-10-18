@@ -38,8 +38,12 @@
 
 class MicrophoneFeed;
 @class MicrophoneDeviceNotification;
+@class MicrophoneDeviceCaptureSession;
 
 class MicrophoneDriverAVFoundation : public MicrophoneDriver {
+private:
+	void setup_feed_to_device_settings(Ref<MicrophoneFeed> p_feed, AVCaptureDevice *p_device);
+
 protected:
 	bool monitoring_feeds = false;
 	MicrophoneDeviceNotification *device_notifications = nullptr;
@@ -47,6 +51,7 @@ protected:
 	struct FeedEntry {
 		Ref<MicrophoneFeed> feed;
 		AVCaptureDevice *device;
+		MicrophoneDeviceCaptureSession *capture_session;
 	};
 
 	mutable LocalVector<FeedEntry> _feed_entries;
@@ -54,6 +59,8 @@ protected:
 public:
 	virtual LocalVector<Ref<MicrophoneFeed>> get_feeds() const override;
 	virtual void update_feeds() override;
+	virtual bool activate_feed(Ref<MicrophoneFeed> p_feed) override;
+	virtual void deactivate_feed(Ref<MicrophoneFeed> p_feed) override;
 
 	virtual void set_monitoring_feeds(bool p_monitoring_feeds) override;
 	virtual bool get_monitoring_feeds() const override;

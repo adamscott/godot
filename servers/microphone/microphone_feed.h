@@ -42,18 +42,20 @@ class MicrophoneFeed : public RefCounted {
 
 	friend MicrophoneDriver;
 
-private:
-	int id;
-	bool active;
-
-protected:
+public:
 	enum MicrophoneFeedFormatId {
 		MICROPHONE_FEED_FORMAT_ID_LINEAR_PCM,
 		MICROPHONE_FEED_FORMAT_ID_MAX,
 	};
 
+private:
+	int id;
+	bool active = false;
+
+protected:
 	String name;
 	String description;
+	MicrophoneFeedFormatId format_id = MICROPHONE_FEED_FORMAT_ID_LINEAR_PCM;
 	double sample_rate = 44100;
 	float buffer_length = 0.5;
 	uint64_t buffer_size = 0;
@@ -76,6 +78,9 @@ public:
 
 	String get_name() const { return name; }
 	void set_name(String p_name) { name = p_name; }
+
+	MicrophoneFeedFormatId get_format_id() const { return format_id; }
+	void set_format_id(MicrophoneFeedFormatId p_format_id) { format_id = p_format_id; }
 
 	float get_sample_rate() const { return sample_rate; }
 	void set_sample_rate(float p_sample_rate) {

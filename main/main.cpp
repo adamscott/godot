@@ -2707,7 +2707,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 			if (project_manager) {
 				microphone_driver = "dummy";
 			} else {
-				microphone_driver = GLOBAL_GET("audio/driver/microphone_server_driver");
+				microphone_driver = GLOBAL_GET("audio/driver/microphone_driver");
 			}
 		}
 

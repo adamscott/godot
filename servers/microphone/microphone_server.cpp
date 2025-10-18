@@ -135,8 +135,12 @@ void MicrophoneServer::init() {
 	// TODO: Init.
 }
 
-MicrophoneServer::MicrophoneServer() {}
-MicrophoneServer::~MicrophoneServer() {}
+MicrophoneServer::MicrophoneServer() {
+	singleton = this;
+}
+MicrophoneServer::~MicrophoneServer() {
+	singleton = nullptr;
+}
 
 void MicrophoneServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_monitoring_feeds", "is_monitoring_feeds"), &MicrophoneServer::set_monitoring_feeds);

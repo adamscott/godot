@@ -31,6 +31,7 @@
 #include "microphone_feed.h"
 
 #include "core/object/object.h"
+#include "servers/microphone/microphone_driver.h"
 #include "servers/microphone/microphone_server.h"
 
 void MicrophoneFeed::update_buffer_size() {
@@ -64,11 +65,16 @@ void MicrophoneFeed::clear_buffer() {
 bool MicrophoneFeed::activate_feed() {
 	bool ret = true;
 	GDVIRTUAL_CALL(_activate_feed, ret);
+
+	if (ret) {
+		return MicrophoneDriver::get_singleton()->activate_feed(this);
+	}
 	return ret;
 }
 
 void MicrophoneFeed::deactivate_feed() {
 	GDVIRTUAL_CALL(_deactivate_feed);
+	MicrophoneDriver::get_singleton()->deactivate_feed(this);
 }
 
 MicrophoneFeed::MicrophoneFeed() {
