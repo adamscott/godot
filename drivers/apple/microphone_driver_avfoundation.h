@@ -37,9 +37,13 @@
 #include <AVFoundation/AVFoundation.h>
 
 class MicrophoneFeed;
+@class MicrophoneDeviceNotification;
 
 class MicrophoneDriverAVFoundation : public MicrophoneDriver {
 protected:
+	bool monitoring_feeds = false;
+	MicrophoneDeviceNotification *device_notifications = nullptr;
+
 	struct FeedEntry {
 		Ref<MicrophoneFeed> feed;
 		AVCaptureDevice *device;

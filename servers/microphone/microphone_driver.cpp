@@ -31,6 +31,7 @@
 #include "microphone_driver.h"
 
 #include "core/config/project_settings.h"
+#include "servers/microphone/microphone_feed.h"
 
 /*
  * MicrophoneDriver
@@ -39,6 +40,10 @@ MicrophoneDriver *MicrophoneDriver::singleton = nullptr;
 
 Error MicrophoneDriver::init() {
 	return OK;
+}
+
+RingBuffer<uint8_t> &MicrophoneDriver::get_ring_buffer(Ref<MicrophoneFeed> p_microphone_feed) {
+	return p_microphone_feed->ring_buffer;
 }
 
 MicrophoneDriver::MicrophoneDriver() {}

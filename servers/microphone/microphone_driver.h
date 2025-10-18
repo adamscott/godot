@@ -34,6 +34,7 @@
 #include "core/object/ref_counted.h"
 #include "core/string/ustring.h"
 #include "core/templates/local_vector.h"
+#include "core/templates/ring_buffer.h"
 
 class MicrophoneFeed;
 
@@ -41,6 +42,8 @@ class MicrophoneDriver {
 	static MicrophoneDriver *singleton;
 
 public:
+	static RingBuffer<uint8_t> &get_ring_buffer(Ref<MicrophoneFeed> p_feed);
+
 	static MicrophoneDriver *get_singleton() { return singleton; }
 	void set_singleton() { singleton = this; }
 
