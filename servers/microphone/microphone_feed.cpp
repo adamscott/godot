@@ -78,7 +78,7 @@ void MicrophoneFeed::deactivate_feed() {
 }
 
 MicrophoneFeed::MicrophoneFeed() {
-	id = MicrophoneServer::get_singleton()->get_free_id();
+	id = -1;
 	name = "???";
 }
 
@@ -92,6 +92,8 @@ void MicrophoneFeed::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_active", "active"), &MicrophoneFeed::set_active);
 	ClassDB::bind_method(D_METHOD("get_name"), &MicrophoneFeed::get_name);
 	ClassDB::bind_method(D_METHOD("set_name", "name"), &MicrophoneFeed::set_name);
+	ClassDB::bind_method(D_METHOD("get_description"), &MicrophoneFeed::get_description);
+	ClassDB::bind_method(D_METHOD("set_description", "description"), &MicrophoneFeed::set_description);
 	ClassDB::bind_method(D_METHOD("get_sample_rate"), &MicrophoneFeed::get_sample_rate);
 	ClassDB::bind_method(D_METHOD("set_sample_rate", "sample_rate"), &MicrophoneFeed::set_sample_rate);
 	ClassDB::bind_method(D_METHOD("get_buffer_length"), &MicrophoneFeed::get_buffer_length);
@@ -107,14 +109,15 @@ void MicrophoneFeed::_bind_methods() {
 	GDVIRTUAL_BIND(_activate_feed);
 	GDVIRTUAL_BIND(_deactivate_feed);
 
+	ADD_PROPERTY(PropertyInfo(Variant::STRING, "name"), "set_name", "get_name");
+	ADD_PROPERTY(PropertyInfo(Variant::STRING, "description"), "set_description", "get_description");
+
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "sample_rate"), "set_sample_rate", "get_sample_rate");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "buffer_length"), "set_buffer_length", "get_buffer_length");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "channels_per_frame"), "set_channels_per_frame", "get_channels_per_frame");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "bytes_per_frame"), "set_bytes_per_frame", "get_bytes_per_frame");
 
-	ADD_GROUP("Feed", "feed_");
-	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "feed_is_active"), "set_active", "is_active");
-	ADD_PROPERTY(PropertyInfo(Variant::STRING, "feed_name"), "set_name", "get_name");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "active"), "set_active", "is_active");
 
 	ADD_SIGNAL(MethodInfo(SNAME("feed_activated")));
 	ADD_SIGNAL(MethodInfo(SNAME("feed_deactivated")));

@@ -32,9 +32,10 @@
 
 #include "core/error/error_macros.h"
 #include "servers/microphone/microphone_feed.h"
+#include "servers/microphone/microphone_server.h"
 #include <CoreAudioTypes/CoreAudioBaseTypes.h>
 
-MicrophoneDriverAVFoundation::FeedEntry *MicrophoneDriverAVFoundation::get_feed_entry_from_feed(Ref<MicrophoneFeed> p_feed) {
+MicrophoneDriverAVFoundation::FeedEntry *MicrophoneDriverAVFoundation::get_feed_entry_from_feed(const Ref<MicrophoneFeed> p_feed) const {
 	for (FeedEntry &feed_entry : _feed_entries) {
 		if (feed_entry.feed == p_feed) {
 			return &feed_entry;
@@ -49,6 +50,9 @@ void MicrophoneDriverAVFoundation::setup_feed_to_device_settings(Ref<MicrophoneF
 	ERR_FAIL_COND(CMFormatDescriptionGetMediaType(format_description) != kCMMediaType_Audio);
 	const AudioStreamBasicDescription *audio_format_stream_basic_description = CMAudioFormatDescriptionGetStreamBasicDescription(format_description);
 	ERR_FAIL_COND(audio_format_stream_basic_description == nullptr);
+
+	p_feed->set_name(String::utf8(p_device.localizedName.UTF8String));
+	p_feed->set_description(String::utf8(p_device.description.UTF8String));
 
 	p_feed->set_sample_rate(audio_format_stream_basic_description->mSampleRate);
 	p_feed->set_channels_per_frame(audio_format_stream_basic_description->mChannelsPerFrame);
@@ -84,7 +88,7 @@ void MicrophoneDriverAVFoundation::set_monitoring_feeds(bool p_monitoring_feeds)
 }
 
 bool MicrophoneDriverAVFoundation::is_monitoring_feeds() const {
-	return device_notifications != nil;
+	return monitoring_feeds;
 }
 
 LocalVector<Ref<MicrophoneFeed>> MicrophoneDriverAVFoundation::get_feeds() const {
@@ -95,8 +99,13 @@ LocalVector<Ref<MicrophoneFeed>> MicrophoneDriverAVFoundation::get_feeds() const
 	return feeds;
 }
 
+uint32_t MicrophoneDriverAVFoundation::get_feed_count() const {
+	return _feed_entries.size();
+}
+
 void MicrophoneDriverAVFoundation::update_feeds() {
 	NSArray<AVCaptureDevice *> *devices = nullptr;
+	bool feeds_updated = false;
 
 #if defined(__x86_64__)
 	if (@available(macOS 10.15, *)) {
@@ -116,7 +125,7 @@ void MicrophoneDriverAVFoundation::update_feeds() {
 #endif
 
 	// Remove outdated devices.
-	for (uint32_t i = _feed_entries.size() - 1; i >= 0; i--) {
+	for (int64_t i = (int64_t)_feed_entries.size() - 1; i >= 0; i--) {
 		FeedEntry *feed_entry = &_feed_entries[i];
 		if (feed_entry->feed.is_null()) {
 			continue;
@@ -124,6 +133,7 @@ void MicrophoneDriverAVFoundation::update_feeds() {
 
 		if (![devices containsObject:feed_entry->device]) {
 			remove_feed_entry(feed_entry);
+			feeds_updated = true;
 		}
 	};
 
@@ -142,15 +152,23 @@ void MicrophoneDriverAVFoundation::update_feeds() {
 		if (found) {
 			continue;
 		}
+		feeds_updated = true;
 
 		Ref<MicrophoneFeed> feed;
 		feed.instantiate();
+		set_feed_id(feed);
 		setup_feed_to_device_settings(feed, device);
 		_feed_entries.push_back({ .feed = feed, .device = device });
+		MicrophoneServer::get_singleton()->emit_signal("feed_added", feed);
+	}
+
+	if (feeds_updated) {
+		MicrophoneServer::get_singleton()->emit_signal("feeds_updated");
 	}
 }
 
 void MicrophoneDriverAVFoundation::remove_feed_entry(FeedEntry *p_feed_entry) {
+	Ref<MicrophoneFeed> feed = p_feed_entry->feed;
 	deactivate_feed_entry(p_feed_entry);
 	for (uint32_t i = 0; i < _feed_entries.size(); i++) {
 		if (&_feed_entries[i] == p_feed_entry) {
@@ -158,14 +176,18 @@ void MicrophoneDriverAVFoundation::remove_feed_entry(FeedEntry *p_feed_entry) {
 			break;
 		}
 	}
+	MicrophoneServer::get_singleton()->emit_signal("feed_removed", feed);
 }
 
 bool MicrophoneDriverAVFoundation::activate_feed_entry(FeedEntry *p_feed_entry) {
+	print_line(vformat("activate_feed_entry"));
+
 	if (p_feed_entry->capture_session) {
 		return true;
 	}
 
-	auto init_device_capture_session = [p_feed_entry]() -> void {
+	auto init_device_capture_session = [&p_feed_entry]() -> void {
+		print_line(vformat("start capture"));
 		p_feed_entry->capture_session = [[MicrophoneDeviceCaptureSession alloc] initForFeed:p_feed_entry->feed
 																				  andDevice:p_feed_entry->device];
 		p_feed_entry->feed->emit_signal(SNAME("feed_activated"));
@@ -204,7 +226,6 @@ bool MicrophoneDriverAVFoundation::activate_feed_entry(FeedEntry *p_feed_entry) 
 
 void MicrophoneDriverAVFoundation::deactivate_feed_entry(FeedEntry *p_feed_entry) {
 	ERR_FAIL_NULL(p_feed_entry);
-
 	if (p_feed_entry->capture_session) {
 		[p_feed_entry->capture_session cleanup];
 		p_feed_entry->capture_session = nil;
@@ -221,6 +242,36 @@ void MicrophoneDriverAVFoundation::deactivate_feed(Ref<MicrophoneFeed> p_feed) {
 	FeedEntry *feed_entry = get_feed_entry_from_feed(p_feed);
 	ERR_FAIL_NULL(feed_entry);
 	deactivate_feed_entry(feed_entry);
+}
+
+bool MicrophoneDriverAVFoundation::is_feed_active(const Ref<MicrophoneFeed> p_feed) const {
+	FeedEntry *feed_entry = get_feed_entry_from_feed(p_feed);
+	ERR_FAIL_NULL_V(feed_entry, false);
+	return feed_entry->capture_session != nil;
+}
+
+void MicrophoneDriverAVFoundation::set_feed_active(Ref<MicrophoneFeed> p_feed, bool p_active) {
+	FeedEntry *feed_entry = get_feed_entry_from_feed(p_feed);
+	ERR_FAIL_NULL(feed_entry);
+	bool feed_entry_active = feed_entry->capture_session != nil;
+	if (feed_entry_active == p_active) {
+		return;
+	}
+	if (!p_active) {
+		deactivate_feed_entry(feed_entry);
+		return;
+	}
+	activate_feed_entry(feed_entry);
+}
+
+MicrophoneDriverAVFoundation::MicrophoneDriverAVFoundation() {
+	_feed_entries.clear();
+}
+
+MicrophoneDriverAVFoundation::~MicrophoneDriverAVFoundation() {
+	for (int64_t i = (int64_t)_feed_entries.size() - 1; i <= 0; i--) {
+		remove_feed_entry(&_feed_entries[i]);
+	}
 }
 
 /*
@@ -328,7 +379,6 @@ void MicrophoneDriverAVFoundation::deactivate_feed(Ref<MicrophoneFeed> p_feed) {
 			nil);
 	ERR_FAIL_COND_MSG(os_error != noErr, vformat("error when calling CMSampleBufferGetAudioBufferListWithRetainedBlockBuffer: %s", os_error));
 
-	// print_line(vformat("bufferSize: %s", (uint64_t)bufferSize));
 	CMBlockBufferRef blockBuffer = CMSampleBufferGetDataBuffer(pSampleBuffer);
 	AudioBufferList *audioBufferList = (AudioBufferList *)malloc(bufferSize);
 
@@ -345,13 +395,14 @@ void MicrophoneDriverAVFoundation::deactivate_feed(Ref<MicrophoneFeed> p_feed) {
 
 	for (UInt32 i = 0; i < audioBufferList->mNumberBuffers; i++) {
 		AudioBuffer &audioBuffer = audioBufferList->mBuffers[i];
-		RingBuffer<uint8_t> &ringBuffer = MicrophoneDriver::get_ring_buffer(feed);
-		uint32_t spaceLeft = ringBuffer.space_left();
+		RingBuffer<uint8_t> *ringBuffer = MicrophoneDriver::get_ring_buffer_from_feed(feed);
+		uint32_t spaceLeft = ringBuffer->space_left();
 		uint32_t dataSize = audioBuffer.mDataByteSize;
 		if (spaceLeft < dataSize) {
-			ringBuffer.advance_read(dataSize - spaceLeft);
+			ringBuffer->advance_read(dataSize - spaceLeft);
 		}
-		uint32_t writeSize = ringBuffer.write((uint8_t *)audioBuffer.mData, dataSize);
+		print_line(vformat("writing %s bytes to ringBuffer %x", dataSize, (uint64_t)(pointer_t)ringBuffer));
+		uint32_t writeSize = ringBuffer->write((uint8_t *)audioBuffer.mData, dataSize);
 		if (writeSize != dataSize) {
 			ERR_PRINT(vformat("writeSize (%s) != dataSize (%s)", writeSize, dataSize));
 		}

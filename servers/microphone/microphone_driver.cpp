@@ -37,13 +37,19 @@
  * MicrophoneDriver
  */
 MicrophoneDriver *MicrophoneDriver::singleton = nullptr;
+uint32_t MicrophoneDriver::next_feed_id = 0;
 
 Error MicrophoneDriver::init() {
 	return OK;
 }
 
-RingBuffer<uint8_t> &MicrophoneDriver::get_ring_buffer(Ref<MicrophoneFeed> p_feed) {
-	return p_feed->ring_buffer;
+RingBuffer<uint8_t> *MicrophoneDriver::get_ring_buffer_from_feed(Ref<MicrophoneFeed> p_feed) {
+	return &p_feed->ring_buffer;
+}
+
+void MicrophoneDriver::set_feed_id(Ref<MicrophoneFeed> p_feed) {
+	p_feed->id = next_feed_id;
+	next_feed_id += 1;
 }
 
 MicrophoneDriver::MicrophoneDriver() {}

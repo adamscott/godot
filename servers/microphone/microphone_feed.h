@@ -33,6 +33,7 @@
 #include "core/object/gdvirtual.gen.inc"
 #include "core/object/ref_counted.h"
 #include "core/templates/ring_buffer.h"
+#include "servers/microphone/microphone_driver.h"
 #include "servers/microphone/microphone_server.h"
 
 class MicrophoneDriver;
@@ -49,10 +50,12 @@ public:
 	};
 
 private:
-	int id;
+	uint32_t id;
 	bool active = false;
 
 protected:
+	static void _bind_methods();
+
 	String name;
 	String description;
 	MicrophoneFeedFormatId format_id = MICROPHONE_FEED_FORMAT_ID_LINEAR_PCM;
@@ -69,17 +72,18 @@ protected:
 		return (8 * bytes_per_frame) / channels_per_frame;
 	}
 
-	static void _bind_methods();
 	void resize_buffer();
 	void update_ring_buffer_size();
 
 public:
 	int get_id() const { return id; }
-	virtual bool is_active() const { return active; }
-	virtual void set_active(bool p_is_active) { active = p_is_active; }
+	virtual bool is_active() const { return MicrophoneDriver::get_singleton()->is_feed_active(Ref<MicrophoneFeed>(this)); }
+	virtual void set_active(bool p_active) { MicrophoneDriver::get_singleton()->set_feed_active(Ref<MicrophoneFeed>(this), p_active); }
 
 	String get_name() const { return name; }
 	void set_name(String p_name) { name = p_name; }
+	String get_description() const { return description; }
+	void set_description(String p_description) { description = p_description; }
 
 	MicrophoneFeedFormatId get_format_id() const { return format_id; }
 	void set_format_id(MicrophoneFeedFormatId p_format_id) { format_id = p_format_id; }

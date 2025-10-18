@@ -30,6 +30,7 @@
 
 #include "microphone_server.h"
 
+#include "core/object/object.h"
 #include "core/variant/typed_array.h"
 #include "servers/microphone/microphone_driver.h"
 #include "servers/microphone/microphone_feed.h"
@@ -44,99 +45,51 @@ bool MicrophoneServer::is_monitoring_feeds() const {
 	return MicrophoneDriver::get_singleton()->is_monitoring_feeds();
 }
 
-int MicrophoneServer::get_free_id() {
-	bool id_exists = true;
-	int newid = 0;
-
-	// find a free id
-	while (id_exists) {
-		newid++;
-		id_exists = false;
-		for (int i = 0; i < feeds.size() && !id_exists; i++) {
-			if (feeds[i]->get_id() == newid) {
-				id_exists = true;
-			};
-		};
-	};
-
-	return newid;
-}
-
 int MicrophoneServer::get_feed_index(int p_id) {
-	ERR_FAIL_COND_V_MSG(!monitoring_feeds, -1, "MicrophoneServer is not actively monitoring feeds; call set_monitoring_feeds(true) first.");
-
-	for (int i = 0; i < feeds.size(); i++) {
+	ERR_FAIL_COND_V_MSG(!is_monitoring_feeds(), -1, "MicrophoneServer is not actively monitoring feeds; call set_monitoring_feeds(true) first.");
+	LocalVector<Ref<MicrophoneFeed>> feeds = MicrophoneDriver::get_singleton()->get_feeds();
+	for (uint32_t i = 0; i < feeds.size(); i++) {
 		if (feeds[i]->get_id() == p_id) {
 			return i;
-		};
-	};
-
+		}
+	}
 	return -1;
 }
 
 Ref<MicrophoneFeed> MicrophoneServer::get_feed_by_id(int p_id) {
-	ERR_FAIL_COND_V_MSG(!monitoring_feeds, nullptr, "MicrophoneServer is not actively monitoring feeds; call set_monitoring_feeds(true) first.");
-
-	int index = get_feed_index(p_id);
-
-	if (index == -1) {
-		return nullptr;
-	} else {
-		return feeds[index];
+	ERR_FAIL_COND_V_MSG(!is_monitoring_feeds(), nullptr, "MicrophoneServer is not actively monitoring feeds; call set_monitoring_feeds(true) first.");
+	LocalVector<Ref<MicrophoneFeed>> feeds = MicrophoneDriver::get_singleton()->get_feeds();
+	for (uint32_t i = 0; i < feeds.size(); i++) {
+		if (feeds[i]->get_id() == p_id) {
+			return feeds[i];
+		}
 	}
-}
-
-void MicrophoneServer::add_feed(const Ref<MicrophoneFeed> &p_feed) {
-	ERR_FAIL_COND(p_feed.is_null());
-
-	// add our feed
-	feeds.push_back(p_feed);
-
-	print_verbose("MicrophoneServer: Registered camera " + p_feed->get_name() + " with ID " + itos(p_feed->get_id()) + " at index " + itos(feeds.size() - 1));
-
-	// let whomever is interested know
-	emit_signal(SNAME("feed_added"), p_feed->get_id());
-}
-
-void MicrophoneServer::remove_feed(const Ref<MicrophoneFeed> &p_feed) {
-	for (int i = 0; i < feeds.size(); i++) {
-		if (feeds[i] == p_feed) {
-			int feed_id = p_feed->get_id();
-
-			print_verbose("MicrophoneServer: Removed camera " + p_feed->get_name() + " with ID " + itos(feed_id));
-
-			// remove it from our array, if this results in our feed being unreferenced it will be destroyed
-			feeds.remove_at(i);
-
-			// let whomever is interested know
-			emit_signal(SNAME("feed_removed"), feed_id);
-			return;
-		};
-	};
+	return nullptr;
 }
 
 Ref<MicrophoneFeed> MicrophoneServer::get_feed(int p_index) {
-	ERR_FAIL_COND_V_MSG(!monitoring_feeds, nullptr, "MicrophoneServer is not actively monitoring feeds; call set_monitoring_feeds(true) first.");
-	ERR_FAIL_INDEX_V(p_index, feeds.size(), nullptr);
-
+	ERR_FAIL_COND_V_MSG(!is_monitoring_feeds(), nullptr, "MicrophoneServer is not actively monitoring feeds; call set_monitoring_feeds(true) first.");
+	LocalVector<Ref<MicrophoneFeed>> feeds = MicrophoneDriver::get_singleton()->get_feeds();
+	ERR_FAIL_COND_V(p_index < 0, nullptr);
+	ERR_FAIL_INDEX_V((uint32_t)p_index, feeds.size(), nullptr);
 	return feeds[p_index];
 }
 
-int MicrophoneServer::get_feed_count() {
-	ERR_FAIL_COND_V_MSG(!monitoring_feeds, 0, "MicrophoneServer is not actively monitoring feeds; call set_monitoring_feeds(true) first.");
-	return feeds.size();
+int MicrophoneServer::get_feed_count() const {
+	ERR_FAIL_COND_V_MSG(!is_monitoring_feeds(), 0, "MicrophoneServer is not actively monitoring feeds; call set_monitoring_feeds(true) first.");
+	return MicrophoneDriver::get_singleton()->get_feed_count();
 }
 
 TypedArray<MicrophoneFeed> MicrophoneServer::get_feeds() {
-	ERR_FAIL_COND_V_MSG(!monitoring_feeds, {}, "MicrophoneServer is not actively monitoring feeds; call set_monitoring_feeds(true) first.");
+	ERR_FAIL_COND_V_MSG(!is_monitoring_feeds(), {}, "MicrophoneServer is not actively monitoring feeds; call set_monitoring_feeds(true) first.");
 	TypedArray<MicrophoneFeed> return_feeds;
-	int cc = get_feed_count();
-	return_feeds.resize(cc);
+	int feed_count = get_feed_count();
+	return_feeds.resize(feed_count);
 
-	for (int i = 0; i < feeds.size(); i++) {
-		return_feeds[i] = get_feed(i);
+	LocalVector<Ref<MicrophoneFeed>> feeds = MicrophoneDriver::get_singleton()->get_feeds();
+	for (int i = 0; i < feed_count; i++) {
+		return_feeds[i] = feeds[i];
 	};
-
 	return return_feeds;
 }
 
@@ -159,12 +112,9 @@ void MicrophoneServer::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_feed", "index"), &MicrophoneServer::get_feed);
 	ClassDB::bind_method(D_METHOD("get_feed_count"), &MicrophoneServer::get_feed_count);
-	ClassDB::bind_method(D_METHOD("feeds"), &MicrophoneServer::get_feeds);
+	ClassDB::bind_method(D_METHOD("get_feeds"), &MicrophoneServer::get_feeds);
 
-	ClassDB::bind_method(D_METHOD("add_feed", "feed"), &MicrophoneServer::add_feed);
-	ClassDB::bind_method(D_METHOD("remove_feed", "feed"), &MicrophoneServer::remove_feed);
-
-	ADD_SIGNAL(MethodInfo(SNAME("feed_added"), PropertyInfo(Variant::INT, "id")));
-	ADD_SIGNAL(MethodInfo(SNAME("feed_removed"), PropertyInfo(Variant::INT, "id")));
+	ADD_SIGNAL(MethodInfo(SNAME("feed_added"), PropertyInfo(Variant::OBJECT, "feed")));
+	ADD_SIGNAL(MethodInfo(SNAME("feed_removed"), PropertyInfo(Variant::OBJECT, "feed")));
 	ADD_SIGNAL(MethodInfo(SNAME("feeds_updated")));
 }

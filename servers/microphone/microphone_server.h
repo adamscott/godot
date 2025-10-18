@@ -47,7 +47,6 @@ protected:
 	static void _bind_methods();
 
 	bool monitoring_feeds = false;
-	Vector<Ref<MicrophoneFeed>> feeds;
 
 public:
 	static MicrophoneServer *get_singleton() { return singleton; }
@@ -55,19 +54,12 @@ public:
 	virtual void set_monitoring_feeds(bool p_monitoring_feeds);
 	bool is_monitoring_feeds() const;
 
-	// Right now we identify our feed by it's ID when it's used in the background.
-	// May see if we can change this to purely relying on MicrophoneFeed objects or by name.
-	int get_free_id();
 	int get_feed_index(int p_id);
 	Ref<MicrophoneFeed> get_feed_by_id(int p_id);
 
-	// Add and remove feeds.
-	void add_feed(const Ref<MicrophoneFeed> &p_feed);
-	void remove_feed(const Ref<MicrophoneFeed> &p_feed);
-
 	// Get our feeds.
 	Ref<MicrophoneFeed> get_feed(int p_index);
-	int get_feed_count();
+	int get_feed_count() const;
 	TypedArray<MicrophoneFeed> get_feeds();
 
 	void init();
