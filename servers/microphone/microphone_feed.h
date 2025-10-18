@@ -35,14 +35,25 @@
 #include "core/templates/ring_buffer.h"
 #include "servers/microphone/microphone_server.h"
 
+class MicrophoneDriver;
+
 class MicrophoneFeed : public RefCounted {
 	GDCLASS(MicrophoneFeed, RefCounted);
 
+	friend MicrophoneDriver;
+
 private:
 	int id;
+	bool active;
 
 protected:
-	String name; // name of our camera feed
+	enum MicrophoneFeedFormatId {
+		MICROPHONE_FEED_FORMAT_ID_LINEAR_PCM,
+		MICROPHONE_FEED_FORMAT_ID_MAX,
+	};
+
+	String name;
+	String description;
 	double sample_rate = 44100;
 	float buffer_length = 0.5;
 	uint64_t buffer_size = 0;
@@ -60,8 +71,8 @@ protected:
 
 public:
 	int get_id() const { return id; }
-	virtual bool is_active() const = 0;
-	virtual void set_active(bool p_is_active) = 0;
+	virtual bool is_active() const { return active; }
+	virtual void set_active(bool p_is_active) { active = p_is_active; }
 
 	String get_name() const { return name; }
 	void set_name(String p_name) { name = p_name; }
@@ -104,8 +115,6 @@ public:
 
 	PackedByteArray get_buffer() const;
 	void clear_buffer();
-
-	virtual void set_to_device_native_settings() = 0;
 
 	virtual bool activate_feed();
 	virtual void deactivate_feed();

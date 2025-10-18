@@ -32,11 +32,24 @@
 
 #include "servers/microphone/microphone_driver.h"
 
+#include "core/object/ref_counted.h"
+
 #include <AVFoundation/AVFoundation.h>
 
+class MicrophoneFeed;
+
 class MicrophoneDriverAVFoundation : public MicrophoneDriver {
+protected:
+	struct FeedEntry {
+		Ref<MicrophoneFeed> feed;
+		AVCaptureDevice *device;
+	};
+
+	mutable LocalVector<FeedEntry> _feed_entries;
+
 public:
-	virtual LocalVector<Device> get_devices() const override;
+	virtual LocalVector<Ref<MicrophoneFeed>> get_feeds() const override;
+	virtual void update_feeds() override;
 
 	virtual void set_monitoring_feeds(bool p_monitoring_feeds) override;
 	virtual bool get_monitoring_feeds() const override;
@@ -46,3 +59,31 @@ public:
 	MicrophoneDriverAVFoundation();
 	~MicrophoneDriverAVFoundation();
 };
+
+@interface MicrophoneDeviceNotification : NSObject {
+	MicrophoneDriverAVFoundation *microphoneDriver;
+}
+
+- (void)addObservers;
+- (void)removeObservers;
+
+- (void)devicesChanged:(NSNotification *)notification;
+- (id)initForDriver:(MicrophoneDriverAVFoundation *)pDriver;
+- (void)dealloc;
+@end
+
+@interface MicrophoneDeviceCaptureSession : AVCaptureSession <AVCaptureAudioDataOutputSampleBufferDelegate> {
+	Ref<MicrophoneFeed> feed;
+	AVCaptureDeviceInput *inputDevice;
+	AVCaptureAudioDataOutput *dataOutput;
+}
+
+- (id)initForFeed:(Ref<MicrophoneFeed>)pFeed
+		andDevice:(AVCaptureDevice *)pDevice;
+- (void)captureOutput:(AVCaptureOutput *)pCaptureOutput
+		didOutputSampleBuffer:(CMSampleBufferRef)pSampleBuffer
+			   fromConnection:(AVCaptureConnection *)pConnection;
+
+- (void)cleanup;
+
+@end

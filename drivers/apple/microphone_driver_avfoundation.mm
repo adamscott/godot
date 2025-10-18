@@ -30,6 +30,8 @@
 
 #include "microphone_driver_avfoundation.h"
 
+#include "servers/microphone/microphone_feed.h"
+
 void MicrophoneDriverAVFoundation::set_monitoring_feeds(bool p_monitoring_feeds) {
 }
 
@@ -37,10 +39,67 @@ bool MicrophoneDriverAVFoundation::get_monitoring_feeds() const {
 	return false;
 }
 
-LocalVector<MicrophoneDriver::Device> MicrophoneDriverAVFoundation::get_devices() const {
-	LocalVector<MicrophoneDriver::Device> devices;
+LocalVector<Ref<MicrophoneFeed>> MicrophoneDriverAVFoundation::get_feeds() const {
+	LocalVector<Ref<MicrophoneFeed>> feeds;
+	for (FeedEntry &feed_entry : _feed_entries) {
+		feeds.push_back(feed_entry.feed);
+	}
+	return feeds;
+}
 
-	return devices;
+void MicrophoneDriverAVFoundation::update_feeds() {
+	NSArray<AVCaptureDevice *> *devices = nullptr;
+
+#if defined(__x86_64__)
+	if (@available(macOS 10.15, *)) {
+#endif
+		AVCaptureDeviceDiscoverySession *session;
+		if (@available(macOS 14.0, *)) {
+			// AVCaptureDeviceTypeBuiltInMicrophone is deprecated since macOS 14.0
+			session = [AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:[NSArray arrayWithObjects:AVCaptureDeviceTypeMicrophone, nil] mediaType:AVMediaTypeAudio position:AVCaptureDevicePositionUnspecified];
+		} else {
+			session = [AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:[NSArray arrayWithObjects:AVCaptureDeviceTypeBuiltInMicrophone, nil] mediaType:AVMediaTypeAudio position:AVCaptureDevicePositionUnspecified];
+		}
+		devices = session.devices;
+#if defined(__x86_64__)
+	} else {
+		devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeAudio];
+	}
+#endif
+
+	// Remove outdated devices.
+	for (uint32_t i = _feed_entries.size() - 1; i >= 0; i--) {
+		FeedEntry &feed_entry = _feed_entries[i];
+		if (feed_entry.feed.is_null()) {
+			continue;
+		}
+
+		if (![devices containsObject:feed_entry.device]) {
+			// remove_feed(feed);
+			_feed_entries.remove_at(i);
+		}
+	};
+
+	for (AVCaptureDevice *device in devices) {
+		bool found = false;
+		for (uint32_t i = 0; i < _feed_entries.size(); i++) {
+			FeedEntry &feed_entry = _feed_entries[i];
+			if (feed_entry.feed.is_null()) {
+				continue;
+			}
+			if (feed_entry.device == device) {
+				found = true;
+			}
+		}
+
+		if (found) {
+			continue;
+		}
+
+		Ref<MicrophoneFeed> feed;
+		feed.instantiate();
+		_feed_entries.push_back({ .feed = feed, .device = device });
+	}
 }
 
 MicrophoneDriverAVFoundation::MicrophoneDriverAVFoundation() {}

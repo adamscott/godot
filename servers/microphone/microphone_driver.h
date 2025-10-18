@@ -31,35 +31,21 @@
 #pragma once
 
 #include "core/error/error_list.h"
+#include "core/object/ref_counted.h"
 #include "core/string/ustring.h"
 #include "core/templates/local_vector.h"
+
+class MicrophoneFeed;
 
 class MicrophoneDriver {
 	static MicrophoneDriver *singleton;
 
 public:
-	enum DataFormatId {
-		DATA_FORMAT_ID_LINEAR_PCM,
-		DATA_FORMAT_ID_MAX,
-	};
-
-	struct DeviceFormat {
-		DataFormatId data_format_id;
-		double sample_rate;
-		int32_t bytes_per_frame;
-		int32_t channels_per_frame;
-	};
-
-	struct Device {
-		String name;
-		String description;
-		DeviceFormat defaultFormatValues;
-	};
-
 	static MicrophoneDriver *get_singleton() { return singleton; }
 	void set_singleton() { singleton = this; }
 
-	virtual LocalVector<Device> get_devices() const = 0;
+	virtual LocalVector<Ref<MicrophoneFeed>> get_feeds() const = 0;
+	virtual void update_feeds() = 0;
 
 	virtual void set_monitoring_feeds(bool p_monitoring_feeds) = 0;
 	virtual bool get_monitoring_feeds() const = 0;
@@ -73,7 +59,8 @@ public:
 
 class MicrophoneDriverDummy : public MicrophoneDriver {
 public:
-	virtual LocalVector<Device> get_devices() const { return LocalVector<Device>(); }
+	virtual LocalVector<Ref<MicrophoneFeed>> get_feeds() const { return LocalVector<Ref<MicrophoneFeed>>(); }
+	virtual void update_feeds() {}
 
 	virtual void set_monitoring_feeds(bool p_monitoring_feeds) {}
 	virtual bool get_monitoring_feeds() const { return false; }
