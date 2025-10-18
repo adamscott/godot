@@ -53,7 +53,7 @@ public:
 	virtual void deactivate_feed(Ref<MicrophoneFeed> p_feed) = 0;
 
 	virtual void set_monitoring_feeds(bool p_monitoring_feeds) = 0;
-	virtual bool get_monitoring_feeds() const = 0;
+	virtual bool is_monitoring_feeds() const = 0;
 
 	virtual String get_name() const = 0;
 	virtual Error init();
@@ -68,7 +68,7 @@ public:
 	virtual void update_feeds() {}
 
 	virtual void set_monitoring_feeds(bool p_monitoring_feeds) {}
-	virtual bool get_monitoring_feeds() const { return false; }
+	virtual bool is_monitoring_feeds() const { return false; }
 	virtual bool activate_feed(Ref<MicrophoneFeed> p_feed) { return false; }
 	virtual void deactivate_feed(Ref<MicrophoneFeed> p_feed) {}
 

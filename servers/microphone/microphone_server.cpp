@@ -31,9 +31,18 @@
 #include "microphone_server.h"
 
 #include "core/variant/typed_array.h"
+#include "servers/microphone/microphone_driver.h"
 #include "servers/microphone/microphone_feed.h"
 
 MicrophoneServer *MicrophoneServer::singleton = nullptr;
+
+void MicrophoneServer::set_monitoring_feeds(bool p_monitoring_feeds) {
+	MicrophoneDriver::get_singleton()->set_monitoring_feeds(p_monitoring_feeds);
+}
+
+bool MicrophoneServer::is_monitoring_feeds() const {
+	return MicrophoneDriver::get_singleton()->is_monitoring_feeds();
+}
 
 int MicrophoneServer::get_free_id() {
 	bool id_exists = true;

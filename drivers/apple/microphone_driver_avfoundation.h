@@ -72,7 +72,7 @@ public:
 	virtual void deactivate_feed(Ref<MicrophoneFeed> p_feed) override;
 
 	virtual void set_monitoring_feeds(bool p_monitoring_feeds) override;
-	virtual bool get_monitoring_feeds() const override;
+	virtual bool is_monitoring_feeds() const override;
 
 	virtual String get_name() const override { return String("AVFoundation"); }
 

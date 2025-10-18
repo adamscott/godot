@@ -83,7 +83,7 @@ void MicrophoneDriverAVFoundation::set_monitoring_feeds(bool p_monitoring_feeds)
 	device_notifications = [[MicrophoneDeviceNotification alloc] initForDriver:this];
 }
 
-bool MicrophoneDriverAVFoundation::get_monitoring_feeds() const {
+bool MicrophoneDriverAVFoundation::is_monitoring_feeds() const {
 	return device_notifications != nil;
 }
 

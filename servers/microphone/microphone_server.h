@@ -52,8 +52,8 @@ protected:
 public:
 	static MicrophoneServer *get_singleton() { return singleton; }
 
-	virtual void set_monitoring_feeds(bool p_monitoring_feeds) { monitoring_feeds = p_monitoring_feeds; }
-	_FORCE_INLINE_ bool is_monitoring_feeds() const { return monitoring_feeds; }
+	virtual void set_monitoring_feeds(bool p_monitoring_feeds);
+	bool is_monitoring_feeds() const;
 
 	// Right now we identify our feed by it's ID when it's used in the background.
 	// May see if we can change this to purely relying on MicrophoneFeed objects or by name.
@@ -69,8 +69,6 @@ public:
 	Ref<MicrophoneFeed> get_feed(int p_index);
 	int get_feed_count();
 	TypedArray<MicrophoneFeed> get_feeds();
-
-	MicrophoneServer *create(int p_microphone_driver_index);
 
 	void init();
 
