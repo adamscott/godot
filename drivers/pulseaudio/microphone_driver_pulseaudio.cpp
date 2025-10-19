@@ -369,7 +369,6 @@ void MicrophoneDriverPulseAudio::start_updating_feeds() {
 #else
 	pa_mainloop_lock(_pa_mainloop);
 #endif // THREADS_ENABLED
-	print_line("locked");
 
 	_pa_context_subscription_source_operation = pa_context_subscribe(_pa_context, PA_SUBSCRIPTION_MASK_SOURCE, nullptr, nullptr);
 	pa_context_set_subscribe_callback(_pa_context, &MicrophoneDriverPulseAudio::_pa_context_subscription_source_callback, this);
@@ -379,8 +378,6 @@ void MicrophoneDriverPulseAudio::start_updating_feeds() {
 #else
 	pa_mainloop_unlock(_pa_mainloop);
 #endif
-
-	print_line("unlocked");
 }
 
 void MicrophoneDriverPulseAudio::stop_updating_feeds() {
