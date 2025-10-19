@@ -46,51 +46,140 @@ void MicrophoneDriverPulseAudio::setup_feed_to_source_settings(Ref<MicrophoneFee
 	p_feed->set_name(String::utf8(p_pa_source_info->name));
 	p_feed->set_description(String::utf8(p_pa_source_info->description));
 
+	BitField<MicrophoneFeed::FormatFlag> format_flags = MicrophoneFeed::MICROPHONE_FEED_FORMAT_FLAG_NONE;
+
+#define FORMAT_ALAW() \
+	p_feed->set_format_id(MicrophoneFeed::MICROPHONE_FEED_FORMAT_ID_ALAW)
+#define FORMAT_ULAW() \
+	p_feed->set_format_id(MicrophoneFeed::MICROPHONE_FEED_FORMAT_ID_ULAW)
+#define FORMAT_LINEAR_PCM() \
+	p_feed->set_format_id(MicrophoneFeed::MICROPHONE_FEED_FORMAT_ID_LINEAR_PCM)
+
+#define BIT_DEPTH(bit_depth) \
+	p_feed->set_bit_depth(bit_depth)
+
+#define IS_ALIGNED_HIGH() \
+	format_flags.set_flag(MicrophoneFeed::MICROPHONE_FEED_FORMAT_FLAG_IS_ALIGNED_HIGH)
+#define IS_BIG_ENDIAN(is_big_endian)                                                      \
+	if (is_big_endian) {                                                                  \
+		format_flags.set_flag(MicrophoneFeed::MICROPHONE_FEED_FORMAT_FLAG_IS_BIG_ENDIAN); \
+	}                                                                                     \
+	(void)0
+#define IS_FLOAT() \
+	format_flags.set_flag(MicrophoneFeed::MICROPHONE_FEED_FORMAT_FLAG_IS_FLOAT)
+#define IS_PACKED() \
+	format_flags.set_flag(MicrophoneFeed::MICROPHONE_FEED_FORMAT_FLAG_IS_PACKED)
+#define IS_SIGNED_INTEGER() \
+	format_flags.set_flag(MicrophoneFeed::MICROPHONE_FEED_FORMAT_FLAG_IS_SIGNED_INTEGER)
+
+#define SAMPLE_U8()      \
+	FORMAT_LINEAR_PCM(); \
+	BIT_DEPTH(8)
+#define SAMPLE_ALAW() \
+	FORMAT_ALAW();    \
+	BIT_DEPTH(8)
+#define SAMPLE_ULAW() \
+	FORMAT_ULAW();    \
+	BIT_DEPTH(8)
+#define SAMPLE_S16(is_big_endian) \
+	FORMAT_LINEAR_PCM();          \
+	BIT_DEPTH(16);                \
+	IS_SIGNED_INTEGER();          \
+	IS_BIG_ENDIAN(is_big_endian)
+#define SAMPLE_FLOAT32(is_big_endian) \
+	FORMAT_LINEAR_PCM();              \
+	BIT_DEPTH(32);                    \
+	IS_FLOAT();                       \
+	IS_BIG_ENDIAN(is_big_endian)
+#define SAMPLE_S32(is_big_endian) \
+	FORMAT_LINEAR_PCM();          \
+	BIT_DEPTH(32);                \
+	IS_SIGNED_INTEGER();          \
+	IS_BIG_ENDIAN(is_big_endian)
+#define SAMPLE_S24(is_big_endian) \
+	FORMAT_LINEAR_PCM();          \
+	BIT_DEPTH(24);                \
+	IS_SIGNED_INTEGER();          \
+	IS_PACKED();                  \
+	IS_BIG_ENDIAN(is_big_endian)
+#define SAMPLE_S24_32(is_big_endian) \
+	FORMAT_LINEAR_PCM();             \
+	BIT_DEPTH(24);                   \
+	IS_SIGNED_INTEGER();             \
+	IS_ALIGNED_HIGH();               \
+	IS_BIG_ENDIAN(is_big_endian)
+
 	switch (p_pa_source_info->sample_spec.format) {
 		case PA_SAMPLE_U8: {
-			p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_UNSIGNED_8BIT_PCM);
+			SAMPLE_U8();
 		} break;
 		case PA_SAMPLE_ALAW: {
-			p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_8BIT_ALAW);
+			SAMPLE_ALAW();
 		} break;
 		case PA_SAMPLE_ULAW: {
-			p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_8BIT_MULAW);
+			SAMPLE_ULAW();
 		} break;
 		case PA_SAMPLE_S16LE: {
-			p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_16BIT_PCM_LITTLEENDIAN);
+			SAMPLE_S16(false);
 		} break;
 		case PA_SAMPLE_S16BE: {
-			p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_16BIT_PCM_BIGENDIAN);
+			SAMPLE_S16(true);
 		} break;
 		case PA_SAMPLE_FLOAT32LE: {
-			p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_FLOAT_32BIT_LITTLEENDIAN);
+			SAMPLE_FLOAT32(false);
 		} break;
 		case PA_SAMPLE_FLOAT32BE: {
-			p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_FLOAT_32BIT_BIGENDIAN);
+			SAMPLE_FLOAT32(true);
 		} break;
 		case PA_SAMPLE_S32LE: {
-			p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_32BIT_PCM_LITTLEENDIAN);
+			SAMPLE_S32(false);
 		} break;
 		case PA_SAMPLE_S32BE: {
-			p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_32BIT_PCM_BIGENDIAN);
+			SAMPLE_S32(true);
 		} break;
 		case PA_SAMPLE_S24LE: {
-			p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_24BIT_PCM_PACKED_LITTLEENDIAN);
+			SAMPLE_S24(false);
 		} break;
 		case PA_SAMPLE_S24BE: {
-			p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_24BIT_PCM_PACKED_BIGENDIAN);
+			SAMPLE_S24(true);
 		} break;
 		case PA_SAMPLE_S24_32LE: {
-			p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_24BIT_PCM_LSB32BIT_LITTLEENDIAN);
+			SAMPLE_S24_32(false);
 		} break;
 		case PA_SAMPLE_S24_32BE: {
-			p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_24BIT_PCM_LSB32BIT_BIGENDIAN);
+			SAMPLE_S24_32(true);
 		} break;
 		case PA_SAMPLE_MAX:
 		case PA_SAMPLE_INVALID: {
 			ERR_FAIL();
 		} break;
 	}
+
+	p_feed->set_format_flags(format_flags);
+
+	p_feed->set_sample_rate(p_pa_source_info->sample_spec.rate);
+	p_feed->set_channels_per_frame(p_pa_source_info->sample_spec.channels);
+
+#undef SAMPLE_U8
+#undef SAMPLE_ALAW
+#undef SAMPLE_ULAW
+#undef SAMPLE_S16
+#undef SAMPLE_FLOAT32
+#undef SAMPLE_S32
+#undef SAMPLE_S24
+#undef SAMPLE_S24_32
+
+#undef IS_ALIGNED_HIGH
+#undef IS_BIG_ENDIAN
+#undef IS_FLOAT
+#undef IS_PACKED
+#undef IS_SIGNED_INTEGER
+
+#undef BIT_DEPTH
+
+#undef ALAW
+#undef ULAW
+#undef LINEAR_PCM
 }
 
 void MicrophoneDriverPulseAudio::_pa_context_state_callback(pa_context *p_pa_context, void *p_userdata) {
