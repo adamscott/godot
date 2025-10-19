@@ -104,6 +104,7 @@ uint32_t MicrophoneDriverPulseAudio::get_feed_count() const {
 }
 
 void MicrophoneDriverPulseAudio::update_feeds() {
+	print_line(vformat("MicrophoneDriverPulseAudio::update_feeds() [START]"));
 	if (!monitoring_feeds || started_update_feeds) {
 		return;
 	}
@@ -128,6 +129,8 @@ void MicrophoneDriverPulseAudio::update_feeds() {
 #ifdef THREADS_ENABLED
 	pa_threaded_mainloop_unlock(_pa_threaded_mainloop);
 #endif // THREADS_ENABLED
+
+	print_line(vformat("MicrophoneDriverPulseAudio::update_feeds() [END]"));
 }
 
 bool MicrophoneDriverPulseAudio::activate_feed(Ref<MicrophoneFeed> p_feed) {
