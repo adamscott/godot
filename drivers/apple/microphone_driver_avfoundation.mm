@@ -360,6 +360,7 @@ MicrophoneDriverAVFoundation::~MicrophoneDriverAVFoundation() {
 				AVNumberOfChannelsKey : [NSNumber numberWithInt:feed->get_channels_per_frame()]
 			};
 		} break;
+		case MicrophoneFeed::MICROPHONE_FEED_FORMAT_ID_UNDEFINED:
 		case MicrophoneFeed::MICROPHONE_FEED_FORMAT_ID_MAX: {
 			ERR_FAIL_V(nil);
 		} break;
