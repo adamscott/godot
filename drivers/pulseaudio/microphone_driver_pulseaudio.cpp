@@ -432,7 +432,8 @@ bool MicrophoneDriverPulseAudio::activate_feed_entry(FeedEntry *p_feed_entry) co
 	pa_sample_spec _pa_sample_spec;
 	pa_channel_map _pa_channel_map;
 
-	_microphone_feed_to_pa_sample_spec(p_feed_entry->feed, _pa_sample_spec);
+	Error err = _microphone_feed_to_pa_sample_spec(p_feed_entry->feed, _pa_sample_spec);
+	ERR_FAIL_COND_V_MSG(err != OK, false, "couldn't create pa_sample_spec from MicrophoneFeed");
 
 #ifdef THREADS_ENABLED
 	pa_threaded_mainloop_lock(_pa_threaded_mainloop);
