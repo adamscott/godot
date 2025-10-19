@@ -45,14 +45,14 @@ class MicrophoneFeed : public RefCounted {
 	friend MicrophoneDriver;
 
 public:
-	enum MicrophoneFeedFormatId {
+	enum FormatId {
 		MICROPHONE_FEED_FORMAT_ID_ALAW,
 		MICROPHONE_FEED_FORMAT_ID_ULAW,
 		MICROPHONE_FEED_FORMAT_ID_LINEAR_PCM,
 		MICROPHONE_FEED_FORMAT_ID_MAX,
 	};
 
-	enum MicrophoneFeedFormatFlag {
+	enum FormatFlag {
 		MICROPHONE_FEED_FORMAT_FLAG_NONE = 0,
 		MICROPHONE_FEED_FORMAT_FLAG_IS_ALIGNED_HIGH = 1 << 0,
 		MICROPHONE_FEED_FORMAT_FLAG_IS_BIG_ENDIAN = 1 << 1,
@@ -73,20 +73,16 @@ protected:
 
 	String name;
 	String description;
-	MicrophoneFeedFormatId format_id = MICROPHONE_FEED_FORMAT_ID_LINEAR_PCM;
-	BitField<MicrophoneFeedFormatFlag> format_flags = 0;
+	FormatId format_id = MICROPHONE_FEED_FORMAT_ID_LINEAR_PCM;
+	BitField<FormatFlag> format_flags = 0;
 	double sample_rate = 44100;
 	uint32_t channels_per_frame = 1;
-	uint32_t bytes_per_frame = sizeof(float);
+	uint32_t bit_depth = sizeof(float) * 8;
 
 	mutable RingBuffer<uint8_t> ring_buffer;
 	uint64_t ring_buffer_size = 0;
 
 	float buffer_length = 0.5;
-
-	inline uint32_t get_bits_per_channel() {
-		return (8 * bytes_per_frame) / channels_per_frame;
-	}
 
 	void resize_buffer();
 	void update_ring_buffer_size();
@@ -101,10 +97,10 @@ public:
 	String get_description() const { return description; }
 	void set_description(String p_description) { description = p_description; }
 
-	void set_format_flags(BitField<MicrophoneFeedFormatFlag> p_format_flags) { format_flags = p_format_flags; }
-	BitField<MicrophoneFeedFormatFlag> get_format_flags() const { return format_flags; }
-	MicrophoneFeedFormatId get_format_id() const { return format_id; }
-	void set_format_id(MicrophoneFeedFormatId p_format_id) { format_id = p_format_id; }
+	void set_format_flags(BitField<FormatFlag> p_format_flags) { format_flags = p_format_flags; }
+	BitField<FormatFlag> get_format_flags() const { return format_flags; }
+	FormatId get_format_id() const { return format_id; }
+	void set_format_id(FormatId p_format_id) { format_id = p_format_id; }
 
 	float get_sample_rate() const { return sample_rate; }
 	void set_sample_rate(float p_sample_rate) {
@@ -133,14 +129,10 @@ public:
 		update_ring_buffer_size();
 	}
 
-	uint32_t get_bytes_per_frame() const { return bytes_per_frame; }
-	void set_bytes_per_frame(uint32_t p_bytes_per_frame) {
-		if (bytes_per_frame == p_bytes_per_frame) {
-			return;
-		}
-		bytes_per_frame = p_bytes_per_frame;
-		update_ring_buffer_size();
-	}
+	uint32_t get_bit_depth() const { return bit_depth; }
+	void set_bit_depth(const uint32_t p_bit_depth) { bit_depth = p_bit_depth; }
+
+	inline uint32_t get_bytes_per_frame() const { return channels_per_frame * bit_depth; }
 
 	PackedByteArray get_buffer() const;
 	void clear_buffer();
@@ -154,3 +146,6 @@ public:
 	MicrophoneFeed(String p_name);
 	virtual ~MicrophoneFeed();
 };
+
+VARIANT_ENUM_CAST(MicrophoneFeed::FormatId);
+VARIANT_BITFIELD_CAST(MicrophoneFeed::FormatFlag);

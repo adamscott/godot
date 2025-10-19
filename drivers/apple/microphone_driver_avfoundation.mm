@@ -34,6 +34,7 @@
 #include "servers/microphone/microphone_feed.h"
 #include "servers/microphone/microphone_server.h"
 
+#include <AVFAudio/AVFAudio.h>
 #include <CoreAudioTypes/CoreAudioBaseTypes.h>
 
 MicrophoneDriverAVFoundation::FeedEntry *MicrophoneDriverAVFoundation::get_feed_entry_from_feed(const Ref<MicrophoneFeed> p_feed) const {
@@ -57,9 +58,9 @@ void MicrophoneDriverAVFoundation::setup_feed_to_device_settings(Ref<MicrophoneF
 
 	p_feed->set_sample_rate(audio_format_stream_basic_description->mSampleRate);
 	p_feed->set_channels_per_frame(audio_format_stream_basic_description->mChannelsPerFrame);
-	p_feed->set_bytes_per_frame(audio_format_stream_basic_description->mBytesPerFrame);
+	p_feed->set_bit_depth(audio_format_stream_basic_description->mBitsPerChannel);
 
-	BitField<MicrophoneFeed::MicrophoneFeedFormatFlag> feed_flags = MicrophoneFeed::MICROPHONE_FEED_FORMAT_FLAG_NONE;
+	BitField<MicrophoneFeed::FormatFlag> feed_flags = MicrophoneFeed::MICROPHONE_FEED_FORMAT_FLAG_NONE;
 
 #define HAS_FLAG(flag) audio_format_stream_basic_description->mFormatFlags &flag
 #define SET_IF_HAS_FLAG(apple_flag, microphone_feed_flag)          \
@@ -75,10 +76,11 @@ void MicrophoneDriverAVFoundation::setup_feed_to_device_settings(Ref<MicrophoneF
 	SET_IF_HAS_FLAG(kAudioFormatFlagIsNonMixable, MICROPHONE_FEED_FORMAT_FLAG_IS_NON_MIXABLE);
 	SET_IF_HAS_FLAG(kAudioFormatFlagIsPacked, MICROPHONE_FEED_FORMAT_FLAG_IS_PACKED);
 	SET_IF_HAS_FLAG(kAudioFormatFlagIsSignedInteger, MICROPHONE_FEED_FORMAT_FLAG_IS_SIGNED_INTEGER);
-	p_feed->set_format_flags(feed_flags);
 
 #undef SET_IF_HAS_FLAG
 #undef HAS_FLAG
+
+	p_feed->set_format_flags(feed_flags);
 }
 
 void MicrophoneDriverAVFoundation::set_monitoring_feeds(bool p_monitoring_feeds) {
@@ -189,14 +191,11 @@ void MicrophoneDriverAVFoundation::remove_feed_entry(FeedEntry *p_feed_entry) {
 }
 
 bool MicrophoneDriverAVFoundation::activate_feed_entry(FeedEntry *p_feed_entry) {
-	print_line(vformat("activate_feed_entry"));
-
 	if (p_feed_entry->capture_session) {
 		return true;
 	}
 
 	auto init_device_capture_session = [&p_feed_entry]() -> void {
-		print_line(vformat("start capture"));
 		p_feed_entry->capture_session = [[MicrophoneDeviceCaptureSession alloc] initForFeed:p_feed_entry->feed
 																				  andDevice:p_feed_entry->device];
 		p_feed_entry->feed->emit_signal(SNAME("feed_activated"));
@@ -332,6 +331,40 @@ MicrophoneDriverAVFoundation::~MicrophoneDriverAVFoundation() {
 	NSError *error;
 	feed = pFeed;
 
+	BitField<MicrophoneFeed::FormatFlag> feedFlags = pFeed->get_format_flags();
+	NSDictionary<NSString *, id> *settings = nil;
+
+	switch (pFeed->get_format_id()) {
+		case MicrophoneFeed::MICROPHONE_FEED_FORMAT_ID_LINEAR_PCM: {
+			settings = @{
+				AVFormatIDKey : [NSNumber numberWithInt:kAudioFormatLinearPCM],
+				AVSampleRateKey : [NSNumber numberWithFloat:feed->get_sample_rate()],
+				AVNumberOfChannelsKey : [NSNumber numberWithInt:feed->get_channels_per_frame()],
+				AVLinearPCMIsBigEndianKey : [NSNumber numberWithBool:feedFlags.has_flag(MicrophoneFeed::MICROPHONE_FEED_FORMAT_FLAG_IS_BIG_ENDIAN)],
+				AVLinearPCMIsFloatKey : [NSNumber numberWithBool:feedFlags.has_flag(MicrophoneFeed::MICROPHONE_FEED_FORMAT_FLAG_IS_FLOAT)],
+				AVLinearPCMIsNonInterleavedKey : [NSNumber numberWithBool:feedFlags.has_flag(MicrophoneFeed::MICROPHONE_FEED_FORMAT_FLAG_IS_NON_INTERLEAVED)],
+				AVLinearPCMBitDepthKey : [NSNumber numberWithInt:feed->get_bit_depth()],
+			};
+		} break;
+		case MicrophoneFeed::MICROPHONE_FEED_FORMAT_ID_ALAW: {
+			settings = @{
+				AVFormatIDKey : [NSNumber numberWithInt:kAudioFormatALaw],
+				AVSampleRateKey : [NSNumber numberWithFloat:feed->get_sample_rate()],
+				AVNumberOfChannelsKey : [NSNumber numberWithInt:feed->get_channels_per_frame()]
+			};
+		} break;
+		case MicrophoneFeed::MICROPHONE_FEED_FORMAT_ID_ULAW: {
+			settings = @{
+				AVFormatIDKey : [NSNumber numberWithInt:kAudioFormatULaw],
+				AVSampleRateKey : [NSNumber numberWithFloat:feed->get_sample_rate()],
+				AVNumberOfChannelsKey : [NSNumber numberWithInt:feed->get_channels_per_frame()]
+			};
+		} break;
+		case MicrophoneFeed::MICROPHONE_FEED_FORMAT_ID_MAX: {
+			ERR_FAIL_V(nil);
+		} break;
+	}
+
 	[self beginConfiguration];
 
 	inputDevice = [AVCaptureDeviceInput
@@ -343,21 +376,7 @@ MicrophoneDriverAVFoundation::~MicrophoneDriverAVFoundation() {
 	dataOutput = [AVCaptureAudioDataOutput new];
 	ERR_FAIL_COND_V_MSG(!dataOutput, self, vformat(R"*(could not get data output for MicrophoneFeed "%s")*", feed->get_name()));
 
-	AudioFormatID formatId;
-	switch (pFeed->get_format_id()) {
-		case MicrophoneFeed::MICROPHONE_FEED_FORMAT_ID_LINEAR_PCM:
-		default: {
-			formatId = kAudioFormatLinearPCM;
-		} break;
-	}
-
-	NSDictionary<NSString *, id> *settings = @{
-		AVFormatIDKey : [NSNumber numberWithInt:formatId],
-		AVSampleRateKey : [NSNumber numberWithFloat:feed->get_sample_rate()],
-		AVNumberOfChannelsKey : [NSNumber numberWithInt:feed->get_channels_per_frame()]
-	};
 	dataOutput.audioSettings = settings;
-
 	[dataOutput setSampleBufferDelegate:self queue:dispatch_get_main_queue()];
 
 	[self addOutput:dataOutput];

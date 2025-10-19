@@ -30,12 +30,13 @@
 
 #include "microphone_feed.h"
 
+#include "core/object/class_db.h"
 #include "core/object/object.h"
 #include "servers/microphone/microphone_driver.h"
 #include "servers/microphone/microphone_server.h"
 
 void MicrophoneFeed::update_ring_buffer_size() {
-	uint64_t new_ring_buffer_size = (uint64_t)(buffer_length * sample_rate) * channels_per_frame * bytes_per_frame;
+	uint64_t new_ring_buffer_size = (uint64_t)(buffer_length * sample_rate) * channels_per_frame * bit_depth;
 	if (new_ring_buffer_size == ring_buffer_size) {
 		return;
 	}
@@ -94,14 +95,21 @@ void MicrophoneFeed::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_name", "name"), &MicrophoneFeed::set_name);
 	ClassDB::bind_method(D_METHOD("get_description"), &MicrophoneFeed::get_description);
 	ClassDB::bind_method(D_METHOD("set_description", "description"), &MicrophoneFeed::set_description);
+
+	ClassDB::bind_method(D_METHOD("get_format_id"), &MicrophoneFeed::get_format_id);
+	ClassDB::bind_method(D_METHOD("set_format_id", "format_id"), &MicrophoneFeed::set_format_id);
+	ClassDB::bind_method(D_METHOD("get_format_flags"), &MicrophoneFeed::get_format_flags);
+	ClassDB::bind_method(D_METHOD("set_format_flags", "format_flags"), &MicrophoneFeed::set_format_flags);
+
 	ClassDB::bind_method(D_METHOD("get_sample_rate"), &MicrophoneFeed::get_sample_rate);
 	ClassDB::bind_method(D_METHOD("set_sample_rate", "sample_rate"), &MicrophoneFeed::set_sample_rate);
 	ClassDB::bind_method(D_METHOD("get_buffer_length"), &MicrophoneFeed::get_buffer_length);
 	ClassDB::bind_method(D_METHOD("set_buffer_length", "buffer_length"), &MicrophoneFeed::set_buffer_length);
 	ClassDB::bind_method(D_METHOD("get_channels_per_frame"), &MicrophoneFeed::get_channels_per_frame);
 	ClassDB::bind_method(D_METHOD("set_channels_per_frame", "channels_per_frame"), &MicrophoneFeed::set_channels_per_frame);
+	ClassDB::bind_method(D_METHOD("get_bit_depth"), &MicrophoneFeed::get_bit_depth);
+	ClassDB::bind_method(D_METHOD("set_bit_depth", "bit_depth"), &MicrophoneFeed::set_bit_depth);
 	ClassDB::bind_method(D_METHOD("get_bytes_per_frame"), &MicrophoneFeed::get_bytes_per_frame);
-	ClassDB::bind_method(D_METHOD("set_bytes_per_frame", "bytes_per_frame"), &MicrophoneFeed::set_bytes_per_frame);
 
 	ClassDB::bind_method(D_METHOD("get_buffer"), &MicrophoneFeed::get_buffer);
 	ClassDB::bind_method(D_METHOD("clear_buffer"), &MicrophoneFeed::clear_buffer);
@@ -115,10 +123,25 @@ void MicrophoneFeed::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "sample_rate"), "set_sample_rate", "get_sample_rate");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "buffer_length"), "set_buffer_length", "get_buffer_length");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "channels_per_frame"), "set_channels_per_frame", "get_channels_per_frame");
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "bytes_per_frame"), "set_bytes_per_frame", "get_bytes_per_frame");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "bit_depth"), "set_bit_depth", "get_bit_depth");
 
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "active"), "set_active", "is_active");
 
 	ADD_SIGNAL(MethodInfo(SNAME("feed_activated")));
 	ADD_SIGNAL(MethodInfo(SNAME("feed_deactivated")));
+
+	BIND_ENUM_CONSTANT(MICROPHONE_FEED_FORMAT_ID_ALAW);
+	BIND_ENUM_CONSTANT(MICROPHONE_FEED_FORMAT_ID_ULAW);
+	BIND_ENUM_CONSTANT(MICROPHONE_FEED_FORMAT_ID_LINEAR_PCM);
+	BIND_ENUM_CONSTANT(MICROPHONE_FEED_FORMAT_ID_MAX);
+
+	BIND_BITFIELD_FLAG(MICROPHONE_FEED_FORMAT_FLAG_NONE);
+	BIND_BITFIELD_FLAG(MICROPHONE_FEED_FORMAT_FLAG_IS_ALIGNED_HIGH);
+	BIND_BITFIELD_FLAG(MICROPHONE_FEED_FORMAT_FLAG_IS_BIG_ENDIAN);
+	BIND_BITFIELD_FLAG(MICROPHONE_FEED_FORMAT_FLAG_IS_FLOAT);
+	BIND_BITFIELD_FLAG(MICROPHONE_FEED_FORMAT_FLAG_IS_NON_INTERLEAVED);
+	BIND_BITFIELD_FLAG(MICROPHONE_FEED_FORMAT_FLAG_IS_NON_MIXABLE);
+	BIND_BITFIELD_FLAG(MICROPHONE_FEED_FORMAT_FLAG_IS_PACKED);
+	BIND_BITFIELD_FLAG(MICROPHONE_FEED_FORMAT_FLAG_IS_SIGNED_INTEGER);
+	BIND_BITFIELD_FLAG(MICROPHONE_FEED_FORMAT_FLAG_ALL);
 }
