@@ -44,6 +44,24 @@ class MicrophoneFeed : public RefCounted {
 	friend MicrophoneDriver;
 
 public:
+	enum MicrophoneFeedSampleFormat {
+		MICROPHONE_FEED_SAMPLE_FORMAT_INVALID,
+		MICROPHONE_FEED_SAMPLE_FORMAT_UNSIGNED_8BIT_PCM,
+		MICROPHONE_FEED_SAMPLE_FORMAT_8BIT_ALAW,
+		MICROPHONE_FEED_SAMPLE_FORMAT_8BIT_MULAW,
+		MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_16BIT_PCM_LITTLEENDIAN,
+		MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_16BIT_PCM_BIGENDIAN,
+		MICROPHONE_FEED_SAMPLE_FORMAT_FLOAT_32BIT_LITTLEENDIAN,
+		MICROPHONE_FEED_SAMPLE_FORMAT_FLOAT_32BIT_BIGENDIAN,
+		MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_32BIT_PCM_LITTLEENDIAN,
+		MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_32BIT_PCM_BIGENDIAN,
+		MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_24BIT_PCM_PACKED_LITTLEENDIAN,
+		MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_24BIT_PCM_PACKED_BIGENDIAN,
+		MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_24BIT_PCM_LSB32BIT_LITTLEENDIAN,
+		MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_24BIT_PCM_LSB32BIT_BIGENDIAN,
+		MICROPHONE_FEED_SAMPLE_FORMAT_MAX,
+	};
+
 	enum MicrophoneFeedFormatId {
 		MICROPHONE_FEED_FORMAT_ID_LINEAR_PCM,
 		MICROPHONE_FEED_FORMAT_ID_MAX,
@@ -58,6 +76,7 @@ protected:
 
 	String name;
 	String description;
+	MicrophoneFeedSampleFormat sample_format = MICROPHONE_FEED_SAMPLE_FORMAT_INVALID;
 	MicrophoneFeedFormatId format_id = MICROPHONE_FEED_FORMAT_ID_LINEAR_PCM;
 	double sample_rate = 44100;
 	uint32_t channels_per_frame = 1;
@@ -85,6 +104,8 @@ public:
 	String get_description() const { return description; }
 	void set_description(String p_description) { description = p_description; }
 
+	MicrophoneFeedSampleFormat get_sample_format() const { return sample_format; }
+	void set_sample_format(MicrophoneFeedSampleFormat p_sample_format) { sample_format = p_sample_format; }
 	MicrophoneFeedFormatId get_format_id() const { return format_id; }
 	void set_format_id(MicrophoneFeedFormatId p_format_id) { format_id = p_format_id; }
 

@@ -48,6 +48,9 @@ class MicrophoneDriverPulseAudioCallbackHelper;
 class MicrophoneDriverPulseAudio : public MicrophoneDriver {
 	friend MicrophoneDriverPulseAudioCallbackHelper;
 
+private:
+	void setup_feed_to_source_settings(Ref<MicrophoneFeed> p_feed, const pa_source_info *p_pa_source_info);
+
 protected:
 	MicrophoneDriverPulseAudioCallbackHelper *callback_helper = nullptr;
 

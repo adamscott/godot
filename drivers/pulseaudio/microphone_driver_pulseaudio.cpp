@@ -42,6 +42,57 @@
 /*
  * MicrophoneDriverPulseAudio
  */
+void MicrophoneDriverPulseAudio::setup_feed_to_source_settings(Ref<MicrophoneFeed> p_feed, const pa_source_info *p_pa_source_info) {
+	p_feed->set_name(String::utf8(p_pa_source_info->name));
+	p_feed->set_description(String::utf8(p_pa_source_info->description));
+
+	switch (p_pa_source_info->sample_spec.format) {
+		case PA_SAMPLE_U8: {
+			p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_UNSIGNED_8BIT_PCM);
+		} break;
+		case PA_SAMPLE_ALAW: {
+			p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_8BIT_ALAW);
+		} break;
+		case PA_SAMPLE_ULAW: {
+			p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_8BIT_MULAW);
+		} break;
+		case PA_SAMPLE_S16LE: {
+			p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_16BIT_PCM_LITTLEENDIAN);
+		} break;
+		case PA_SAMPLE_S16BE: {
+			p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_16BIT_PCM_BIGENDIAN);
+		} break;
+		case PA_SAMPLE_FLOAT32LE: {
+			p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_FLOAT_32BIT_LITTLEENDIAN);
+		} break;
+		case PA_SAMPLE_FLOAT32BE: {
+			p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_FLOAT_32BIT_BIGENDIAN);
+		} break;
+		case PA_SAMPLE_S32LE: {
+			p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_32BIT_PCM_LITTLEENDIAN);
+		} break;
+		case PA_SAMPLE_S32BE: {
+			p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_32BIT_PCM_BIGENDIAN);
+		} break;
+		case PA_SAMPLE_S24LE: {
+			p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_24BIT_PCM_PACKED_LITTLEENDIAN);
+		} break;
+		case PA_SAMPLE_S24BE: {
+			p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_24BIT_PCM_PACKED_BIGENDIAN);
+		} break;
+		case PA_SAMPLE_S24_32LE: {
+			p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_24BIT_PCM_LSB32BIT_LITTLEENDIAN);
+		} break;
+		case PA_SAMPLE_S24_32BE: {
+			p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_24BIT_PCM_LSB32BIT_BIGENDIAN);
+		} break;
+		case PA_SAMPLE_MAX:
+		case PA_SAMPLE_INVALID: {
+			ERR_FAIL();
+		} break;
+	}
+}
+
 void MicrophoneDriverPulseAudio::_pa_context_state_callback(pa_context *p_pa_context, void *p_userdata) {
 	pa_context_state state;
 	int *_pa_ready = static_cast<int *>(p_userdata);
@@ -91,19 +142,19 @@ void MicrophoneDriverPulseAudio::_pa_context_get_source_info_list_callback(pa_co
 		}
 	}
 
-	bool found = false;
+	bool feed_entry_found = false;
 	for (FeedEntry &feed_entry : microphone_driver->_feed_entries) {
 		if (p_pa_source_info->index == feed_entry.pa_index) {
 			feed_entry.marked_as_checked = true;
-			found = true;
+			feed_entry_found = true;
 			break;
 		}
 	}
-	if (!found) {
+
+	if (!feed_entry_found) {
 		Ref<MicrophoneFeed> feed;
 		feed.instantiate();
-		feed->set_name(String::utf8(p_pa_source_info->name));
-		feed->set_description(String::utf8(p_pa_source_info->description));
+		microphone_driver->setup_feed_to_source_settings(feed, p_pa_source_info);
 		microphone_driver->_feed_entries.push_back({ .marked_as_checked = true, .pa_index = p_pa_source_info->index, .feed = feed });
 		microphone_driver->feeds_updated = true;
 		MicrophoneServer::get_singleton()->emit_signal("feed_added", feed);
