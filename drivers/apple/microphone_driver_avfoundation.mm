@@ -59,15 +59,103 @@ void MicrophoneDriverAVFoundation::setup_feed_to_device_settings(Ref<MicrophoneF
 	p_feed->set_channels_per_frame(audio_format_stream_basic_description->mChannelsPerFrame);
 	p_feed->set_bytes_per_frame(audio_format_stream_basic_description->mBytesPerFrame);
 
-	switch (audio_format_stream_basic_description->mFormatID) {
-		case kAudioFormatLinearPCM: {
-			p_feed->set_format_id(MicrophoneFeed::MICROPHONE_FEED_FORMAT_ID_LINEAR_PCM);
-		} break;
+	BitField<MicrophoneFeed::MicrophoneFeedFormatFlag> feed_flags = MicrophoneFeed::MICROPHONE_FEED_FORMAT_FLAG_NONE;
 
-		default: {
-			// Do nothing.
-		} break;
-	}
+#define HAS_FLAG(flag) audio_format_stream_basic_description->mFormatFlags &flag
+#define SET_IF_HAS_FLAG(apple_flag, microphone_feed_flag)          \
+	if (HAS_FLAG(apple_flag)) {                                    \
+		feed_flags.set_flag(MicrophoneFeed::microphone_feed_flag); \
+	}                                                              \
+	(void)0
+
+	SET_IF_HAS_FLAG(kAudioFormatFlagIsAlignedHigh, MICROPHONE_FEED_FORMAT_FLAG_IS_ALIGNED_HIGH);
+	SET_IF_HAS_FLAG(kAudioFormatFlagIsBigEndian, MICROPHONE_FEED_FORMAT_FLAG_IS_BIG_ENDIAN);
+	SET_IF_HAS_FLAG(kAudioFormatFlagIsFloat, MICROPHONE_FEED_FORMAT_FLAG_IS_FLOAT);
+	SET_IF_HAS_FLAG(kAudioFormatFlagIsNonInterleaved, MICROPHONE_FEED_FORMAT_FLAG_IS_NON_INTERLEAVED);
+	SET_IF_HAS_FLAG(kAudioFormatFlagIsPacked, MICROPHONE_FEED_FORMAT_FLAG_IS_PACKED);
+	SET_IF_HAS_FLAG(kAudioFormatFlagIsSignedInteger, MICROPHONE_FEED_FORMAT_FLAG_IS_SIGNED_INTEGER);
+	p_feed->set_format_flags(feed_flags);
+
+#undef SET_IF_HAS_FLAG
+#undef HAS_FLAG
+
+	// #define IS_BITS(number_of_bits) audio_format_stream_basic_description->mBitsPerChannel == number_of_bits
+	// #define HAS_FLAG(flag) audio_format_stream_basic_description->mFormatFlags &flag
+
+	// 	switch (audio_format_stream_basic_description->mFormatID) {
+	// 		case kAudioFormatALaw: {
+	// 			p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_8BIT_ALAW);
+	// 		} break;
+	// 		case kAudioFormatULaw: {
+	// 			p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_8BIT_ULAW);
+	// 		} break;
+
+	// 		case kAudioFormatLinearPCM: {
+	// 			if (HAS_FLAG(kLinearPCMFormatFlagIsFloat)) {
+	// 				// Is float.
+	// 				if (IS_BITS(32)) {
+	// 					if (HAS_FLAG(kLinearPCMFormatFlagIsBigEndian)) {
+	// 						p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_FLOAT_32BIT_BIGENDIAN);
+	// 					} else {
+	// 						p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_FLOAT_32BIT_LITTLEENDIAN);
+	// 					}
+	// 				} else {
+	// 					ERR_FAIL_MSG(vformat("LinearPCM float %sbit unimplemented", audio_format_stream_basic_description->mBitsPerChannel));
+	// 				}
+	// 			} else {
+	// 				if (HAS_FLAG(kLinearPCMFormatFlagIsSignedInteger)) {
+	// 					// Is signed integer.
+	// 					if (HAS_FLAG(kLinearPCMFormatFlagIsPacked)) {
+	// 						// Is packed.
+	// 						if (IS_BITS(24)) {
+	// 							if (HAS_FLAG(kLinearPCMFormatFlagIsBigEndian)) {
+	// 								p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_24BIT_PCM_PACKED_BIGENDIAN);
+	// 							} else {
+	// 								p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_24BIT_PCM_PACKED_LITTLEENDIAN);
+	// 							}
+	// 						} else {
+	// 							ERR_FAIL_MSG(vformat("LinearPCM signed packed %sbit unimplemented", audio_format_stream_basic_description->mBitsPerChannel));
+	// 						}
+	// 					} else {
+	// 						// Is not packed.
+	// 						if (IS_BITS(16)) {
+	// 							if (HAS_FLAG(kLinearPCMFormatFlagIsBigEndian)) {
+	// 								p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_16BIT_PCM_BIGENDIAN);
+	// 							} else {
+	// 								p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_16BIT_PCM_LITTLEENDIAN);
+	// 							}
+	// 						} else if (IS_BITS(32)) {
+	// 							if (HAS_FLAG(kLinearPCMFormatFlagIsBigEndian)) {
+	// 								p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_32BIT_PCM_BIGENDIAN);
+	// 							} else {
+	// 								p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_32BIT_PCM_LITTLEENDIAN);
+	// 							}
+	// 						} else {
+	// 							ERR_FAIL_MSG(vformat("LinearPCM signed non-packed %sbit unimplemented", audio_format_stream_basic_description->mBitsPerChannel));
+	// 						}
+	// 					}
+	// 					// {
+	// 					// 	ERR_FAIL_MSG("LinearPCM signed integer packed non-24bit unimplemented");
+	// 					// }
+	// 				} else {
+	// 					// Is unsigned integer.
+	// 					if (audio_format_stream_basic_description->mBitsPerChannel == 8) {
+	// 						p_feed->set_sample_format(MicrophoneFeed::MICROPHONE_FEED_SAMPLE_FORMAT_UNSIGNED_8BIT_PCM);
+	// 					} else {
+	// 						ERR_FAIL_MSG("LinearPCM unsigned integer non-8bit unimplemented");
+	// 					}
+	// 				}
+	// 			}
+	// 			p_feed->set_format_id(MicrophoneFeed::MICROPHONE_FEED_FORMAT_ID_LINEAR_PCM);
+	// 		} break;
+
+	// 		default: {
+	// 			// Do nothing.
+	// 		} break;
+	// 	}
+
+	// #undef HAS_FLAG
+	// #undef IS_BITS
 
 	// format_id = audio_format_stream_basic_description->mFormatID;
 	// format_flags = audio_format_stream_basic_description->mFormatFlags;
