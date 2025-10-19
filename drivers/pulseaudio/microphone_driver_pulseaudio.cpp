@@ -111,13 +111,34 @@ void MicrophoneDriverPulseAudio::stop_updating_feeds() {
 	call_proxy->cancel_update_feeds();
 }
 
+MicrophoneDriverPulseAudio::FeedEntry *MicrophoneDriverPulseAudio::get_feed_entry_from_feed(const Ref<MicrophoneFeed> p_feed) const {
+	for (FeedEntry &feed_entry : _feed_entries) {
+		if (feed_entry.feed == p_feed) {
+			return &feed_entry;
+		}
+	}
+	return nullptr;
+}
+
 LocalVector<Ref<MicrophoneFeed>> MicrophoneDriverPulseAudio::get_feeds() const {
 	LocalVector<Ref<MicrophoneFeed>> feeds;
+	for (FeedEntry &feed_entry : _feed_entries) {
+		feeds.push_back(feed_entry.feed);
+	}
 	return feeds;
 }
 
+bool MicrophoneDriverPulseAudio::activate_feed_entry(FeedEntry *p_feed_entry) const {
+	ERR_FAIL_NULL_V(p_feed_entry, false);
+	return false;
+}
+
+void MicrophoneDriverPulseAudio::deactivate_feed_entry(FeedEntry *p_feed_entry) {
+	ERR_FAIL_NULL(p_feed_entry);
+}
+
 uint32_t MicrophoneDriverPulseAudio::get_feed_count() const {
-	return 0;
+	return _feed_entries.size();
 }
 
 void MicrophoneDriverPulseAudio::update_feeds() {
@@ -175,6 +196,7 @@ void MicrophoneDriverPulseAudio::set_monitoring_feeds(bool p_monitoring_feeds) {
 	}
 
 	update_feeds();
+	call_proxy->trigger_update_feeds();
 }
 
 bool MicrophoneDriverPulseAudio::is_monitoring_feeds() const {

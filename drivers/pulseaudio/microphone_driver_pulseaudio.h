@@ -72,6 +72,9 @@ protected:
 	mutable LocalVector<FeedEntry> _feed_entries;
 	FeedEntry *get_feed_entry_from_feed(const Ref<MicrophoneFeed> p_feed) const;
 
+	bool activate_feed_entry(FeedEntry *p_feed_entry) const;
+	void deactivate_feed_entry(FeedEntry *p_feed_entry);
+
 public:
 	virtual LocalVector<Ref<MicrophoneFeed>> get_feeds() const override;
 	virtual uint32_t get_feed_count() const override;
