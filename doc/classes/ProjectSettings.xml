@@ -426,6 +426,10 @@
 			If [code]true[/code], microphone input will be allowed. This requires appropriate permissions to be set when exporting to Android or iOS.
 			[b]Note:[/b] If the operating system blocks access to audio input devices (due to the user's privacy settings), audio capture will only return silence. On Windows, make sure that apps are allowed to access the microphone in the OS' privacy settings.
 		</member>
+		<member name="audio/driver/enable_microphone_server" type="bool" setter="" getter="" default="false">
+		</member>
+		<member name="audio/driver/microphone_driver" type="String" setter="" getter="">
+		</member>
 		<member name="audio/driver/mix_rate" type="int" setter="" getter="" default="44100">
 			Target mixing rate used for audio (in Hz). In general, it's better to not touch this and leave it to the host operating system.
 			[b]Note:[/b] On iOS and macOS, mixing rate is determined by audio driver, this value is ignored.

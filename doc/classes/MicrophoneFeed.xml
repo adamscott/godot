@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="MicrophoneFeed" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../class.xsd">
+	<brief_description>
+	</brief_description>
+	<description>
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="_activate_feed" qualifiers="virtual">
+			<return type="bool" />
+			<description>
+			</description>
+		</method>
+		<method name="_deactivate_feed" qualifiers="virtual">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+		<method name="clear_buffer">
+			<return type="void" />
+			<description>
+			</description>
+		</method>
+		<method name="get_buffer" qualifiers="const">
+			<return type="PackedByteArray" />
+			<description>
+			</description>
+		</method>
+		<method name="get_id" qualifiers="const">
+			<return type="int" />
+			<description>
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="active" type="bool" setter="set_active" getter="is_active">
+		</member>
+		<member name="buffer_length" type="float" setter="set_buffer_length" getter="get_buffer_length">
+		</member>
+		<member name="bytes_per_frame" type="int" setter="set_bytes_per_frame" getter="get_bytes_per_frame">
+		</member>
+		<member name="channels_per_frame" type="int" setter="set_channels_per_frame" getter="get_channels_per_frame">
+		</member>
+		<member name="description" type="String" setter="set_description" getter="get_description">
+		</member>
+		<member name="name" type="String" setter="set_name" getter="get_name">
+		</member>
+		<member name="sample_rate" type="float" setter="set_sample_rate" getter="get_sample_rate">
+		</member>
+	</members>
+	<signals>
+		<signal name="feed_activated">
+			<description>
+			</description>
+		</signal>
+		<signal name="feed_deactivated">
+			<description>
+			</description>
+		</signal>
+	</signals>
+</class>

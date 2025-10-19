@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="MicrophoneServer" inherits="Object" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../class.xsd">
+	<brief_description>
+	</brief_description>
+	<description>
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="get_feed">
+			<return type="MicrophoneFeed" />
+			<param index="0" name="index" type="int" />
+			<description>
+			</description>
+		</method>
+		<method name="get_feed_count" qualifiers="const">
+			<return type="int" />
+			<description>
+			</description>
+		</method>
+		<method name="get_feeds">
+			<return type="MicrophoneFeed[]" />
+			<description>
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="monitoring_feeds" type="bool" setter="set_monitoring_feeds" getter="is_monitoring_feeds" default="false">
+		</member>
+	</members>
+	<signals>
+		<signal name="feed_added">
+			<param index="0" name="feed" type="Object" />
+			<description>
+			</description>
+		</signal>
+		<signal name="feed_removed">
+			<param index="0" name="feed" type="Object" />
+			<description>
+			</description>
+		</signal>
+		<signal name="feeds_updated">
+			<description>
+			</description>
+		</signal>
+	</signals>
+</class>
