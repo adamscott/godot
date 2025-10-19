@@ -30,7 +30,6 @@
 
 #pragma once
 
-#include "core/object/object.h"
 #ifdef PULSEAUDIO_ENABLED
 
 #include "servers/microphone/microphone_driver.h"
@@ -38,7 +37,7 @@
 #include "core/object/ref_counted.h"
 
 #ifdef SOWRAP_ENABLED
-#include "pulse-so_wrap.h"
+#include "drivers/pulseaudio/pulse-so_wrap.h"
 #else
 #include <pulse/pulseaudio.h>
 #endif

@@ -29,7 +29,6 @@
 /**************************************************************************/
 
 #include "microphone_driver_pulseaudio.h"
-#include "drivers/pulseaudio/pulse-so_wrap.h"
 
 #ifdef PULSEAUDIO_ENABLED
 
