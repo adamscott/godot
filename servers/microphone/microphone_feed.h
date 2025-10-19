@@ -46,6 +46,7 @@ class MicrophoneFeed : public RefCounted {
 
 public:
 	enum FormatId {
+		MICROPHONE_FEED_FORMAT_ID_UNDEFINED,
 		MICROPHONE_FEED_FORMAT_ID_ALAW,
 		MICROPHONE_FEED_FORMAT_ID_ULAW,
 		MICROPHONE_FEED_FORMAT_ID_LINEAR_PCM,
@@ -73,7 +74,7 @@ protected:
 
 	String name;
 	String description;
-	FormatId format_id = MICROPHONE_FEED_FORMAT_ID_LINEAR_PCM;
+	FormatId format_id = MICROPHONE_FEED_FORMAT_ID_UNDEFINED;
 	BitField<FormatFlag> format_flags = 0;
 	double sample_rate = 44100;
 	uint32_t channels_per_frame = 1;
