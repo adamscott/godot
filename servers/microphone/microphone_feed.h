@@ -45,24 +45,6 @@ class MicrophoneFeed : public RefCounted {
 	friend MicrophoneDriver;
 
 public:
-	// enum MicrophoneFeedSampleFormat {
-	// 	MICROPHONE_FEED_SAMPLE_FORMAT_INVALID,
-	// 	MICROPHONE_FEED_SAMPLE_FORMAT_UNSIGNED_8BIT_PCM,
-	// 	MICROPHONE_FEED_SAMPLE_FORMAT_8BIT_ALAW,
-	// 	MICROPHONE_FEED_SAMPLE_FORMAT_8BIT_ULAW,
-	// 	MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_16BIT_PCM_LITTLEENDIAN,
-	// 	MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_16BIT_PCM_BIGENDIAN,
-	// 	MICROPHONE_FEED_SAMPLE_FORMAT_FLOAT_32BIT_LITTLEENDIAN,
-	// 	MICROPHONE_FEED_SAMPLE_FORMAT_FLOAT_32BIT_BIGENDIAN,
-	// 	MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_32BIT_PCM_LITTLEENDIAN,
-	// 	MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_32BIT_PCM_BIGENDIAN,
-	// 	MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_24BIT_PCM_PACKED_LITTLEENDIAN,
-	// 	MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_24BIT_PCM_PACKED_BIGENDIAN,
-	// 	MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_24BIT_PCM_LSB32BIT_LITTLEENDIAN,
-	// 	MICROPHONE_FEED_SAMPLE_FORMAT_SIGNED_24BIT_PCM_LSB32BIT_BIGENDIAN,
-	// 	MICROPHONE_FEED_SAMPLE_FORMAT_MAX,
-	// };
-
 	enum MicrophoneFeedFormatId {
 		MICROPHONE_FEED_FORMAT_ID_ALAW,
 		MICROPHONE_FEED_FORMAT_ID_ULAW,
@@ -76,7 +58,7 @@ public:
 		MICROPHONE_FEED_FORMAT_FLAG_IS_BIG_ENDIAN = 1 << 1,
 		MICROPHONE_FEED_FORMAT_FLAG_IS_FLOAT = 1 << 2,
 		MICROPHONE_FEED_FORMAT_FLAG_IS_NON_INTERLEAVED = 1 << 3,
-		// MICROPHONE_FEED_FORMAT_FLAG_IS_NON_MIXABLE = 1 << 4,
+		MICROPHONE_FEED_FORMAT_FLAG_IS_NON_MIXABLE = 1 << 4,
 		MICROPHONE_FEED_FORMAT_FLAG_IS_PACKED = 1 << 5,
 		MICROPHONE_FEED_FORMAT_FLAG_IS_SIGNED_INTEGER = 1 << 6,
 		MICROPHONE_FEED_FORMAT_FLAG_ALL = (1 << 7) - 1,
@@ -91,7 +73,6 @@ protected:
 
 	String name;
 	String description;
-	// MicrophoneFeedSampleFormat sample_format = MICROPHONE_FEED_SAMPLE_FORMAT_INVALID;
 	MicrophoneFeedFormatId format_id = MICROPHONE_FEED_FORMAT_ID_LINEAR_PCM;
 	BitField<MicrophoneFeedFormatFlag> format_flags = 0;
 	double sample_rate = 44100;
@@ -120,8 +101,6 @@ public:
 	String get_description() const { return description; }
 	void set_description(String p_description) { description = p_description; }
 
-	// MicrophoneFeedSampleFormat get_sample_format() const { return sample_format; }
-	// void set_sample_format(MicrophoneFeedSampleFormat p_sample_format) { sample_format = p_sample_format; }
 	void set_format_flags(BitField<MicrophoneFeedFormatFlag> p_format_flags) { format_flags = p_format_flags; }
 	BitField<MicrophoneFeedFormatFlag> get_format_flags() const { return format_flags; }
 	MicrophoneFeedFormatId get_format_id() const { return format_id; }
