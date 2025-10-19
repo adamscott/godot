@@ -36,7 +36,7 @@
 #include "servers/microphone/microphone_server.h"
 
 void MicrophoneFeed::update_ring_buffer_size() {
-	uint64_t new_ring_buffer_size = (uint64_t)(buffer_length * sample_rate) * channels_per_frame * bit_depth;
+	uint64_t new_ring_buffer_size = (uint64_t)(buffer_length * sample_rate) * channels_per_frame * (bit_depth / 8);
 	if (new_ring_buffer_size == ring_buffer_size) {
 		return;
 	}
