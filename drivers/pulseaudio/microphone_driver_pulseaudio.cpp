@@ -103,12 +103,14 @@ void MicrophoneDriverPulseAudio::_pa_context_get_source_info_list_callback(pa_co
 		feed->set_name(String::utf8(p_pa_source_info->name));
 		feed->set_description(String::utf8(p_pa_source_info->description));
 		microphone_driver->_feed_entries.push_back({ .marked_as_checked = true, .pa_index = p_pa_source_info->index, .feed = feed });
+		microphone_driver->feeds_updated = true;
+		MicrophoneServer::get_singleton()->emit_signal("feed_added", feed);
 	}
 }
 
 void MicrophoneDriverPulseAudio::stop_updating_feeds() {
 	monitoring_feeds = false;
-	started_update_feeds = false;
+	update_feeds_started = false;
 	call_proxy->cancel_update_feeds();
 }
 
@@ -129,6 +131,23 @@ LocalVector<Ref<MicrophoneFeed>> MicrophoneDriverPulseAudio::get_feeds() const {
 	return feeds;
 }
 
+void MicrophoneDriverPulseAudio::remove_feed_entry(FeedEntry *p_feed_entry) {
+	for (uint32_t i = 0; i < _feed_entries.size(); i++) {
+		if (&_feed_entries[i] == p_feed_entry) {
+			remove_feed_entry_at(i);
+			break;
+		}
+	}
+}
+
+void MicrophoneDriverPulseAudio::remove_feed_entry_at(uint32_t p_feed_entry_index) {
+	ERR_FAIL_INDEX(p_feed_entry_index, _feed_entries.size());
+	deactivate_feed_entry(&_feed_entries[p_feed_entry_index]);
+	Ref<MicrophoneFeed> feed = _feed_entries[p_feed_entry_index].feed;
+	_feed_entries.remove_at(p_feed_entry_index);
+	MicrophoneServer::get_singleton()->emit_signal("feed_removed", feed);
+}
+
 bool MicrophoneDriverPulseAudio::activate_feed_entry(FeedEntry *p_feed_entry) const {
 	ERR_FAIL_NULL_V(p_feed_entry, false);
 	return false;
@@ -136,6 +155,7 @@ bool MicrophoneDriverPulseAudio::activate_feed_entry(FeedEntry *p_feed_entry) co
 
 void MicrophoneDriverPulseAudio::deactivate_feed_entry(FeedEntry *p_feed_entry) {
 	ERR_FAIL_NULL(p_feed_entry);
+	p_feed_entry->active = false;
 }
 
 uint32_t MicrophoneDriverPulseAudio::get_feed_count() const {
@@ -143,13 +163,12 @@ uint32_t MicrophoneDriverPulseAudio::get_feed_count() const {
 }
 
 void MicrophoneDriverPulseAudio::update_feeds() {
-	if (!monitoring_feeds || started_update_feeds) {
+	if (!monitoring_feeds || update_feeds_started) {
 		return;
 	}
 	ERR_FAIL_COND(_pa_context_get_source_info_list_operation != nullptr);
-	started_update_feeds = true;
-
-	print_line(vformat("MicrophoneDriverPulseAudio::update_feeds()"));
+	update_feeds_started = true;
+	feeds_updated = false;
 
 #ifdef THREADS_ENABLED
 	pa_threaded_mainloop_lock(_pa_threaded_mainloop);
@@ -168,6 +187,24 @@ void MicrophoneDriverPulseAudio::update_feeds() {
 #ifdef THREADS_ENABLED
 	pa_threaded_mainloop_unlock(_pa_threaded_mainloop);
 #endif // THREADS_ENABLED
+
+	for (int64_t i = _feed_entries.size() - 1; i >= 0; i--) {
+		FeedEntry *feed_entry = &_feed_entries[i];
+		if (!feed_entry->marked_as_checked) {
+			feeds_updated = true;
+			remove_feed_entry_at(i);
+			continue;
+		}
+	}
+
+	if (feeds_updated) {
+		feeds_updated = false;
+		MicrophoneServer::get_singleton()->emit_signal("feeds_updated");
+	}
+
+	for (FeedEntry &feed_entry : _feed_entries) {
+		feed_entry.marked_as_checked = false;
+	}
 }
 
 bool MicrophoneDriverPulseAudio::activate_feed(Ref<MicrophoneFeed> p_feed) {
@@ -300,7 +337,7 @@ bool MicrophoneDriverPulseAudioCallProxy::launch_update_feeds() {
 	}
 
 	last_trigger_tick_ms = now_tick_ms;
-	microphone_driver->started_update_feeds = false;
+	microphone_driver->update_feeds_started = false;
 	microphone_driver->update_feeds();
 
 	return true;

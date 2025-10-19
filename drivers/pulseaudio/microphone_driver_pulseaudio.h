@@ -60,7 +60,8 @@ protected:
 	pa_operation *_pa_context_get_source_info_list_operation = nullptr;
 	static void _pa_context_get_source_info_list_callback(pa_context *p_pa_context, const pa_source_info *p_pa_source_info, int p_eol, void *p_userdata);
 
-	bool started_update_feeds = false;
+	bool update_feeds_started = false;
+	bool feeds_updated = false;
 	void stop_updating_feeds();
 	MicrophoneDriverPulseAudioCallProxy *call_proxy = nullptr;
 
@@ -72,6 +73,9 @@ protected:
 	};
 	mutable LocalVector<FeedEntry> _feed_entries;
 	FeedEntry *get_feed_entry_from_feed(const Ref<MicrophoneFeed> p_feed) const;
+
+	void remove_feed_entry(FeedEntry *p_feed_entry);
+	void remove_feed_entry_at(uint32_t p_feed_entry_index);
 
 	bool activate_feed_entry(FeedEntry *p_feed_entry) const;
 	void deactivate_feed_entry(FeedEntry *p_feed_entry);
