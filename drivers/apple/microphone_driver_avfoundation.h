@@ -44,17 +44,12 @@ class MicrophoneDriverAVFoundation : public MicrophoneDriver {
 protected:
 	MicrophoneDeviceNotification *device_notifications = nullptr;
 
-	struct FeedEntry;
-	mutable LocalVector<FeedEntry> _feed_entries;
-
 	struct FeedEntry {
 		AVCaptureDevice *device = nil;
 		MicrophoneDeviceCaptureSession *capture_session = nil;
 		Ref<MicrophoneFeed> feed;
-
-		void remove() {
-		}
 	};
+	mutable LocalVector<FeedEntry> _feed_entries;
 	FeedEntry *get_feed_entry_from_feed(const Ref<MicrophoneFeed> p_feed) const;
 
 private:
