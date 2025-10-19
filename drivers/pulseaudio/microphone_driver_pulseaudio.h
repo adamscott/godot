@@ -43,12 +43,14 @@
 #endif
 
 class MicrophoneFeed;
-class MicrophoneDriverPulseAudioCallProxy;
+class MicrophoneDriverPulseAudioCallbackHelper;
 
 class MicrophoneDriverPulseAudio : public MicrophoneDriver {
-	friend MicrophoneDriverPulseAudioCallProxy;
+	friend MicrophoneDriverPulseAudioCallbackHelper;
 
 protected:
+	MicrophoneDriverPulseAudioCallbackHelper *callback_helper = nullptr;
+
 #ifdef THREADS_ENABLED
 	pa_threaded_mainloop *_pa_threaded_mainloop = nullptr;
 #else
@@ -59,11 +61,13 @@ protected:
 	static void _pa_context_state_callback(pa_context *p_pa_context, void *p_userdata);
 	pa_operation *_pa_context_get_source_info_list_operation = nullptr;
 	static void _pa_context_get_source_info_list_callback(pa_context *p_pa_context, const pa_source_info *p_pa_source_info, int p_eol, void *p_userdata);
+	pa_operation *_pa_context_subscription_source_operation = nullptr;
+	static void _pa_context_subscription_source_callback(pa_context *p_pa_context, pa_subscription_event_type p_pa_subscription_event_type, uint32_t p_index, void *p_userdata);
 
 	bool update_feeds_started = false;
 	bool feeds_updated = false;
+	void start_updating_feeds();
 	void stop_updating_feeds();
-	MicrophoneDriverPulseAudioCallProxy *call_proxy = nullptr;
 
 	struct FeedEntry {
 		bool marked_as_checked = false;
@@ -99,26 +103,17 @@ public:
 	~MicrophoneDriverPulseAudio();
 };
 
-class MicrophoneDriverPulseAudioCallProxy : public Object {
-	GDCLASS(MicrophoneDriverPulseAudioCallProxy, Object);
+class MicrophoneDriverPulseAudioCallbackHelper : public Object {
+	MicrophoneDriverPulseAudio *driver = nullptr;
 
-private:
-	static const uint16_t TRIGGER_TICK_COOLDOWN_MS = 500;
-
-	MicrophoneDriverPulseAudio *microphone_driver = nullptr;
-	bool update_feeds_queued = false;
-	uint64_t last_trigger_tick_ms = 0;
-
-	Callable on_update_feeds_trigger_callable;
-	void on_update_feeds_trigger();
-	bool launch_update_feeds();
+	void call_update_feeds_callback();
+	Callable call_update_feeds_callback_callable;
 
 public:
-	void trigger_update_feeds();
-	void cancel_update_feeds();
+	void call_update_feeds();
 
-	MicrophoneDriverPulseAudioCallProxy(MicrophoneDriverPulseAudio *p_microphone_driver);
-	~MicrophoneDriverPulseAudioCallProxy();
+	MicrophoneDriverPulseAudioCallbackHelper(MicrophoneDriverPulseAudio *p_driver);
+	~MicrophoneDriverPulseAudioCallbackHelper();
 };
 
 #endif // PULSEAUDIO_ENABLED

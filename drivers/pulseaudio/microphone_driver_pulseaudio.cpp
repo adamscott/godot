@@ -33,13 +33,15 @@
 #ifdef PULSEAUDIO_ENABLED
 
 #include "core/error/error_macros.h"
+#include "core/object/object.h"
 #include "core/os/main_loop.h"
 #include "core/os/os.h"
-#include "core/os/time.h"
 #include "servers/microphone/microphone_feed.h"
 #include "servers/microphone/microphone_server.h"
-#include "thirdparty/linuxbsd_headers/pulse/def.h"
 
+/*
+ * MicrophoneDriverPulseAudio
+ */
 void MicrophoneDriverPulseAudio::_pa_context_state_callback(pa_context *p_pa_context, void *p_userdata) {
 	pa_context_state state;
 	int *_pa_ready = static_cast<int *>(p_userdata);
@@ -108,10 +110,47 @@ void MicrophoneDriverPulseAudio::_pa_context_get_source_info_list_callback(pa_co
 	}
 }
 
+void MicrophoneDriverPulseAudio::_pa_context_subscription_source_callback(pa_context *p_pa_context, pa_subscription_event_type p_pa_subscription_event_type, uint32_t p_index, void *p_userdata) {
+	MicrophoneDriverPulseAudio *microphone_driver = static_cast<MicrophoneDriverPulseAudio *>(p_userdata);
+	ERR_FAIL_NULL(microphone_driver);
+	microphone_driver->callback_helper->call_update_feeds();
+
+#ifdef THREADS_ENABLED
+	pa_threaded_mainloop_signal(microphone_driver->_pa_threaded_mainloop, 0);
+#endif
+}
+
+void MicrophoneDriverPulseAudio::start_updating_feeds() {
+	monitoring_feeds = true;
+
+#ifdef THREADS_ENABLED
+	pa_threaded_mainloop_lock(_pa_threaded_mainloop);
+#else
+	pa_mainloop_lock(_pa_mainloop);
+#endif // THREADS_ENABLED
+	print_line("locked");
+
+	_pa_context_subscription_source_operation = pa_context_subscribe(_pa_context, PA_SUBSCRIPTION_MASK_SOURCE, nullptr, nullptr);
+	pa_context_set_subscribe_callback(_pa_context, &MicrophoneDriverPulseAudio::_pa_context_subscription_source_callback, this);
+
+#ifdef THREADS_ENABLED
+	pa_threaded_mainloop_unlock(_pa_threaded_mainloop);
+#else
+	pa_mainloop_unlock(_pa_mainloop);
+#endif
+
+	print_line("unlocked");
+}
+
 void MicrophoneDriverPulseAudio::stop_updating_feeds() {
 	monitoring_feeds = false;
 	update_feeds_started = false;
-	call_proxy->cancel_update_feeds();
+
+	if (_pa_context_subscription_source_operation) {
+		pa_operation_cancel(_pa_context_subscription_source_operation);
+		pa_operation_unref(_pa_context_subscription_source_operation);
+		_pa_context_subscription_source_operation = nullptr;
+	}
 }
 
 MicrophoneDriverPulseAudio::FeedEntry *MicrophoneDriverPulseAudio::get_feed_entry_from_feed(const Ref<MicrophoneFeed> p_feed) const {
@@ -205,6 +244,8 @@ void MicrophoneDriverPulseAudio::update_feeds() {
 	for (FeedEntry &feed_entry : _feed_entries) {
 		feed_entry.marked_as_checked = false;
 	}
+
+	update_feeds_started = false;
 }
 
 bool MicrophoneDriverPulseAudio::activate_feed(Ref<MicrophoneFeed> p_feed) {
@@ -245,7 +286,7 @@ void MicrophoneDriverPulseAudio::set_monitoring_feeds(bool p_monitoring_feeds) {
 	}
 
 	update_feeds();
-	call_proxy->trigger_update_feeds();
+	start_updating_feeds();
 }
 
 bool MicrophoneDriverPulseAudio::is_monitoring_feeds() const {
@@ -253,6 +294,8 @@ bool MicrophoneDriverPulseAudio::is_monitoring_feeds() const {
 }
 
 Error MicrophoneDriverPulseAudio::init() {
+	callback_helper = memnew(MicrophoneDriverPulseAudioCallbackHelper(this));
+
 	pa_mainloop_api *_pa_mainloop_api = nullptr;
 
 #ifdef THREADS_ENABLED
@@ -287,86 +330,57 @@ Error MicrophoneDriverPulseAudio::init() {
 #endif // THREADS_ENABLED
 	}
 
-	call_proxy = memnew(MicrophoneDriverPulseAudioCallProxy(this));
-
 	return OK;
 }
 
 MicrophoneDriverPulseAudio::MicrophoneDriverPulseAudio() {
 }
+
 MicrophoneDriverPulseAudio::~MicrophoneDriverPulseAudio() {
-	if (call_proxy) {
-		memfree(call_proxy);
-		call_proxy = nullptr;
+	if (callback_helper) {
+		memfree(callback_helper);
 	}
 
 	if (_pa_context) {
+		pa_context_disconnect(_pa_context);
 		pa_context_unref(_pa_context);
 		_pa_context = nullptr;
 	}
 
+#ifdef THREADS_ENABLED
 	if (_pa_threaded_mainloop) {
 		pa_threaded_mainloop_stop(_pa_threaded_mainloop);
 		pa_threaded_mainloop_free(_pa_threaded_mainloop);
 		_pa_threaded_mainloop = nullptr;
 	}
+#else
+	if (_pa_mainloop) {
+		pa_mainloop_stop(_pa_mainloop);
+		pa_mainloop_free(_pa_mainloop);
+		_pa_mainloop = nullptr;
+	}
+#endif // THREADS_ENABLED
 }
 
 /*
- * MicrophoneDriverPulseAudioCallProxy
+ * MicrophoneDriverPulseAudioCallbackHelper
  */
-void MicrophoneDriverPulseAudioCallProxy::on_update_feeds_trigger() {
-	if (OS::get_singleton()->get_main_loop()->is_connected(SNAME("process_frame"), on_update_feeds_trigger_callable)) {
-		OS::get_singleton()->get_main_loop()->disconnect("process_frame", on_update_feeds_trigger_callable);
-	}
-
-	if (launch_update_feeds()) {
-		cancel_update_feeds();
-		trigger_update_feeds();
-	}
+void MicrophoneDriverPulseAudioCallbackHelper::call_update_feeds_callback() {
+	driver->update_feeds();
 }
 
-bool MicrophoneDriverPulseAudioCallProxy::launch_update_feeds() {
-	if (!update_feeds_queued) {
-		return false;
-	}
-
-	uint64_t now_tick_ms = Time::get_singleton()->get_ticks_msec();
-	if (now_tick_ms < last_trigger_tick_ms + TRIGGER_TICK_COOLDOWN_MS) {
-		return true;
-	}
-
-	last_trigger_tick_ms = now_tick_ms;
-	microphone_driver->update_feeds_started = false;
-	microphone_driver->update_feeds();
-
-	return true;
-}
-
-void MicrophoneDriverPulseAudioCallProxy::trigger_update_feeds() {
-	if (update_feeds_queued) {
+void MicrophoneDriverPulseAudioCallbackHelper::call_update_feeds() {
+	if (OS::get_singleton()->get_main_loop()->is_connected("process_frame", call_update_feeds_callback_callable)) {
 		return;
 	}
-	update_feeds_queued = true;
-
-	if (!OS::get_singleton()->get_main_loop()->is_connected(SNAME("process_frame"), on_update_feeds_trigger_callable)) {
-		OS::get_singleton()->get_main_loop()->connect("process_frame", on_update_feeds_trigger_callable, CONNECT_DEFERRED);
-	}
+	OS::get_singleton()->get_main_loop()->connect("process_frame", call_update_feeds_callback_callable, CONNECT_DEFERRED | CONNECT_ONE_SHOT);
 }
 
-void MicrophoneDriverPulseAudioCallProxy::cancel_update_feeds() {
-	update_feeds_queued = false;
+MicrophoneDriverPulseAudioCallbackHelper::MicrophoneDriverPulseAudioCallbackHelper(MicrophoneDriverPulseAudio *p_driver) {
+	driver = p_driver;
+	call_update_feeds_callback_callable = callable_mp(this, &MicrophoneDriverPulseAudioCallbackHelper::call_update_feeds_callback);
 }
 
-MicrophoneDriverPulseAudioCallProxy::MicrophoneDriverPulseAudioCallProxy(MicrophoneDriverPulseAudio *p_microphone_driver) {
-	microphone_driver = p_microphone_driver;
-	on_update_feeds_trigger_callable = callable_mp(this, &MicrophoneDriverPulseAudioCallProxy::on_update_feeds_trigger);
-}
-
-MicrophoneDriverPulseAudioCallProxy::~MicrophoneDriverPulseAudioCallProxy() {
-	if (OS::get_singleton()->get_main_loop()->is_connected(SNAME("process_frame"), on_update_feeds_trigger_callable)) {
-		OS::get_singleton()->get_main_loop()->disconnect("process_frame", on_update_feeds_trigger_callable);
-	}
-}
+MicrophoneDriverPulseAudioCallbackHelper::~MicrophoneDriverPulseAudioCallbackHelper() {}
 
 #endif // PULSEAUDIO_ENABLED
