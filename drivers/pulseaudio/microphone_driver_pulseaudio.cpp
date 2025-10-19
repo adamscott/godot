@@ -217,6 +217,7 @@ MicrophoneDriverPulseAudio::~MicrophoneDriverPulseAudio() {
 	}
 
 	if (_pa_threaded_mainloop) {
+		pa_threaded_mainloop_stop(_pa_threaded_mainloop);
 		pa_threaded_mainloop_free(_pa_threaded_mainloop);
 		_pa_threaded_mainloop = nullptr;
 	}
