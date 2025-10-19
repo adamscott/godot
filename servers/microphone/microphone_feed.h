@@ -75,7 +75,7 @@ protected:
 	String name;
 	String description;
 	FormatId format_id = MICROPHONE_FEED_FORMAT_ID_UNDEFINED;
-	BitField<FormatFlag> format_flags = 0;
+	BitField<FormatFlag> format_flags = MICROPHONE_FEED_FORMAT_FLAG_NONE;
 	double sample_rate = 44100;
 	uint32_t channels_per_frame = 1;
 	uint32_t bit_depth = sizeof(float) * 8;
