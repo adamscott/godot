@@ -99,10 +99,15 @@ class MicrophoneDriverPulseAudioCallProxy : public Object {
 	GDCLASS(MicrophoneDriverPulseAudioCallProxy, Object);
 
 private:
-	MicrophoneDriverPulseAudio *microphone_driver;
-	bool waiting = false;
+	static const uint16_t TRIGGER_TICK_COOLDOWN_MS = 500;
 
-	void launch_update_feeds();
+	MicrophoneDriverPulseAudio *microphone_driver = nullptr;
+	bool update_feeds_queued = false;
+	uint64_t last_trigger_tick_ms = 0;
+
+	Callable on_update_feeds_trigger_callable;
+	void on_update_feeds_trigger();
+	bool launch_update_feeds();
 
 public:
 	void trigger_update_feeds();
