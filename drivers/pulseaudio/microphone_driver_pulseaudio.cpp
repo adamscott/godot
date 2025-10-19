@@ -473,6 +473,8 @@ void MicrophoneDriverPulseAudio::deactivate_feed_entry(FeedEntry *p_feed_entry) 
 	ERR_FAIL_NULL(p_feed_entry);
 	if (p_feed_entry->pa_stream) {
 		pa_stream_disconnect(p_feed_entry->pa_stream);
+		pa_stream_unref(p_feed_entry->pa_stream);
+		p_feed_entry->pa_stream = nullptr;
 	}
 }
 
