@@ -313,7 +313,7 @@ void MicrophoneDriverPulseAudioCallProxy::trigger_update_feeds() {
 	update_feeds_queued = true;
 
 	if (!OS::get_singleton()->get_main_loop()->is_connected(SNAME("process_frame"), on_update_feeds_trigger_callable)) {
-		OS::get_singleton()->get_main_loop()->connect("process_frame", on_update_feeds_trigger_callable);
+		OS::get_singleton()->get_main_loop()->connect("process_frame", on_update_feeds_trigger_callable, CONNECT_DEFERRED);
 	}
 }
 
