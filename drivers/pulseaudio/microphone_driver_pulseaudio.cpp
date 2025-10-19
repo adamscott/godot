@@ -428,11 +428,13 @@ void MicrophoneDriverPulseAudio::remove_feed_entry_at(uint32_t p_feed_entry_inde
 bool MicrophoneDriverPulseAudio::activate_feed_entry(FeedEntry *p_feed_entry) const {
 	ERR_FAIL_NULL_V(p_feed_entry, false);
 	ERR_FAIL_COND_V(p_feed_entry->pa_stream != nullptr, false);
+	ERR_FAIL_COND_V(p_feed_entry->feed.is_null(), false);
+	Ref<MicrophoneFeed> feed = p_feed_entry->feed;
 
 	pa_sample_spec _pa_sample_spec;
 	pa_channel_map _pa_channel_map;
 
-	Error err = _microphone_feed_to_pa_sample_spec(p_feed_entry->feed, _pa_sample_spec);
+	Error err = _microphone_feed_to_pa_sample_spec(feed, _pa_sample_spec);
 	ERR_FAIL_COND_V_MSG(err != OK, false, "couldn't create pa_sample_spec from MicrophoneFeed");
 
 #ifdef THREADS_ENABLED
@@ -442,32 +444,31 @@ bool MicrophoneDriverPulseAudio::activate_feed_entry(FeedEntry *p_feed_entry) co
 #endif
 
 	int input_latency = 30;
-	int input_buffer_frames = nearest_shift(uint32_t(float(input_latency) * p_feed_entry->feed->get_sample_rate() / 1000.0));
-	int input_buffer_size = input_buffer_frames * p_feed_entry->feed->get_channels_per_frame();
+	int input_buffer_frames = nearest_shift(uint32_t(float(input_latency) * feed->get_sample_rate() / 1000.0));
+	int input_buffer_size = input_buffer_frames * feed->get_channels_per_frame();
 
 	pa_buffer_attr _pa_stream_attributes = {};
 	_pa_stream_attributes.maxlength = (uint32_t)-1;
-	_pa_stream_attributes.fragsize = input_buffer_size * p_feed_entry->feed->get_bit_depth();
+	_pa_stream_attributes.fragsize = input_buffer_size * feed->get_bit_depth();
 
 	p_feed_entry->pa_stream = pa_stream_new(_pa_context, "GodotMicrophoneRecord", &_pa_sample_spec, &_pa_channel_map);
 	ERR_FAIL_NULL_V(p_feed_entry->pa_stream, false);
-	int error_code = pa_stream_connect_record(p_feed_entry->pa_stream, p_feed_entry->feed->get_name().utf8().get_data(), &_pa_stream_attributes, PA_STREAM_NOFLAGS);
+
+	bool success = true;
+
+	int error_code = pa_stream_connect_record(p_feed_entry->pa_stream, feed->get_name().utf8().get_data(), &_pa_stream_attributes, PA_STREAM_NOFLAGS);
 	if (error_code > 0) {
-		goto handle_error;
+		success = false;
+		ERR_PRINT(vformat(R"*(failed to initialize stream record for "%s")*", feed));
 	}
 
-	goto finish;
-
-handle_error:
-
-finish:
 #ifdef THREADS_ENABLED
 	pa_threaded_mainloop_unlock(_pa_threaded_mainloop);
 #else
 	pa_mainloop_unlock(_pa_mainloop);
 #endif
 
-	return false;
+	return success;
 }
 
 void MicrophoneDriverPulseAudio::deactivate_feed_entry(FeedEntry *p_feed_entry) {
