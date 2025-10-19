@@ -40,7 +40,6 @@
 #include "thirdparty/linuxbsd_headers/pulse/thread-mainloop.h"
 
 void MicrophoneDriverPulseAudio::_pa_context_state_callback(pa_context *p_pa_context, void *p_userdata) {
-	print_line(vformat("_pa_context_state_callback"));
 	pa_context_state state;
 	int *_pa_ready = static_cast<int *>(p_userdata);
 
@@ -65,6 +64,29 @@ void MicrophoneDriverPulseAudio::_pa_context_state_callback(pa_context *p_pa_con
 
 void MicrophoneDriverPulseAudio::_pa_context_get_source_info_list_callback(pa_context *p_pa_context, const pa_source_info *p_pa_source_info, int p_eol, void *p_userdata) {
 	MicrophoneDriverPulseAudio *microphone_driver = static_cast<MicrophoneDriverPulseAudio *>(p_userdata);
+	ERR_FAIL_NULL(microphone_driver);
+
+	if (p_eol) {
+		pa_threaded_mainloop_signal(microphone_driver->_pa_threaded_mainloop, 0);
+		return;
+	}
+
+	// Exclude output monitor devices. (i.e. loopback)
+	if (p_pa_source_info->monitor_of_sink != PA_INVALID_INDEX) {
+		return;
+	}
+
+	if (p_pa_source_info->n_ports > 0) {
+		uint32_t port = 0;
+		for (; port != p_pa_source_info->n_ports; port++) {
+			if (p_pa_source_info->ports[port]->available != PA_PORT_AVAILABLE_NO) {
+				break;
+			}
+		}
+		if (port == p_pa_source_info->n_ports) {
+			return;
+		}
+	}
 
 	bool found = false;
 	for (FeedEntry &feed_entry : microphone_driver->_feed_entries) {
@@ -77,14 +99,9 @@ void MicrophoneDriverPulseAudio::_pa_context_get_source_info_list_callback(pa_co
 	if (!found) {
 		Ref<MicrophoneFeed> feed;
 		feed.instantiate();
+		feed->set_name(String::utf8(p_pa_source_info->name));
+		feed->set_description(String::utf8(p_pa_source_info->description));
 		microphone_driver->_feed_entries.push_back({ .checked = true, .pa_index = p_pa_source_info->index, .feed = feed });
-	}
-
-	print_line(vformat("name: %s", p_pa_source_info->name));
-
-	if (p_eol > 0) {
-		pa_threaded_mainloop_signal(microphone_driver->_pa_threaded_mainloop, 0);
-		return;
 	}
 }
 
@@ -116,7 +133,6 @@ void MicrophoneDriverPulseAudio::update_feeds() {
 #endif // THREADS_ENABLED
 	_pa_context_get_source_info_list_operation = pa_context_get_source_info_list(_pa_context, &MicrophoneDriverPulseAudio::_pa_context_get_source_info_list_callback, (void *)this);
 	ERR_FAIL_NULL(_pa_context_get_source_info_list_operation);
-	print_line(vformat("_pa_context_get_source_info_list_operation: %x", (uint64_t)_pa_context_get_source_info_list_operation));
 	while (pa_operation_get_state(_pa_context_get_source_info_list_operation) == PA_OPERATION_RUNNING) {
 #ifdef THREADS_ENABLED
 		pa_threaded_mainloop_wait(_pa_threaded_mainloop);
