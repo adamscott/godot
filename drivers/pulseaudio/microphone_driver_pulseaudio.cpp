@@ -377,7 +377,7 @@ void MicrophoneDriverPulseAudio::start_updating_feeds() {
 	pa_threaded_mainloop_unlock(_pa_threaded_mainloop);
 #else
 	pa_mainloop_unlock(_pa_mainloop);
-#endif
+#endif // THREADS_ENABLED
 }
 
 void MicrophoneDriverPulseAudio::stop_updating_feeds() {
