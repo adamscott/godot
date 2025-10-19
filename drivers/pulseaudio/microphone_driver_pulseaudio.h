@@ -30,15 +30,49 @@
 
 #pragma once
 
+#include "core/object/object.h"
 #ifdef PULSEAUDIO_ENABLED
 
 #include "servers/microphone/microphone_driver.h"
 
 #include "core/object/ref_counted.h"
 
+#ifdef SOWRAP_ENABLED
+#include "pulse-so_wrap.h"
+#else
+#include <pulse/pulseaudio.h>
+#endif
+
 class MicrophoneFeed;
+class MicrophoneDriverPulseAudioCallProxy;
 
 class MicrophoneDriverPulseAudio : public MicrophoneDriver {
+	friend MicrophoneDriverPulseAudioCallProxy;
+
+protected:
+#ifdef THREADS_ENABLED
+	pa_threaded_mainloop *_pa_threaded_mainloop = nullptr;
+#else
+	pa_mainloop *_pa_mainloop = nullptr;
+#endif // THREADS_ENABLED
+	pa_context *_pa_context = nullptr;
+
+	static void _pa_context_state_callback(pa_context *p_pa_context, void *p_userdata);
+	pa_operation *_pa_context_get_source_info_list_operation = nullptr;
+	static void _pa_context_get_source_info_list_callback(pa_context *p_pa_context, const pa_source_info *p_pa_source_info, int p_eol, void *p_userdata);
+
+	bool started_update_feeds = false;
+	void stop_updating_feeds();
+	MicrophoneDriverPulseAudioCallProxy *call_proxy = nullptr;
+
+	struct FeedEntry {
+		bool checked;
+		uint32_t pa_index;
+		Ref<MicrophoneFeed> feed;
+	};
+	mutable LocalVector<FeedEntry> _feed_entries;
+	FeedEntry *get_feed_entry_from_feed(const Ref<MicrophoneFeed> p_feed) const;
+
 public:
 	virtual LocalVector<Ref<MicrophoneFeed>> get_feeds() const override;
 	virtual uint32_t get_feed_count() const override;
@@ -52,9 +86,27 @@ public:
 	virtual bool is_monitoring_feeds() const override;
 
 	virtual String get_name() const override { return String("PulseAudio"); }
+	virtual Error init() override;
 
 	MicrophoneDriverPulseAudio();
 	~MicrophoneDriverPulseAudio();
+};
+
+class MicrophoneDriverPulseAudioCallProxy : public Object {
+	GDCLASS(MicrophoneDriverPulseAudioCallProxy, Object);
+
+private:
+	MicrophoneDriverPulseAudio *microphone_driver;
+	bool waiting = false;
+
+	void launch_update_feeds();
+
+public:
+	void trigger_update_feeds();
+	void cancel_update_feeds();
+
+	MicrophoneDriverPulseAudioCallProxy(MicrophoneDriverPulseAudio *p_microphone_driver);
+	~MicrophoneDriverPulseAudioCallProxy();
 };
 
 #endif // PULSEAUDIO_ENABLED

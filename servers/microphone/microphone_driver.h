@@ -45,6 +45,8 @@ private:
 	static uint32_t next_feed_id;
 
 protected:
+	bool monitoring_feeds = false;
+
 	static void set_feed_id(Ref<MicrophoneFeed> p_feed);
 
 public:

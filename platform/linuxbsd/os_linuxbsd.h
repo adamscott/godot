@@ -33,9 +33,15 @@
 #include "crash_handler_linuxbsd.h"
 
 #include "core/input/input.h"
+#ifdef ALSA_ENABLED
 #include "drivers/alsa/audio_driver_alsa.h"
+// #include "drivers/alsa/microphone_driver_alsa.h"
+#endif // ALSA_ENABLED
 #include "drivers/alsamidi/midi_driver_alsamidi.h"
+#ifdef PULSEAUDIO_ENABLED
 #include "drivers/pulseaudio/audio_driver_pulseaudio.h"
+#include "drivers/pulseaudio/microphone_driver_pulseaudio.h"
+#endif // PULSEAUDIO_ENABLED
 #include "drivers/unix/os_unix.h"
 #include "servers/audio/audio_server.h"
 
@@ -66,7 +72,8 @@ class OS_LinuxBSD : public OS_Unix {
 #endif
 
 #ifdef ALSA_ENABLED
-	AudioDriverALSA driver_alsa;
+	AudioDriverALSA audio_driver_alsa;
+	// MicrophoneDriverALSA microphone_driver_alsa;
 #endif
 
 #ifdef ALSAMIDI_ENABLED
@@ -74,7 +81,8 @@ class OS_LinuxBSD : public OS_Unix {
 #endif
 
 #ifdef PULSEAUDIO_ENABLED
-	AudioDriverPulseAudio driver_pulseaudio;
+	AudioDriverPulseAudio audio_driver_pulseaudio;
+	MicrophoneDriverPulseAudio microphone_driver_pulseaudio;
 #endif
 
 	CrashHandler crash_handler;
