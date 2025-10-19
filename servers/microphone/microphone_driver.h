@@ -63,8 +63,8 @@ public:
 	virtual bool is_feed_active(Ref<MicrophoneFeed> p_feed) const = 0;
 	virtual void set_feed_active(Ref<MicrophoneFeed> p_feed, bool p_active) = 0;
 
-	virtual void set_monitoring_feeds(bool p_monitoring_feeds) = 0;
-	virtual bool is_monitoring_feeds() const = 0;
+	virtual void set_monitoring_feeds(bool p_monitoring_feeds) { monitoring_feeds = p_monitoring_feeds; }
+	virtual bool is_monitoring_feeds() const { return monitoring_feeds; }
 
 	virtual String get_name() const = 0;
 	virtual Error init();
@@ -79,8 +79,6 @@ public:
 	virtual uint32_t get_feed_count() const override { return 0; }
 	virtual void update_feeds() override {}
 
-	virtual void set_monitoring_feeds(bool p_monitoring_feeds) override {}
-	virtual bool is_monitoring_feeds() const override { return false; }
 	virtual bool activate_feed(Ref<MicrophoneFeed> p_feed) override { return false; }
 	virtual void deactivate_feed(Ref<MicrophoneFeed> p_feed) override {}
 	virtual bool is_feed_active(Ref<MicrophoneFeed> p_feed) const override { return false; }

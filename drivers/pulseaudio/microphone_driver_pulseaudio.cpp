@@ -91,7 +91,7 @@ void MicrophoneDriverPulseAudio::_pa_context_get_source_info_list_callback(pa_co
 	bool found = false;
 	for (FeedEntry &feed_entry : microphone_driver->_feed_entries) {
 		if (p_pa_source_info->index == feed_entry.pa_index) {
-			feed_entry.checked = true;
+			feed_entry.marked_as_checked = true;
 			found = true;
 			break;
 		}
@@ -101,7 +101,7 @@ void MicrophoneDriverPulseAudio::_pa_context_get_source_info_list_callback(pa_co
 		feed.instantiate();
 		feed->set_name(String::utf8(p_pa_source_info->name));
 		feed->set_description(String::utf8(p_pa_source_info->description));
-		microphone_driver->_feed_entries.push_back({ .checked = true, .pa_index = p_pa_source_info->index, .feed = feed });
+		microphone_driver->_feed_entries.push_back({ .marked_as_checked = true, .pa_index = p_pa_source_info->index, .feed = feed });
 	}
 }
 
@@ -168,17 +168,29 @@ void MicrophoneDriverPulseAudio::update_feeds() {
 }
 
 bool MicrophoneDriverPulseAudio::activate_feed(Ref<MicrophoneFeed> p_feed) {
-	return false;
+	FeedEntry *feed_entry = get_feed_entry_from_feed(p_feed);
+	ERR_FAIL_NULL_V(feed_entry, false);
+	return activate_feed_entry(feed_entry);
 }
 
 void MicrophoneDriverPulseAudio::deactivate_feed(Ref<MicrophoneFeed> p_feed) {
+	FeedEntry *feed_entry = get_feed_entry_from_feed(p_feed);
+	ERR_FAIL_NULL(feed_entry);
+	deactivate_feed_entry(feed_entry);
 }
 
 bool MicrophoneDriverPulseAudio::is_feed_active(Ref<MicrophoneFeed> p_feed) const {
-	return false;
+	FeedEntry *feed_entry = get_feed_entry_from_feed(p_feed);
+	ERR_FAIL_NULL_V(feed_entry, false);
+	return feed_entry->active;
 }
 
 void MicrophoneDriverPulseAudio::set_feed_active(Ref<MicrophoneFeed> p_feed, bool p_active) {
+	FeedEntry *feed_entry = get_feed_entry_from_feed(p_feed);
+	ERR_FAIL_NULL(feed_entry);
+	if (feed_entry->active == p_active) {
+		return;
+	}
 }
 
 void MicrophoneDriverPulseAudio::set_monitoring_feeds(bool p_monitoring_feeds) {
@@ -197,7 +209,7 @@ void MicrophoneDriverPulseAudio::set_monitoring_feeds(bool p_monitoring_feeds) {
 }
 
 bool MicrophoneDriverPulseAudio::is_monitoring_feeds() const {
-	return false;
+	return monitoring_feeds;
 }
 
 Error MicrophoneDriverPulseAudio::init() {
