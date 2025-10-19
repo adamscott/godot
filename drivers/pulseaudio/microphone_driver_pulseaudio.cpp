@@ -32,12 +32,113 @@
 
 #ifdef PULSEAUDIO_ENABLED
 
+#include "core/error/error_list.h"
 #include "core/error/error_macros.h"
 #include "core/object/object.h"
 #include "core/os/main_loop.h"
 #include "core/os/os.h"
 #include "servers/microphone/microphone_feed.h"
 #include "servers/microphone/microphone_server.h"
+
+Error _microphone_feed_to_pa_sample_spec(Ref<MicrophoneFeed> p_feed, pa_sample_spec &p_pa_sample_spec) {
+	pa_sample_format sample_format;
+	BitField<MicrophoneFeed::FormatFlag> feed_format_flags = p_feed->get_format_flags();
+
+#define HAS_FLAG(flag) \
+	feed_format_flags.has_flag(MicrophoneFeed::flag)
+#define HAS_BIT_DEPTH(bit_depth) \
+	p_feed->get_bit_depth() == bit_depth
+#define FORMAT_ERROR(error_string, ...) \
+	ERR_FAIL_V_MSG(ERR_CANT_CREATE, vformat("unsupported format for PulseAudio: %s", error_string))
+
+	switch (p_feed->get_format_id()) {
+		case MicrophoneFeed::MICROPHONE_FEED_FORMAT_ID_ALAW:
+		case MicrophoneFeed::MICROPHONE_FEED_FORMAT_ID_ULAW: {
+			bool is_alaw = p_feed->get_format_id() == MicrophoneFeed::MICROPHONE_FEED_FORMAT_ID_ALAW;
+			String format_name = is_alaw ? "ALAW" : "ULAW";
+#define FORMAT_ERROR_LAW(str) \
+	FORMAT_ERROR(vformat("doesn't support %s %s samples", format_name, str))
+
+			if (HAS_FLAG(MICROPHONE_FEED_FORMAT_FLAG_IS_FLOAT)) {
+				FORMAT_ERROR_LAW("float");
+			} else if (HAS_FLAG(MICROPHONE_FEED_FORMAT_FLAG_IS_SIGNED_INTEGER)) {
+				FORMAT_ERROR_LAW("signed integer");
+			} else if (HAS_FLAG(MICROPHONE_FEED_FORMAT_FLAG_IS_PACKED)) {
+				FORMAT_ERROR_LAW("packed");
+			} else if (HAS_FLAG(MICROPHONE_FEED_FORMAT_FLAG_IS_ALIGNED_HIGH)) {
+				FORMAT_ERROR_LAW("aligned high");
+			} else {
+				if (HAS_BIT_DEPTH(8)) {
+					sample_format = is_alaw ? PA_SAMPLE_ALAW : PA_SAMPLE_ULAW;
+				} else {
+					FORMAT_ERROR_LAW("non 8-bit");
+				}
+			}
+
+#undef FORMAT_ERROR_LAW
+		} break;
+
+		case MicrophoneFeed::MICROPHONE_FEED_FORMAT_ID_LINEAR_PCM: {
+			if (HAS_FLAG(MICROPHONE_FEED_FORMAT_FLAG_IS_FLOAT)) {
+				if (HAS_BIT_DEPTH(32)) {
+					if (HAS_FLAG(MICROPHONE_FEED_FORMAT_FLAG_IS_BIG_ENDIAN)) {
+						sample_format = PA_SAMPLE_FLOAT32BE;
+					} else {
+						sample_format = PA_SAMPLE_FLOAT32LE;
+					}
+				} else {
+					FORMAT_ERROR("doesn't support non 32-bit float samples");
+				}
+			} else if (HAS_FLAG(MICROPHONE_FEED_FORMAT_FLAG_IS_SIGNED_INTEGER)) {
+				if (HAS_BIT_DEPTH(16)) {
+					if (HAS_FLAG(MICROPHONE_FEED_FORMAT_FLAG_IS_BIG_ENDIAN)) {
+						sample_format = PA_SAMPLE_S16BE;
+					} else {
+						sample_format = PA_SAMPLE_S16LE;
+					}
+				} else if (HAS_BIT_DEPTH(32)) {
+					if (HAS_FLAG(MICROPHONE_FEED_FORMAT_FLAG_IS_BIG_ENDIAN)) {
+						sample_format = PA_SAMPLE_S32BE;
+					} else {
+						sample_format = PA_SAMPLE_S32LE;
+					}
+				} else if (HAS_BIT_DEPTH(24)) {
+					if (HAS_FLAG(MICROPHONE_FEED_FORMAT_FLAG_IS_PACKED)) {
+						if (HAS_FLAG(MICROPHONE_FEED_FORMAT_FLAG_IS_BIG_ENDIAN)) {
+							sample_format = PA_SAMPLE_S24BE;
+						} else {
+							sample_format = PA_SAMPLE_S24LE;
+						}
+					} else if (HAS_FLAG(MICROPHONE_FEED_FORMAT_FLAG_IS_ALIGNED_HIGH)) {
+						if (HAS_FLAG(MICROPHONE_FEED_FORMAT_FLAG_IS_BIG_ENDIAN)) {
+							sample_format = PA_SAMPLE_S24_32BE;
+						} else {
+							sample_format = PA_SAMPLE_S24_32LE;
+						}
+					} else {
+						FORMAT_ERROR("doesn't support 24-bit non-packed and non aligned high samples");
+					}
+				} else {
+					FORMAT_ERROR(vformat("doesn't support %s-bit samples", p_feed->get_bit_depth()));
+				}
+			} else {
+				if (HAS_BIT_DEPTH(8)) {
+					sample_format = PA_SAMPLE_U8;
+				} else {
+					FORMAT_ERROR("doesn't support non 8-bit unsigned samples");
+				}
+			}
+		} break;
+		case MicrophoneFeed::MICROPHONE_FEED_FORMAT_ID_UNDEFINED:
+		case MicrophoneFeed::MICROPHONE_FEED_FORMAT_ID_MAX: {
+			ERR_FAIL_V(ERR_CANT_CREATE);
+		} break;
+	}
+
+	p_pa_sample_spec.format = sample_format;
+
+	return OK;
+}
 
 /*
  * MicrophoneDriverPulseAudio
@@ -329,12 +430,53 @@ void MicrophoneDriverPulseAudio::remove_feed_entry_at(uint32_t p_feed_entry_inde
 
 bool MicrophoneDriverPulseAudio::activate_feed_entry(FeedEntry *p_feed_entry) const {
 	ERR_FAIL_NULL_V(p_feed_entry, false);
+	ERR_FAIL_COND_V(p_feed_entry->pa_stream != nullptr, false);
+
+	pa_sample_spec _pa_sample_spec;
+	pa_channel_map _pa_channel_map;
+
+	_microphone_feed_to_pa_sample_spec(p_feed_entry->feed, _pa_sample_spec);
+
+#ifdef THREADS_ENABLED
+	pa_threaded_mainloop_lock(_pa_threaded_mainloop);
+#else
+	pa_mainloop_lock(_pa_mainloop);
+#endif
+
+	int input_latency = 30;
+	int input_buffer_frames = nearest_shift(uint32_t(float(input_latency) * p_feed_entry->feed->get_sample_rate() / 1000.0));
+	int input_buffer_size = input_buffer_frames * p_feed_entry->feed->get_channels_per_frame();
+
+	pa_buffer_attr _pa_stream_attributes = {};
+	_pa_stream_attributes.maxlength = (uint32_t)-1;
+	_pa_stream_attributes.fragsize = input_buffer_size * p_feed_entry->feed->get_bit_depth();
+
+	p_feed_entry->pa_stream = pa_stream_new(_pa_context, "GodotMicrophoneRecord", &_pa_sample_spec, &_pa_channel_map);
+	ERR_FAIL_NULL_V(p_feed_entry->pa_stream, false);
+	int error_code = pa_stream_connect_record(p_feed_entry->pa_stream, p_feed_entry->feed->get_name().utf8().get_data(), &_pa_stream_attributes, PA_STREAM_NOFLAGS);
+	if (error_code > 0) {
+		goto handle_error;
+	}
+
+	goto finish;
+
+handle_error:
+
+finish:
+#ifdef THREADS_ENABLED
+	pa_threaded_mainloop_unlock(_pa_threaded_mainloop);
+#else
+	pa_mainloop_unlock(_pa_mainloop);
+#endif
+
 	return false;
 }
 
 void MicrophoneDriverPulseAudio::deactivate_feed_entry(FeedEntry *p_feed_entry) {
 	ERR_FAIL_NULL(p_feed_entry);
-	p_feed_entry->active = false;
+	if (p_feed_entry->pa_stream) {
+		pa_stream_disconnect(p_feed_entry->pa_stream);
+	}
 }
 
 uint32_t MicrophoneDriverPulseAudio::get_feed_count() const {
@@ -403,13 +545,13 @@ void MicrophoneDriverPulseAudio::deactivate_feed(Ref<MicrophoneFeed> p_feed) {
 bool MicrophoneDriverPulseAudio::is_feed_active(Ref<MicrophoneFeed> p_feed) const {
 	FeedEntry *feed_entry = get_feed_entry_from_feed(p_feed);
 	ERR_FAIL_NULL_V(feed_entry, false);
-	return feed_entry->active;
+	return feed_entry->pa_stream != nullptr;
 }
 
 void MicrophoneDriverPulseAudio::set_feed_active(Ref<MicrophoneFeed> p_feed, bool p_active) {
 	FeedEntry *feed_entry = get_feed_entry_from_feed(p_feed);
 	ERR_FAIL_NULL(feed_entry);
-	if (feed_entry->active == p_active) {
+	if ((feed_entry->pa_stream != nullptr) == p_active) {
 		return;
 	}
 }

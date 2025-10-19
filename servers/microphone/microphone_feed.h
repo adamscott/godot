@@ -77,7 +77,7 @@ protected:
 	FormatId format_id = MICROPHONE_FEED_FORMAT_ID_UNDEFINED;
 	BitField<FormatFlag> format_flags = MICROPHONE_FEED_FORMAT_FLAG_NONE;
 	double sample_rate = 44100;
-	uint32_t channels_per_frame = 1;
+	uint8_t channels_per_frame = 1;
 	uint32_t bit_depth = sizeof(float) * 8;
 
 	mutable RingBuffer<uint8_t> ring_buffer;
@@ -121,8 +121,8 @@ public:
 		update_ring_buffer_size();
 	}
 
-	uint32_t get_channels_per_frame() const { return channels_per_frame; }
-	void set_channels_per_frame(uint32_t p_channels_per_frame) {
+	uint8_t get_channels_per_frame() const { return channels_per_frame; }
+	void set_channels_per_frame(uint8_t p_channels_per_frame) {
 		if (channels_per_frame == p_channels_per_frame) {
 			return;
 		}

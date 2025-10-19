@@ -74,7 +74,7 @@ protected:
 
 	struct FeedEntry {
 		bool marked_as_checked = false;
-		bool active = false;
+		pa_stream *pa_stream = nullptr;
 		uint32_t pa_index;
 		Ref<MicrophoneFeed> feed;
 	};
