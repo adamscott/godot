@@ -470,16 +470,21 @@ bool MicrophoneDriverPulseAudio::activate_feed_entry(FeedEntry *p_feed_entry) co
 	pa_mainloop_unlock(_pa_mainloop);
 #endif
 
+	feed->emit_signal(SNAME("activated"));
 	return success;
 }
 
 void MicrophoneDriverPulseAudio::deactivate_feed_entry(FeedEntry *p_feed_entry) {
 	ERR_FAIL_NULL(p_feed_entry);
-	if (p_feed_entry->pa_stream) {
-		pa_stream_disconnect(p_feed_entry->pa_stream);
-		pa_stream_unref(p_feed_entry->pa_stream);
-		p_feed_entry->pa_stream = nullptr;
+	if (!p_feed_entry->pa_stream) {
+		return;
 	}
+
+	pa_stream_disconnect(p_feed_entry->pa_stream);
+	pa_stream_unref(p_feed_entry->pa_stream);
+	p_feed_entry->pa_stream = nullptr;
+
+	p_feed_entry->feed->emit_signal(SNAME("deactivated"));
 }
 
 uint32_t MicrophoneDriverPulseAudio::get_feed_count() const {

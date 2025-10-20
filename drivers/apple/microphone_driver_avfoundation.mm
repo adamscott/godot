@@ -198,7 +198,7 @@ bool MicrophoneDriverAVFoundation::activate_feed_entry(FeedEntry *p_feed_entry) 
 	auto init_device_capture_session = [&p_feed_entry]() -> void {
 		p_feed_entry->capture_session = [[MicrophoneDeviceCaptureSession alloc] initForFeed:p_feed_entry->feed
 																				  andDevice:p_feed_entry->device];
-		p_feed_entry->feed->emit_signal(SNAME("feed_activated"));
+		p_feed_entry->feed->emit_signal(SNAME("activated"));
 	};
 
 	if (@available(macOS 10.14, *)) {
@@ -234,10 +234,13 @@ bool MicrophoneDriverAVFoundation::activate_feed_entry(FeedEntry *p_feed_entry) 
 
 void MicrophoneDriverAVFoundation::deactivate_feed_entry(FeedEntry *p_feed_entry) {
 	ERR_FAIL_NULL(p_feed_entry);
-	if (p_feed_entry->capture_session) {
-		[p_feed_entry->capture_session cleanup];
-		p_feed_entry->capture_session = nil;
+	if (!p_feed_entry->capture_session) {
+		return;
 	}
+
+	[p_feed_entry->capture_session cleanup];
+	p_feed_entry->capture_session = nil;
+	p_feed_entry->feed->emit_signal(SNAME("deactivated"));
 }
 
 bool MicrophoneDriverAVFoundation::activate_feed(Ref<MicrophoneFeed> p_feed) {

@@ -127,8 +127,8 @@ void MicrophoneFeed::_bind_methods() {
 
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "active"), "set_active", "is_active");
 
-	ADD_SIGNAL(MethodInfo(SNAME("feed_activated")));
-	ADD_SIGNAL(MethodInfo(SNAME("feed_deactivated")));
+	ADD_SIGNAL(MethodInfo(SNAME("activated")));
+	ADD_SIGNAL(MethodInfo(SNAME("deactivated")));
 
 	BIND_ENUM_CONSTANT(MICROPHONE_FEED_FORMAT_ID_ALAW);
 	BIND_ENUM_CONSTANT(MICROPHONE_FEED_FORMAT_ID_ULAW);
