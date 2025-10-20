@@ -430,13 +430,14 @@ MicrophoneDriverAVFoundation::~MicrophoneDriverAVFoundation() {
 		if (spaceLeft < dataSize) {
 			ringBuffer->advance_read(dataSize - spaceLeft);
 		}
-		print_line(vformat("writing %s bytes to ringBuffer %x", dataSize, (uint64_t)(pointer_t)ringBuffer));
 		uint32_t writeSize = ringBuffer->write((uint8_t *)audioBuffer.mData, dataSize);
 		if (writeSize != dataSize) {
 			ERR_PRINT(vformat("writeSize (%s) != dataSize (%s)", writeSize, dataSize));
+			goto finish_capture_output;
 		}
 	}
 
+finish_capture_output:
 	CFRelease(blockBuffer);
 	CFRelease(pSampleBuffer);
 	free(audioBufferList);
