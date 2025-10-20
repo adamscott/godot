@@ -60,7 +60,7 @@ void MicrophoneDriverAVFoundation::setup_feed_to_device_settings(Ref<MicrophoneF
 	p_feed->set_channels_per_frame(audio_format_stream_basic_description->mChannelsPerFrame);
 	p_feed->set_bit_depth(audio_format_stream_basic_description->mBitsPerChannel);
 
-	BitField<MicrophoneFeed::FormatFlag> feed_flags = MicrophoneFeed::MICROPHONE_FEED_FORMAT_FLAG_NONE;
+	BitField<MicrophoneFeed::FormatFlag> feed_flags = MicrophoneFeed::FORMAT_FLAG_NONE;
 
 #define HAS_FLAG(flag) audio_format_stream_basic_description->mFormatFlags &flag
 #define SET_IF_HAS_FLAG(apple_flag, microphone_feed_flag)          \
@@ -69,13 +69,13 @@ void MicrophoneDriverAVFoundation::setup_feed_to_device_settings(Ref<MicrophoneF
 	}                                                              \
 	(void)0
 
-	SET_IF_HAS_FLAG(kAudioFormatFlagIsAlignedHigh, MICROPHONE_FEED_FORMAT_FLAG_IS_ALIGNED_HIGH);
-	SET_IF_HAS_FLAG(kAudioFormatFlagIsBigEndian, MICROPHONE_FEED_FORMAT_FLAG_IS_BIG_ENDIAN);
-	SET_IF_HAS_FLAG(kAudioFormatFlagIsFloat, MICROPHONE_FEED_FORMAT_FLAG_IS_FLOAT);
-	SET_IF_HAS_FLAG(kAudioFormatFlagIsNonInterleaved, MICROPHONE_FEED_FORMAT_FLAG_IS_NON_INTERLEAVED);
-	SET_IF_HAS_FLAG(kAudioFormatFlagIsNonMixable, MICROPHONE_FEED_FORMAT_FLAG_IS_NON_MIXABLE);
-	SET_IF_HAS_FLAG(kAudioFormatFlagIsPacked, MICROPHONE_FEED_FORMAT_FLAG_IS_PACKED);
-	SET_IF_HAS_FLAG(kAudioFormatFlagIsSignedInteger, MICROPHONE_FEED_FORMAT_FLAG_IS_SIGNED_INTEGER);
+	SET_IF_HAS_FLAG(kAudioFormatFlagIsAlignedHigh, FORMAT_FLAG_IS_ALIGNED_HIGH);
+	SET_IF_HAS_FLAG(kAudioFormatFlagIsBigEndian, FORMAT_FLAG_IS_BIG_ENDIAN);
+	SET_IF_HAS_FLAG(kAudioFormatFlagIsFloat, FORMAT_FLAG_IS_FLOAT);
+	SET_IF_HAS_FLAG(kAudioFormatFlagIsNonInterleaved, FORMAT_FLAG_IS_NON_INTERLEAVED);
+	SET_IF_HAS_FLAG(kAudioFormatFlagIsNonMixable, FORMAT_FLAG_IS_NON_MIXABLE);
+	SET_IF_HAS_FLAG(kAudioFormatFlagIsPacked, FORMAT_FLAG_IS_PACKED);
+	SET_IF_HAS_FLAG(kAudioFormatFlagIsSignedInteger, FORMAT_FLAG_IS_SIGNED_INTEGER);
 
 #undef SET_IF_HAS_FLAG
 #undef HAS_FLAG
@@ -338,33 +338,33 @@ MicrophoneDriverAVFoundation::~MicrophoneDriverAVFoundation() {
 	NSDictionary<NSString *, id> *settings = nil;
 
 	switch (pFeed->get_format_id()) {
-		case MicrophoneFeed::MICROPHONE_FEED_FORMAT_ID_LINEAR_PCM: {
+		case MicrophoneFeed::FORMAT_ID_LINEAR_PCM: {
 			settings = @{
 				AVFormatIDKey : [NSNumber numberWithInt:kAudioFormatLinearPCM],
 				AVSampleRateKey : [NSNumber numberWithFloat:feed->get_sample_rate()],
 				AVNumberOfChannelsKey : [NSNumber numberWithInt:feed->get_channels_per_frame()],
-				AVLinearPCMIsBigEndianKey : [NSNumber numberWithBool:feedFlags.has_flag(MicrophoneFeed::MICROPHONE_FEED_FORMAT_FLAG_IS_BIG_ENDIAN)],
-				AVLinearPCMIsFloatKey : [NSNumber numberWithBool:feedFlags.has_flag(MicrophoneFeed::MICROPHONE_FEED_FORMAT_FLAG_IS_FLOAT)],
-				AVLinearPCMIsNonInterleavedKey : [NSNumber numberWithBool:feedFlags.has_flag(MicrophoneFeed::MICROPHONE_FEED_FORMAT_FLAG_IS_NON_INTERLEAVED)],
+				AVLinearPCMIsBigEndianKey : [NSNumber numberWithBool:feedFlags.has_flag(MicrophoneFeed::FORMAT_FLAG_IS_BIG_ENDIAN)],
+				AVLinearPCMIsFloatKey : [NSNumber numberWithBool:feedFlags.has_flag(MicrophoneFeed::FORMAT_FLAG_IS_FLOAT)],
+				AVLinearPCMIsNonInterleavedKey : [NSNumber numberWithBool:feedFlags.has_flag(MicrophoneFeed::FORMAT_FLAG_IS_NON_INTERLEAVED)],
 				AVLinearPCMBitDepthKey : [NSNumber numberWithInt:feed->get_bit_depth()],
 			};
 		} break;
-		case MicrophoneFeed::MICROPHONE_FEED_FORMAT_ID_ALAW: {
+		case MicrophoneFeed::FORMAT_ID_ALAW: {
 			settings = @{
 				AVFormatIDKey : [NSNumber numberWithInt:kAudioFormatALaw],
 				AVSampleRateKey : [NSNumber numberWithFloat:feed->get_sample_rate()],
 				AVNumberOfChannelsKey : [NSNumber numberWithInt:feed->get_channels_per_frame()]
 			};
 		} break;
-		case MicrophoneFeed::MICROPHONE_FEED_FORMAT_ID_ULAW: {
+		case MicrophoneFeed::FORMAT_ID_ULAW: {
 			settings = @{
 				AVFormatIDKey : [NSNumber numberWithInt:kAudioFormatULaw],
 				AVSampleRateKey : [NSNumber numberWithFloat:feed->get_sample_rate()],
 				AVNumberOfChannelsKey : [NSNumber numberWithInt:feed->get_channels_per_frame()]
 			};
 		} break;
-		case MicrophoneFeed::MICROPHONE_FEED_FORMAT_ID_UNDEFINED:
-		case MicrophoneFeed::MICROPHONE_FEED_FORMAT_ID_MAX: {
+		case MicrophoneFeed::FORMAT_ID_UNDEFINED:
+		case MicrophoneFeed::FORMAT_ID_MAX: {
 			ERR_FAIL_V(nil);
 		} break;
 	}
