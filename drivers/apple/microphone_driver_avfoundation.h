@@ -30,6 +30,8 @@
 
 #pragma once
 
+#ifdef COREAUDIO_ENABLED
+
 #include "servers/microphone/microphone_driver.h"
 
 #include "core/object/ref_counted.h"
@@ -104,3 +106,5 @@ public:
 - (void)cleanup;
 
 @end
+
+#endif // COREAUDIO_ENABLED

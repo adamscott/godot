@@ -52,12 +52,12 @@ Error _microphone_feed_to_pa_sample_spec(Ref<MicrophoneFeed> p_feed, pa_sample_s
 	ERR_FAIL_V_MSG(ERR_CANT_CREATE, vformat("unsupported format for PulseAudio: %s", error_string))
 
 	switch (p_feed->get_format_id()) {
-		case MicrophoneFeed::FORMAT_ID_ALAW:
-		case MicrophoneFeed::FORMAT_ID_ULAW: {
-			bool is_alaw = p_feed->get_format_id() == MicrophoneFeed::FORMAT_ID_ALAW;
+		case MicrophoneFeed::FORMAT_ID_ALAW_PCM:
+		case MicrophoneFeed::FORMAT_ID_ULAW_PCM: {
+			bool is_alaw = p_feed->get_format_id() == MicrophoneFeed::FORMAT_ID_ALAW_PCM;
 			String format_name = is_alaw ? "ALAW" : "ULAW";
 #define FORMAT_ERROR_LAW(str) \
-	FORMAT_ERROR(vformat("doesn't support %s %s samples", format_name, str))
+	FORMAT_ERROR(vformat("doesn't support %s PCM %s samples", format_name, str))
 
 			if (HAS_FLAG(FORMAT_FLAG_IS_FLOAT)) {
 				FORMAT_ERROR_LAW("float");
@@ -150,9 +150,9 @@ void MicrophoneDriverPulseAudio::setup_feed_to_source_settings(Ref<MicrophoneFee
 	BitField<MicrophoneFeed::FormatFlag> format_flags = MicrophoneFeed::FORMAT_FLAG_NONE;
 
 #define FORMAT_ALAW() \
-	p_feed->set_format_id(MicrophoneFeed::FORMAT_ID_ALAW)
+	p_feed->set_format_id(MicrophoneFeed::FORMAT_ID_ALAW_PCM)
 #define FORMAT_ULAW() \
-	p_feed->set_format_id(MicrophoneFeed::FORMAT_ID_ULAW)
+	p_feed->set_format_id(MicrophoneFeed::FORMAT_ID_ULAW_PCM)
 #define FORMAT_LINEAR_PCM() \
 	p_feed->set_format_id(MicrophoneFeed::FORMAT_ID_LINEAR_PCM)
 
@@ -259,7 +259,7 @@ void MicrophoneDriverPulseAudio::setup_feed_to_source_settings(Ref<MicrophoneFee
 	p_feed->set_format_flags(format_flags);
 
 	p_feed->set_sample_rate(p_pa_source_info->sample_spec.rate);
-	p_feed->set_channels_per_frame(p_pa_source_info->sample_spec.channels);
+	p_feed->set_channels(p_pa_source_info->sample_spec.channels);
 
 #undef SAMPLE_U8
 #undef SAMPLE_ALAW
@@ -445,7 +445,7 @@ bool MicrophoneDriverPulseAudio::activate_feed_entry(FeedEntry *p_feed_entry) co
 
 	int input_latency = 30;
 	int input_buffer_frames = nearest_shift(uint32_t(float(input_latency) * feed->get_sample_rate() / 1000.0));
-	int input_buffer_size = input_buffer_frames * feed->get_channels_per_frame();
+	int input_buffer_size = input_buffer_frames * feed->get_channels();
 
 	pa_buffer_attr _pa_stream_attributes = {};
 	_pa_stream_attributes.maxlength = (uint32_t)-1;

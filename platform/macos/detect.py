@@ -215,6 +215,8 @@ def configure(env: "SConsEnvironment"):
             "-framework",
             "AudioUnit",
             "-framework",
+            "AudioToolbox",
+            "-framework",
             "CoreAudio",
             "-framework",
             "CoreMIDI",
