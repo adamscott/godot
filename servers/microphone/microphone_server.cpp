@@ -46,7 +46,6 @@ bool MicrophoneServer::is_monitoring_feeds() const {
 }
 
 int MicrophoneServer::get_feed_index(int p_id) {
-	ERR_FAIL_COND_V_MSG(!is_monitoring_feeds(), -1, "MicrophoneServer is not actively monitoring feeds; call set_monitoring_feeds(true) first.");
 	LocalVector<Ref<MicrophoneFeed>> feeds = MicrophoneDriver::get_singleton()->get_feeds();
 	for (uint32_t i = 0; i < feeds.size(); i++) {
 		if (feeds[i]->get_id() == p_id) {
@@ -57,7 +56,7 @@ int MicrophoneServer::get_feed_index(int p_id) {
 }
 
 Ref<MicrophoneFeed> MicrophoneServer::get_feed_by_id(int p_id) {
-	ERR_FAIL_COND_V_MSG(!is_monitoring_feeds(), nullptr, "MicrophoneServer is not actively monitoring feeds; call set_monitoring_feeds(true) first.");
+	ERR_FAIL_COND_V_MSG(p_id < 0, nullptr, "MicrophoneFeed ids cannot be negative");
 	LocalVector<Ref<MicrophoneFeed>> feeds = MicrophoneDriver::get_singleton()->get_feeds();
 	for (uint32_t i = 0; i < feeds.size(); i++) {
 		if (feeds[i]->get_id() == p_id) {
@@ -68,7 +67,6 @@ Ref<MicrophoneFeed> MicrophoneServer::get_feed_by_id(int p_id) {
 }
 
 Ref<MicrophoneFeed> MicrophoneServer::get_feed(int p_index) {
-	ERR_FAIL_COND_V_MSG(!is_monitoring_feeds(), nullptr, "MicrophoneServer is not actively monitoring feeds; call set_monitoring_feeds(true) first.");
 	LocalVector<Ref<MicrophoneFeed>> feeds = MicrophoneDriver::get_singleton()->get_feeds();
 	ERR_FAIL_COND_V(p_index < 0, nullptr);
 	ERR_FAIL_INDEX_V((uint32_t)p_index, feeds.size(), nullptr);
@@ -76,12 +74,10 @@ Ref<MicrophoneFeed> MicrophoneServer::get_feed(int p_index) {
 }
 
 int MicrophoneServer::get_feed_count() const {
-	ERR_FAIL_COND_V_MSG(!is_monitoring_feeds(), 0, "MicrophoneServer is not actively monitoring feeds; call set_monitoring_feeds(true) first.");
 	return MicrophoneDriver::get_singleton()->get_feed_count();
 }
 
 TypedArray<MicrophoneFeed> MicrophoneServer::get_feeds() {
-	ERR_FAIL_COND_V_MSG(!is_monitoring_feeds(), {}, "MicrophoneServer is not actively monitoring feeds; call set_monitoring_feeds(true) first.");
 	TypedArray<MicrophoneFeed> return_feeds;
 	int feed_count = get_feed_count();
 	return_feeds.resize(feed_count);
