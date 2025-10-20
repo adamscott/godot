@@ -449,7 +449,7 @@ bool MicrophoneDriverPulseAudio::activate_feed_entry(FeedEntry *p_feed_entry) co
 
 	pa_buffer_attr _pa_stream_attributes = {};
 	_pa_stream_attributes.maxlength = (uint32_t)-1;
-	_pa_stream_attributes.fragsize = input_buffer_size * feed->get_bit_depth();
+	_pa_stream_attributes.fragsize = input_buffer_size * (feed->get_bit_depth() / 8);
 
 	p_feed_entry->pa_stream = pa_stream_new(_pa_context, "GodotMicrophoneRecord", &_pa_sample_spec, &_pa_channel_map);
 	ERR_FAIL_NULL_V(p_feed_entry->pa_stream, false);
