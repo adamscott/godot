@@ -307,11 +307,11 @@ void MicrophoneDriverPulseAudio::_pa_context_state_callback(pa_context *p_pa_con
 }
 
 void MicrophoneDriverPulseAudio::_pa_context_get_source_info_list_callback(pa_context *p_pa_context, const pa_source_info *p_pa_source_info, int p_eol, void *p_userdata) {
-	MicrophoneDriverPulseAudio *microphone_driver = static_cast<MicrophoneDriverPulseAudio *>(p_userdata);
-	ERR_FAIL_NULL(microphone_driver);
+	MicrophoneDriverPulseAudio *driver = static_cast<MicrophoneDriverPulseAudio *>(p_userdata);
+	ERR_FAIL_NULL(driver);
 
 	if (p_eol) {
-		pa_threaded_mainloop_signal(microphone_driver->_pa_threaded_mainloop, 0);
+		pa_threaded_mainloop_signal(driver->_pa_threaded_mainloop, 0);
 		return;
 	}
 
@@ -333,7 +333,7 @@ void MicrophoneDriverPulseAudio::_pa_context_get_source_info_list_callback(pa_co
 	}
 
 	bool feed_entry_found = false;
-	for (FeedEntry &feed_entry : microphone_driver->_feed_entries) {
+	for (FeedEntry &feed_entry : driver->_feed_entries) {
 		if (p_pa_source_info->index == feed_entry.pa_index) {
 			feed_entry.marked_as_checked = true;
 			feed_entry_found = true;
@@ -344,20 +344,20 @@ void MicrophoneDriverPulseAudio::_pa_context_get_source_info_list_callback(pa_co
 	if (!feed_entry_found) {
 		Ref<MicrophoneFeed> feed;
 		feed.instantiate();
-		microphone_driver->setup_feed_to_source_settings(feed, p_pa_source_info);
-		microphone_driver->_feed_entries.push_back({ .marked_as_checked = true, .pa_index = p_pa_source_info->index, .feed = feed });
-		microphone_driver->feeds_updated = true;
+		driver->setup_feed_to_source_settings(feed, p_pa_source_info);
+		driver->_feed_entries.push_back({ .marked_as_checked = true, .pa_index = p_pa_source_info->index, .feed = feed });
+		driver->feeds_updated = true;
 		MicrophoneServer::get_singleton()->emit_signal("feed_added", feed);
 	}
 }
 
 void MicrophoneDriverPulseAudio::_pa_context_subscription_source_callback(pa_context *p_pa_context, pa_subscription_event_type p_pa_subscription_event_type, uint32_t p_index, void *p_userdata) {
-	MicrophoneDriverPulseAudio *microphone_driver = static_cast<MicrophoneDriverPulseAudio *>(p_userdata);
-	ERR_FAIL_NULL(microphone_driver);
-	microphone_driver->callback_helper->call_update_feeds();
+	MicrophoneDriverPulseAudio *driver = static_cast<MicrophoneDriverPulseAudio *>(p_userdata);
+	ERR_FAIL_NULL(driver);
+	driver->callback_helper->call_update_feeds();
 
 #ifdef THREADS_ENABLED
-	pa_threaded_mainloop_signal(microphone_driver->_pa_threaded_mainloop, 0);
+	pa_threaded_mainloop_signal(driver->_pa_threaded_mainloop, 0);
 #endif
 }
 
@@ -451,12 +451,14 @@ bool MicrophoneDriverPulseAudio::activate_feed_entry(FeedEntry *p_feed_entry) co
 	_pa_stream_attributes.maxlength = (uint32_t)-1;
 	_pa_stream_attributes.fragsize = input_buffer_size * (feed->get_bit_depth() / 8);
 
-	p_feed_entry->pa_stream = pa_stream_new(_pa_context, "GodotMicrophoneRecord", &_pa_sample_spec, &_pa_channel_map);
+	pa_stream *_pa_stream = pa_stream_new(_pa_context, "GodotMicrophoneRecord", &_pa_sample_spec, &_pa_channel_map);
+	p_feed_entry->pa_stream = _pa_stream;
 	ERR_FAIL_NULL_V(p_feed_entry->pa_stream, false);
 
-	bool success = true;
+	pa_stream_set_read_callback(_pa_stream, &MicrophoneDriverPulseAudio::_pa_stream_record_read_callback, (void *)this);
 
-	int error_code = pa_stream_connect_record(p_feed_entry->pa_stream, feed->get_name().utf8().get_data(), &_pa_stream_attributes, PA_STREAM_NOFLAGS);
+	bool success = true;
+	int error_code = pa_stream_connect_record(_pa_stream, feed->get_name().utf8().get_data(), &_pa_stream_attributes, PA_STREAM_NOFLAGS);
 	if (error_code > 0) {
 		success = false;
 		ERR_PRINT(vformat(R"*(failed to initialize stream record for "%s")*", feed));
