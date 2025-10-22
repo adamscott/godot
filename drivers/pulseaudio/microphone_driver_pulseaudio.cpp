@@ -37,6 +37,7 @@
 #include "core/object/object.h"
 #include "core/os/main_loop.h"
 #include "core/os/os.h"
+#include "core/typedefs.h"
 #include "servers/microphone/microphone_feed.h"
 #include "servers/microphone/microphone_server.h"
 
@@ -355,10 +356,29 @@ void MicrophoneDriverPulseAudio::_pa_context_subscription_source_callback(pa_con
 	MicrophoneDriverPulseAudio *driver = static_cast<MicrophoneDriverPulseAudio *>(p_userdata);
 	ERR_FAIL_NULL(driver);
 	driver->callback_helper->call_update_feeds();
+}
 
-#ifdef THREADS_ENABLED
-	pa_threaded_mainloop_signal(driver->_pa_threaded_mainloop, 0);
-#endif
+void MicrophoneDriverPulseAudio::_pa_stream_record_read_callback(pa_stream *p_pa_stream, size_t p_size, void *p_userdata) {
+	MicrophoneDriverPulseAudio *driver = static_cast<MicrophoneDriverPulseAudio *>(p_userdata);
+	ERR_FAIL_NULL(driver);
+
+	const void *data;
+	if (pa_stream_peek(p_pa_stream, &data, &p_size) < 0) {
+		ERR_FAIL_MSG("pa_stream_peek() failed: " + String::utf8(pa_strerror(pa_context_errno(driver->_pa_context))));
+	}
+
+	FeedEntry *feed_entry = driver->get_feed_entry_from_pa_stream(p_pa_stream);
+	ERR_FAIL_NULL(feed_entry);
+	RingBuffer<uint8_t> *ring_buffer = driver->get_ring_buffer_from_feed(feed_entry->feed);
+	uint32_t space_left = ring_buffer->space_left();
+	if (space_left < p_size) {
+		ring_buffer->advance_read(p_size - space_left);
+	}
+
+	int err = pa_stream_drop(p_pa_stream);
+	ERR_FAIL_COND(err != 0);
+	uint32_t write_size = ring_buffer->write((uint8_t *)data, p_size);
+	ERR_FAIL_COND_MSG(write_size != p_size, vformat("write_size (%s) != p_size (%s)", write_size, p_size));
 }
 
 void MicrophoneDriverPulseAudio::start_updating_feeds() {
@@ -394,6 +414,15 @@ void MicrophoneDriverPulseAudio::stop_updating_feeds() {
 MicrophoneDriverPulseAudio::FeedEntry *MicrophoneDriverPulseAudio::get_feed_entry_from_feed(const Ref<MicrophoneFeed> p_feed) const {
 	for (FeedEntry &feed_entry : _feed_entries) {
 		if (feed_entry.feed == p_feed) {
+			return &feed_entry;
+		}
+	}
+	return nullptr;
+}
+
+MicrophoneDriverPulseAudio::FeedEntry *MicrophoneDriverPulseAudio::get_feed_entry_from_pa_stream(const pa_stream *p_pa_stream) const {
+	for (FeedEntry &feed_entry : _feed_entries) {
+		if (feed_entry.pa_stream == p_pa_stream) {
 			return &feed_entry;
 		}
 	}

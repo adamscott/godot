@@ -66,6 +66,7 @@ protected:
 	static void _pa_context_get_source_info_list_callback(pa_context *p_pa_context, const pa_source_info *p_pa_source_info, int p_eol, void *p_userdata);
 	pa_operation *_pa_context_subscription_source_operation = nullptr;
 	static void _pa_context_subscription_source_callback(pa_context *p_pa_context, pa_subscription_event_type p_pa_subscription_event_type, uint32_t p_index, void *p_userdata);
+	static void _pa_stream_record_read_callback(pa_stream *p_pa_stream, size_t p_nbytes, void *p_userdata);
 
 	bool update_feeds_started = false;
 	bool feeds_updated = false;
@@ -80,6 +81,7 @@ protected:
 	};
 	mutable LocalVector<FeedEntry> _feed_entries;
 	FeedEntry *get_feed_entry_from_feed(const Ref<MicrophoneFeed> p_feed) const;
+	FeedEntry *get_feed_entry_from_pa_stream(const pa_stream *p_pa_stream) const;
 
 	void remove_feed_entry(FeedEntry *p_feed_entry);
 	void remove_feed_entry_at(uint32_t p_feed_entry_index);
