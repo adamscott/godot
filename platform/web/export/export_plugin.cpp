@@ -30,17 +30,19 @@
 
 #include "export_plugin.h"
 
-#include "logo_svg.gen.h"
-#include "run_icon_svg.gen.h"
-
 #include "core/config/project_settings.h"
 #include "core/io/dir_access.h"
+#include "core/io/file_access.h"
 #include "editor/editor_string_names.h"
 #include "editor/export/editor_export.h"
 #include "editor/import/resource_importer_texture_settings.h"
 #include "editor/settings/editor_settings.h"
 #include "editor/themes/editor_scale.h"
+#include "modules/zip/zip_reader.h"
 #include "scene/resources/image_texture.h"
+
+#include "logo_svg.gen.h"
+#include "run_icon_svg.gen.h"
 
 #include "modules/modules_enabled.gen.h" // For mono.
 #include "modules/svg/image_loader_svg.h"
@@ -369,6 +371,7 @@ void EditorExportPlatformWeb::get_export_options(List<ExportOption> *r_options) 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "custom_template/release", PROPERTY_HINT_GLOBAL_FILE, "*.zip"), ""));
 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "async/is_async_export_preset"), false));
+	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "async/clear_before_export"), true));
 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "variant/extensions_support"), false)); // GDExtension support.
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "variant/thread_support"), false, true)); // Thread support (i.e. run with or without COEP/COOP headers).
@@ -504,11 +507,6 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 		return ERR_FILE_BAD_PATH;
 	}
 
-	bool is_async_export_preset = (bool)p_preset->get("async/is_async_export_preset");
-	if (is_async_export_preset) {
-		print_line(vformat("async/is_async_export_preset"));
-	}
-
 	// Find the correct template
 	String template_path = p_debug ? custom_debug : custom_release;
 	template_path = template_path.strip_edges();
@@ -526,7 +524,84 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 	// Export pck and shared objects
 	Vector<SharedObject> shared_objects;
 	String pck_path = base_path + ".pck";
-	Error error = save_pack(p_preset, p_debug, pck_path, &shared_objects);
+	String zip_path;
+	Error error;
+
+	bool is_async_export_preset = (bool)p_preset->get("async/is_async_export_preset");
+	if (is_async_export_preset) {
+		bool clear_async_before_export = (bool)p_preset->get("async/clear_before_export");
+
+		Ref<DirAccess> temporary_dir = DirAccess::create_temp("godot_web_export", true, &error);
+		if (error != OK) {
+			add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not create temporary directory.")));
+			return error;
+		}
+		zip_path = temporary_dir->get_current_dir().path_join(vformat("%s.zip", base_name));
+		save_zip(p_preset, p_debug, zip_path, &shared_objects);
+
+		Ref<ZIPReader> zip_reader;
+		zip_reader.instantiate();
+		error = zip_reader->open(zip_path);
+		if (error != OK) {
+			add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not open .zip file: \"%s\"."), zip_path));
+			return error;
+		}
+
+		if (clear_async_before_export && DirAccess::exists(base_path)) {
+			{
+				Ref<DirAccess> base_dir_access = DirAccess::open(base_path);
+				base_dir_access->erase_contents_recursive();
+			}
+			{
+				Ref<DirAccess> root_dir_access = DirAccess::open(".");
+				root_dir_access->remove(base_path);
+			}
+		}
+
+		if (!DirAccess::exists(base_path)) {
+			error = DirAccess::make_dir_absolute(base_path);
+			if (error != OK) {
+				add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR(R"*(Could not create directory: "%s")*"), base_path));
+				return error;
+			}
+		}
+
+		Ref<DirAccess> root_dir = DirAccess::open(base_path);
+		if (root_dir.is_null()) {
+			add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR(R"*(Could not open directory: "%s")*"), base_path));
+			return error;
+		}
+
+		PackedStringArray file_paths = zip_reader->get_files();
+		for (const String &file_path : file_paths) {
+			if (file_path.ends_with("/")) {
+				root_dir->make_dir_recursive(file_path);
+				continue;
+			}
+
+			String save_path = root_dir->get_current_dir().path_join(file_path);
+			root_dir->make_dir_recursive(save_path.get_base_dir());
+			Ref<FileAccess> file = FileAccess::open(save_path, FileAccess::WRITE);
+			PackedByteArray file_data = zip_reader->read_file(file_path, true);
+			file->store_buffer(file_data);
+		}
+
+		{
+			Ref<DirAccess> da = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
+			for (int i = 0; i < shared_objects.size(); i++) {
+				String dst = root_dir->get_current_dir().path_join(shared_objects[i].path.get_file());
+				error = da->copy(shared_objects[i].path, dst);
+				if (error != OK) {
+					add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), shared_objects[i].path.get_file()));
+					return error;
+				}
+			}
+		}
+
+		return OK;
+	}
+
+	error = save_pack(p_preset, p_debug, pck_path, &shared_objects);
 	if (error != OK) {
 		add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), pck_path));
 		return error;
