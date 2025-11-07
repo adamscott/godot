@@ -368,6 +368,8 @@ void EditorExportPlatformWeb::get_export_options(List<ExportOption> *r_options) 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "custom_template/debug", PROPERTY_HINT_GLOBAL_FILE, "*.zip"), ""));
 	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "custom_template/release", PROPERTY_HINT_GLOBAL_FILE, "*.zip"), ""));
 
+	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "async/is_async_export_preset"), false));
+
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "variant/extensions_support"), false)); // GDExtension support.
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "variant/thread_support"), false, true)); // Thread support (i.e. run with or without COEP/COOP headers).
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "vram_texture_compression/for_desktop"), true)); // S3TC
@@ -500,6 +502,11 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 	if (!DirAccess::exists(base_dir)) {
 		add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Target folder does not exist or is inaccessible: \"%s\""), base_dir));
 		return ERR_FILE_BAD_PATH;
+	}
+
+	bool is_async_export_preset = (bool)p_preset->get("async/is_async_export_preset");
+	if (is_async_export_preset) {
+		print_line(vformat("async/is_async_export_preset"));
 	}
 
 	// Find the correct template
