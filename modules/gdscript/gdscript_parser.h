@@ -1440,6 +1440,8 @@ private:
 	void reset_extents(Node *p_node, GDScriptTokenizer::Token p_token);
 	void reset_extents(Node *p_node, Node *p_from);
 
+	HashSet<String> dependencies;
+
 	template <typename T>
 	T *alloc_node() {
 		T *node = memnew(T);
@@ -1611,21 +1613,11 @@ public:
 	bool annotation_exists(const String &p_annotation_name) const;
 
 	const List<ParserError> &get_errors() const { return errors; }
-	const List<String> get_dependencies() const {
-		List<String> dependencies;
-
-		GDScriptParser::Node *current_node = list;
-		while (current_node != nullptr) {
-			if (current_node->type == Node::PRELOAD) {
-				PreloadNode *preload_node = static_cast<PreloadNode *>(current_node);
-				if (!preload_node->resolved_path.is_empty()) {
-					dependencies.push_back(preload_node->resolved_path);
-				}
-			}
-			current_node = current_node->next;
-		}
-
+	const HashSet<String> &get_dependencies() const {
 		return dependencies;
+	}
+	void add_dependency(const String &p_dependency) {
+		dependencies.insert(p_dependency);
 	}
 #ifdef DEBUG_ENABLED
 	const List<GDScriptWarning> &get_warnings() const { return warnings; }
