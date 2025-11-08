@@ -268,6 +268,15 @@ const GodotOS = {
 				}, 0);
 			});
 		},
+
+		loadAsyncFile: function (pckDir, path) {
+			(async function () {
+				const remapResponse = await fetch(`${pckDir}/${path}.remap`);
+				GodotRuntime.print(remapResponse);
+			})().catch((err) => {
+				GodotRuntime.print('load file err', err);
+			});
+		},
 	},
 
 	godot_js_os_finish_async__proxy: 'sync',
@@ -320,6 +329,15 @@ const GodotOS = {
 			return ((ua.indexOf('CrOS') !== -1) || (ua.indexOf('BSD') !== -1) || (ua.indexOf('Linux') !== -1) || (ua.indexOf('X11') !== -1)) ? 1 : 0;
 		}
 		return 0;
+	},
+
+	godot_js_os_set_up_async_data__proxy: 'sync',
+	godot_js_os_set_up_async_data__sig: 'ipp',
+	godot_js_os_set_up_async_data: function (p_pck_dir_ptr, p_path_ptr) {
+		const pck_dir = GodotRuntime.parseString(p_pck_dir_ptr);
+		const path = GodotRuntime.parseString(p_path_ptr);
+		GodotOS.loadAsyncFile(pck_dir, path);
+		return 1;
 	},
 
 	godot_js_os_execute__proxy: 'sync',

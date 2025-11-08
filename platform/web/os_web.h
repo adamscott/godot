@@ -93,6 +93,8 @@ public:
 	String get_unique_id() const override;
 	int get_default_thread_pool_size() const override;
 
+	Error set_up_async_data(const String &p_pck_dir, const String &p_path) const override;
+
 	String get_executable_path() const override;
 	Error shell_open(const String &p_uri) override;
 	String get_name() const override;

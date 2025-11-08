@@ -1110,6 +1110,10 @@ bool ResourceLoader::is_imported(const String &p_path) {
 	return false; //not found
 }
 
+void ResourceLoader::set_up_async_data(const String &p_pck_dir, const String &p_path, Error *r_error) {
+	*r_error = OS::get_singleton()->set_up_async_data(p_pck_dir, p_path);
+}
+
 void ResourceLoader::get_dependencies(const String &p_path, List<String> *p_dependencies, bool p_add_types) {
 	String local_path = _path_remap(_validate_local_path(p_path));
 

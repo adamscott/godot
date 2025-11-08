@@ -161,6 +161,10 @@ int OS_Web::get_default_thread_pool_size() const {
 #endif
 }
 
+Error OS_Web::set_up_async_data(const String &p_pck_dir, const String &p_path) const {
+	return static_cast<Error>(godot_js_os_set_up_async_data(p_pck_dir.utf8().get_data(), p_path.utf8().get_data()));
+}
+
 bool OS_Web::_check_internal_feature_support(const String &p_feature) {
 	if (p_feature == "web") {
 		return true;
