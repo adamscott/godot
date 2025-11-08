@@ -582,16 +582,17 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 
 			String save_path = root_dir->get_current_dir().path_join(file_path);
 			root_dir->make_dir_recursive(save_path.get_base_dir());
+			PackedByteArray file_data;
 			{
 				Ref<FileAccess> file = FileAccess::open(save_path, FileAccess::WRITE);
-				PackedByteArray file_data = zip_reader->read_file(file_path, true);
+				file_data = zip_reader->read_file(file_path, true);
 				file->store_buffer(file_data);
 			}
 
 			if (file_path.ends_with(".remap")) {
 				Ref<ConfigFile> remap_file;
 				remap_file.instantiate();
-				remap_file->load(save_path);
+				remap_file->parse(String::utf8((const char *)file_data.ptr()));
 
 				String resource_path = file_path.trim_suffix(".remap");
 				if (!resource_path.begins_with("res://")) {
