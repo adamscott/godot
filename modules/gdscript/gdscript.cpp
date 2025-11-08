@@ -3071,8 +3071,12 @@ void ResourceFormatLoaderGDScript::get_dependencies(const String &p_path, List<S
 		return;
 	}
 
-	for (const String &E : parser.get_dependencies()) {
-		p_dependencies->push_back(E);
+	GDScriptAnalyzer analyzer = GDScriptAnalyzer(&parser);
+	analyzer.analyze();
+
+	for (const String &parser_dependency : parser.get_dependencies()) {
+		p_dependencies->push_back(parser_dependency);
+		ResourceLoader::get_dependencies(parser_dependency, p_dependencies);
 	}
 }
 

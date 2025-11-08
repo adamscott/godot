@@ -1612,8 +1612,20 @@ public:
 
 	const List<ParserError> &get_errors() const { return errors; }
 	const List<String> get_dependencies() const {
-		// TODO: Keep track of deps.
-		return List<String>();
+		List<String> dependencies;
+
+		GDScriptParser::Node *current_node = list;
+		while (current_node != nullptr) {
+			if (current_node->type == Node::PRELOAD) {
+				PreloadNode *preload_node = static_cast<PreloadNode *>(current_node);
+				if (!preload_node->resolved_path.is_empty()) {
+					dependencies.push_back(preload_node->resolved_path);
+				}
+			}
+			current_node = current_node->next;
+		}
+
+		return dependencies;
 	}
 #ifdef DEBUG_ENABLED
 	const List<GDScriptWarning> &get_warnings() const { return warnings; }

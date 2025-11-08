@@ -31,6 +31,7 @@
 #include "export_plugin.h"
 
 #include "core/config/project_settings.h"
+#include "core/io/config_file.h"
 #include "core/io/dir_access.h"
 #include "core/io/file_access.h"
 #include "editor/editor_string_names.h"
@@ -581,9 +582,36 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 
 			String save_path = root_dir->get_current_dir().path_join(file_path);
 			root_dir->make_dir_recursive(save_path.get_base_dir());
-			Ref<FileAccess> file = FileAccess::open(save_path, FileAccess::WRITE);
-			PackedByteArray file_data = zip_reader->read_file(file_path, true);
-			file->store_buffer(file_data);
+			{
+				Ref<FileAccess> file = FileAccess::open(save_path, FileAccess::WRITE);
+				PackedByteArray file_data = zip_reader->read_file(file_path, true);
+				file->store_buffer(file_data);
+			}
+
+			if (file_path.ends_with(".remap")) {
+				Ref<ConfigFile> remap_file;
+				remap_file.instantiate();
+				remap_file->load(save_path);
+
+				String resource_path = file_path.trim_suffix(".remap");
+				if (!resource_path.begins_with("res://")) {
+					resource_path = "res://" + resource_path;
+				}
+
+				List<String> resource_dependencies;
+				ResourceLoader::get_dependencies(resource_path, &resource_dependencies);
+
+				Array file_dependencies;
+				for (const String &resource_dependency : resource_dependencies) {
+					// print_line(vformat("[%s]: %s", resource_path, resource_dependency));
+					Dictionary file_dependency;
+					file_dependency["uid"] = resource_dependency.get_slice("::", 0);
+					file_dependency["fallback_path"] = resource_dependency.get_slice("::", 2);
+					file_dependencies.push_back(file_dependency);
+				}
+				remap_file->set_value("dependencies", "files", file_dependencies);
+				remap_file->save(save_path);
+			}
 		}
 
 		{
