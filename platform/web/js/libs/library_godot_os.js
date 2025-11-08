@@ -269,9 +269,14 @@ const GodotOS = {
 			});
 		},
 
-		loadAsyncFile: function (pckDir, path) {
+		loadAsyncFile: function (pPckDir, pPath) {
+			let path = pPath;
+			if (path.startsWith('res://')) {
+				path = path.substring('res://'.length);
+			}
+
 			(async function () {
-				const remapResponse = await fetch(`${pckDir}/${path}.remap`);
+				const remapResponse = await fetch(`${pPckDir}/${path}.remap`);
 				GodotRuntime.print(remapResponse);
 			})().catch((err) => {
 				GodotRuntime.print('load file err', err);

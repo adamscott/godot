@@ -594,11 +594,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 				remap_file.instantiate();
 				remap_file->parse(String::utf8((const char *)file_data.ptr()));
 
-				String resource_path = file_path.trim_suffix(".remap");
-				if (!resource_path.begins_with("res://")) {
-					resource_path = "res://" + resource_path;
-				}
-
+				String resource_path = "res://" + file_path.trim_suffix(".remap");
 				List<String> resource_dependencies;
 				ResourceLoader::get_dependencies(resource_path, &resource_dependencies);
 
