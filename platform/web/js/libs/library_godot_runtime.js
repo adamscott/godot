@@ -28,8 +28,119 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
+class ConfigFile {
+	constructor() {
+		/** @type {Map<string, Map<string, any>>} */
+		this.sections = new Map();
+	}
+
+	_getSection(pSection) {
+		if (this.sections.has(pSection)) {
+			return this.sections.get(pSection);
+		}
+
+		/** @type {Map<string, string>} */
+		const sectionMap = new Map();
+		this.sections.set(pSection, sectionMap);
+		return sectionMap;
+	}
+
+	/**
+	 * @param {string} pSection
+	 * @param {string} pKey
+	 * @param {any} pValue
+	 */
+	setValue(pSection, pKey, pValue) {
+		this._getSection(pSection).set(pKey, pValue);
+	}
+
+	/**
+	 * @param {string} pSection
+	 * @param {string} pKey
+	 * @param {any} pDefault
+	 */
+	getValue(pSection, pKey, pDefault = undefined) {
+		if (!this.hasSectionKey(pSection, pKey)) {
+			return pDefault;
+		}
+		return this.sections.get(pSection).get(pKey);
+	}
+
+	/**
+	 * @param {string} pSection
+	 */
+	hasSection(pSection) {
+		return this.sections.has(pSection);
+	}
+
+	/**
+	 * @param {string} pSection
+	 * @param {string} pKey
+	 */
+	hasSectionKey(pSection, pKey) {
+		if (!this.hasSection(pSection)) {
+			return false;
+		}
+		return this.sections.get(pSection).has(pKey);
+	}
+
+	getSections() {
+		return Array.from(this.sections.keys());
+	}
+
+	/**
+	 * @param {string} pSection
+	 */
+	getSectionKeys(pSection) {
+		if (!this.sections.has(pSection)) {
+			return [];
+		}
+		return Array.from(this._getSection(pSection).keys());
+	}
+
+	/**
+	 * @param {string} pSection
+	 */
+	eraseSection(pSection) {
+		if (!this.sections.has(pSection)) {
+			return;
+		}
+		this.sections.get(pSection).clear();
+		this.sections.delete(pSection);
+	}
+
+	/**
+	 * @param {string} pSection
+	 * @param {string} pKey
+	 */
+	eraseSectionKey(pSection, pKey) {
+		if (!this.sections.has(pSection)) {
+			return;
+		}
+		if (!this.sections.get(pSection).has(pKey)) {
+			return;
+		}
+		this.sections.get(pSection).delete(pKey);
+	}
+
+	clear() {
+		for (const section of this.getSections()) {
+			this.sections.get(section).clear();
+		}
+		this.sections.clear();
+	}
+}
+
 const GodotRuntime = {
 	$GodotRuntime: {
+		ConfigFile: ConfigFile,
+
+		getConfigFileFromString: function (pConfigFileString) {
+			const configFile = new GodotRuntime.ConfigFile();
+			configFile.parseString(pConfigFileString);
+			return configFile;
+		},
+
 		/*
 		 * Functions
 		 */

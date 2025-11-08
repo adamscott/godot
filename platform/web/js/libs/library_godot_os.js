@@ -277,9 +277,14 @@ const GodotOS = {
 
 			(async function () {
 				const remapResponse = await fetch(`${pPckDir}/${path}.remap`);
+				if (!remapResponse.ok) {
+					GodotRuntime.error('couldn\'t load remap file');
+					return;
+				}
+
 				GodotRuntime.print(remapResponse);
 			})().catch((err) => {
-				GodotRuntime.print('load file err', err);
+				GodotRuntime.error('load file err', err);
 			});
 		},
 	},
