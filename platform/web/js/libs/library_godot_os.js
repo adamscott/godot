@@ -282,7 +282,10 @@ const GodotOS = {
 					return;
 				}
 
-				GodotRuntime.print(remapResponse);
+				const remapResponseData = await remapResponse.text();
+				const configFile = GodotRuntime.getConfigFileFromString(remapResponseData);
+
+				GodotRuntime.print(configFile);
 			})().catch((err) => {
 				GodotRuntime.error('load file err', err);
 			});

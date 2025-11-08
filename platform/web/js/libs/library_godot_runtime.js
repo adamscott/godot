@@ -28,117 +28,59 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-class ConfigFile {
-	constructor() {
-		/** @type {Map<string, Map<string, any>>} */
-		this.sections = new Map();
-	}
-
-	_getSection(pSection) {
-		if (this.sections.has(pSection)) {
-			return this.sections.get(pSection);
-		}
-
-		/** @type {Map<string, string>} */
-		const sectionMap = new Map();
-		this.sections.set(pSection, sectionMap);
-		return sectionMap;
-	}
-
-	/**
-	 * @param {string} pSection
-	 * @param {string} pKey
-	 * @param {any} pValue
-	 */
-	setValue(pSection, pKey, pValue) {
-		this._getSection(pSection).set(pKey, pValue);
-	}
-
-	/**
-	 * @param {string} pSection
-	 * @param {string} pKey
-	 * @param {any} pDefault
-	 */
-	getValue(pSection, pKey, pDefault = undefined) {
-		if (!this.hasSectionKey(pSection, pKey)) {
-			return pDefault;
-		}
-		return this.sections.get(pSection).get(pKey);
-	}
-
-	/**
-	 * @param {string} pSection
-	 */
-	hasSection(pSection) {
-		return this.sections.has(pSection);
-	}
-
-	/**
-	 * @param {string} pSection
-	 * @param {string} pKey
-	 */
-	hasSectionKey(pSection, pKey) {
-		if (!this.hasSection(pSection)) {
-			return false;
-		}
-		return this.sections.get(pSection).has(pKey);
-	}
-
-	getSections() {
-		return Array.from(this.sections.keys());
-	}
-
-	/**
-	 * @param {string} pSection
-	 */
-	getSectionKeys(pSection) {
-		if (!this.sections.has(pSection)) {
-			return [];
-		}
-		return Array.from(this._getSection(pSection).keys());
-	}
-
-	/**
-	 * @param {string} pSection
-	 */
-	eraseSection(pSection) {
-		if (!this.sections.has(pSection)) {
-			return;
-		}
-		this.sections.get(pSection).clear();
-		this.sections.delete(pSection);
-	}
-
-	/**
-	 * @param {string} pSection
-	 * @param {string} pKey
-	 */
-	eraseSectionKey(pSection, pKey) {
-		if (!this.sections.has(pSection)) {
-			return;
-		}
-		if (!this.sections.get(pSection).has(pKey)) {
-			return;
-		}
-		this.sections.get(pSection).delete(pKey);
-	}
-
-	clear() {
-		for (const section of this.getSections()) {
-			this.sections.get(section).clear();
-		}
-		this.sections.clear();
-	}
-}
-
 const GodotRuntime = {
 	$GodotRuntime: {
-		ConfigFile: ConfigFile,
+		_getConfigFileAsJsonCallback: null,
 
-		getConfigFileFromString: function (pConfigFileString) {
-			const configFile = new GodotRuntime.ConfigFile();
-			configFile.parseString(pConfigFileString);
-			return configFile;
+		getConfigFileFromString: function (pConfigFileDataAsString) {
+			if (pConfigFileDataAsString.length == 0) {
+				return null;
+			}
+			if (GodotRuntime._getConfigFileAsJsonCallback == null) {
+				GodotRuntime.error('Could not get config file as JSON, callback not yet set.');
+				return null;
+			}
+			globalThis['GodotRuntime'] = GodotRuntime;
+			globalThis['HEAPU32'] = HEAPU32;
+			globalThis['HEAPU8'] = HEAPU8;
+			globalThis['HEAP8'] = HEAP8;
+
+			let configFileDataPtr = GodotRuntime.allocString(pConfigFileDataAsString);
+			// let configFileJsStringPtr = GodotRuntime._getConfigFileAsJsonCallback(configFileDataPtr);
+			const configFilePtr = GodotRuntime._getConfigFileAsJsonCallback(configFileDataPtr);
+			GodotRuntime.free(configFileDataPtr);
+			configFileDataPtr = 0;
+
+			// if (configFileJsStringPtr === 0) {
+			if (configFilePtr === 0) {
+				GodotRuntime.error('configFilePtr is nullptr');
+				return null;
+			}
+			// GodotRuntime.print("configFilePtr: " + configFileJsStringPtr);
+			GodotRuntime.print(`configFilePtr: ${configFilePtr}`);
+			// const configFile = GodotRuntime.getStringFromJsStringPtr(configFileJsStringPtr);
+			const configFile = GodotRuntime.parseString(configFilePtr);
+
+			// const configFileLength = GodotRuntime.getHeapValue(configFileJsStringPtr, "i32");
+			// let configFilePtr = Number(GodotRuntime.getHeapValue(configFileJsStringPtr + HEAPU32.BYTES_PER_ELEMENT, "i64"));
+			// const configFile = UTF8ToString(configFilePtr, configFileLength, true);
+			// GodotRuntime.free(configFileJsStringPtr);
+			// configFileJsStringPtr = 0;
+			// GodotRuntime.free(configFilePtr);
+			// configFilePtr = 0;
+
+			GodotRuntime.print('configFile:', configFile);
+			// const configFile = GodotRuntime.parseString(configFileDataPtr);
+			if (configFile.length === 0) {
+				GodotRuntime.error('configFile is empty', configFile);
+				return null;
+			}
+			const configFileJson = JSON.parse(configFile);
+
+			GodotRuntime.free(configFileDataPtr);
+			configFileDataPtr = 0;
+
+			return configFileJson;
 		},
 
 		/*
@@ -239,6 +181,13 @@ const GodotRuntime = {
 		stringToHeap: function (p_str, p_ptr, p_len) {
 			return stringToUTF8Array(p_str, HEAP8, p_ptr, p_len);
 		},
+	},
+
+	godot_js_runtime_set_get_config_file_as_json_cb__proxy: 'async',
+	godot_js_runtime_set_get_config_file_as_json_cb__sig: 'pp',
+	godot_js_runtime_set_get_config_file_as_json_cb: function (pCallbackPtr) {
+		GodotRuntime.print('GodotRuntime._getConfigFileAsJsonCallbackPtr:', pCallbackPtr);
+		GodotRuntime._getConfigFileAsJsonCallback = GodotRuntime.get_func(pCallbackPtr);
 	},
 };
 autoAddDeps(GodotRuntime, '$GodotRuntime');

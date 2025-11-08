@@ -31,6 +31,7 @@
 #include "export_plugin.h"
 
 #include "core/config/project_settings.h"
+#include "core/error/error_list.h"
 #include "core/io/config_file.h"
 #include "core/io/dir_access.h"
 #include "core/io/file_access.h"
@@ -530,6 +531,11 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 
 	bool is_async_export_preset = (bool)p_preset->get("async/is_async_export_preset");
 	if (is_async_export_preset) {
+		if (FileAccess::exists(pck_path)) {
+			add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR(R"*(Could not create directory "%s", a file with the same name exists.)*"), pck_path));
+			return ERR_ALREADY_EXISTS;
+		}
+
 		bool clear_async_before_export = (bool)p_preset->get("async/clear_before_export");
 
 		Ref<DirAccess> temporary_dir = DirAccess::create_temp("godot_web_export", true, &error);
@@ -547,29 +553,28 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 			add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not open .zip file: \"%s\"."), zip_path));
 			return error;
 		}
-
-		if (clear_async_before_export && DirAccess::exists(base_path)) {
+		if (clear_async_before_export && DirAccess::exists(pck_path)) {
 			{
-				Ref<DirAccess> base_dir_access = DirAccess::open(base_path);
-				base_dir_access->erase_contents_recursive();
+				Ref<DirAccess> pck_dir_access = DirAccess::open(pck_path);
+				pck_dir_access->erase_contents_recursive();
 			}
 			{
 				Ref<DirAccess> root_dir_access = DirAccess::open(".");
-				root_dir_access->remove(base_path);
+				root_dir_access->remove(pck_path);
 			}
 		}
 
-		if (!DirAccess::exists(base_path)) {
-			error = DirAccess::make_dir_absolute(base_path);
+		if (!DirAccess::exists(pck_path)) {
+			error = DirAccess::make_dir_absolute(pck_path);
 			if (error != OK) {
-				add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR(R"*(Could not create directory: "%s")*"), base_path));
+				add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR(R"*(Could not create directory: "%s")*"), pck_path));
 				return error;
 			}
 		}
 
-		Ref<DirAccess> root_dir = DirAccess::open(base_path);
+		Ref<DirAccess> root_dir = DirAccess::open(pck_path);
 		if (root_dir.is_null()) {
-			add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR(R"*(Could not open directory: "%s")*"), base_path));
+			add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR(R"*(Could not open directory: "%s")*"), pck_path));
 			return error;
 		}
 

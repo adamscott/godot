@@ -58,6 +58,7 @@ class OS_Web : public OS_Unix {
 	WASM_EXPORT static void dir_access_remove_callback(const String &p_file);
 	WASM_EXPORT static void fs_sync_callback();
 	WASM_EXPORT static void update_pwa_state_callback();
+	WASM_EXPORT static char *get_config_as_json_callback(const char *p_config_file_data);
 
 protected:
 	void initialize() override;
