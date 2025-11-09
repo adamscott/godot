@@ -372,8 +372,7 @@ void EditorExportPlatformWeb::get_export_options(List<ExportOption> *r_options) 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "custom_template/debug", PROPERTY_HINT_GLOBAL_FILE, "*.zip"), ""));
 	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "custom_template/release", PROPERTY_HINT_GLOBAL_FILE, "*.zip"), ""));
 
-	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "async/is_async_export_preset"), false));
-	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "async/clear_before_export"), true));
+	r_options->push_back(ExportOption(PropertyInfo(Variant::CALLABLE, "async/edit_exported_async_pcks", PROPERTY_HINT_TOOL_BUTTON, vformat("%s,Edit", TTRC("Edit Exported Async PCKs")), PROPERTY_USAGE_EDITOR), callable_mp(const_cast<EditorExportPlatformWeb *>(this), &EditorExportPlatformWeb::_show_edit_async_window)));
 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "variant/extensions_support"), false)); // GDExtension support.
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "variant/thread_support"), false, true)); // Thread support (i.e. run with or without COEP/COOP headers).
@@ -1024,6 +1023,10 @@ Error EditorExportPlatformWeb::_start_server(const String &p_bind_host, const ui
 Error EditorExportPlatformWeb::_stop_server() {
 	server->stop();
 	return OK;
+}
+
+void EditorExportPlatformWeb::_show_edit_async_window() {
+	print_line("_show_edit_async_window");
 }
 
 Ref<Texture2D> EditorExportPlatformWeb::get_run_icon() const {
