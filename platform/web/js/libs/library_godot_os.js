@@ -221,6 +221,8 @@ const GodotFS = {
 				}
 				FS.mkdirTree(dir);
 			}
+
+			GodotRuntime.print(`FS.stat(${dir}):`, FS.stat(dir));
 			FS.writeFile(path, new Uint8Array(buffer));
 		},
 	},
@@ -270,6 +272,7 @@ const GodotOS = {
 		},
 
 		loadAsyncFile: function (pPckDir, pPath) {
+			GodotRuntime.print(`loading async "${pPath}" of "${pPckDir}"`);
 			let path = pPath;
 			if (path.startsWith('res://')) {
 				path = path.substring('res://'.length);
@@ -278,17 +281,42 @@ const GodotOS = {
 			(async function () {
 				const remapResponse = await fetch(`${pPckDir}/${path}.remap`);
 				if (!remapResponse.ok) {
-					GodotRuntime.error('couldn\'t load remap file');
+					GodotRuntime.error(`couldn't load remap file "${pPckDir}/${path}.remap"`);
 					return;
 				}
 
-				const remapResponseData = await remapResponse.text();
-				const configFile = GodotRuntime.getConfigFileFromString(remapResponseData);
+				const textDecoder = new TextDecoder();
+				const remapResponseData = await remapResponse.bytes();
+				const remapResponseString = textDecoder.decode(remapResponseData);
+				const configFile = GodotRuntime.getConfigFileFromString(remapResponseString);
 
-				GodotRuntime.print(configFile);
+				GodotFS.copy_to_fs(`${path}.remap`, remapResponseData);
+				const promises = [
+					GodotOS.installFile(pPckDir, configFile['remap']['path']),
+				];
+				for (const file of configFile['dependencies']['files']) {
+					promises.push(GodotOS.loadAsyncFile(pPckDir, file['fallback_path']));
+				}
+				await Promise.allSettled(promises);
 			})().catch((err) => {
 				GodotRuntime.error('load file err', err);
 			});
+		},
+
+		installFile: async function (pPckDir, pPath) {
+			GodotRuntime.print(`installing "${pPath}" of "${pPckDir}"`);
+			let path = pPath;
+			if (path.startsWith('res://')) {
+				path = path.substring('res://'.length);
+			}
+
+			const fileResponse = await fetch(`${pPckDir}/${path}`);
+			if (!fileResponse.ok) {
+				throw new Error(`couldn't load file "${pPckDir}/${path}"`);
+			}
+
+			const fileResponseBuffer = await fileResponse.bytes();
+			GodotFS.copy_to_fs(path, fileResponseBuffer);
 		},
 	},
 
