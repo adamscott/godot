@@ -37,10 +37,14 @@
 #include "core/io/file_access.h"
 #include "editor/editor_string_names.h"
 #include "editor/export/editor_export.h"
+#include "editor/export/project_export.h"
 #include "editor/import/resource_importer_texture_settings.h"
 #include "editor/settings/editor_settings.h"
 #include "editor/themes/editor_scale.h"
 #include "modules/zip/zip_reader.h"
+#include "scene/gui/box_container.h"
+#include "scene/gui/control.h"
+#include "scene/gui/split_container.h"
 #include "scene/resources/image_texture.h"
 
 #include "logo_svg.gen.h"
@@ -1025,8 +1029,45 @@ Error EditorExportPlatformWeb::_stop_server() {
 	return OK;
 }
 
-void EditorExportPlatformWeb::_show_edit_async_window() {
-	print_line("_show_edit_async_window");
+void EditorExportPlatformWeb::_init_edit_exported_async_pcks_dialog() {
+	if (edit_exported_async_pcks_dialog != nullptr) {
+		return;
+	}
+	edit_exported_async_pcks_dialog = memnew(Window);
+	edit_exported_async_pcks_dialog->connect(SNAME("close_requested"), callable_mp(static_cast<EditorExportPlatformWeb *>(this), &EditorExportPlatformWeb::_close_edit_exported_async_pcks_dialog));
+	edit_exported_async_pcks_dialog->set_title(TTRC("Edit Exported Async PCKs"));
+	edit_exported_async_pcks_dialog->set_flag(Window::FLAG_MAXIMIZE_DISABLED, false);
+	edit_exported_async_pcks_dialog->set_clamp_to_embedder(true);
+	edit_exported_async_pcks_dialog->set_min_size(Size2i(500, 500));
+
+	VBoxContainer *main_container = memnew(VBoxContainer);
+	edit_exported_async_pcks_dialog->add_child(main_container);
+	main_container->set_anchors_and_offsets_preset(Control::LayoutPreset::PRESET_FULL_RECT);
+
+	HSplitContainer *hbox = memnew(HSplitContainer);
+	main_container->add_child(hbox);
+	hbox->set_v_size_flags(Control::SIZE_EXPAND_FILL);
+	if (EDITOR_GET("interface/touchscreen/enable_touch_optimizations")) {
+		hbox->set_touch_dragger_enabled(true);
+	}
+}
+
+void EditorExportPlatformWeb::_open_edit_exported_async_pcks_dialog() {
+	if (edit_exported_async_pcks_dialog == nullptr) {
+		_init_edit_exported_async_pcks_dialog();
+	}
+	edit_exported_async_pcks_dialog->popup_exclusive_centered(EditorNode::get_singleton()->get_project_export_dialog());
+}
+
+void EditorExportPlatformWeb::_close_edit_exported_async_pcks_dialog() {
+	if (edit_exported_async_pcks_dialog == nullptr) {
+		return;
+	}
+
+	print_line(vformat("EditorExportPlatformWeb::_close_edit_exported_async_pcks_dialog"));
+	edit_exported_async_pcks_dialog->hide();
+	edit_exported_async_pcks_dialog->queue_free();
+	edit_exported_async_pcks_dialog = nullptr;
 }
 
 Ref<Texture2D> EditorExportPlatformWeb::get_run_icon() const {
@@ -1034,28 +1075,32 @@ Ref<Texture2D> EditorExportPlatformWeb::get_run_icon() const {
 }
 
 void EditorExportPlatformWeb::initialize() {
-	if (EditorNode::get_singleton()) {
-		server.instantiate();
+	if (!EditorNode::get_singleton()) {
+		return;
+	}
+	server.instantiate();
 
-		Ref<Image> img = memnew(Image);
-		const bool upsample = !Math::is_equal_approx(Math::round(EDSCALE), EDSCALE);
+	Ref<Image> img = memnew(Image);
+	const bool upsample = !Math::is_equal_approx(Math::round(EDSCALE), EDSCALE);
 
-		ImageLoaderSVG::create_image_from_string(img, _web_logo_svg, EDSCALE, upsample, false);
-		logo = ImageTexture::create_from_image(img);
+	ImageLoaderSVG::create_image_from_string(img, _web_logo_svg, EDSCALE, upsample, false);
+	logo = ImageTexture::create_from_image(img);
 
-		ImageLoaderSVG::create_image_from_string(img, _web_run_icon_svg, EDSCALE, upsample, false);
-		run_icon = ImageTexture::create_from_image(img);
+	ImageLoaderSVG::create_image_from_string(img, _web_run_icon_svg, EDSCALE, upsample, false);
+	run_icon = ImageTexture::create_from_image(img);
 
-		Ref<Theme> theme = EditorNode::get_singleton()->get_editor_theme();
-		if (theme.is_valid()) {
-			stop_icon = theme->get_icon(SNAME("Stop"), EditorStringName(EditorIcons));
-			restart_icon = theme->get_icon(SNAME("Reload"), EditorStringName(EditorIcons));
-		} else {
-			stop_icon.instantiate();
-			restart_icon.instantiate();
-		}
+	Ref<Theme> theme = EditorNode::get_singleton()->get_editor_theme();
+	if (theme.is_valid()) {
+		stop_icon = theme->get_icon(SNAME("Stop"), EditorStringName(EditorIcons));
+		restart_icon = theme->get_icon(SNAME("Reload"), EditorStringName(EditorIcons));
+	} else {
+		stop_icon.instantiate();
+		restart_icon.instantiate();
 	}
 }
 
 EditorExportPlatformWeb::~EditorExportPlatformWeb() {
+	if (edit_exported_async_pcks_dialog != nullptr) {
+		edit_exported_async_pcks_dialog->queue_free();
+	}
 }

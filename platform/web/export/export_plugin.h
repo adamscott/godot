@@ -59,6 +59,8 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 	Ref<ImageTexture> restart_icon;
 	RemoteDebugState remote_debug_state = REMOTE_DEBUG_STATE_UNAVAILABLE;
 
+	Window *edit_exported_async_pcks_dialog = nullptr;
+
 	Ref<EditorHTTPServer> server;
 
 	String _get_template_name(bool p_extension, bool p_thread_support, bool p_debug) const {
@@ -117,7 +119,9 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 	Error _start_server(const String &p_bind_host, uint16_t p_bind_port, bool p_use_tls);
 	Error _stop_server();
 
-	void _show_edit_async_window();
+	void _open_edit_exported_async_pcks_dialog();
+	void _close_edit_exported_async_pcks_dialog();
+	void _init_edit_exported_async_pcks_dialog();
 
 public:
 	virtual void get_preset_features(const Ref<EditorExportPreset> &p_preset, List<String> *r_features) const override;
