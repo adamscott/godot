@@ -44,14 +44,143 @@
 #include "modules/zip/zip_reader.h"
 #include "scene/gui/box_container.h"
 #include "scene/gui/control.h"
+#include "scene/gui/dialogs.h"
+#include "scene/gui/margin_container.h"
+#include "scene/gui/menu_button.h"
 #include "scene/gui/split_container.h"
 #include "scene/resources/image_texture.h"
+#include "scene/scene_string_names.h"
 
 #include "logo_svg.gen.h"
 #include "run_icon_svg.gen.h"
 
 #include "modules/modules_enabled.gen.h" // For mono.
 #include "modules/svg/image_loader_svg.h"
+
+/**
+ * EditorExportPlatformWeb::WebAsyncPckDialog
+ */
+void EditorExportPlatformWeb::WebAsyncPckDialog::_notification(int p_what) {
+	switch (p_what) {
+		case NOTIFICATION_ENTER_TREE: {
+			connect(SNAME("canceled"), callable_mp(this, &WebAsyncPckDialog::on_dialog_canceled));
+			connect(SceneStringName(confirmed), callable_mp(this, &WebAsyncPckDialog::on_dialog_confirmed));
+			connect(SNAME("close_requested"), callable_mp(this, &WebAsyncPckDialog::on_close_requested));
+		} break;
+		case NOTIFICATION_EXIT_TREE: {
+			disconnect(SNAME("canceled"), callable_mp(this, &WebAsyncPckDialog::on_dialog_canceled));
+			disconnect(SceneStringName(confirmed), callable_mp(this, &WebAsyncPckDialog::on_dialog_confirmed));
+			disconnect(SNAME("close_requested"), callable_mp(this, &WebAsyncPckDialog::on_close_requested));
+		} break;
+		default: {
+			// Do nothing.
+		} break;
+	}
+}
+
+void EditorExportPlatformWeb::WebAsyncPckDialog::_handle_cancel() {
+}
+
+void EditorExportPlatformWeb::WebAsyncPckDialog::_handle_confirm() {
+}
+
+Variant EditorExportPlatformWeb::WebAsyncPckDialog::drop_data_fw(const Point2 &p_point, Control *p_from) {
+	return Variant();
+}
+
+bool EditorExportPlatformWeb::WebAsyncPckDialog::can_drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from) {
+	return false;
+}
+
+void EditorExportPlatformWeb::WebAsyncPckDialog::get_drag_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from) {
+}
+
+void EditorExportPlatformWeb::WebAsyncPckDialog::on_dialog_canceled() {
+	_handle_cancel();
+}
+
+void EditorExportPlatformWeb::WebAsyncPckDialog::on_dialog_confirmed() {
+	_handle_confirm();
+}
+
+void EditorExportPlatformWeb::WebAsyncPckDialog::on_close_requested() {
+}
+
+void EditorExportPlatformWeb::WebAsyncPckDialog::on_add_pck_button_pressed() {
+}
+
+void EditorExportPlatformWeb::WebAsyncPckDialog::on_duplicate_pck_button_pressed() {
+}
+
+void EditorExportPlatformWeb::WebAsyncPckDialog::on_delete_pck_button_pressed() {
+}
+
+void EditorExportPlatformWeb::WebAsyncPckDialog::on_item_list_item_selected(int p_item_selected) {
+}
+
+EditorExportPlatformWeb::WebAsyncPckDialog::WebAsyncPckDialog(EditorExportPlatformWeb *p_export_platform) {
+	ERR_FAIL_NULL(p_export_platform);
+
+	export_platform = p_export_platform;
+
+	set_title(TTRC("Edit Exported Async PCKs"));
+	set_flag(Window::FLAG_MAXIMIZE_DISABLED, false);
+	set_clamp_to_embedder(true);
+	set_min_size(Size2i(500, 500));
+
+	VBoxContainer *main_container = memnew(VBoxContainer);
+	add_child(main_container);
+	main_container->set_anchors_and_offsets_preset(Control::LayoutPreset::PRESET_FULL_RECT);
+
+	HSplitContainer *hbox = memnew(HSplitContainer);
+	main_container->add_child(hbox);
+	hbox->set_v_size_flags(Control::SIZE_EXPAND_FILL);
+	if (EDITOR_GET("interface/touchscreen/enable_touch_optimizations")) {
+		hbox->set_touch_dragger_enabled(true);
+	}
+
+	// PCKs list.
+	VBoxContainer *pck_list_vb = memnew(VBoxContainer);
+	pck_list_vb->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+	hbox->add_child(pck_list_vb);
+
+	Label *async_pcks_label = memnew(Label(TTRC("Async PCKs")));
+	async_pcks_label->set_theme_type_variation("HeaderSmall");
+
+	HBoxContainer *pck_list_hb = memnew(HBoxContainer);
+	pck_list_hb->add_child(async_pcks_label);
+	pck_list_hb->add_spacer();
+	pck_list_vb->add_child(pck_list_hb);
+
+	add_pck_button = memnew(Button);
+	add_pck_button->set_text(TTRC("Add..."));
+	add_pck_button->connect(SceneStringName(pressed), callable_mp(this, &EditorExportPlatformWeb::WebAsyncPckDialog::on_add_pck_button_pressed));
+	pck_list_hb->add_child(add_pck_button);
+
+	MarginContainer *pck_list_margin_container = memnew(MarginContainer);
+	pck_list_vb->add_child(pck_list_margin_container);
+	pck_list_margin_container->set_v_size_flags(Control::SIZE_EXPAND_FILL);
+	item_list = memnew(ItemList);
+	item_list->set_theme_type_variation("ItemListSecondary");
+	item_list->set_auto_translate_mode(Node::AUTO_TRANSLATE_MODE_DISABLED);
+	SET_DRAG_FORWARDING_GCD(item_list, EditorExportPlatformWeb::WebAsyncPckDialog);
+	pck_list_margin_container->add_child(item_list);
+	item_list->connect(SceneStringName(item_selected), callable_mp(this, &EditorExportPlatformWeb::WebAsyncPckDialog::on_item_list_item_selected));
+	duplicate_pck_button = memnew(Button);
+	duplicate_pck_button->set_tooltip_text(TTRC("Duplicate"));
+	duplicate_pck_button->set_flat(true);
+	pck_list_hb->add_child(duplicate_pck_button);
+	duplicate_pck_button->connect(SceneStringName(pressed), callable_mp(this, &EditorExportPlatformWeb::WebAsyncPckDialog::on_duplicate_pck_button_pressed));
+	delete_pck_button = memnew(Button);
+	delete_pck_button->set_tooltip_text(TTRC("Delete"));
+	delete_pck_button->set_flat(true);
+	pck_list_hb->add_child(delete_pck_button);
+	delete_pck_button->connect(SceneStringName(pressed), callable_mp(this, &EditorExportPlatformWeb::WebAsyncPckDialog::on_delete_pck_button_pressed));
+}
+
+/**
+ * EditorExportPlatformWeb
+ */
 
 Error EditorExportPlatformWeb::_extract_template(const String &p_template, const String &p_dir, const String &p_name, bool pwa) {
 	Ref<FileAccess> io_fa;
@@ -1033,23 +1162,17 @@ void EditorExportPlatformWeb::_init_edit_exported_async_pcks_dialog() {
 	if (edit_exported_async_pcks_dialog != nullptr) {
 		return;
 	}
-	edit_exported_async_pcks_dialog = memnew(Window);
-	edit_exported_async_pcks_dialog->connect(SNAME("close_requested"), callable_mp(static_cast<EditorExportPlatformWeb *>(this), &EditorExportPlatformWeb::_close_edit_exported_async_pcks_dialog));
-	edit_exported_async_pcks_dialog->set_title(TTRC("Edit Exported Async PCKs"));
-	edit_exported_async_pcks_dialog->set_flag(Window::FLAG_MAXIMIZE_DISABLED, false);
-	edit_exported_async_pcks_dialog->set_clamp_to_embedder(true);
-	edit_exported_async_pcks_dialog->set_min_size(Size2i(500, 500));
+	edit_exported_async_pcks_dialog = memnew(WebAsyncPckDialog(this));
+	edit_exported_async_pcks_dialog->connect(SceneStringName(visibility_changed), callable_mp(this, &EditorExportPlatformWeb::_on_edit_exported_async_pcks_dialog_visibility_changed));
+}
 
-	VBoxContainer *main_container = memnew(VBoxContainer);
-	edit_exported_async_pcks_dialog->add_child(main_container);
-	main_container->set_anchors_and_offsets_preset(Control::LayoutPreset::PRESET_FULL_RECT);
-
-	HSplitContainer *hbox = memnew(HSplitContainer);
-	main_container->add_child(hbox);
-	hbox->set_v_size_flags(Control::SIZE_EXPAND_FILL);
-	if (EDITOR_GET("interface/touchscreen/enable_touch_optimizations")) {
-		hbox->set_touch_dragger_enabled(true);
+void EditorExportPlatformWeb::_finalize_edit_exported_async_pcks_dialog() {
+	if (edit_exported_async_pcks_dialog == nullptr) {
+		return;
 	}
+	edit_exported_async_pcks_dialog->disconnect(SceneStringName(visibility_changed), callable_mp(this, &EditorExportPlatformWeb::_on_edit_exported_async_pcks_dialog_visibility_changed));
+	edit_exported_async_pcks_dialog->queue_free();
+	edit_exported_async_pcks_dialog = nullptr;
 }
 
 void EditorExportPlatformWeb::_open_edit_exported_async_pcks_dialog() {
@@ -1059,15 +1182,11 @@ void EditorExportPlatformWeb::_open_edit_exported_async_pcks_dialog() {
 	edit_exported_async_pcks_dialog->popup_exclusive_centered(EditorNode::get_singleton()->get_project_export_dialog());
 }
 
-void EditorExportPlatformWeb::_close_edit_exported_async_pcks_dialog() {
-	if (edit_exported_async_pcks_dialog == nullptr) {
+void EditorExportPlatformWeb::_on_edit_exported_async_pcks_dialog_visibility_changed() {
+	if (edit_exported_async_pcks_dialog->is_visible()) {
 		return;
 	}
-
-	print_line(vformat("EditorExportPlatformWeb::_close_edit_exported_async_pcks_dialog"));
-	edit_exported_async_pcks_dialog->hide();
-	edit_exported_async_pcks_dialog->queue_free();
-	edit_exported_async_pcks_dialog = nullptr;
+	_finalize_edit_exported_async_pcks_dialog();
 }
 
 Ref<Texture2D> EditorExportPlatformWeb::get_run_icon() const {
@@ -1100,7 +1219,5 @@ void EditorExportPlatformWeb::initialize() {
 }
 
 EditorExportPlatformWeb::~EditorExportPlatformWeb() {
-	if (edit_exported_async_pcks_dialog != nullptr) {
-		edit_exported_async_pcks_dialog->queue_free();
-	}
+	_finalize_edit_exported_async_pcks_dialog();
 }

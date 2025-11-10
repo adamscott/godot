@@ -41,11 +41,48 @@
 #include "editor/editor_string_names.h"
 #include "editor/export/editor_export_platform.h"
 #include "main/splash.gen.h"
+#include "scene/gui/button.h"
+#include "scene/gui/dialogs.h"
+#include "scene/gui/item_list.h"
+#include "scene/gui/menu_button.h"
 
 class ImageTexture;
 
 class EditorExportPlatformWeb : public EditorExportPlatform {
 	GDCLASS(EditorExportPlatformWeb, EditorExportPlatform);
+
+	friend class WebAsyncPckDialog;
+	class WebAsyncPckDialog : public ConfirmationDialog {
+		GDCLASS(WebAsyncPckDialog, ConfirmationDialog);
+		Button *add_pck_button = nullptr;
+		Button *duplicate_pck_button = nullptr;
+		Button *delete_pck_button = nullptr;
+		ItemList *item_list = nullptr;
+
+		EditorExportPlatformWeb *export_platform = nullptr;
+
+		void _handle_cancel();
+		void _handle_confirm();
+
+	protected:
+		void _notification(int p_what);
+
+	public:
+		Variant drop_data_fw(const Point2 &p_point, Control *p_from);
+		bool can_drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from);
+		void get_drag_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from);
+
+		void on_dialog_canceled();
+		void on_dialog_confirmed();
+		void on_close_requested();
+
+		void on_add_pck_button_pressed();
+		void on_duplicate_pck_button_pressed();
+		void on_delete_pck_button_pressed();
+		void on_item_list_item_selected(int p_item_selected);
+
+		WebAsyncPckDialog(EditorExportPlatformWeb *p_export_platform);
+	};
 
 	enum RemoteDebugState {
 		REMOTE_DEBUG_STATE_UNAVAILABLE,
@@ -59,7 +96,7 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 	Ref<ImageTexture> restart_icon;
 	RemoteDebugState remote_debug_state = REMOTE_DEBUG_STATE_UNAVAILABLE;
 
-	Window *edit_exported_async_pcks_dialog = nullptr;
+	WebAsyncPckDialog *edit_exported_async_pcks_dialog = nullptr;
 
 	Ref<EditorHTTPServer> server;
 
@@ -122,6 +159,8 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 	void _open_edit_exported_async_pcks_dialog();
 	void _close_edit_exported_async_pcks_dialog();
 	void _init_edit_exported_async_pcks_dialog();
+	void _finalize_edit_exported_async_pcks_dialog();
+	void _on_edit_exported_async_pcks_dialog_visibility_changed();
 
 public:
 	virtual void get_preset_features(const Ref<EditorExportPreset> &p_preset, List<String> *r_features) const override;
