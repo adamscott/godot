@@ -30,6 +30,8 @@
 
 #pragma once
 
+#include "editor/export/editor_export_preset.h"
+#include "editor/inspector/editor_properties.h"
 #include "editor_http_server.h"
 
 #include "core/config/project_settings.h"
@@ -51,37 +53,78 @@ class ImageTexture;
 class EditorExportPlatformWeb : public EditorExportPlatform {
 	GDCLASS(EditorExportPlatformWeb, EditorExportPlatform);
 
-	friend class WebAsyncPckDialog;
-	class WebAsyncPckDialog : public ConfirmationDialog {
-		GDCLASS(WebAsyncPckDialog, ConfirmationDialog);
+	class AsyncPck : public RefCounted {
+		GDCLASS(AsyncPck, RefCounted)
+
+		typedef EditorExportPreset::ExportFilter ExportFilter;
+		typedef EditorExportPreset::FileExportMode FileExportMode;
+
+	public:
+		String path = "";
+	};
+
+	friend class AsyncPckDialog;
+	class AsyncPckDialog : public ConfirmationDialog {
+		GDCLASS(AsyncPckDialog, ConfirmationDialog);
+
+		bool updating = false;
+
 		Button *add_pck_button = nullptr;
 		Button *duplicate_pck_button = nullptr;
 		Button *delete_pck_button = nullptr;
-		ItemList *item_list = nullptr;
+		ConfirmationDialog *delete_pck_confirmation_dialog = nullptr;
+		ItemList *pck_item_list = nullptr;
+		LineEdit *path_line_edit = nullptr;
+		Label *path_line_edit_error_label = nullptr;
+		Tree *include_files = nullptr;
+		TabContainer *sections = nullptr;
+		OptionButton *export_filter = nullptr;
+		PopupMenu *file_mode_popup = nullptr;
+		LineEdit *include_filters = nullptr;
+		LineEdit *exclude_filters = nullptr;
 
-		EditorExportPlatformWeb *export_platform = nullptr;
+		Ref<EditorExportPlatformWeb> export_platform = nullptr;
 
-		void _handle_cancel();
-		void _handle_confirm();
+		void on_canceled();
+		void on_confirmed();
+		void on_delete_pck_confirmation_dialog_confirmed();
+
+		void on_add_pck_button_pressed();
+		void on_duplicate_pck_button_pressed();
+		void on_delete_pck_button_pressed();
+		void on_item_list_item_selected(int p_item_selected);
+		void on_path_focus_exited();
+		void on_export_filter_item_selected(int p_item_selected);
+		void on_file_mode_popup_id_pressed(int p_id_pressed);
+		void on_filter_changed();
+
+		Ref<AsyncPck> get_current_async_pck();
+
+		void handle_cancel();
+		void handle_confirm();
+		void handle_add_pck();
+		void handle_duplicate_pck();
+		void handle_delete_pck();
+
+		void update_pck_item_list();
+		void update_pck_settings();
+		void update_pck_path_setting();
+
+		bool validate_pck_path_setting(const String &p_path);
 
 	protected:
 		void _notification(int p_what);
+		static void _bind_methods();
 
 	public:
 		Variant drop_data_fw(const Point2 &p_point, Control *p_from);
 		bool can_drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from);
 		void get_drag_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from);
 
-		void on_dialog_canceled();
-		void on_dialog_confirmed();
-		void on_close_requested();
+		void set_async_pck_path(const String &p_path);
+		String get_async_pck_path();
 
-		void on_add_pck_button_pressed();
-		void on_duplicate_pck_button_pressed();
-		void on_delete_pck_button_pressed();
-		void on_item_list_item_selected(int p_item_selected);
-
-		WebAsyncPckDialog(EditorExportPlatformWeb *p_export_platform);
+		AsyncPckDialog(Ref<EditorExportPlatformWeb> p_export_platform);
 	};
 
 	enum RemoteDebugState {
@@ -96,7 +139,8 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 	Ref<ImageTexture> restart_icon;
 	RemoteDebugState remote_debug_state = REMOTE_DEBUG_STATE_UNAVAILABLE;
 
-	WebAsyncPckDialog *edit_exported_async_pcks_dialog = nullptr;
+	AsyncPckDialog *edit_exported_async_pcks_dialog = nullptr;
+	LocalVector<Ref<AsyncPck>> async_pcks;
 
 	Ref<EditorHTTPServer> server;
 

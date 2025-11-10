@@ -39,15 +39,20 @@
 #include "editor/export/editor_export.h"
 #include "editor/export/project_export.h"
 #include "editor/import/resource_importer_texture_settings.h"
+#include "editor/inspector/editor_properties.h"
 #include "editor/settings/editor_settings.h"
 #include "editor/themes/editor_scale.h"
 #include "modules/zip/zip_reader.h"
 #include "scene/gui/box_container.h"
 #include "scene/gui/control.h"
 #include "scene/gui/dialogs.h"
+#include "scene/gui/line_edit.h"
 #include "scene/gui/margin_container.h"
 #include "scene/gui/menu_button.h"
+#include "scene/gui/option_button.h"
 #include "scene/gui/split_container.h"
+#include "scene/gui/tab_container.h"
+#include "scene/main/window.h"
 #include "scene/resources/image_texture.h"
 #include "scene/scene_string_names.h"
 
@@ -60,73 +65,287 @@
 /**
  * EditorExportPlatformWeb::WebAsyncPckDialog
  */
-void EditorExportPlatformWeb::WebAsyncPckDialog::_notification(int p_what) {
+void EditorExportPlatformWeb::AsyncPckDialog::_notification(int p_what) {
+	auto _update_theme = [this]() -> void {
+		duplicate_pck_button->set_button_icon(pck_item_list->get_editor_theme_icon(SNAME("Duplicate")));
+		delete_pck_button->set_button_icon(pck_item_list->get_editor_theme_icon(SNAME("Remove")));
+	};
+
 	switch (p_what) {
+		case NOTIFICATION_VISIBILITY_CHANGED: {
+			if (is_visible()) {
+				update_pck_item_list();
+			}
+		} break;
+
 		case NOTIFICATION_ENTER_TREE: {
-			connect(SNAME("canceled"), callable_mp(this, &WebAsyncPckDialog::on_dialog_canceled));
-			connect(SceneStringName(confirmed), callable_mp(this, &WebAsyncPckDialog::on_dialog_confirmed));
-			connect(SNAME("close_requested"), callable_mp(this, &WebAsyncPckDialog::on_close_requested));
+			connect(SNAME("canceled"), callable_mp(this, &AsyncPckDialog::on_canceled));
+			connect(SceneStringName(confirmed), callable_mp(this, &AsyncPckDialog::on_confirmed));
 		} break;
+
 		case NOTIFICATION_EXIT_TREE: {
-			disconnect(SNAME("canceled"), callable_mp(this, &WebAsyncPckDialog::on_dialog_canceled));
-			disconnect(SceneStringName(confirmed), callable_mp(this, &WebAsyncPckDialog::on_dialog_confirmed));
-			disconnect(SNAME("close_requested"), callable_mp(this, &WebAsyncPckDialog::on_close_requested));
+			disconnect(SNAME("canceled"), callable_mp(this, &AsyncPckDialog::on_canceled));
+			disconnect(SceneStringName(confirmed), callable_mp(this, &AsyncPckDialog::on_confirmed));
 		} break;
+
+		case NOTIFICATION_THEME_CHANGED: {
+			_update_theme();
+		} break;
+
+		case NOTIFICATION_READY: {
+			_update_theme();
+		} break;
+
 		default: {
 			// Do nothing.
 		} break;
 	}
 }
 
-void EditorExportPlatformWeb::WebAsyncPckDialog::_handle_cancel() {
+void EditorExportPlatformWeb::AsyncPckDialog::_bind_methods() {
+	ClassDB::bind_method("set_async_pck_path", &EditorExportPlatformWeb::AsyncPckDialog::set_async_pck_path);
+	ClassDB::bind_method("get_async_pck_path", &EditorExportPlatformWeb::AsyncPckDialog::get_async_pck_path);
+	ADD_PROPERTY(PropertyInfo(Variant::STRING, "async_pck_path"), "set_async_pck_path", "get_async_pck_path");
 }
 
-void EditorExportPlatformWeb::WebAsyncPckDialog::_handle_confirm() {
+void EditorExportPlatformWeb::AsyncPckDialog::set_async_pck_path(const String &p_path) {
+	Ref<AsyncPck> current = get_current_async_pck();
+	if (current.is_null()) {
+		return;
+	}
+	String path = p_path;
+	if (!path.ends_with(".asyncpck")) {
+		path += ".asyncpck";
+	}
+	current->path = p_path;
 }
 
-Variant EditorExportPlatformWeb::WebAsyncPckDialog::drop_data_fw(const Point2 &p_point, Control *p_from) {
+String EditorExportPlatformWeb::AsyncPckDialog::get_async_pck_path() {
+	Ref<AsyncPck> current = get_current_async_pck();
+	if (current.is_null()) {
+		return "";
+	}
+	return current->path;
+}
+
+void EditorExportPlatformWeb::AsyncPckDialog::handle_cancel() {
+	print_line("cancel!");
+}
+
+void EditorExportPlatformWeb::AsyncPckDialog::handle_confirm() {
+	print_line("confirm!");
+}
+
+void EditorExportPlatformWeb::AsyncPckDialog::handle_add_pck() {
+	print_line("add pck!");
+	Ref<EditorExportPreset> current_preset = EditorNode::get_singleton()->get_project_export_dialog()->get_current_preset();
+	ERR_FAIL_COND(current_preset.is_null());
+
+	Ref<AsyncPck> async_pck;
+	async_pck.instantiate();
+
+	auto _get_async_pck_path = [&current_preset](int p_attempt) -> String {
+		String export_path_basename = current_preset->get_export_path().get_file().get_basename();
+
+		if (p_attempt > 1) {
+			String format = "%s_%s.asyncpck";
+			if (export_path_basename.is_empty()) {
+				return vformat(format, current_preset->get_name().to_snake_case(), p_attempt);
+			}
+			return vformat(format, export_path_basename, p_attempt);
+		}
+
+		String format = "%s.asyncpck";
+		if (export_path_basename.is_empty()) {
+			return vformat(format, current_preset->get_name().to_snake_case());
+		}
+		return vformat(format, export_path_basename);
+	};
+
+	int attempt = 1;
+	String path;
+	while (true) {
+		bool valid = true;
+		path = _get_async_pck_path(attempt);
+		if (!path.ends_with("/")) {
+			path += "/";
+		}
+		for (int i = 0; i < static_cast<int32_t>(export_platform->async_pcks.size()); i++) {
+			String async_pck_path = export_platform->async_pcks[i]->path;
+			if (!async_pck_path.ends_with("/")) {
+				async_pck_path += "/";
+			}
+			if (path.simplify_path() == async_pck_path.simplify_path()) {
+				valid = false;
+				break;
+			}
+		}
+
+		if (valid) {
+			break;
+		}
+		attempt += 1;
+	}
+
+	async_pck->path = path;
+	export_platform->async_pcks.push_back(async_pck);
+
+	update_pck_item_list();
+}
+
+void EditorExportPlatformWeb::AsyncPckDialog::handle_duplicate_pck() {
+	print_line("duplicate pck!");
+}
+
+void EditorExportPlatformWeb::AsyncPckDialog::handle_delete_pck() {
+	print_line("delete pck!");
+}
+
+void EditorExportPlatformWeb::AsyncPckDialog::update_pck_item_list() {
+	updating = true;
+
+	Ref<AsyncPck> current_async_pck = get_current_async_pck();
+
+	int current_index = -1;
+	pck_item_list->clear();
+	for (int i = 0; i < static_cast<int32_t>(export_platform->async_pcks.size()); i++) {
+		Ref<AsyncPck> async_pck = export_platform->async_pcks[i];
+		if (async_pck == current_async_pck) {
+			current_index = i;
+		}
+		String async_pck_path = async_pck->path;
+		pck_item_list->add_item(async_pck_path);
+	}
+
+	if (current_index != -1) {
+		pck_item_list->select(current_index);
+	}
+
+	updating = false;
+	update_pck_settings();
+}
+
+void EditorExportPlatformWeb::AsyncPckDialog::update_pck_settings() {
+	// Ref<AsyncPck> current_async_pck = get_current_async_pck();
+	update_pck_path_setting();
+}
+
+void EditorExportPlatformWeb::AsyncPckDialog::update_pck_path_setting() {
+	Ref<AsyncPck> current_async_pck = get_current_async_pck();
+	if (current_async_pck.is_null()) {
+		path_line_edit->set_editable(false);
+		path_line_edit->set_text("");
+		return;
+	}
+
+	path_line_edit->set_editable(true);
+	path_line_edit->set_text(current_async_pck->path);
+	validate_pck_path_setting(current_async_pck->path);
+}
+
+bool EditorExportPlatformWeb::AsyncPckDialog::validate_pck_path_setting(const String &p_path) {
+	Ref<AsyncPck> current_async_pck = get_current_async_pck();
+	if (current_async_pck.is_null()) {
+		return true;
+	}
+
+	String path = p_path;
+	if (path.is_empty()) {
+		path_line_edit_error_label->set_text(TTRC("Path must be a relative path."));
+		return false;
+	}
+
+	if (path.ends_with("/")) {
+		if (!path.substr(0, path.length() - 1).ends_with(".asyncpck")) {
+			path = path + ".asyncpck/";
+			path_line_edit->set_text(path);
+		}
+	} else if (!path.ends_with(".asyncpck")) {
+		path = path + ".asyncpck";
+		path_line_edit->set_text(path);
+	}
+
+	if (!path.is_relative_path()) {
+		path_line_edit_error_label->set_text(TTRC("Path must be a relative path."));
+		return false;
+	}
+
+	current_async_pck->path = path;
+	path_line_edit->set_text(path);
+
+	return true;
+}
+
+Variant EditorExportPlatformWeb::AsyncPckDialog::drop_data_fw(const Point2 &p_point, Control *p_from) {
 	return Variant();
 }
 
-bool EditorExportPlatformWeb::WebAsyncPckDialog::can_drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from) {
+bool EditorExportPlatformWeb::AsyncPckDialog::can_drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from) {
 	return false;
 }
 
-void EditorExportPlatformWeb::WebAsyncPckDialog::get_drag_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from) {
+void EditorExportPlatformWeb::AsyncPckDialog::get_drag_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from) {
 }
 
-void EditorExportPlatformWeb::WebAsyncPckDialog::on_dialog_canceled() {
-	_handle_cancel();
+void EditorExportPlatformWeb::AsyncPckDialog::on_path_focus_exited() {
+	if (validate_pck_path_setting(path_line_edit->get_text())) {
+		update_pck_item_list();
+	}
 }
 
-void EditorExportPlatformWeb::WebAsyncPckDialog::on_dialog_confirmed() {
-	_handle_confirm();
+void EditorExportPlatformWeb::AsyncPckDialog::on_canceled() {
+	handle_cancel();
 }
 
-void EditorExportPlatformWeb::WebAsyncPckDialog::on_close_requested() {
+void EditorExportPlatformWeb::AsyncPckDialog::on_confirmed() {
+	handle_confirm();
 }
 
-void EditorExportPlatformWeb::WebAsyncPckDialog::on_add_pck_button_pressed() {
+void EditorExportPlatformWeb::AsyncPckDialog::on_delete_pck_confirmation_dialog_confirmed() {
+	handle_delete_pck();
 }
 
-void EditorExportPlatformWeb::WebAsyncPckDialog::on_duplicate_pck_button_pressed() {
+void EditorExportPlatformWeb::AsyncPckDialog::on_add_pck_button_pressed() {
+	handle_add_pck();
 }
 
-void EditorExportPlatformWeb::WebAsyncPckDialog::on_delete_pck_button_pressed() {
+void EditorExportPlatformWeb::AsyncPckDialog::on_duplicate_pck_button_pressed() {
+	handle_duplicate_pck();
 }
 
-void EditorExportPlatformWeb::WebAsyncPckDialog::on_item_list_item_selected(int p_item_selected) {
+void EditorExportPlatformWeb::AsyncPckDialog::on_delete_pck_button_pressed() {
+	handle_delete_pck();
 }
 
-EditorExportPlatformWeb::WebAsyncPckDialog::WebAsyncPckDialog(EditorExportPlatformWeb *p_export_platform) {
-	ERR_FAIL_NULL(p_export_platform);
+void EditorExportPlatformWeb::AsyncPckDialog::on_item_list_item_selected(int p_item_selected) {
+	update_pck_item_list();
+}
 
+void EditorExportPlatformWeb::AsyncPckDialog::on_export_filter_item_selected(int p_item_selected) {
+}
+
+void EditorExportPlatformWeb::AsyncPckDialog::on_file_mode_popup_id_pressed(int p_item_selected) {
+}
+
+void EditorExportPlatformWeb::AsyncPckDialog::on_filter_changed() {
+}
+
+Ref<EditorExportPlatformWeb::AsyncPck> EditorExportPlatformWeb::AsyncPckDialog::get_current_async_pck() {
+	if (pck_item_list->get_current() >= 0 && pck_item_list->get_current() < pck_item_list->get_item_count()) {
+		return export_platform->async_pcks[pck_item_list->get_current()];
+	}
+	return nullptr;
+}
+
+EditorExportPlatformWeb::AsyncPckDialog::AsyncPckDialog(Ref<EditorExportPlatformWeb> p_export_platform) {
+	ERR_FAIL_COND(p_export_platform.is_null());
 	export_platform = p_export_platform;
 
 	set_title(TTRC("Edit Exported Async PCKs"));
 	set_flag(Window::FLAG_MAXIMIZE_DISABLED, false);
 	set_clamp_to_embedder(true);
-	set_min_size(Size2i(500, 500));
+	set_min_size(Size2i(600 * EDSCALE, 400 * EDSCALE));
+	set_size(Size2i(600 * EDSCALE, 600 * EDSCALE));
 
 	VBoxContainer *main_container = memnew(VBoxContainer);
 	add_child(main_container);
@@ -153,29 +372,133 @@ EditorExportPlatformWeb::WebAsyncPckDialog::WebAsyncPckDialog(EditorExportPlatfo
 	pck_list_vb->add_child(pck_list_hb);
 
 	add_pck_button = memnew(Button);
-	add_pck_button->set_text(TTRC("Add..."));
-	add_pck_button->connect(SceneStringName(pressed), callable_mp(this, &EditorExportPlatformWeb::WebAsyncPckDialog::on_add_pck_button_pressed));
+	add_pck_button->set_text(TTRC(U"Add…"));
+	add_pck_button->connect(SceneStringName(pressed), callable_mp(this, &EditorExportPlatformWeb::AsyncPckDialog::on_add_pck_button_pressed));
 	pck_list_hb->add_child(add_pck_button);
 
 	MarginContainer *pck_list_margin_container = memnew(MarginContainer);
 	pck_list_vb->add_child(pck_list_margin_container);
 	pck_list_margin_container->set_v_size_flags(Control::SIZE_EXPAND_FILL);
-	item_list = memnew(ItemList);
-	item_list->set_theme_type_variation("ItemListSecondary");
-	item_list->set_auto_translate_mode(Node::AUTO_TRANSLATE_MODE_DISABLED);
-	SET_DRAG_FORWARDING_GCD(item_list, EditorExportPlatformWeb::WebAsyncPckDialog);
-	pck_list_margin_container->add_child(item_list);
-	item_list->connect(SceneStringName(item_selected), callable_mp(this, &EditorExportPlatformWeb::WebAsyncPckDialog::on_item_list_item_selected));
+	pck_item_list = memnew(ItemList);
+	pck_item_list->set_theme_type_variation("ItemListSecondary");
+	pck_item_list->set_auto_translate_mode(Node::AUTO_TRANSLATE_MODE_DISABLED);
+	SET_DRAG_FORWARDING_GCD(pck_item_list, EditorExportPlatformWeb::AsyncPckDialog);
+	pck_list_margin_container->add_child(pck_item_list);
+	pck_item_list->connect(SceneStringName(item_selected), callable_mp(this, &EditorExportPlatformWeb::AsyncPckDialog::on_item_list_item_selected));
 	duplicate_pck_button = memnew(Button);
 	duplicate_pck_button->set_tooltip_text(TTRC("Duplicate"));
 	duplicate_pck_button->set_flat(true);
 	pck_list_hb->add_child(duplicate_pck_button);
-	duplicate_pck_button->connect(SceneStringName(pressed), callable_mp(this, &EditorExportPlatformWeb::WebAsyncPckDialog::on_duplicate_pck_button_pressed));
+	duplicate_pck_button->connect(SceneStringName(pressed), callable_mp(this, &EditorExportPlatformWeb::AsyncPckDialog::on_duplicate_pck_button_pressed));
 	delete_pck_button = memnew(Button);
 	delete_pck_button->set_tooltip_text(TTRC("Delete"));
 	delete_pck_button->set_flat(true);
 	pck_list_hb->add_child(delete_pck_button);
-	delete_pck_button->connect(SceneStringName(pressed), callable_mp(this, &EditorExportPlatformWeb::WebAsyncPckDialog::on_delete_pck_button_pressed));
+	delete_pck_button->connect(SceneStringName(pressed), callable_mp(this, &EditorExportPlatformWeb::AsyncPckDialog::on_delete_pck_button_pressed));
+
+	// Async PCK settings.
+	VBoxContainer *settings_vb = memnew(VBoxContainer);
+	settings_vb->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+	hbox->add_child(settings_vb);
+
+	path_line_edit = memnew(LineEdit);
+	path_line_edit->set_accessibility_name(TTRC("Set Async PCK Path"));
+	settings_vb->add_margin_child(TTRC("Async PCK Path (relative to the preset export path)"), path_line_edit);
+	path_line_edit->connect(SceneStringName(focus_exited), callable_mp(this, &EditorExportPlatformWeb::AsyncPckDialog::on_path_focus_exited));
+
+	path_line_edit_error_label = memnew(Label);
+	path_line_edit_error_label->set_focus_mode(Control::FOCUS_ACCESSIBILITY);
+	path_line_edit_error_label->add_theme_color_override(SceneStringName(font_color), EditorNode::get_singleton()->get_editor_theme()->get_color(SNAME("error_color"), EditorStringName(Editor)));
+	settings_vb->add_child(path_line_edit_error_label);
+	path_line_edit_error_label->hide();
+
+	// Sections.
+	sections = memnew(TabContainer);
+	sections->set_use_hidden_tabs_for_min_size(true);
+	sections->set_theme_type_variation("TabContainerOdd");
+	settings_vb->add_child(sections);
+	sections->set_v_size_flags(Control::SIZE_EXPAND_FILL);
+
+	// Resources export parameters.
+	ScrollContainer *resources_scroll_container = memnew(ScrollContainer);
+	resources_scroll_container->set_name(TTR("Resources"));
+	resources_scroll_container->set_horizontal_scroll_mode(ScrollContainer::SCROLL_MODE_DISABLED);
+	sections->add_child(resources_scroll_container);
+
+	VBoxContainer *resources_vb = memnew(VBoxContainer);
+	resources_vb->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+	resources_vb->set_v_size_flags(Control::SIZE_EXPAND_FILL);
+	resources_scroll_container->add_child(resources_vb);
+
+	export_filter = memnew(OptionButton);
+	export_filter->set_accessibility_name(TTRC("Export Mode"));
+	export_filter->add_item(TTR("Export all resources in the project"));
+	export_filter->add_item(TTR("Export selected scenes (and dependencies)"));
+	export_filter->add_item(TTR("Export selected resources (and dependencies)"));
+	export_filter->add_item(TTR("Export all resources in the project except resources checked below"));
+	// export_filter->add_item(TTR("Export as dedicated server"));
+	resources_vb->add_margin_child(TTR("Export Mode:"), export_filter);
+	export_filter->connect(SceneStringName(item_selected), callable_mp(this, &EditorExportPlatformWeb::AsyncPckDialog::on_export_filter_item_selected));
+
+	// server_strip_message = memnew(Label);
+	// server_strip_message->set_focus_mode(Control::FOCUS_ACCESSIBILITY);
+	// server_strip_message->set_visible(false);
+	// server_strip_message->set_autowrap_mode(TextServer::AUTOWRAP_WORD_SMART);
+	// server_strip_message->set_custom_minimum_size(Size2(300 * EDSCALE, 1));
+	// resources_vb->add_child(server_strip_message);
+
+	// {
+	// 	LocalVector<StringName> resource_names;
+	// 	ClassDB::get_inheriters_from_class("Resource", resource_names);
+
+	// 	PackedStringArray strippable;
+	// 	for (const StringName &resource_name : resource_names) {
+	// 		if (ClassDB::has_method(resource_name, "create_placeholder", true)) {
+	// 			strippable.push_back(resource_name);
+	// 		}
+	// 	}
+	// 	strippable.sort();
+
+	// 	String message = TTR("\"Strip Visuals\" will replace the following resources with placeholders:") + " ";
+	// 	message += String(", ").join(strippable);
+	// 	server_strip_message->set_text(message);
+	// }
+
+	file_mode_popup = memnew(PopupMenu);
+	add_child(file_mode_popup);
+	file_mode_popup->add_item(TTR("Strip Visuals"), EditorExportPreset::MODE_FILE_STRIP);
+	file_mode_popup->add_item(TTR("Keep"), EditorExportPreset::MODE_FILE_KEEP);
+	file_mode_popup->add_item(TTR("Remove"), EditorExportPreset::MODE_FILE_REMOVE);
+	file_mode_popup->connect(SceneStringName(id_pressed), callable_mp(this, &EditorExportPlatformWeb::AsyncPckDialog::on_file_mode_popup_id_pressed));
+
+	include_filters = memnew(LineEdit);
+	include_filters->set_accessibility_name(TTRC("Include Filters"));
+	resources_vb->add_margin_child(
+			TTR("Filters to export non-resource files/folders\n(comma-separated, e.g: *.json, *.txt, docs/*)"),
+			include_filters);
+	include_filters->connect(SceneStringName(text_changed), callable_mp(this, &EditorExportPlatformWeb::AsyncPckDialog::on_filter_changed));
+
+	exclude_filters = memnew(LineEdit);
+	exclude_filters->set_accessibility_name(TTRC("Exclude Filters"));
+	resources_vb->add_margin_child(
+			TTR("Filters to exclude files/folders from project\n(comma-separated, e.g: *.json, *.txt, docs/*)"),
+			exclude_filters);
+	exclude_filters->connect(SceneStringName(text_changed), callable_mp(this, &EditorExportPlatformWeb::AsyncPckDialog::on_filter_changed));
+
+	// Disable by default.
+	path_line_edit->set_editable(false);
+	duplicate_pck_button->set_disabled(true);
+	delete_pck_button->set_disabled(true);
+	sections->hide();
+
+	// Deletion dialog.
+	delete_pck_confirmation_dialog = memnew(ConfirmationDialog);
+	add_child(delete_pck_confirmation_dialog);
+	delete_pck_confirmation_dialog->set_ok_button_text(TTR("Delete"));
+	delete_pck_confirmation_dialog->connect(SceneStringName(confirmed), callable_mp(this, &EditorExportPlatformWeb::AsyncPckDialog::on_delete_pck_confirmation_dialog_confirmed));
+
+	// Export project file dialog.
+	set_hide_on_ok(false);
 }
 
 /**
@@ -1162,7 +1485,7 @@ void EditorExportPlatformWeb::_init_edit_exported_async_pcks_dialog() {
 	if (edit_exported_async_pcks_dialog != nullptr) {
 		return;
 	}
-	edit_exported_async_pcks_dialog = memnew(WebAsyncPckDialog(this));
+	edit_exported_async_pcks_dialog = memnew(AsyncPckDialog(this));
 	edit_exported_async_pcks_dialog->connect(SceneStringName(visibility_changed), callable_mp(this, &EditorExportPlatformWeb::_on_edit_exported_async_pcks_dialog_visibility_changed));
 }
 
