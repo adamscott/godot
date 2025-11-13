@@ -104,6 +104,7 @@ public:
 	static bool _encrypt_and_store_directory(Ref<FileAccess> p_fd, PackData &p_pack_data, const Vector<uint8_t> &p_key, uint64_t p_seed, uint64_t p_file_base);
 	static Error _encrypt_and_store_data(Ref<FileAccess> p_fd, const String &p_path, const Vector<uint8_t> &p_data, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const Vector<uint8_t> &p_key, uint64_t p_seed, bool &r_encrypt);
 	String _get_script_encryption_key(const Ref<EditorExportPreset> &p_preset) const;
+	Error _generate_sparse_pck_metadata(const Ref<EditorExportPreset> &p_preset, PackData &p_pack_data, Vector<uint8_t> &r_data);
 
 private:
 	struct ZipData {

@@ -221,6 +221,8 @@ const GodotFS = {
 				}
 				FS.mkdirTree(dir);
 			}
+
+			GodotRuntime.print(`FS.stat(${dir}):`, FS.stat(dir));
 			FS.writeFile(path, new Uint8Array(buffer));
 		},
 	},
@@ -267,6 +269,54 @@ const GodotOS = {
 					callback();
 				}, 0);
 			});
+		},
+
+		loadAsyncFile: function (pPckDir, pPath) {
+			GodotRuntime.print(`loading async "${pPath}" of "${pPckDir}"`);
+			let path = pPath;
+			if (path.startsWith('res://')) {
+				path = path.substring('res://'.length);
+			}
+
+			(async function () {
+				const remapResponse = await fetch(`${pPckDir}/${path}.remap`);
+				if (!remapResponse.ok) {
+					GodotRuntime.error(`couldn't load remap file "${pPckDir}/${path}.remap"`);
+					return;
+				}
+
+				const textDecoder = new TextDecoder();
+				const remapResponseData = await remapResponse.bytes();
+				const remapResponseString = textDecoder.decode(remapResponseData);
+				const configFile = GodotRuntime.getConfigFileFromString(remapResponseString);
+
+				GodotFS.copy_to_fs(`${path}.remap`, remapResponseData);
+				const promises = [
+					GodotOS.installFile(pPckDir, configFile['remap']['path']),
+				];
+				for (const file of configFile['dependencies']['files']) {
+					promises.push(GodotOS.loadAsyncFile(pPckDir, file['fallback_path']));
+				}
+				await Promise.allSettled(promises);
+			})().catch((err) => {
+				GodotRuntime.error('load file err', err);
+			});
+		},
+
+		installFile: async function (pPckDir, pPath) {
+			GodotRuntime.print(`installing "${pPath}" of "${pPckDir}"`);
+			let path = pPath;
+			if (path.startsWith('res://')) {
+				path = path.substring('res://'.length);
+			}
+
+			const fileResponse = await fetch(`${pPckDir}/${path}`);
+			if (!fileResponse.ok) {
+				throw new Error(`couldn't load file "${pPckDir}/${path}"`);
+			}
+
+			const fileResponseBuffer = await fileResponse.bytes();
+			GodotFS.copy_to_fs(path, fileResponseBuffer);
 		},
 	},
 
@@ -320,6 +370,15 @@ const GodotOS = {
 			return ((ua.indexOf('CrOS') !== -1) || (ua.indexOf('BSD') !== -1) || (ua.indexOf('Linux') !== -1) || (ua.indexOf('X11') !== -1)) ? 1 : 0;
 		}
 		return 0;
+	},
+
+	godot_js_os_async_load__proxy: 'sync',
+	godot_js_os_async_load__sig: 'ipp',
+	godot_js_os_async_load: function (p_pck_dir_ptr, p_path_ptr) {
+		const pck_dir = GodotRuntime.parseString(p_pck_dir_ptr);
+		const path = GodotRuntime.parseString(p_path_ptr);
+		GodotOS.loadAsyncFile(pck_dir, path);
+		return 1;
 	},
 
 	godot_js_os_execute__proxy: 'sync',

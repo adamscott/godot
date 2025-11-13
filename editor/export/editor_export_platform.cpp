@@ -960,6 +960,68 @@ String EditorExportPlatform::_get_script_encryption_key(const Ref<EditorExportPr
 	return p_preset->get_script_encryption_key().to_lower();
 }
 
+Error EditorExportPlatform::_generate_sparse_pck_metadata(const Ref<EditorExportPreset> &p_preset, PackData &p_pack_data, Vector<uint8_t> &r_data) {
+	Error err;
+	Ref<FileAccess> ftmp = FileAccess::create_temp(FileAccess::WRITE_READ, "export_index", "tmp", false, &err);
+	if (err != OK) {
+		add_message(EXPORT_MESSAGE_ERROR, TTR("Save PCK"), TTR("Could not create temporary file!"));
+		return err;
+	}
+	int64_t pck_start_pos = ftmp->get_position();
+	uint64_t file_base_ofs = 0;
+	uint64_t dir_base_ofs = 0;
+	EditorExportPlatform::_store_header(ftmp, p_preset->get_enc_pck() && p_preset->get_enc_directory(), true, file_base_ofs, dir_base_ofs);
+
+	// Write directory.
+	uint64_t dir_offset = ftmp->get_position();
+	ftmp->seek(dir_base_ofs);
+	ftmp->store_64(dir_offset - pck_start_pos);
+	ftmp->seek(dir_offset);
+
+	Vector<uint8_t> key;
+	if (p_preset->get_enc_pck() && p_preset->get_enc_directory()) {
+		String script_key = _get_script_encryption_key(p_preset);
+		key.resize(32);
+		if (script_key.length() == 64) {
+			for (int i = 0; i < 32; i++) {
+				int v = 0;
+				if (i * 2 < script_key.length()) {
+					char32_t ct = script_key[i * 2];
+					if (is_digit(ct)) {
+						ct = ct - '0';
+					} else if (ct >= 'a' && ct <= 'f') {
+						ct = 10 + ct - 'a';
+					}
+					v |= ct << 4;
+				}
+
+				if (i * 2 + 1 < script_key.length()) {
+					char32_t ct = script_key[i * 2 + 1];
+					if (is_digit(ct)) {
+						ct = ct - '0';
+					} else if (ct >= 'a' && ct <= 'f') {
+						ct = 10 + ct - 'a';
+					}
+					v |= ct;
+				}
+				key.write[i] = v;
+			}
+		}
+	}
+
+	if (!EditorExportPlatform::_encrypt_and_store_directory(ftmp, p_pack_data, key, p_preset->get_seed(), 0)) {
+		add_message(EXPORT_MESSAGE_ERROR, TTR("Save PCK"), TTR("Can't create encrypted file."));
+		return ERR_CANT_CREATE;
+	}
+
+	r_data.resize(ftmp->get_length());
+	ftmp->seek(0);
+	ftmp->get_buffer(r_data.ptrw(), r_data.size());
+	ftmp.unref();
+
+	return OK;
+}
+
 Dictionary EditorExportPlatform::get_internal_export_files(const Ref<EditorExportPreset> &p_preset, bool p_debug) {
 	Dictionary files;
 

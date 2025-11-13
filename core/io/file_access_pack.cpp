@@ -137,6 +137,16 @@ uint8_t *PackedData::get_file_hash(const String &p_path) {
 	return E->value.md5;
 }
 
+String PackedData::get_file_pack_path(const String &p_path) {
+	String simplified_path = p_path.simplify_path().trim_prefix("res://");
+	PathMD5 pmd5(simplified_path.md5_buffer());
+	HashMap<PathMD5, PackedFile, PathMD5>::Iterator file_iterator = files.find(pmd5);
+	if (!file_iterator) {
+		return "";
+	}
+	return file_iterator->value.pack;
+}
+
 HashSet<String> PackedData::get_file_paths() const {
 	HashSet<String> file_paths;
 	_get_file_paths(root, root->name, file_paths);

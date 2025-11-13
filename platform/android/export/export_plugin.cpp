@@ -807,7 +807,7 @@ Error EditorExportPlatformAndroid::save_apk_file(void *p_userdata, const String 
 
 	Vector<uint8_t> enc_data;
 	EditorExportPlatform::SavedData sd;
-	Error err = _store_temp_file(simplified_path, p_data, p_enc_in_filters, p_enc_ex_filters, p_key, p_seed, enc_data, sd);
+	Error err = store_temp_file(simplified_path, p_data, p_enc_in_filters, p_enc_ex_filters, p_key, p_seed, enc_data, sd);
 	if (err != OK) {
 		return err;
 	}
@@ -3513,68 +3513,6 @@ Error EditorExportPlatformAndroid::export_project(const Ref<EditorExportPreset> 
 	int export_format = int(p_preset->get("gradle_build/export_format"));
 	bool should_sign = p_preset->get("package/signed");
 	return export_project_helper(p_preset, p_debug, p_path, export_format, should_sign, p_flags);
-}
-
-Error EditorExportPlatformAndroid::_generate_sparse_pck_metadata(const Ref<EditorExportPreset> &p_preset, PackData &p_pack_data, Vector<uint8_t> &r_data) {
-	Error err;
-	Ref<FileAccess> ftmp = FileAccess::create_temp(FileAccess::WRITE_READ, "export_index", "tmp", false, &err);
-	if (err != OK) {
-		add_message(EXPORT_MESSAGE_ERROR, TTR("Save PCK"), TTR("Could not create temporary file!"));
-		return err;
-	}
-	int64_t pck_start_pos = ftmp->get_position();
-	uint64_t file_base_ofs = 0;
-	uint64_t dir_base_ofs = 0;
-	EditorExportPlatform::_store_header(ftmp, p_preset->get_enc_pck() && p_preset->get_enc_directory(), true, file_base_ofs, dir_base_ofs);
-
-	// Write directory.
-	uint64_t dir_offset = ftmp->get_position();
-	ftmp->seek(dir_base_ofs);
-	ftmp->store_64(dir_offset - pck_start_pos);
-	ftmp->seek(dir_offset);
-
-	Vector<uint8_t> key;
-	if (p_preset->get_enc_pck() && p_preset->get_enc_directory()) {
-		String script_key = _get_script_encryption_key(p_preset);
-		key.resize(32);
-		if (script_key.length() == 64) {
-			for (int i = 0; i < 32; i++) {
-				int v = 0;
-				if (i * 2 < script_key.length()) {
-					char32_t ct = script_key[i * 2];
-					if (is_digit(ct)) {
-						ct = ct - '0';
-					} else if (ct >= 'a' && ct <= 'f') {
-						ct = 10 + ct - 'a';
-					}
-					v |= ct << 4;
-				}
-
-				if (i * 2 + 1 < script_key.length()) {
-					char32_t ct = script_key[i * 2 + 1];
-					if (is_digit(ct)) {
-						ct = ct - '0';
-					} else if (ct >= 'a' && ct <= 'f') {
-						ct = 10 + ct - 'a';
-					}
-					v |= ct;
-				}
-				key.write[i] = v;
-			}
-		}
-	}
-
-	if (!EditorExportPlatform::_encrypt_and_store_directory(ftmp, p_pack_data, key, p_preset->get_seed(), 0)) {
-		add_message(EXPORT_MESSAGE_ERROR, TTR("Save PCK"), TTR("Can't create encrypted file."));
-		return ERR_CANT_CREATE;
-	}
-
-	r_data.resize(ftmp->get_length());
-	ftmp->seek(0);
-	ftmp->get_buffer(r_data.ptrw(), r_data.size());
-	ftmp.unref();
-
-	return OK;
 }
 
 Error EditorExportPlatformAndroid::export_project_helper(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, int export_format, bool should_sign, BitField<EditorExportPlatform::DebugFlags> p_flags) {

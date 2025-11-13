@@ -37,6 +37,7 @@
 #include "core/os/os.h"
 #include "editor/export/editor_export.h"
 #include "editor/export/editor_export_platform.h"
+#include "editor/export/editor_export_platform_utils.h"
 #include "servers/display/display_server.h"
 
 const String GODOT_PROJECT_NAME_XML_STRING = R"(<?xml version="1.0" encoding="utf-8"?>
@@ -84,8 +85,6 @@ String _get_android_orientation_label(DisplayServer::ScreenOrientation screen_or
 int _get_app_category_value(int category_index);
 
 String _get_app_category_label(int category_index);
-
-Error _store_temp_file(const String &p_simplified_path, const Vector<uint8_t> &p_data, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const Vector<uint8_t> &p_key, uint64_t p_seed, Vector<uint8_t> &r_enc_data, EditorExportPlatform::SavedData &r_sd);
 
 // Utility method used to create a directory.
 Error create_directory(const String &p_dir);

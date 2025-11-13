@@ -119,6 +119,7 @@ public:
 	void add_path(const String &p_pkg_path, const String &p_path, uint64_t p_ofs, uint64_t p_size, const uint8_t *p_md5, PackSource *p_src, bool p_replace_files, bool p_encrypted = false, bool p_bundle = false); // for PackSource
 	void remove_path(const String &p_path);
 	uint8_t *get_file_hash(const String &p_path);
+	String get_file_pack_path(const String &p_path);
 	HashSet<String> get_file_paths() const;
 
 	void set_disabled(bool p_disabled) { disabled = p_disabled; }

@@ -212,6 +212,8 @@ public:
 	virtual void unset_environment(const String &p_var) const = 0;
 	virtual void load_shell_environment() const {}
 
+	virtual Error async_load(const String &p_pck_dir, const String &p_path) const { return OK; }
+
 	virtual String get_name() const = 0;
 	virtual String get_identifier() const;
 	virtual String get_distribution_name() const = 0;
