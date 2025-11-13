@@ -127,6 +127,8 @@ protected:
 
 	virtual bool _check_internal_feature_support(const String &p_feature) = 0;
 
+	virtual String asyncpck_get_asyncpck_path(const String &p_path, Error *r_error) const;
+
 public:
 	typedef int64_t ProcessID;
 
@@ -370,6 +372,12 @@ public:
 	};
 
 	virtual PreferredTextureFormat get_preferred_texture_format() const;
+
+	virtual bool asyncpck_is_supported() const { return false; }
+	virtual Error asyncpck_install_file(const String &p_path) const {
+		return FAILED;
+	}
+	virtual Dictionary asyncpck_install_file_get_status(const String &p_path) const { return Dictionary(); }
 
 	// Load GDExtensions specific to this platform.
 	// This is invoked by the GDExtensionManager after loading GDExtensions specified by the project.

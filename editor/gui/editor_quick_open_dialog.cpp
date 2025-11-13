@@ -624,7 +624,7 @@ void QuickOpenResultContainer::_setup_candidate(QuickOpenResultCandidate &p_cand
 }
 
 void QuickOpenResultContainer::_setup_candidate(QuickOpenResultCandidate &p_candidate, const FuzzySearchResult &p_result) {
-	_setup_candidate(p_candidate, p_result.target);
+	_setup_candidate(p_candidate, p_result.target.string);
 	p_candidate.result = &p_result;
 }
 
