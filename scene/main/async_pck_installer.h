@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  test_fuzzy_search.h                                                   */
+/*  async_pck_installer.h                                                 */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -30,51 +30,63 @@
 
 #pragma once
 
-#include "core/string/fuzzy_search.h"
-#include "tests/test_macros.h"
+#include "scene/main/node.h"
 
-namespace TestFuzzySearch {
+class AsyncPCKInstaller : public Node {
+	GDCLASS(AsyncPCKInstaller, Node);
 
-struct FuzzySearchTestCase {
-	String query;
-	String expected;
+	const static inline String SIGNAL_FILE_ADDED = "file_added";
+	const static inline String SIGNAL_FILE_REMOVED = "file_removed";
+	const static inline String SIGNAL_FILE_PROGRESS = "file_progress";
+	const static inline String SIGNAL_FILE_INSTALLED = "file_installed";
+	const static inline String SIGNAL_FILE_ERROR = "file_error";
+	const static inline String SIGNAL_PROGRESS = "progress";
+	const static inline String SIGNAL_STATUS_CHANGED = "status_changed";
+
+public:
+	enum InstallerStatus {
+		INSTALLER_STATUS_IDLE,
+		INSTALLER_STATUS_LOADING,
+		INSTALLER_STATUS_INSTALLED,
+		INSTALLER_STATUS_ERROR,
+		INSTALLER_STATUS_MAX,
+	};
+
+private:
+	bool autostart = false;
+	bool started = false;
+
+	mutable bool status_dirty = true;
+	mutable InstallerStatus status_cached = INSTALLER_STATUS_IDLE;
+
+	mutable bool install_needed_dirty = true;
+	mutable bool install_needed_cached = false;
+
+	PackedStringArray file_paths;
+	HashMap<String, InstallerStatus> file_paths_status;
+
+	String _process_file_path(const String &p_path) const;
+	PackedStringArray _get_processed_file_paths() const;
+
+protected:
+	void _notification(int p_what);
+	static void _bind_methods();
+
+	void update();
+
+	bool set_file_path_status(const String &p_path, InstallerStatus p_status);
+
+public:
+	void start();
+
+	void set_autostart(bool p_autostart);
+	bool get_autostart() const;
+
+	void set_file_paths(const PackedStringArray &p_resources_paths);
+	PackedStringArray get_file_paths() const;
+
+	InstallerStatus get_status() const;
+	bool are_files_installable() const;
 };
 
-// Ideally each of these test queries should represent a different aspect, and potentially bottleneck, of the search process.
-const FuzzySearchTestCase test_cases[] = {
-	// Short query, many matches, few adjacent characters
-	{ "///gd", "./menu/hud/hud.gd" },
-	// Filename match with typo
-	{ "sm.png", "./entity/blood_sword/sam.png" },
-	// Multipart filename word matches
-	{ "ham ", "./entity/game_trap/ha_missed_me.wav" },
-	// Single word token matches
-	{ "push background", "./entity/background_zone1/background/push.png" },
-	// Long token matches
-	{ "background_freighter background png", "./entity/background_freighter/background/background.png" },
-	// Many matches, many short tokens
-	{ "menu menu characters wav", "./menu/menu/characters/smoker/0.wav" },
-	// Maximize total matches
-	{ "entity gd", "./entity/entity_man.gd" }
-};
-
-Vector<String> load_test_data() {
-	Ref<FileAccess> fp = FileAccess::open(TestUtils::get_data_path("fuzzy_search/project_dir_tree.txt"), FileAccess::READ);
-	REQUIRE(fp.is_valid());
-	return fp->get_as_utf8_string().split("\n");
-}
-
-TEST_CASE("[FuzzySearch] Test fuzzy search results") {
-	FuzzySearch search;
-	Vector<FuzzySearchResult> results;
-	Vector<String> targets = load_test_data();
-
-	for (FuzzySearchTestCase test_case : test_cases) {
-		search.set_query(test_case.query);
-		search.search_all(targets, results);
-		CHECK_GT(results.size(), 0);
-		CHECK_EQ(results[0].target.string, test_case.expected);
-	}
-}
-
-} //namespace TestFuzzySearch
+VARIANT_ENUM_CAST(AsyncPCKInstaller::InstallerStatus);

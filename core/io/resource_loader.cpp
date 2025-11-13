@@ -34,6 +34,7 @@
 #include "core/core_bind.h"
 #include "core/io/dir_access.h"
 #include "core/io/file_access.h"
+#include "core/io/file_access_pack.h"
 #include "core/io/resource_importer.h"
 #include "core/object/script_language.h"
 #include "core/os/condition_variable.h"
@@ -300,8 +301,6 @@ Ref<Resource> ResourceLoader::_load(const String &p_path, const String &p_origin
 		}
 	}
 	load_paths_stack.push_back(original_path);
-
-	print_verbose(vformat("Loading resource: %s", p_path));
 
 	// Try all loaders and pick the first match for the type hint
 	bool found = false;

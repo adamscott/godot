@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  test_fuzzy_search.h                                                   */
+/*  editor_export_platform_data.cpp                                       */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,53 +28,12 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#pragma once
+#include "editor_export_platform_data.h"
 
-#include "core/string/fuzzy_search.h"
-#include "tests/test_macros.h"
-
-namespace TestFuzzySearch {
-
-struct FuzzySearchTestCase {
-	String query;
-	String expected;
-};
-
-// Ideally each of these test queries should represent a different aspect, and potentially bottleneck, of the search process.
-const FuzzySearchTestCase test_cases[] = {
-	// Short query, many matches, few adjacent characters
-	{ "///gd", "./menu/hud/hud.gd" },
-	// Filename match with typo
-	{ "sm.png", "./entity/blood_sword/sam.png" },
-	// Multipart filename word matches
-	{ "ham ", "./entity/game_trap/ha_missed_me.wav" },
-	// Single word token matches
-	{ "push background", "./entity/background_zone1/background/push.png" },
-	// Long token matches
-	{ "background_freighter background png", "./entity/background_freighter/background/background.png" },
-	// Many matches, many short tokens
-	{ "menu menu characters wav", "./menu/menu/characters/smoker/0.wav" },
-	// Maximize total matches
-	{ "entity gd", "./entity/entity_man.gd" }
-};
-
-Vector<String> load_test_data() {
-	Ref<FileAccess> fp = FileAccess::open(TestUtils::get_data_path("fuzzy_search/project_dir_tree.txt"), FileAccess::READ);
-	REQUIRE(fp.is_valid());
-	return fp->get_as_utf8_string().split("\n");
-}
-
-TEST_CASE("[FuzzySearch] Test fuzzy search results") {
-	FuzzySearch search;
-	Vector<FuzzySearchResult> results;
-	Vector<String> targets = load_test_data();
-
-	for (FuzzySearchTestCase test_case : test_cases) {
-		search.set_query(test_case.query);
-		search.search_all(targets, results);
-		CHECK_GT(results.size(), 0);
-		CHECK_EQ(results[0].target.string, test_case.expected);
+Error EditorExportPlatformData::EditorExportSaveProxy::save_file(const Ref<EditorExportPreset> &p_preset, void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const Vector<uint8_t> &p_key, uint64_t p_seed, bool p_delta) {
+	if (tracking_saves) {
+		saved_paths.insert(p_path.simplify_path().trim_prefix("res://"));
 	}
-}
 
-} //namespace TestFuzzySearch
+	return save_func(p_preset, p_userdata, p_path, p_data, p_file, p_total, p_enc_in_filters, p_enc_ex_filters, p_key, p_seed, p_delta);
+}
