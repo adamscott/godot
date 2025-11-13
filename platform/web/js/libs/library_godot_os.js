@@ -64,6 +64,8 @@ const GodotConfig = {
 		godot_pool_size: 4,
 		on_execute: null,
 		on_exit: null,
+		mainPack: '',
+		asyncPckData: null,
 
 		init_config: function (p_opts) {
 			GodotConfig.canvas_resize_policy = p_opts['canvasResizePolicy'];
@@ -74,6 +76,8 @@ const GodotConfig = {
 			GodotConfig.godot_pool_size = p_opts['godotPoolSize'];
 			GodotConfig.on_execute = p_opts['onExecute'];
 			GodotConfig.on_exit = p_opts['onExit'];
+			GodotConfig.mainPack = p_opts['mainPack'];
+			GodotConfig.asyncPckData = p_opts['asyncPckData'] ?? null;
 			if (p_opts['focusCanvas']) {
 				GodotConfig.canvas.focus();
 			}
@@ -90,6 +94,8 @@ const GodotConfig = {
 			GodotConfig.persistent_drops = false;
 			GodotConfig.on_execute = null;
 			GodotConfig.on_exit = null;
+			GodotConfig.mainPack = '';
+			GodotConfig.asyncPckData = null;
 		},
 	},
 
@@ -227,17 +233,420 @@ const GodotFS = {
 };
 mergeInto(LibraryManager.library, GodotFS);
 
-const GodotOS = {
+class AsyncPckFile {
+	static get Status() {
+		return Object.freeze({
+			STATUS_ERROR: 'STATUS_ERROR',
+			STATUS_IDLE: 'STATUS_IDLE',
+			STATUS_LOADING: 'STATUS_LOADING',
+			STATUS_INSTALLED: 'STATUS_INSTALLED',
+		});
+	}
+
+	constructor(pAsyncPck, pPath, pSize) {
+		this.asyncPck = pAsyncPck;
+		this.path = pPath;
+		{
+			const assetsDir = GodotOS.asyncPckGetAsyncpckAssetsDir(this.asyncPck);
+			this.localPath = `${assetsDir}/${GodotOS._removeResPrefix(this.path)}`;
+		}
+
+		this._status = GodotOS.AsyncPckFile.Status.STATUS_IDLE;
+		this._installed = false;
+		this._size = pSize;
+		this._downloaded = 0;
+		this._loadPromise = null;
+	}
+
+	get status() {
+		return this._status;
+	}
+
+	get size() {
+		return this._size;
+	}
+
+	get downloaded() {
+		return this._downloaded;
+	}
+
+	_add_to_downloaded(pAddedBytes) {
+		this._set_downloaded(this._downloaded + pAddedBytes);
+	}
+
+	_set_downloaded(pDownloaded) {
+		this._downloaded = pDownloaded;
+		if (this._downloaded > this.size) {
+			this.size = this._downloaded;
+		}
+	}
+
+	async load() {
+		if (this._loadPromise != null) {
+			return this._loadPromise;
+		}
+
+		if (this._installed) {
+			GodotRuntime.print(
+				`AsyncPckFile "${this.path}" (of AsyncPck "${this.asyncPck}") is already installed, skipping loading.`
+			);
+			return Promise.resolve();
+		}
+		if (this._status == GodotOS.AsyncPckFile.Status.STATUS_LOADING) {
+			GodotRuntime.print(
+				`AsyncPckFile "${this.path}" (of AsyncPck "${this.asyncPck}") is currently loading, skipping loading.`
+			);
+			return Promise.resolve();
+		}
+		this._status = GodotOS.AsyncPckFile.Status.STATUS_LOADING;
+
+		this._loadPromise = this._load();
+		return await this._loadPromise;
+	}
+
+	async _load() {
+		try {
+			const fileBuffer = await this._loadAttempt();
+
+			GodotFS.copy_to_fs(this.localPath, fileBuffer);
+			this._status = GodotOS.AsyncPckFile.Status.STATUS_INSTALLED;
+		} catch (err) {
+			this._status = GodotOS.AsyncPckFile.Status.STATUS_ERROR;
+
+			const newError = new Error(
+				`AsyncPckFile "${this.path}" (of AsyncPck "${this.asyncPck}"): error while loading "${this.localPath}"`
+			);
+			newError.cause = err;
+			throw newError;
+		} finally {
+			this._loadPromise = null;
+		}
+	}
+
+	async _loadAttempt(pRetryCount = 0) {
+		try {
+			const fileResponse = await GodotOS.asyncPckFetch(this.localPath);
+			if (!fileResponse.ok) {
+				this._status = GodotOS.AsyncPckFile.Status.STATUS_ERROR;
+				throw new Error(`Couldn't load file "${this.localPath}".`);
+			}
+
+			const chunks = [];
+			const reader = fileResponse.body.getReader();
+
+			while (true) {
+				const { done, value: chunk } = await reader.read(); // eslint-disable-line no-await-in-loop
+				if (done) {
+					break;
+				}
+				this._add_to_downloaded(chunk.byteLength);
+				chunks.push(chunk);
+			}
+
+			const fileBuffer = new Uint8Array(this._downloaded);
+			let filePosition = 0;
+			for (const chunk of chunks) {
+				fileBuffer.set(chunk, filePosition);
+				filePosition += chunk.byteLength;
+			}
+
+			return fileBuffer;
+		} catch (err) {
+			const newError = new Error(
+				`AsyncPckFile "${this.path}" (of AsyncPck "${this.asyncPck}"): error while attempting to load "${this.localPath}". (attempt ${pRetryCount}/${GodotOS._asyncPckFetchMaxRetry})`
+			);
+			newError.cause = err;
+
+			if (pRetryCount == GodotOS._asyncPckFetchMaxRetry) {
+				const maxRetryError = new Error(`Maximum retry count (${GodotOS._asyncPckFetchMaxRetry}) reached.`);
+				maxRetryError.cause = newError;
+				throw maxRetryError;
+			}
+
+			GodotRuntime.error(newError);
+
+			// Exponent wait.
+			await GodotOS._wait(GodotOS._asyncPckWaitTimeBaseMs * (2 ** pRetryCount), 'ms');
+			return this._loadAttempt(pRetryCount + 1);
+		}
+	}
+
+	flagAsInstalled() {
+		this._status = GodotOS.AsyncPckFile.Status.STATUS_INSTALLED;
+	}
+
+	getAsJsonObject() {
+		return {
+			localPath: this.localPath,
+			status: this._status,
+			size: this._size,
+			downloaded: this._downloaded,
+		};
+	}
+}
+
+class AsyncPckResource {
+	constructor(pAsyncPck, pPath, pFileDefinition, pDependencies) {
+		this.asyncPck = pAsyncPck;
+		this.path = pPath;
+		this.dependencies = pDependencies;
+
+		this.files = [];
+		for (const [filePath, fileProperties] of Object.entries(pFileDefinition['files'])) {
+			const asyncPckFile = new GodotOS.AsyncPckFile(pAsyncPck, filePath, fileProperties['size']);
+			this.files.push(asyncPckFile);
+		}
+
+		this._loadPromise = null;
+	}
+
+	get size() {
+		return this.files.reduce((pAccumulatorValue, pFile) => pAccumulatorValue + pFile.size, 0);
+	}
+
+	get downloaded() {
+		return this.files.reduce((pAccumulatorValue, pFile) => pAccumulatorValue + pFile.downloaded, 0);
+	}
+
+	get status() {
+		if (this.files.find(GodotOS.AsyncPckResource.isStatusError) != null) {
+			return GodotOS.AsyncPckFile.Status.STATUS_ERROR;
+		}
+		if (this.files.every(GodotOS.AsyncPckResource.isStatusInstalled)) {
+			return GodotOS.AsyncPckFile.Status.STATUS_INSTALLED;
+		}
+		if (this.files.find(GodotOS.AsyncPckResource.isStatusLoading) != null) {
+			return GodotOS.AsyncPckFile.Status.STATUS_LOADING;
+		}
+		return GodotOS.AsyncPckFile.Status.STATUS_IDLE;
+	}
+
+	get allDependencies() {
+		const dependenciesMap = new Map();
+		for (const dependency of this.dependencies) {
+			const asyncPckResource = GodotOS.asyncPckGetAsyncPckResource(this.asyncPck, dependency);
+			if (asyncPckResource == null) {
+				throw new Error(`Cannot get dependencies of a non-resource ("${dependency}" of "${this.asyncPck}")`);
+			}
+			asyncPckResource._getAllDependencies(dependenciesMap);
+		}
+		const dependencies = {};
+		for (const key of dependenciesMap.keys()) {
+			dependencies[key] = dependenciesMap.get(key);
+		}
+		return dependencies;
+	}
+
+	_getAllDependencies(pDependenciesMap) {
+		if (pDependenciesMap.has(this.path)) {
+			return;
+		}
+		pDependenciesMap.set(this.path, this.getAsJsonObject({ withDependencies: false }));
+		for (const dependency of this.dependencies) {
+			const asyncPckResource = GodotOS.asyncPckGetAsyncPckResource(this.asyncPck, dependency);
+			if (asyncPckResource == null) {
+				throw new Error(`Cannot get dependencies of a non-resource ("${dependency}" of "${this.asyncPck}")`);
+			}
+			asyncPckResource._getAllDependencies(pDependenciesMap);
+		}
+	}
+
+	get allDependenciesResources() {
+		const dependenciesResources = [];
+		const allDependencies = this.allDependencies;
+		for (const dependency of Object.keys(allDependencies)) {
+			const asyncPckResource = GodotOS.asyncPckGetAsyncPckResource(this.asyncPck, dependency);
+			if (asyncPckResource == null) {
+				throw new Error(`Cannot get dependencies of a non-resource ("${dependency}" of "${this.asyncPck}")`);
+			}
+			dependenciesResources.push(asyncPckResource);
+		}
+		return dependenciesResources;
+	}
+
+	async load() {
+		if (this._loadPromise != null) {
+			return this._loadPromise;
+		}
+		if (this.status == GodotOS.AsyncPckFile.Status.STATUS_INSTALLED) {
+			return Promise.resolve();
+		}
+		this._loadPromise = this._load();
+		return await this._loadPromise;
+	}
+
+	async _load() {
+		try {
+			await Promise.allSettled(
+				this.files.map((pFile) => {
+					if (pFile.status == GodotOS.AsyncPckFile.Status.STATUS_INSTALLED) {
+						return Promise.resolve();
+					}
+					return pFile.load(pFile);
+				})
+			);
+		} catch (err) {
+			const newError = new Error(
+				`AsyncPckResource "${this.path}" (of AsyncPck "${this.asyncPck}"): error while loading"`
+			);
+			newError.cause = err;
+			throw newError;
+		} finally {
+			this._loadPromise = null;
+		}
+	}
+
+	flagAsInstalled() {
+		for (const file of this.files) {
+			file.flagAsInstalled();
+		}
+	}
+
+	insertInInstallMap() {
+		if (!GodotOS._asyncPckInstallMap.has(this.asyncPck)) {
+			GodotOS._asyncPckInstallMap.set(this.asyncPck, new Map());
+		}
+		GodotOS._asyncPckInstallMap.get(this.asyncPck).set(this.path, this);
+	}
+
+	getAsJsonObject(pOptions = {}) {
+		const { withDependencies = true } = pOptions;
+		const jsonData = {
+		};
+		if (withDependencies) {
+			const dependenciesResources = this.allDependenciesResources;
+			jsonData['files'] = {};
+			jsonData['files'][this.path] = this.getAsJsonObject({ withDependencies: false });
+			for (const dependencyResource of dependenciesResources) {
+				jsonData['files'][dependencyResource.path] = dependencyResource.getAsJsonObject({ withDependencies: false });
+			}
+			jsonData['size'] = this.size + dependenciesResources.reduce((pAccumulator, pDependencyResource) => pAccumulator + pDependencyResource.size, 0);
+			jsonData['downloaded'] = this.downloaded + dependenciesResources.reduce((pAccumulator, pDependencyResource) => pAccumulator + pDependencyResource.downloaded, 0);
+
+			let status = this.status;
+			if (status == GodotOS.AsyncPckFile.Status.STATUS_IDLE || this.status == GodotOS.AsyncPckFile.Status.STATUS_INSTALLED) {
+				if (dependenciesResources.find(GodotOS.AsyncPckResource.isStatusError) != null) {
+					status = GodotOS.AsyncPckFile.Status.STATUS_ERROR;
+				}
+				if (dependenciesResources.every(GodotOS.AsyncPckResource.isStatusInstalled)) {
+					status = GodotOS.AsyncPckFile.Status.STATUS_INSTALLED;
+				}
+				if (dependenciesResources.find(GodotOS.AsyncPckResource.isStatusLoading) != null) {
+					status = GodotOS.AsyncPckFile.Status.STATUS_LOADING;
+				}
+			}
+			jsonData['status'] = status;
+		} else {
+			jsonData['size'] = this.size;
+			jsonData['downloaded'] = this.downloaded;
+			jsonData['status'] = this.status;
+		}
+
+		return jsonData;
+	}
+
+	static isStatus(pStatus, pFile) {
+		return pFile.status == pStatus;
+	}
+
+	static isStatusError(pFile) {
+		return GodotOS.AsyncPckResource.isStatus(GodotOS.AsyncPckFile.Status.STATUS_ERROR, pFile);
+	}
+
+	static isStatusLoading(pFile) {
+		return GodotOS.AsyncPckResource.isStatus(GodotOS.AsyncPckFile.Status.STATUS_LOADING, pFile);
+	}
+
+	static isStatusInstalled(pFile) {
+		return GodotOS.AsyncPckResource.isStatus(GodotOS.AsyncPckFile.Status.STATUS_INSTALLED, pFile);
+	}
+}
+
+const _GodotOS = {
 	$GodotOS__deps: ['$GodotRuntime', '$GodotConfig', '$GodotFS'],
 	$GodotOS__postset: [
+		'Module["initOS"] = async () => { await GodotOS.init(); };',
 		'Module["request_quit"] = function() { GodotOS.request_quit() };',
 		'Module["onExit"] = GodotOS.cleanup;',
 		'GodotOS._fs_sync_promise = Promise.resolve();',
-	].join(''),
+		'GodotOS._asyncPckInstallMap = new Map();',
+	].join(' '),
 	$GodotOS: {
 		request_quit: function () {},
 		_async_cbs: [],
 		_fs_sync_promise: null,
+		AsyncPckFile: AsyncPckFile,
+		AsyncPckResource: AsyncPckResource,
+		_asyncPckInstallMap: null,
+		_asyncPckConcurrencyQueueManager: null,
+		_asyncPckFetchMaxRetry: 5,
+		_asyncPckWaitTimeBaseMs: 100,
+		_mainPack: '',
+		_prefixRes: 'res://',
+
+		_trimLastSlash: function (pPath) {
+			if (pPath.endsWith('/')) {
+				return pPath.substring(0, pPath.length - 1);
+			}
+			return pPath;
+		},
+		_addResPrefix: function (pPath) {
+			let path = pPath;
+			if (!path.startsWith(GodotOS._prefixRes)) {
+				path = GodotOS._prefixRes + path;
+			}
+			return path;
+		},
+		_removeResPrefix: function (pPath) {
+			let path = pPath;
+			if (path.startsWith(GodotOS._prefixRes)) {
+				path = path.substring(GodotOS._prefixRes.length);
+			}
+			return path;
+		},
+
+		init: async function () {
+			const { wait } = await import('@godotengine/utils/wait');
+			GodotOS._wait = wait;
+
+			GodotOS._mainPack = GodotConfig.mainPack ?? '';
+			if (GodotOS._mainPack.endsWith('.asyncpck')) {
+				const { ConcurrencyQueueManager } = await import('@godotengine/utils/concurrencyQueueManager');
+				// eslint-disable-next-line require-atomic-updates -- We set `GodotOS._concurrencyQueueManager` only once: at init time.
+				GodotOS._asyncPckConcurrencyQueueManager = new ConcurrencyQueueManager();
+				GodotOS.initAsyncPck();
+			}
+		},
+
+		initAsyncPck: function () {
+			const data = GodotConfig.asyncPckData;
+
+			const initialLoad = data['initialLoad'];
+			for (const value of Object.values(initialLoad)) {
+				const resources = value['resources'];
+				const dependencies = value['dependencies'];
+				for (const [resourceKey, resourceValue] of Object.entries(resources)) {
+					let asyncPckResource = GodotOS.asyncPckGetAsyncPckResource(GodotOS._mainPack, resourceKey);
+					if (asyncPckResource != null) {
+						continue;
+					}
+					asyncPckResource = new GodotOS.AsyncPckResource(GodotOS._mainPack, resourceKey, resourceValue, dependencies[resourceKey]);
+					asyncPckResource.insertInInstallMap();
+					asyncPckResource.flagAsInstalled();
+				}
+			}
+
+			const staticFiles = data['staticFiles'];
+			for (const [staticFilePath, staticFileData] of Object.entries(staticFiles)) {
+				let asyncPckResource = GodotOS.asyncPckGetAsyncPckResource(GodotOS._mainPack, staticFilePath);
+				if (asyncPckResource != null) {
+					continue;
+				}
+				asyncPckResource = new GodotOS.AsyncPckResource(GodotOS._mainPack, staticFilePath, staticFileData, []);
+				asyncPckResource.insertInInstallMap();
+				asyncPckResource.flagAsInstalled();
+			}
+		},
 
 		atexit: function (p_promise_cb) {
 			GodotOS._async_cbs.push(p_promise_cb);
@@ -253,20 +662,95 @@ const GodotOS = {
 		},
 
 		finish_async: function (callback) {
-			GodotOS._fs_sync_promise.then(function (err) {
-				const promises = [];
-				GodotOS._async_cbs.forEach(function (cb) {
-					promises.push(new Promise(cb));
+			GodotOS._fs_sync_promise
+				.then(function (err) {
+					const promises = [];
+					GodotOS._async_cbs.forEach(function (cb) {
+						promises.push(new Promise(cb));
+					});
+					return Promise.all(promises);
+				})
+				.then(function () {
+					return GodotFS.sync(); // Final FS sync.
+				})
+				.then(function (err) {
+					// Always deferred.
+					setTimeout(function () {
+						callback();
+					}, 0);
 				});
-				return Promise.all(promises);
-			}).then(function () {
-				return GodotFS.sync(); // Final FS sync.
-			}).then(function (err) {
-				// Always deferred.
-				setTimeout(function () {
-					callback();
-				}, 0);
-			});
+		},
+
+		asyncPckFetch: async function (...pArgs) {
+			return await GodotOS?._asyncPckConcurrencyQueueManager?.queue(() => fetch(...pArgs));
+		},
+
+		asyncPckGetAsyncpckAssetsDir: function (pPckDir) {
+			let pckDir = GodotOS._trimLastSlash(pPckDir);
+			if (pckDir.endsWith('.asyncpck')) {
+				pckDir = `${pckDir}/assets`;
+			}
+			return pckDir;
+		},
+
+		asyncPckGetAsyncPckResource: function (pPckDir, pPath) {
+			if (!GodotOS._asyncPckInstallMap.has(pPckDir)) {
+				return null;
+			}
+			const path = GodotOS._addResPrefix(pPath);
+			if (!GodotOS._asyncPckInstallMap.get(pPckDir).has(path)) {
+				return null;
+			}
+			return GodotOS._asyncPckInstallMap.get(pPckDir).get(path);
+		},
+
+		asyncPckInstallFile: async function (pPckDir, pPath) {
+			let asyncPckResource = GodotOS.asyncPckGetAsyncPckResource(pPckDir, pPath);
+			if (asyncPckResource != null) {
+				if (
+					asyncPckResource.status != GodotOS.AsyncPckFile.Status.STATUS_LOADING
+					&& asyncPckResource.status != GodotOS.AsyncPckFile.Status.STATUS_INSTALLED
+				) {
+					await asyncPckResource.load();
+				}
+				return;
+			}
+
+			const assetsDir = GodotOS.asyncPckGetAsyncpckAssetsDir(pPckDir);
+			const path = GodotOS._removeResPrefix(pPath);
+			const depsJsonPath = `${assetsDir}/${path}.deps.json`;
+			const depsJsonResponse = await GodotOS.asyncPckFetch(depsJsonPath);
+			if (!depsJsonResponse.ok) {
+				GodotRuntime.error(`Couldn't load dependencies file "${depsJsonPath}".`);
+				return;
+			}
+
+			const remapResponseJson = await depsJsonResponse.json();
+			const resources = remapResponseJson['resources'];
+			const dependencies = remapResponseJson['dependencies'];
+			const resourceKeys = Object.keys(resources);
+			const createdAsyncPckResources = [];
+			for (const resourceKey of resourceKeys) {
+				asyncPckResource = new GodotOS.AsyncPckResource(pPckDir, resourceKey, resources[resourceKey], dependencies[resourceKey]);
+				asyncPckResource.insertInInstallMap();
+				createdAsyncPckResources.push(asyncPckResource);
+			}
+
+			await Promise.allSettled(
+				createdAsyncPckResources.map(async (pAsyncPckResource) => {
+					await pAsyncPckResource.load();
+				})
+			);
+		},
+
+		asyncPckInstallFileGetStatus: function (pPckDir, pPath) {
+			const path = GodotOS._addResPrefix(pPath);
+			const asyncPckResource = GodotOS.asyncPckGetAsyncPckResource(pPckDir, path);
+			if (asyncPckResource == null) {
+				return null;
+			}
+			const jsonObject = asyncPckResource.getAsJsonObject();
+			return jsonObject;
 		},
 	},
 
@@ -320,6 +804,37 @@ const GodotOS = {
 			return ((ua.indexOf('CrOS') !== -1) || (ua.indexOf('BSD') !== -1) || (ua.indexOf('Linux') !== -1) || (ua.indexOf('X11') !== -1)) ? 1 : 0;
 		}
 		return 0;
+	},
+
+	godot_js_os_asyncpck_install_file__proxy: 'sync',
+	godot_js_os_asyncpck_install_file__sig: 'ipp',
+	godot_js_os_asyncpck_install_file: function (pPckDirPtr, pPathPtr) {
+		const pckDir = GodotOS._trimLastSlash(GodotRuntime.parseString(pPckDirPtr));
+		const path = GodotOS._addResPrefix(GodotOS._trimLastSlash(GodotRuntime.parseString(pPathPtr)));
+
+		GodotOS.asyncPckInstallFile(pckDir, path).catch((err) => {
+			GodotRuntime.error(`GodotOS.installAsyncFile("${pckDir}", "${path}")`, err);
+		});
+		return 0;
+	},
+
+	godot_js_os_asyncpck_install_file_get_status__proxy: 'sync',
+	godot_js_os_asyncpck_install_file_get_status__sig: 'ppp',
+	godot_js_os_asyncpck_install_file_get_status: function (pPckDirPtr, pPathPtr, pReturnStringLengthPtr) {
+		const pckDir = GodotOS._trimLastSlash(GodotRuntime.parseString(pPckDirPtr));
+		const path = GodotOS._addResPrefix(GodotOS._trimLastSlash(GodotRuntime.parseString(pPathPtr)));
+
+		const status = GodotOS.asyncPckInstallFileGetStatus(pckDir, path);
+		if (status == null) {
+			return 0;
+		}
+
+		const statusJson = JSON.stringify(status, null, 2);
+		const statusJsonPtr = GodotRuntime.allocString(statusJson);
+		if (pReturnStringLengthPtr !== 0) {
+			GodotRuntime.setHeapValue(pReturnStringLengthPtr, GodotRuntime.strlen(statusJson), 'i32');
+		}
+		return statusJsonPtr;
 	},
 
 	godot_js_os_execute__proxy: 'sync',
@@ -378,8 +893,8 @@ const GodotOS = {
 	},
 };
 
-autoAddDeps(GodotOS, '$GodotOS');
-mergeInto(LibraryManager.library, GodotOS);
+autoAddDeps(_GodotOS, '$GodotOS');
+mergeInto(LibraryManager.library, _GodotOS);
 
 /*
  * Godot event listeners.

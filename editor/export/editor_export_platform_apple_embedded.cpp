@@ -36,6 +36,7 @@
 #include "editor/editor_node.h"
 #include "editor/editor_string_names.h"
 #include "editor/export/editor_export.h"
+#include "editor/export/editor_export_platform_data.h"
 #include "editor/export/lipo.h"
 #include "editor/export/macho.h"
 #include "editor/file_system/editor_paths.h"
@@ -1627,7 +1628,7 @@ Error EditorExportPlatformAppleEmbedded::_export_project_helper(const Ref<Editor
 	const String binary_dir = dest_dir + binary_name;
 
 	if (!DirAccess::exists(dest_dir)) {
-		add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Target folder does not exist or is inaccessible: \"%s\""), dest_dir));
+		add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Target folder does not exist or is inaccessible: \"%s\""), dest_dir));
 		return ERR_FILE_BAD_PATH;
 	}
 
@@ -1652,7 +1653,7 @@ Error EditorExportPlatformAppleEmbedded::_export_project_helper(const Ref<Editor
 		String err;
 		src_pkg_name = find_export_template(get_platform_name() + ".zip", &err);
 		if (src_pkg_name.is_empty()) {
-			add_message(EXPORT_MESSAGE_ERROR, TTR("Prepare Templates"), TTR("Export template not found."));
+			add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Prepare Templates"), TTR("Export template not found."));
 			return ERR_FILE_NOT_FOUND;
 		}
 	}
@@ -1689,7 +1690,7 @@ Error EditorExportPlatformAppleEmbedded::_export_project_helper(const Ref<Editor
 				if ((total_files == 0) || (expected_files >= Math::floor(total_files * 0.8))) {
 					da->erase_contents_recursive();
 				} else {
-					add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Unexpected files found in the export destination directory \"%s.xcodeproj\", delete it manually or select another destination."), binary_dir));
+					add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Unexpected files found in the export destination directory \"%s.xcodeproj\", delete it manually or select another destination."), binary_dir));
 					return ERR_CANT_CREATE;
 				}
 			}
@@ -1720,7 +1721,7 @@ Error EditorExportPlatformAppleEmbedded::_export_project_helper(const Ref<Editor
 				if ((total_files == 0) || (expected_files >= Math::floor(total_files * 0.8))) {
 					da->erase_contents_recursive();
 				} else {
-					add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Unexpected files found in the export destination directory \"%s\", delete it manually or select another destination."), binary_dir));
+					add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Unexpected files found in the export destination directory \"%s\", delete it manually or select another destination."), binary_dir));
 					return ERR_CANT_CREATE;
 				}
 			}
@@ -1729,7 +1730,7 @@ Error EditorExportPlatformAppleEmbedded::_export_project_helper(const Ref<Editor
 			if (!da->dir_exists(binary_dir)) {
 				Error err = da->make_dir(binary_dir);
 				if (err != OK) {
-					add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Failed to create the directory: \"%s\""), binary_dir));
+					add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Failed to create the directory: \"%s\""), binary_dir));
 					return err;
 				}
 			}
@@ -1795,7 +1796,7 @@ Error EditorExportPlatformAppleEmbedded::_export_project_helper(const Ref<Editor
 
 	Ref<DirAccess> tmp_app_path = DirAccess::create_for_path(dest_dir);
 	if (tmp_app_path.is_null()) {
-		add_message(EXPORT_MESSAGE_ERROR, TTR("Prepare Templates"), vformat(TTR("Could not create and open the directory: \"%s\""), dest_dir));
+		add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Prepare Templates"), vformat(TTR("Could not create and open the directory: \"%s\""), dest_dir));
 		return ERR_CANT_CREATE;
 	}
 
@@ -1804,7 +1805,7 @@ Error EditorExportPlatformAppleEmbedded::_export_project_helper(const Ref<Editor
 	zlib_filefunc_def io = zipio_create_io(&io_fa);
 	unzFile src_pkg_zip = unzOpen2(src_pkg_name.utf8().get_data(), &io);
 	if (!src_pkg_zip) {
-		add_message(EXPORT_MESSAGE_ERROR, TTR("Prepare Templates"), TTR("Could not open export template (not a zip file?): \"%s\".", src_pkg_name));
+		add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Prepare Templates"), TTR("Could not open export template (not a zip file?): \"%s\".", src_pkg_name));
 		return ERR_CANT_OPEN;
 	}
 
@@ -1813,7 +1814,7 @@ Error EditorExportPlatformAppleEmbedded::_export_project_helper(const Ref<Editor
 		// TODO: Improve error reporting by using `add_message` throughout all methods called via `_export_apple_embedded_plugins`.
 		// For now a generic top level message would be fine, but we're ought to use proper reporting here instead of
 		// just fail macros and non-descriptive error return values.
-		add_message(EXPORT_MESSAGE_ERROR, TTR("Apple Embedded Plugins"), vformat(TTR("Failed to export Apple Embedded plugins with code %d. Please check the output log."), err));
+		add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Apple Embedded Plugins"), vformat(TTR("Failed to export Apple Embedded plugins with code %d. Please check the output log."), err));
 		return err;
 	}
 
@@ -1881,7 +1882,7 @@ Error EditorExportPlatformAppleEmbedded::_export_project_helper(const Ref<Editor
 				Error dir_err = tmp_app_path->make_dir_recursive(dir_name);
 				if (dir_err) {
 					unzClose(src_pkg_zip);
-					add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not create a directory at path \"%s\"."), dir_name));
+					add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not create a directory at path \"%s\"."), dir_name));
 					return ERR_CANT_CREATE;
 				}
 			}
@@ -1891,7 +1892,7 @@ Error EditorExportPlatformAppleEmbedded::_export_project_helper(const Ref<Editor
 				Ref<FileAccess> f = FileAccess::open(file, FileAccess::WRITE);
 				if (f.is_null()) {
 					unzClose(src_pkg_zip);
-					add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write to a file at path \"%s\"."), file));
+					add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write to a file at path \"%s\"."), file));
 					return ERR_CANT_CREATE;
 				};
 				f->store_buffer(data.ptr(), data.size());
@@ -1912,7 +1913,7 @@ Error EditorExportPlatformAppleEmbedded::_export_project_helper(const Ref<Editor
 	unzClose(src_pkg_zip);
 
 	if (!found_library) {
-		add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Requested template library '%s' not found. It might be missing from your template archive."), library_to_use));
+		add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Requested template library '%s' not found. It might be missing from your template archive."), library_to_use));
 		return ERR_FILE_NOT_FOUND;
 	}
 
@@ -1982,7 +1983,7 @@ Error EditorExportPlatformAppleEmbedded::_export_project_helper(const Ref<Editor
 			String dest_lib_file_path = dest_dir + static_lib_path.get_file();
 			Error lib_copy_err = tmp_app_path->copy(static_lib_path, dest_lib_file_path);
 			if (lib_copy_err != OK) {
-				add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not copy a file at path \"%s\" to \"%s\"."), static_lib_path, dest_lib_file_path));
+				add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not copy a file at path \"%s\" to \"%s\"."), static_lib_path, dest_lib_file_path));
 				return lib_copy_err;
 			}
 		}
@@ -1994,7 +1995,7 @@ Error EditorExportPlatformAppleEmbedded::_export_project_helper(const Ref<Editor
 		err = tmp_app_path->make_dir_recursive(iconset_dir);
 	}
 	if (err != OK) {
-		add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not create a directory at path \"%s\"."), iconset_dir));
+		add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not create a directory at path \"%s\"."), iconset_dir));
 		return err;
 	}
 
@@ -2009,7 +2010,7 @@ Error EditorExportPlatformAppleEmbedded::_export_project_helper(const Ref<Editor
 
 		Ref<DirAccess> launch_screen_da = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
 		if (launch_screen_da.is_null()) {
-			add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), TTR("Could not access the filesystem."));
+			add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), TTR("Could not access the filesystem."));
 			return ERR_CANT_CREATE;
 		}
 
@@ -2017,7 +2018,7 @@ Error EditorExportPlatformAppleEmbedded::_export_project_helper(const Ref<Editor
 
 		err = _export_loading_screen_file(p_preset, splash_image_path);
 		if (err != OK) {
-			add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Failed to create a file at path \"%s\" with code %d."), splash_image_path, err));
+			add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Failed to create a file at path \"%s\" with code %d."), splash_image_path, err));
 		}
 	}
 
@@ -2032,7 +2033,7 @@ Error EditorExportPlatformAppleEmbedded::_export_project_helper(const Ref<Editor
 	{
 		Ref<FileAccess> f = FileAccess::open(project_file_name, FileAccess::WRITE);
 		if (f.is_null()) {
-			add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write to a file at path \"%s\"."), project_file_name));
+			add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write to a file at path \"%s\"."), project_file_name));
 			return ERR_CANT_CREATE;
 		};
 		f->store_buffer(project_file_data.ptr(), project_file_data.size());
@@ -2048,7 +2049,7 @@ Error EditorExportPlatformAppleEmbedded::_export_project_helper(const Ref<Editor
 		CodesignData codesign_data(p_preset, p_debug);
 		err = _walk_dir_recursive(dylibs_dir, _codesign, &codesign_data);
 		if (err != OK) {
-			add_message(EXPORT_MESSAGE_ERROR, TTR("Code Signing"), TTR("Code signing failed, see editor log for details."));
+			add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Code Signing"), TTR("Code signing failed, see editor log for details."));
 			return err;
 		}
 	}
@@ -2090,12 +2091,12 @@ Error EditorExportPlatformAppleEmbedded::_export_project_helper(const Ref<Editor
 		}
 	});
 	if (result != 0) {
-		add_message(EXPORT_MESSAGE_ERROR, TTR("Xcode Build"), vformat(TTR("Failed to run xcodebuild with code %d"), err));
+		add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Xcode Build"), vformat(TTR("Failed to run xcodebuild with code %d"), err));
 		return ERR_CANT_CREATE;
 	}
 
 	if (!archive_succeeded) {
-		add_message(EXPORT_MESSAGE_ERROR, TTR("Xcode Build"), TTR("Xcode project build failed, see editor log for details."));
+		add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Xcode Build"), TTR("Xcode project build failed, see editor log for details."));
 		return FAILED;
 	}
 
@@ -2124,17 +2125,17 @@ Error EditorExportPlatformAppleEmbedded::_export_project_helper(const Ref<Editor
 			}
 		});
 		if (result != 0) {
-			add_message(EXPORT_MESSAGE_ERROR, TTR("Xcode Build"), vformat(TTR("Failed to run xcodebuild with code %d"), err));
+			add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Xcode Build"), vformat(TTR("Failed to run xcodebuild with code %d"), err));
 			return err;
 		}
 
 		if (!export_succeeded) {
-			add_message(EXPORT_MESSAGE_ERROR, TTR("Xcode Build"), TTR(".ipa export failed, see editor log for details."));
+			add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Xcode Build"), TTR(".ipa export failed, see editor log for details."));
 			return FAILED;
 		}
 	}
 #else
-	add_message(EXPORT_MESSAGE_WARNING, TTR("Xcode Build"), TTR(".ipa can only be built on macOS. Leaving Xcode project without building the package."));
+	add_message(EditorExportPlatformData::EXPORT_MESSAGE_WARNING, TTR("Xcode Build"), TTR(".ipa can only be built on macOS. Leaving Xcode project without building the package."));
 #endif
 
 	return OK;
@@ -2608,7 +2609,7 @@ Error EditorExportPlatformAppleEmbedded::run(const Ref<EditorExportPreset> &p_pr
 	String can_export_error;
 	bool can_export_missing_templates;
 	if (!can_export(p_preset, can_export_error, can_export_missing_templates)) {
-		add_message(EXPORT_MESSAGE_ERROR, TTR("Run"), can_export_error);
+		add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Run"), can_export_error);
 		return ERR_UNCONFIGURED;
 	}
 
@@ -2647,11 +2648,11 @@ Error EditorExportPlatformAppleEmbedded::run(const Ref<EditorExportPreset> &p_pr
 	String host = EDITOR_GET("network/debug/remote_host");
 	int remote_port = (int)EDITOR_GET("network/debug/remote_port");
 
-	if (p_debug_flags.has_flag(DEBUG_FLAG_REMOTE_DEBUG_LOCALHOST)) {
+	if (p_debug_flags.has_flag(EditorExportPlatformData::DEBUG_FLAG_REMOTE_DEBUG_LOCALHOST)) {
 		host = "localhost";
 	}
 
-	if (p_debug_flags.has_flag(DEBUG_FLAG_DUMB_CLIENT)) {
+	if (p_debug_flags.has_flag(EditorExportPlatformData::DEBUG_FLAG_DUMB_CLIENT)) {
 		int port = EDITOR_GET("filesystem/file_server/port");
 		String passwd = EDITOR_GET("filesystem/file_server/password");
 		cmd_args_list.push_back("--remote-fs");
@@ -2662,7 +2663,7 @@ Error EditorExportPlatformAppleEmbedded::run(const Ref<EditorExportPreset> &p_pr
 		}
 	}
 
-	if (p_debug_flags.has_flag(DEBUG_FLAG_REMOTE_DEBUG)) {
+	if (p_debug_flags.has_flag(EditorExportPlatformData::DEBUG_FLAG_REMOTE_DEBUG)) {
 		cmd_args_list.push_back("--remote-debug");
 
 		cmd_args_list.push_back(get_debug_protocol() + host + ":" + String::num_int64(remote_port));
@@ -2684,11 +2685,11 @@ Error EditorExportPlatformAppleEmbedded::run(const Ref<EditorExportPreset> &p_pr
 		}
 	}
 
-	if (p_debug_flags.has_flag(DEBUG_FLAG_VIEW_COLLISIONS)) {
+	if (p_debug_flags.has_flag(EditorExportPlatformData::DEBUG_FLAG_VIEW_COLLISIONS)) {
 		cmd_args_list.push_back("--debug-collisions");
 	}
 
-	if (p_debug_flags.has_flag(DEBUG_FLAG_VIEW_NAVIGATION)) {
+	if (p_debug_flags.has_flag(EditorExportPlatformData::DEBUG_FLAG_VIEW_NAVIGATION)) {
 		cmd_args_list.push_back("--debug-navigation");
 	}
 
@@ -2722,12 +2723,12 @@ Error EditorExportPlatformAppleEmbedded::run(const Ref<EditorExportPreset> &p_pr
 			int ec;
 			err = OS::get_singleton()->execute(idepl, args, &log, &ec, true);
 			if (err != OK) {
-				add_message(EXPORT_MESSAGE_WARNING, TTR("Run"), TTR("Could not start ios-deploy executable."));
+				add_message(EditorExportPlatformData::EXPORT_MESSAGE_WARNING, TTR("Run"), TTR("Could not start ios-deploy executable."));
 				CLEANUP_AND_RETURN(err);
 			}
 			if (ec != 0) {
 				print_line("ios-deploy:\n" + log);
-				add_message(EXPORT_MESSAGE_ERROR, TTR("Run"), TTR("Installation/running failed, see editor log for details."));
+				add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Run"), TTR("Installation/running failed, see editor log for details."));
 				CLEANUP_AND_RETURN(ERR_UNCONFIGURED);
 			}
 		}
@@ -2751,7 +2752,7 @@ Error EditorExportPlatformAppleEmbedded::run(const Ref<EditorExportPreset> &p_pr
 			});
 			if (ec != 0) {
 				print_line("device install:\n" + log);
-				add_message(EXPORT_MESSAGE_ERROR, TTR("Run"), TTR("Installation failed, see editor log for details."));
+				add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Run"), TTR("Installation failed, see editor log for details."));
 				CLEANUP_AND_RETURN(ERR_UNCONFIGURED);
 			}
 		}
@@ -2778,7 +2779,7 @@ Error EditorExportPlatformAppleEmbedded::run(const Ref<EditorExportPreset> &p_pr
 			});
 			if (ec != 0) {
 				print_line("devicectl launch:\n" + log);
-				add_message(EXPORT_MESSAGE_ERROR, TTR("Run"), TTR("Running failed, see editor log for details."));
+				add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Run"), TTR("Running failed, see editor log for details."));
 			}
 		}
 	}
