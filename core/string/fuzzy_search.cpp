@@ -162,7 +162,7 @@ void FuzzySearchResult::score_token_match(FuzzyTokenMatch &p_match, bool p_case_
 			substring_score *= 2;
 		}
 		// Score matches on a word boundary higher than matches within a word
-		if (_is_word_boundary(target, substring.x - 1) || _is_word_boundary(target, substring.x + substring.y)) {
+		if (_is_word_boundary(target.string, substring.x - 1) || _is_word_boundary(target.string, substring.x + substring.y)) {
 			substring_score += 4;
 		}
 		// Score exact query matches higher than non-compact subsequence matches
@@ -245,10 +245,10 @@ void FuzzySearch::sort_and_filter(Vector<FuzzySearchResult> &p_results) const {
 		bool operator()(const FuzzySearchResult &p_lhs, const FuzzySearchResult &p_rhs) const {
 			// Sort on (score, length, alphanumeric) to ensure consistent ordering.
 			if (p_lhs.score == p_rhs.score) {
-				if (p_lhs.target.length() == p_rhs.target.length()) {
-					return p_lhs.target < p_rhs.target;
+				if (p_lhs.target.string.length() == p_rhs.target.string.length()) {
+					return p_lhs.target.string < p_rhs.target.string;
 				}
-				return p_lhs.target.length() < p_rhs.target.length();
+				return p_lhs.target.string.length() < p_rhs.target.string.length();
 			}
 			return p_lhs.score > p_rhs.score;
 		}
@@ -293,11 +293,16 @@ void FuzzySearch::set_query(const String &p_query, bool p_case_sensitive) {
 }
 
 bool FuzzySearch::search(const String &p_target, FuzzySearchResult &p_result) const {
+	return search({ p_target, nullptr }, p_result);
+}
+
+bool FuzzySearch::search(const FuzzySearchTarget &p_target, FuzzySearchResult &p_result) const {
 	p_result.target = p_target;
-	p_result.dir_index = p_target.rfind_char('/');
+	const String &target_text = p_target.string;
+	p_result.dir_index = target_text.rfind_char('/');
 	p_result.miss_budget = max_misses;
 
-	String adjusted_target = case_sensitive ? p_target : p_target.to_lower();
+	String adjusted_target = case_sensitive ? target_text : target_text.to_lower();
 
 	// For each token, eagerly generate subsequences starting from index 0 and keep the best scoring one
 	// which does not conflict with prior token matches. This is not ensured to find the highest scoring
@@ -319,7 +324,7 @@ bool FuzzySearch::search(const String &p_target, FuzzySearchResult &p_result) co
 				}
 			}
 			if (p_result.can_add_token_match(match)) {
-				p_result.score_token_match(match, match.is_case_insensitive(p_target, adjusted_target));
+				p_result.score_token_match(match, match.is_case_insensitive(target_text, adjusted_target));
 				if (best_match.token_idx == -1 || best_match.score < match.score) {
 					best_match = match;
 				}
@@ -343,6 +348,16 @@ bool FuzzySearch::search(const String &p_target, FuzzySearchResult &p_result) co
 }
 
 void FuzzySearch::search_all(const PackedStringArray &p_targets, Vector<FuzzySearchResult> &p_results) const {
+	Vector<FuzzySearchTarget> targets;
+
+	for (const String &target : p_targets) {
+		targets.push_back({ target, nullptr });
+	}
+
+	search_all(targets, p_results);
+}
+
+void FuzzySearch::search_all(const Vector<FuzzySearchTarget> &p_targets, Vector<FuzzySearchResult> &p_results) const {
 	p_results.clear();
 
 	for (int i = 0; i < p_targets.size(); i++) {

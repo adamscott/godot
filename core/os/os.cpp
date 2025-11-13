@@ -33,6 +33,7 @@
 #include "core/config/project_settings.h"
 #include "core/io/dir_access.h"
 #include "core/io/file_access.h"
+#include "core/io/file_access_pack.h"
 #include "core/io/json.h"
 #include "core/os/midi_driver.h"
 #include "core/version_generated.gen.h"
@@ -819,6 +820,37 @@ void OS::benchmark_dump() {
 		}
 	}
 #endif
+}
+
+String OS::asyncpck_get_asyncpck_path(const String &p_path, Error *r_error) const {
+	Error err = OK;
+	bool has_path;
+	String pck_path;
+#define _ERR_FAIL_COND(m_cond, m_err) \
+	if (unlikely(m_cond)) {           \
+		err = m_err;                  \
+		goto return_error;            \
+	}                                 \
+	(void)0
+
+	_ERR_FAIL_COND(p_path.is_empty(), ERR_INVALID_PARAMETER);
+	_ERR_FAIL_COND(FileAccess::exists(p_path), ERR_INVALID_PARAMETER);
+
+	has_path = PackedData::get_singleton()->has_async_path(p_path);
+
+	_ERR_FAIL_COND(!has_path, ERR_CANT_RESOLVE);
+
+	pck_path = PackedData::get_singleton()->get_file_async_pack_path(p_path);
+
+	_ERR_FAIL_COND(!has_path, ERR_CANT_RESOLVE);
+	_ERR_FAIL_COND(pck_path.is_empty(), ERR_CANT_RESOLVE);
+
+return_error:
+	if (r_error != nullptr) {
+		*r_error = err;
+	}
+	return pck_path;
+#undef _ERR_COND
 }
 
 OS::OS() {
