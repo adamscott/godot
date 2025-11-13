@@ -1113,6 +1113,9 @@ bool ResourceLoader::is_imported(const String &p_path) {
 
 void ResourceLoader::async_load(const String &p_path, Error *r_error) {
 	ERR_FAIL_COND(p_path.is_empty());
+	if (FileAccess::exists(p_path)) {
+		return;
+	}
 	ERR_FAIL_COND(!PackedData::get_singleton()->has_path(p_path));
 	String pck_path = PackedData::get_singleton()->get_file_pack_path(p_path);
 	ERR_FAIL_COND(pck_path.is_empty());
