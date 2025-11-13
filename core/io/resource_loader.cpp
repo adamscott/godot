@@ -34,6 +34,7 @@
 #include "core/core_bind.h"
 #include "core/io/dir_access.h"
 #include "core/io/file_access.h"
+#include "core/io/file_access_pack.h"
 #include "core/io/resource_importer.h"
 #include "core/object/script_language.h"
 #include "core/os/condition_variable.h"
@@ -1108,6 +1109,17 @@ bool ResourceLoader::is_imported(const String &p_path) {
 	}
 
 	return false; //not found
+}
+
+void ResourceLoader::async_load(const String &p_path, Error *r_error) {
+	ERR_FAIL_COND(p_path.is_empty());
+	ERR_FAIL_COND(!PackedData::get_singleton()->has_path(p_path));
+	String pck_path = PackedData::get_singleton()->get_file_pack_path(p_path);
+	ERR_FAIL_COND(pck_path.is_empty());
+	Error error = OS::get_singleton()->async_load(pck_path, p_path);
+	if (error != OK) {
+		*r_error = error;
+	}
 }
 
 void ResourceLoader::get_dependencies(const String &p_path, List<String> *p_dependencies, bool p_add_types) {

@@ -82,6 +82,7 @@ public:
 	Ref<Resource> get_cached_ref(const String &p_path);
 	bool exists(const String &p_path, const String &p_type_hint = "");
 	ResourceUID::ID get_resource_uid(const String &p_path);
+	void async_load(const String &p_path);
 
 	Vector<String> list_directory(const String &p_directory);
 

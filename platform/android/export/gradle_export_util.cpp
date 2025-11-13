@@ -123,48 +123,6 @@ String _get_app_category_label(int category_index) {
 	}
 }
 
-// Utility method used to create a directory.
-Error create_directory(const String &p_dir) {
-	if (!DirAccess::exists(p_dir)) {
-		Ref<DirAccess> filesystem_da = DirAccess::create(DirAccess::ACCESS_RESOURCES);
-		ERR_FAIL_COND_V_MSG(filesystem_da.is_null(), ERR_CANT_CREATE, "Cannot create directory '" + p_dir + "'.");
-		Error err = filesystem_da->make_dir_recursive(p_dir);
-		ERR_FAIL_COND_V_MSG(err, ERR_CANT_CREATE, "Cannot create directory '" + p_dir + "'.");
-	}
-	return OK;
-}
-
-// Writes p_data into a file at p_path, creating directories if necessary.
-// Note: this will overwrite the file at p_path if it already exists.
-Error store_file_at_path(const String &p_path, const Vector<uint8_t> &p_data) {
-	String dir = p_path.get_base_dir();
-	Error err = create_directory(dir);
-	if (err != OK) {
-		return err;
-	}
-	Ref<FileAccess> fa = FileAccess::open(p_path, FileAccess::WRITE);
-	ERR_FAIL_COND_V_MSG(fa.is_null(), ERR_CANT_CREATE, "Cannot create file '" + p_path + "'.");
-	fa->store_buffer(p_data.ptr(), p_data.size());
-	return OK;
-}
-
-// Writes string p_data into a file at p_path, creating directories if necessary.
-// Note: this will overwrite the file at p_path if it already exists.
-Error store_string_at_path(const String &p_path, const String &p_data) {
-	String dir = p_path.get_base_dir();
-	Error err = create_directory(dir);
-	if (err != OK) {
-		if (OS::get_singleton()->is_stdout_verbose()) {
-			print_error("Unable to write data into " + p_path);
-		}
-		return err;
-	}
-	Ref<FileAccess> fa = FileAccess::open(p_path, FileAccess::WRITE);
-	ERR_FAIL_COND_V_MSG(fa.is_null(), ERR_CANT_CREATE, "Cannot create file '" + p_path + "'.");
-	fa->store_string(p_data);
-	return OK;
-}
-
 // Implementation of EditorExportSaveFunction.
 // This method will only be called as an input to export_project_files.
 // It is used by the export_project_files method to save all the asset files into the gradle project.
@@ -177,7 +135,7 @@ Error rename_and_store_file_in_gradle_project(void *p_userdata, const String &p_
 
 	Vector<uint8_t> enc_data;
 	EditorExportPlatform::SavedData sd;
-	Error err = _store_temp_file(simplified_path, p_data, p_enc_in_filters, p_enc_ex_filters, p_key, p_seed, enc_data, sd);
+	Error err = store_temp_file(simplified_path, p_data, p_enc_in_filters, p_enc_ex_filters, p_key, p_seed, enc_data, sd);
 	if (err != OK) {
 		return err;
 	}
@@ -396,35 +354,4 @@ String _get_application_tag(const Ref<EditorExportPlatform> &p_export_platform, 
 	manifest_application_text += _get_activity_tag(p_export_platform, p_preset, p_debug);
 	manifest_application_text += "    </application>\n";
 	return manifest_application_text;
-}
-
-Error _store_temp_file(const String &p_simplified_path, const Vector<uint8_t> &p_data, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const Vector<uint8_t> &p_key, uint64_t p_seed, Vector<uint8_t> &r_enc_data, EditorExportPlatform::SavedData &r_sd) {
-	Error err = OK;
-	Ref<FileAccess> ftmp = FileAccess::create_temp(FileAccess::WRITE_READ, "export", "tmp", false, &err);
-	if (err != OK) {
-		return err;
-	}
-	r_sd.path_utf8 = p_simplified_path.trim_prefix("res://").utf8();
-	r_sd.ofs = 0;
-	r_sd.size = p_data.size();
-	err = EditorExportPlatform::_encrypt_and_store_data(ftmp, p_simplified_path, p_data, p_enc_in_filters, p_enc_ex_filters, p_key, p_seed, r_sd.encrypted);
-	if (err != OK) {
-		return err;
-	}
-
-	r_enc_data.resize(ftmp->get_length());
-	ftmp->seek(0);
-	ftmp->get_buffer(r_enc_data.ptrw(), r_enc_data.size());
-	ftmp.unref();
-
-	// Store MD5 of original file.
-	{
-		unsigned char hash[16];
-		CryptoCore::md5(p_data.ptr(), p_data.size(), hash);
-		r_sd.md5.resize(16);
-		for (int i = 0; i < 16; i++) {
-			r_sd.md5.write[i] = hash[i];
-		}
-	}
-	return OK;
 }

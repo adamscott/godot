@@ -30,6 +30,8 @@
 
 #pragma once
 
+#include "core/io/file_access.h"
+#include "core/variant/variant.h"
 #include "editor_http_server.h"
 
 #include "core/config/project_settings.h"
@@ -51,6 +53,59 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		REMOTE_DEBUG_STATE_UNAVAILABLE,
 		REMOTE_DEBUG_STATE_AVAILABLE,
 		REMOTE_DEBUG_STATE_SERVING,
+	};
+
+	struct ExportData {
+		struct FileDependencies {
+			String resource_path;
+			String remap_file_path;
+			int64_t remap_file_size;
+			String remap_path;
+			int64_t remap_size;
+			LocalVector<FileDependencies *> dependencies;
+
+			Error write_deps_file(const String &p_path);
+			void flatten_dependencies(LocalVector<FileDependencies *> &r_deps) {
+				if (r_deps.has(this)) {
+					return;
+				}
+				r_deps.push_back(this);
+				for (FileDependencies *dependency : dependencies) {
+					dependency->flatten_dependencies(r_deps);
+				}
+			}
+
+			FileDependencies(const ExportData *p_export_data, const String &p_resource_path, const String &p_remap_file_path, const String &p_remap_path) :
+					resource_path(p_resource_path), remap_file_path(p_remap_file_path), remap_path(p_remap_path) {
+				ERR_FAIL_COND(resource_path.is_empty());
+				ERR_FAIL_COND(remap_file_path.is_empty());
+				ERR_FAIL_COND(remap_path.is_empty());
+
+				String real_remap_file_path = p_export_data->res_to_global(remap_file_path);
+				String real_remap_path = p_export_data->res_to_global(remap_path);
+
+				ERR_FAIL_COND(!FileAccess::exists(real_remap_file_path));
+				ERR_FAIL_COND(!FileAccess::exists(real_remap_path));
+
+				remap_file_size = FileAccess::get_size(real_remap_file_path);
+				remap_size = FileAccess::get_size(real_remap_path);
+			}
+		};
+
+		HashMap<String, FileDependencies> dependencies;
+		EditorExportPlatform::PackData pack_data;
+		String assets_directory;
+		String libraries_directory;
+		bool debug;
+		LocalVector<String> libraries;
+
+		Error add_dependencies(const String &p_resource_path);
+		String res_to_global(const String &p_res_path) const {
+			return assets_directory.path_join(p_res_path.trim_prefix("res://"));
+		}
+		String global_to_res(const String &p_global_path) const {
+			return "res://" + p_global_path.trim_prefix(assets_directory.trim_suffix("/") + "/");
+		}
 	};
 
 	Ref<ImageTexture> logo;
@@ -116,6 +171,8 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 	Error _launch_browser(const String &p_bind_host, uint16_t p_bind_port, bool p_use_tls);
 	Error _start_server(const String &p_bind_host, uint16_t p_bind_port, bool p_use_tls);
 	Error _stop_server();
+
+	static Error _rename_and_store_file_in_async_pck(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const PackedByteArray &p_key, uint64_t p_seed);
 
 public:
 	virtual void get_preset_features(const Ref<EditorExportPreset> &p_preset, List<String> *r_features) const override;

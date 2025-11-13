@@ -30,6 +30,11 @@
 
 #include "export_plugin.h"
 
+#include "core/error/error_list.h"
+#include "core/io/config_file.h"
+#include "core/io/file_access.h"
+#include "core/io/resource_loader.h"
+#include "core/variant/dictionary.h"
 #include "logo_svg.gen.h"
 #include "run_icon_svg.gen.h"
 
@@ -37,6 +42,7 @@
 #include "core/io/dir_access.h"
 #include "editor/editor_string_names.h"
 #include "editor/export/editor_export.h"
+#include "editor/export/editor_export_platform_utils.h"
 #include "editor/import/resource_importer_texture_settings.h"
 #include "editor/settings/editor_settings.h"
 #include "editor/themes/editor_scale.h"
@@ -44,6 +50,69 @@
 
 #include "modules/modules_enabled.gen.h" // For mono.
 #include "modules/svg/image_loader_svg.h"
+#include <functional>
+
+Error EditorExportPlatformWeb::ExportData::FileDependencies::write_deps_file(const String &p_path) {
+	ERR_FAIL_COND_V(p_path.is_empty(), ERR_INVALID_PARAMETER);
+	Ref<ConfigFile> deps_file;
+	deps_file.instantiate();
+
+	LocalVector<FileDependencies *> dependencies;
+	flatten_dependencies(dependencies);
+
+	for (const FileDependencies *dependency : dependencies) {
+		Dictionary remap_file_path_entry;
+		remap_file_path_entry.set("size", remap_file_size);
+		deps_file->set_value("dependencies", dependency->remap_file_path, remap_file_path_entry);
+		Dictionary remap_path_entry;
+		remap_path_entry.set("size", remap_size);
+		deps_file->set_value("dependencies", dependency->remap_path, remap_path_entry);
+	}
+
+	return deps_file->save(p_path);
+}
+
+Error EditorExportPlatformWeb::ExportData::add_dependencies(const String &p_resource_path) {
+	if (dependencies.has(p_resource_path)) {
+		return OK;
+	}
+
+	String resource_path;
+	if (p_resource_path.contains("::")) {
+		resource_path = p_resource_path.get_slice("::", 2);
+	} else {
+		resource_path = p_resource_path;
+	}
+
+	const String remap_suffix = ".remap";
+	String remap_file_path = resource_path + remap_suffix;
+	Ref<ConfigFile> remap_file;
+	remap_file.instantiate();
+	remap_file->load(res_to_global(remap_file_path));
+	String remap_path = remap_file->get_value("remap", "path");
+	print_line(vformat("-> resource_path: %s, remap_path: %s", resource_path, remap_path));
+
+	dependencies.insert(resource_path, ExportData::FileDependencies(this, resource_path, remap_file_path, remap_path));
+
+	List<String> resource_dependencies;
+	ResourceLoader::get_dependencies(resource_path, &resource_dependencies);
+
+	for (const String &resource_dependency : resource_dependencies) {
+		String resource_dependency_path = resource_dependency.contains("::")
+				? resource_dependency.get_slice("::", 2)
+				: resource_dependency;
+		Error error = add_dependencies(resource_dependency_path);
+		if (error != OK) {
+			ERR_PRINT(vformat(R"*(Could not add dependencies of "%s".)*", resource_dependency_path));
+			return error;
+		}
+		dependencies.get(resource_path).dependencies.push_back(&dependencies.get(resource_dependency_path));
+	}
+
+	dependencies.get(resource_path).write_deps_file(res_to_global(resource_path + ".deps"));
+
+	return OK;
+}
 
 Error EditorExportPlatformWeb::_extract_template(const String &p_template, const String &p_dir, const String &p_name, bool pwa) {
 	Ref<FileAccess> io_fa;
@@ -493,9 +562,17 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 	const bool export_icon = p_preset->get("html/export_icon");
 	const bool pwa = p_preset->get("progressive_web_app/enabled");
 
-	const String base_dir = p_path.get_base_dir();
-	const String base_path = p_path.get_basename();
-	const String base_name = p_path.get_file().get_basename();
+	String path = p_path;
+	if (!path.is_absolute_path()) {
+		if (!path.begins_with("res://")) {
+			path = "res://" + path;
+		}
+		path = ProjectSettings::get_singleton()->globalize_path(path);
+	}
+
+	const String base_dir = path.get_base_dir();
+	const String base_path = path.get_basename();
+	const String base_name = path.get_file().get_basename();
 
 	if (!DirAccess::exists(base_dir)) {
 		add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Target folder does not exist or is inaccessible: \"%s\""), base_dir));
@@ -518,23 +595,78 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 
 	// Export pck and shared objects
 	Vector<SharedObject> shared_objects;
-	String pck_path = base_path + ".pck";
-	Error error = save_pack(p_preset, p_debug, pck_path, &shared_objects);
+	String pck_path = base_path + ".asyncpck";
+
+	ExportData export_data;
+	export_data.assets_directory = pck_path.path_join("assets");
+	export_data.libraries_directory = pck_path.path_join("libraries");
+	export_data.pack_data.path = "assets.sparsepck";
+	export_data.pack_data.use_sparse_pck = true;
+	Error error = export_project_files(p_preset, p_debug, &EditorExportPlatformWeb::_rename_and_store_file_in_async_pck, nullptr, &export_data);
 	if (error != OK) {
-		add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), pck_path));
+		add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write async pck: \"%s\"."), pck_path));
+		return error;
+	}
+
+	PackedByteArray encoded_data;
+	error = _generate_sparse_pck_metadata(p_preset, export_data.pack_data, encoded_data);
+	if (error != OK) {
+		add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not encode contents of async pck: \"%s\"."), pck_path));
+		return error;
+	}
+
+	error = store_file_at_path(export_data.assets_directory.path_join("assets.sparsepck"), encoded_data);
+	if (error != OK) {
+		add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not store contents of async pck: \"%s\"."), pck_path));
 		return error;
 	}
 
 	{
 		Ref<DirAccess> da = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
 		for (int i = 0; i < shared_objects.size(); i++) {
-			String dst = base_dir.path_join(shared_objects[i].path.get_file());
+			String dst = export_data.libraries_directory.path_join(shared_objects[i].path.get_file());
 			error = da->copy(shared_objects[i].path, dst);
 			if (error != OK) {
 				add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), shared_objects[i].path.get_file()));
 				return error;
 			}
 		}
+	}
+
+	{
+		std::function<Error(String)> loop_asset_dir;
+		loop_asset_dir = [&export_data, &loop_asset_dir](const String &p_path) -> Error {
+			print_line(vformat("looping in %s", p_path));
+			Ref<DirAccess> dir_access = DirAccess::open(p_path);
+			dir_access->list_dir_begin();
+			String next = dir_access->get_next();
+			while (!next.is_empty()) {
+				if (next == "." || next == "..") {
+					next = dir_access->get_next();
+					continue;
+				}
+				if (next.ends_with("/")) {
+					loop_asset_dir(next);
+					next = dir_access->get_next();
+					continue;
+				}
+
+				const String remap_suffix = ".remap";
+				if (next.ends_with(remap_suffix)) {
+					String resource_path = export_data.global_to_res(dir_access->get_current_dir().path_join(next.trim_suffix(remap_suffix)));
+					Error err = export_data.add_dependencies(resource_path);
+					if (err != OK) {
+						return err;
+					}
+				}
+				next = dir_access->get_next();
+			}
+			dir_access->list_dir_end();
+
+			return OK;
+		};
+
+		loop_asset_dir(ProjectSettings::get_singleton()->globalize_path(export_data.assets_directory));
 	}
 
 	// Extract templates.
@@ -569,7 +701,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 
 	// Generate HTML file with replaced strings.
 	_fix_html(html, p_preset, base_name, p_debug, p_flags, shared_objects, file_sizes);
-	Error err = _write_or_error(html.ptr(), html.size(), p_path);
+	Error err = _write_or_error(html.ptr(), html.size(), path);
 	if (err != OK) {
 		// Message is supplied by the subroutine method.
 		return err;
@@ -603,7 +735,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 
 	// Generate the PWA worker and manifest
 	if (pwa) {
-		err = _build_pwa(p_preset, p_path, shared_objects);
+		err = _build_pwa(p_preset, path, shared_objects);
 		if (err != OK) {
 			// Message is supplied by the subroutine method.
 			return err;
@@ -911,6 +1043,27 @@ Error EditorExportPlatformWeb::_start_server(const String &p_bind_host, const ui
 
 Error EditorExportPlatformWeb::_stop_server() {
 	server->stop();
+	return OK;
+}
+
+Error EditorExportPlatformWeb::_rename_and_store_file_in_async_pck(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const Vector<uint8_t> &p_key, uint64_t p_seed) {
+	// EditorExportPlatformWeb *export_platform = static_cast<EditorExportPlatformWeb *>(p_userdata);
+	ExportData *export_data = static_cast<ExportData *>(p_userdata);
+	const String simplified_path = EditorExportPlatform::simplify_path(p_path);
+
+	Vector<uint8_t> encoded_data;
+	EditorExportPlatform::SavedData saved_data;
+	Error err = store_temp_file(simplified_path, p_data, p_enc_in_filters, p_enc_ex_filters, p_key, p_seed, encoded_data, saved_data);
+	if (err != OK) {
+		return err;
+	}
+
+	const String target_path = export_data->assets_directory.path_join(simplified_path.trim_prefix("res://"));
+	print_verbose("Saving project files from " + simplified_path + " into " + target_path);
+	err = store_file_at_path(target_path, encoded_data);
+
+	export_data->pack_data.file_ofs.push_back(saved_data);
+
 	return OK;
 }
 
