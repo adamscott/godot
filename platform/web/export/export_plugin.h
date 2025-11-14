@@ -60,8 +60,12 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 			String resource_path;
 			String remap_file_path;
 			int64_t remap_file_size;
+			String remap_file_md5;
+			String remap_file_sha256;
 			String remap_path;
 			int64_t remap_size;
+			String remap_md5;
+			String remap_sha256;
 			LocalVector<FileDependencies *> dependencies;
 
 			Error write_deps_file(const String &p_path);
@@ -89,6 +93,11 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 
 				remap_file_size = FileAccess::get_size(real_remap_file_path);
 				remap_size = FileAccess::get_size(real_remap_path);
+
+				remap_file_md5 = real_remap_file_path.md5_text();
+				remap_file_sha256 = real_remap_file_path.sha256_text();
+				remap_md5 = real_remap_path.md5_text();
+				remap_sha256 = real_remap_path.sha256_text();
 			}
 		};
 

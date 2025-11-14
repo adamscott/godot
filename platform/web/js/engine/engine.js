@@ -197,14 +197,44 @@ const Engine = (function () {
 				this.config.update(override);
 				// Add main-pack argument.
 				const exe = this.config.executable;
-				const pack = this.config.mainPack || `${exe}.asyncpck`;
+				let pack = this.config.mainPack || `${exe}.asyncpck`;
+				const mainSceneDepsJson = this.config.mainSceneDepsJson;
 
 				this.config.args = ['--main-pack', pack].concat(this.config.args);
 				// Start and init with execName as loadPath if not inited.
 				const me = this;
+
 				return Promise.all([
 					this.init(exe),
-					this.preloadFile(pack, pack),
+					// this.preloadFile(pack, pack),
+					(async function () {
+						if (mainSceneDepsJson == null) {
+							return;
+						}
+						const json = JSON.parse(mainSceneDepsJson);
+						const totalSize = json['total_size'];
+						const resources = json['resources'];
+						// TODO: Remove console log.
+						window['console'].log(totalSize, resources);
+
+						const asyncPckSuffix = '.asyncpck';
+						if (pack.endsWith(`${asyncPckSuffix}/`)) {
+							pack = pack.substring(0, pack.length - 1);
+						}
+
+						if (pack.endsWith(asyncPckSuffix)) {
+							await Promise.allSettled(Object.keys(resources).map(async (resourcePath) => {
+								const resourcePathWithoutResPrefix = resourcePath.substring('res://'.length);
+								const resourceRealPath = `${pack}/assets/${resourcePathWithoutResPrefix}`;
+								const response = await fetch(resourceRealPath);
+								if (!response.ok) {
+									throw new Error(`Could not fetch "${resourceRealPath}"`);
+								}
+								const data = await response.bytes();
+								me.rtenv['copyToFS'](`${loadPath}/${resourcePathWithoutResPrefix}`, data);
+							}));
+						}
+					})(),
 				]).then(function () {
 					return me.start.apply(me);
 				});

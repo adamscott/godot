@@ -61,14 +61,24 @@ Error EditorExportPlatformWeb::ExportData::FileDependencies::write_deps_file(con
 	LocalVector<FileDependencies *> dependencies;
 	flatten_dependencies(dependencies);
 
+	int64_t total_size = 0;
+	Dictionary resources;
 	for (const FileDependencies *dependency : dependencies) {
 		Dictionary remap_file_path_entry;
-		remap_file_path_entry.set("size", remap_file_size);
-		deps_file->set_value("dependencies", dependency->remap_file_path, remap_file_path_entry);
+		remap_file_path_entry.set("size", dependency->remap_file_size);
+		remap_file_path_entry.set("md5", dependency->remap_file_md5);
+		remap_file_path_entry.set("sha256", dependency->remap_file_sha256);
+		resources.set(dependency->remap_file_path, remap_file_path_entry);
+		total_size += dependency->remap_file_size;
 		Dictionary remap_path_entry;
-		remap_path_entry.set("size", remap_size);
-		deps_file->set_value("dependencies", dependency->remap_path, remap_path_entry);
+		remap_path_entry.set("size", dependency->remap_size);
+		remap_path_entry.set("md5", dependency->remap_md5);
+		remap_path_entry.set("sha256", dependency->remap_sha256);
+		resources.set(dependency->remap_path, remap_path_entry);
+		total_size += dependency->remap_size;
 	}
+	deps_file->set_value("dependencies", "resources", resources);
+	deps_file->set_value("dependencies", "total_size", total_size);
 
 	return deps_file->save(p_path);
 }
@@ -99,15 +109,17 @@ Error EditorExportPlatformWeb::ExportData::add_dependencies(const String &p_reso
 	ResourceLoader::get_dependencies(resource_path, &resource_dependencies);
 
 	for (const String &resource_dependency : resource_dependencies) {
-		String resource_dependency_path = resource_dependency.contains("::")
-				? resource_dependency.get_slice("::", 2)
-				: resource_dependency;
-		Error error = add_dependencies(resource_dependency_path);
+		String simplified_resource_dependency = resource_dependency;
+		if (resource_dependency.contains("::")) {
+			simplified_resource_dependency = simplified_resource_dependency.get_slice("::", 0);
+		}
+		simplified_resource_dependency = simplify_path(simplified_resource_dependency);
+		Error error = add_dependencies(simplified_resource_dependency);
 		if (error != OK) {
-			ERR_PRINT(vformat(R"*(Could not add dependencies of "%s".)*", resource_dependency_path));
+			ERR_PRINT(vformat(R"*(Could not add dependencies of "%s".)*", simplified_resource_dependency));
 			return error;
 		}
-		dependencies.get(resource_path).dependencies.push_back(&dependencies.get(resource_dependency_path));
+		dependencies.get(resource_path).dependencies.push_back(&dependencies.get(simplified_resource_dependency));
 	}
 
 	dependencies.get(resource_path).write_deps_file(res_to_global(resource_path + ".deps"));
@@ -686,12 +698,17 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 		error = main_scene_deps->load(main_scene_path + ".deps");
 		ERR_FAIL_COND_V(error != OK, ERR_CANT_OPEN);
 		Dictionary deps_data;
-		Vector<String> section_keys = main_scene_deps->get_section_keys("dependencies");
-		for (const String &section_key : section_keys) {
-			Variant data = main_scene_deps->get_value("dependencies", section_key);
-			deps_data.set(section_key, data);
-		}
-		main_scene_deps_json = JSON::stringify(deps_data, String(" ").repeat(2));
+		Dictionary resources = main_scene_deps->get_value("dependencies", "resources");
+
+		Dictionary assets_sparsepck_data;
+		assets_sparsepck_data.set("size", FileAccess::get_size(export_data.res_to_global("res://assets.sparsepck")));
+		assets_sparsepck_data.set("md5", export_data.res_to_global("res://assets.sparsepck").md5_text());
+		assets_sparsepck_data.set("sha256", export_data.res_to_global("res://assets.sparsepck").sha256_text());
+		resources.set("res://assets.sparsepck", assets_sparsepck_data);
+
+		deps_data.set("total_size", main_scene_deps->get_value("dependencies", "total_size"));
+		deps_data.set("resources", resources);
+		main_scene_deps_json = JSON::stringify(deps_data);
 	}
 
 	// Extract templates.
@@ -703,11 +720,12 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 
 	// Parse generated file sizes (pck and wasm, to help show a meaningful loading bar).
 	Dictionary file_sizes;
-	Ref<FileAccess> f = FileAccess::open(pck_path, FileAccess::READ);
-	if (f.is_valid()) {
-		file_sizes[pck_path.get_file()] = (uint64_t)f->get_length();
-	}
-	f = FileAccess::open(base_path + ".wasm", FileAccess::READ);
+	// Ref<FileAccess> f = FileAccess::open(pck_path, FileAccess::READ);
+	// if (f.is_valid()) {
+	// 	file_sizes[pck_path.get_file()] = (uint64_t)f->get_length();
+	// }
+
+	Ref<FileAccess> f = FileAccess::open(base_path + ".wasm", FileAccess::READ);
 	if (f.is_valid()) {
 		file_sizes[base_name + ".wasm"] = (uint64_t)f->get_length();
 	}
