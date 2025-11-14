@@ -53,6 +53,14 @@ const InternalConfig = function (initConfig) { // eslint-disable-line no-unused-
 		 */
 		mainPack: null,
 		/**
+		 * Main scene to preload.
+		 *
+		 * @memberof EngineConfig
+		 * @default
+		 * @type {?string}
+		 */
+		mainSceneDepsJson: null,
+		/**
 		 * Specify a language code to select the proper localization for the game.
 		 *
 		 * The browser locale will be used if none is specified. See complete list of
@@ -271,6 +279,7 @@ const InternalConfig = function (initConfig) { // eslint-disable-line no-unused-
 		this.fileSizes = parse('fileSizes', this.fileSizes);
 		this.emscriptenPoolSize = parse('emscriptenPoolSize', this.emscriptenPoolSize);
 		this.godotPoolSize = parse('godotPoolSize', this.godotPoolSize);
+		this.mainSceneDepsJson = parse('mainSceneDepsJson', this.mainSceneDepsJson);
 		this.args = parse('args', this.args);
 		this.onExecute = parse('onExecute', this.onExecute);
 		this.onExit = parse('onExit', this.onExit);
@@ -364,6 +373,7 @@ const InternalConfig = function (initConfig) { // eslint-disable-line no-unused-
 			'persistentDrops': this.persistentDrops,
 			'virtualKeyboard': this.experimentalVK,
 			'godotPoolSize': this.godotPoolSize,
+			'mainSceneDepsJson': this.mainSceneDepsJson,
 			'focusCanvas': this.focusCanvas,
 			'onExecute': this.onExecute,
 			'onExit': function (p_code) {

@@ -33,6 +33,7 @@
 #include "core/error/error_list.h"
 #include "core/io/config_file.h"
 #include "core/io/file_access.h"
+#include "core/io/json.h"
 #include "core/io/resource_loader.h"
 #include "core/variant/dictionary.h"
 #include "logo_svg.gen.h"
@@ -198,7 +199,7 @@ void EditorExportPlatformWeb::_replace_strings(const HashMap<String, String> &p_
 	}
 }
 
-void EditorExportPlatformWeb::_fix_html(Vector<uint8_t> &p_html, const Ref<EditorExportPreset> &p_preset, const String &p_name, bool p_debug, BitField<EditorExportPlatform::DebugFlags> p_flags, const Vector<SharedObject> p_shared_objects, const Dictionary &p_file_sizes) {
+void EditorExportPlatformWeb::_fix_html(Vector<uint8_t> &p_html, const Ref<EditorExportPreset> &p_preset, const String &p_name, bool p_debug, BitField<EditorExportPlatform::DebugFlags> p_flags, const Vector<SharedObject> p_shared_objects, const Dictionary &p_file_sizes, const String &p_main_scene_deps_json) {
 	// Engine.js config
 	Dictionary config;
 	Array libs;
@@ -221,6 +222,8 @@ void EditorExportPlatformWeb::_fix_html(Vector<uint8_t> &p_html, const Ref<Edito
 
 	config["godotPoolSize"] = p_preset->get("threads/godot_pool_size");
 	config["emscriptenPoolSize"] = p_preset->get("threads/emscripten_pool_size");
+
+	config["mainSceneDepsJson"] = p_main_scene_deps_json;
 
 	String head_include;
 	if (p_preset->get("html/export_icon")) {
@@ -327,7 +330,7 @@ Error EditorExportPlatformWeb::_build_pwa(const Ref<EditorExportPreset> &p_prese
 	// Heavy files that are cached on demand.
 	Array opt_cache_files = {
 		name + ".wasm",
-		name + ".pck"
+		// name + ".asyncpck"
 	};
 	if (extensions) {
 		opt_cache_files.push_back(name + ".side.wasm");
@@ -496,6 +499,12 @@ bool EditorExportPlatformWeb::has_valid_export_configuration(const Ref<EditorExp
 #else
 
 	String err;
+
+	String main_scene_path = p_preset->get_project_setting("application/run/main_scene");
+	if (main_scene_path.is_empty()) {
+		err += TTR("No main scene has been set. The main scene must be set for the web platform in order to preload the minimal files.") + "\n";
+	}
+
 	bool valid = false;
 	bool extensions = (bool)p_preset->get("variant/extensions_support");
 	bool thread_support = (bool)p_preset->get("variant/thread_support");
@@ -669,6 +678,22 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 		loop_asset_dir(ProjectSettings::get_singleton()->globalize_path(export_data.assets_directory));
 	}
 
+	String main_scene_deps_json;
+	{
+		String main_scene_path = export_data.res_to_global(get_project_setting(p_preset, "application/run/main_scene"));
+		Ref<ConfigFile> main_scene_deps;
+		main_scene_deps.instantiate();
+		error = main_scene_deps->load(main_scene_path + ".deps");
+		ERR_FAIL_COND_V(error != OK, ERR_CANT_OPEN);
+		Dictionary deps_data;
+		Vector<String> section_keys = main_scene_deps->get_section_keys("dependencies");
+		for (const String &section_key : section_keys) {
+			Variant data = main_scene_deps->get_value("dependencies", section_key);
+			deps_data.set(section_key, data);
+		}
+		main_scene_deps_json = JSON::stringify(deps_data, String(" ").repeat(2));
+	}
+
 	// Extract templates.
 	error = _extract_template(template_path, base_dir, base_name, pwa);
 	if (error) {
@@ -700,7 +725,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 	f.unref(); // close file.
 
 	// Generate HTML file with replaced strings.
-	_fix_html(html, p_preset, base_name, p_debug, p_flags, shared_objects, file_sizes);
+	_fix_html(html, p_preset, base_name, p_debug, p_flags, shared_objects, file_sizes, main_scene_deps_json);
 	Error err = _write_or_error(html.ptr(), html.size(), path);
 	if (err != OK) {
 		// Message is supplied by the subroutine method.
@@ -1003,7 +1028,7 @@ Error EditorExportPlatformWeb::_export_project(const Ref<EditorExportPreset> &p_
 		DirAccess::remove_file_or_error(basepath + ".audio.worklet.js");
 		DirAccess::remove_file_or_error(basepath + ".audio.position.worklet.js");
 		DirAccess::remove_file_or_error(basepath + ".service.worker.js");
-		DirAccess::remove_file_or_error(basepath + ".pck");
+		DirAccess::remove_file_or_error(basepath + ".asyncpck");
 		DirAccess::remove_file_or_error(basepath + ".png");
 		DirAccess::remove_file_or_error(basepath + ".side.wasm");
 		DirAccess::remove_file_or_error(basepath + ".wasm");
