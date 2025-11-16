@@ -155,6 +155,12 @@ public:
 	virtual Ref<FileAccess> get_file(const String &p_path, PackedData::PackedFile *p_file) override;
 };
 
+class PackedSourceAsyncPCK : public PackedSourcePCK {
+public:
+	virtual bool try_open_pack(const String &p_path, bool p_replace_files, uint64_t p_offset) override;
+	virtual Ref<FileAccess> get_file(const String &p_path, PackedData::PackedFile *p_file) override;
+};
+
 class PackedSourceDirectory : public PackSource {
 	void add_directory(const String &p_path, bool p_replace_files);
 

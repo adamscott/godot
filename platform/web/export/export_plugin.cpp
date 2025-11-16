@@ -656,9 +656,11 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 
 	{
 		std::function<Error(String)> loop_asset_dir;
-		loop_asset_dir = [&export_data, &loop_asset_dir](const String &p_path) -> Error {
-			print_line(vformat("looping in %s", p_path));
-			Ref<DirAccess> dir_access = DirAccess::open(p_path);
+		loop_asset_dir = [&loop_asset_dir, &export_data](const String &p_path) -> Error {
+			String path = p_path.simplify_path();
+			Ref<DirAccess> dir_access = DirAccess::open(path);
+			ERR_FAIL_COND_V(dir_access.is_null(), ERR_CANT_OPEN);
+
 			dir_access->list_dir_begin();
 			String next = dir_access->get_next();
 			while (!next.is_empty()) {
@@ -666,15 +668,18 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 					next = dir_access->get_next();
 					continue;
 				}
-				if (next.ends_with("/")) {
-					loop_asset_dir(next);
+				if (DirAccess::exists(path.path_join(next))) {
+					Error err = loop_asset_dir(path.path_join(next));
+					if (err != OK) {
+						return err;
+					}
 					next = dir_access->get_next();
 					continue;
 				}
 
 				const String remap_suffix = ".remap";
 				if (next.ends_with(remap_suffix)) {
-					String resource_path = export_data.global_to_res(dir_access->get_current_dir().path_join(next.trim_suffix(remap_suffix)));
+					String resource_path = export_data.global_to_res(path.path_join(next.trim_suffix(remap_suffix)));
 					Error err = export_data.add_dependencies(resource_path);
 					if (err != OK) {
 						return err;
@@ -700,11 +705,47 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 		Dictionary deps_data;
 		Dictionary resources = main_scene_deps->get_value("dependencies", "resources");
 
-		Dictionary assets_sparsepck_data;
-		assets_sparsepck_data.set("size", FileAccess::get_size(export_data.res_to_global("res://assets.sparsepck")));
-		assets_sparsepck_data.set("md5", export_data.res_to_global("res://assets.sparsepck").md5_text());
-		assets_sparsepck_data.set("sha256", export_data.res_to_global("res://assets.sparsepck").sha256_text());
-		resources.set("res://assets.sparsepck", assets_sparsepck_data);
+		{
+			std::function<Error(String)> loop_asset_dir;
+			loop_asset_dir = [&loop_asset_dir, &export_data, &resources](const String &p_path) -> Error {
+				String path = p_path.simplify_path();
+				Ref<DirAccess> dir_access = DirAccess::open(path);
+				dir_access->list_dir_begin();
+				String next = dir_access->get_next();
+				while (!next.is_empty()) {
+					if (next == "." || next == "..") {
+						next = dir_access->get_next();
+						continue;
+					}
+					if (DirAccess::exists(path.path_join(next))) {
+						Error err = loop_asset_dir(path.path_join(next));
+						if (err != OK) {
+							return err;
+						}
+						next = dir_access->get_next();
+						continue;
+					}
+
+					const String remap_suffix = ".remap";
+					if (!next.ends_with(remap_suffix)) {
+						String file_path = export_data.global_to_res(path.simplify_path().path_join(next));
+						if (!resources.has(file_path)) {
+							Dictionary file_data;
+							file_data.set("size", FileAccess::get_size(export_data.res_to_global(file_path)));
+							file_data.set("md5", export_data.res_to_global(file_path.md5_text()));
+							file_data.set("sha256", export_data.res_to_global(file_path.sha256_text()));
+							resources.set(file_path, file_data);
+						}
+					}
+					next = dir_access->get_next();
+				}
+				dir_access->list_dir_end();
+
+				return OK;
+			};
+
+			loop_asset_dir(ProjectSettings::get_singleton()->globalize_path(export_data.assets_directory));
+		}
 
 		deps_data.set("total_size", main_scene_deps->get_value("dependencies", "total_size"));
 		deps_data.set("resources", resources);
