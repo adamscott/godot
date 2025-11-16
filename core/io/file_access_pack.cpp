@@ -30,6 +30,7 @@
 
 #include "file_access_pack.h"
 
+#include "core/io/file_access.h"
 #include "core/io/file_access_encrypted.h"
 #include "core/object/script_language.h"
 #include "core/os/os.h"
@@ -341,6 +342,28 @@ bool PackedSourcePCK::try_open_pack(const String &p_path, bool p_replace_files, 
 
 Ref<FileAccess> PackedSourcePCK::get_file(const String &p_path, PackedData::PackedFile *p_file) {
 	return memnew(FileAccessPack(p_path, *p_file));
+}
+
+//////////////////////////////////////////////////////////////////
+
+bool PackedSourceAsyncPCK::try_open_pack(const String &p_path, bool p_replace_files, uint64_t p_offset) {
+	String path = p_path.simplify_path();
+	if (path.ends_with("/")) {
+		path = path.trim_suffix("/");
+	}
+	if (!path.ends_with(".asyncpck")) {
+		return false;
+	}
+	path = path.path_join("assets").path_join("assets.sparsepck");
+	return PackedSourcePCK::try_open_pack(path, p_replace_files, p_offset);
+}
+
+Ref<FileAccess> PackedSourceAsyncPCK::get_file(const String &p_path, PackedData::PackedFile *p_file) {
+	print_line(vformat("PackedSourceAsyncPCK::get_file(%s), %s", p_path, p_file->pack));
+	String pack = p_file->pack.get_base_dir();
+	String path = p_path.simplify_path().trim_prefix("res://");
+	String file_path = pack.path_join(path);
+	return memnew(FileAccessPack(file_path, *p_file));
 }
 
 //////////////////////////////////////////////////////////////////

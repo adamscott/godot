@@ -577,11 +577,7 @@ bool ProjectSettings::_load_resource_pack(const String &p_pack, bool p_replace_f
 	}
 
 	if (pack.ends_with(".asyncpck")) {
-		PackedData::get_singleton()->add_pack_source(memnew(PackedSourceDirectory));
-		PackedData::get_singleton()->add_pack("res://", false, 0);
-		DirAccess::make_default<DirAccessPack>(DirAccess::ACCESS_RESOURCES);
-		print_line(vformat("p_pack is asyncpck"));
-		return _load_resource_pack(pack + "/assets/assets.sparsepck", p_replace_files, p_offset, p_main_pack);
+		PackedData::get_singleton()->add_pack_source(memnew(PackedSourceAsyncPCK));
 	}
 
 	if (!p_main_pack && !using_datapack && !OS::get_singleton()->get_resource_dir().is_empty()) {
@@ -752,7 +748,7 @@ Error ProjectSettings::_setup(const String &p_path, const String &p_main_pack, b
 		}
 	}
 
-#if defined(ANDROID_ENABLED)
+#if defined(ANDROID_ENABLED) || defined(WEB_ENABLED)
 	// Attempt to load sparse PCK assets.
 	_load_resource_pack("res://assets.sparsepck", false, 0, true);
 #endif
