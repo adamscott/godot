@@ -46,31 +46,16 @@ const GodotRuntime = {
 			globalThis['HEAP8'] = HEAP8;
 
 			let configFileDataPtr = GodotRuntime.allocString(pConfigFileDataAsString);
-			// let configFileJsStringPtr = GodotRuntime._getConfigFileAsJsonCallback(configFileDataPtr);
 			const configFilePtr = GodotRuntime._getConfigFileAsJsonCallback(configFileDataPtr);
 			GodotRuntime.free(configFileDataPtr);
 			configFileDataPtr = 0;
 
-			// if (configFileJsStringPtr === 0) {
 			if (configFilePtr === 0) {
 				GodotRuntime.error('configFilePtr is nullptr');
 				return null;
 			}
-			// GodotRuntime.print("configFilePtr: " + configFileJsStringPtr);
-			GodotRuntime.print(`configFilePtr: ${configFilePtr}`);
-			// const configFile = GodotRuntime.getStringFromJsStringPtr(configFileJsStringPtr);
 			const configFile = GodotRuntime.parseString(configFilePtr);
 
-			// const configFileLength = GodotRuntime.getHeapValue(configFileJsStringPtr, "i32");
-			// let configFilePtr = Number(GodotRuntime.getHeapValue(configFileJsStringPtr + HEAPU32.BYTES_PER_ELEMENT, "i64"));
-			// const configFile = UTF8ToString(configFilePtr, configFileLength, true);
-			// GodotRuntime.free(configFileJsStringPtr);
-			// configFileJsStringPtr = 0;
-			// GodotRuntime.free(configFilePtr);
-			// configFilePtr = 0;
-
-			GodotRuntime.print('configFile:', configFile);
-			// const configFile = GodotRuntime.parseString(configFileDataPtr);
 			if (configFile.length === 0) {
 				GodotRuntime.error('configFile is empty', configFile);
 				return null;
@@ -186,7 +171,6 @@ const GodotRuntime = {
 	godot_js_runtime_set_get_config_file_as_json_cb__proxy: 'async',
 	godot_js_runtime_set_get_config_file_as_json_cb__sig: 'pp',
 	godot_js_runtime_set_get_config_file_as_json_cb: function (pCallbackPtr) {
-		GodotRuntime.print('GodotRuntime._getConfigFileAsJsonCallbackPtr:', pCallbackPtr);
 		GodotRuntime._getConfigFileAsJsonCallback = GodotRuntime.get_func(pCallbackPtr);
 	},
 };
