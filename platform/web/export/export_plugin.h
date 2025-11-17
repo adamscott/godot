@@ -44,6 +44,7 @@
 #include "editor/export/editor_export_platform.h"
 #include "main/splash.gen.h"
 #include "scene/gui/dialogs.h"
+#include "scene/gui/tree.h"
 
 class ImageTexture;
 
@@ -125,14 +126,25 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 	};
 
 	class AsyncDialog : public ConfirmationDialog {
-	private:
+		GDCLASS(AsyncDialog, ConfirmationDialog);
+
+		enum TabId {
+			TAB_ID_MAIN_SCENE,
+			TAB_ID_SELECT_RESOURCES,
+			TAB_ID_MAX,
+		};
+
 		EditorExportPlatformWeb *export_platform = nullptr;
 
 		TabContainer *tab_container = nullptr;
 		Tree *main_scene_tree = nullptr;
 		Tree *select_resources_tree = nullptr;
 
+		bool _fill_tree(EditorFileSystemDirectory *p_dir, Tree *p_tree, TreeItem *p_tree_item, bool p_read_only);
+
 		void _update_display();
+		void _update_tab_main_scene();
+		void _update_tab_select_resources();
 		void _update_theme();
 
 		void _on_tab_container_tab_changed(int p_tab);
@@ -212,6 +224,9 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 
 	static Error _rename_and_store_file_in_async_pck(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const PackedByteArray &p_key, uint64_t p_seed);
 	void _open_async_dialog();
+	void _on_async_dialog_visibility_changed();
+
+	String _get_main_scene_path() const;
 
 public:
 	virtual void get_preset_features(const Ref<EditorExportPreset> &p_preset, List<String> *r_features) const override;
