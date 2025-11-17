@@ -134,6 +134,7 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 			TAB_ID_MAX,
 		};
 
+		bool updating = false;
 		EditorExportPlatformWeb *export_platform = nullptr;
 
 		TabContainer *tab_container = nullptr;
@@ -147,7 +148,17 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		void _update_tab_select_resources();
 		void _update_theme();
 
+		static Ref<EditorExportPreset> _get_editor_export_preset();
+		HashSet<String> _get_selected_resources();
+
+		void _on_confirmed();
 		void _on_tab_container_tab_changed(int p_tab);
+		void _on_select_resources_tree_item_edited();
+		void _on_select_resources_tree_check_propagated_to_item(Object *p_tree_item, int p_column);
+
+		void _add_selected_file(const String &p_path);
+		void _remove_selected_file(const String &p_path);
+		void _update_selected_file(const String &p_path, bool p_add);
 
 	protected:
 		void _notification(int p_what);

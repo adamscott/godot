@@ -38,6 +38,7 @@
 #include "core/io/resource_loader.h"
 #include "core/io/resource_uid.h"
 #include "core/variant/dictionary.h"
+#include "editor/editor_node.h"
 #include "editor/export/editor_export_preset.h"
 #include "logo_svg.gen.h"
 #include "run_icon_svg.gen.h"
@@ -171,6 +172,10 @@ void EditorExportPlatformWeb::AsyncDialog::_notification(int p_what) {
 		case NOTIFICATION_ENTER_TREE: {
 		} break;
 
+		case NOTIFICATION_READY: {
+			connect(SceneStringName(confirmed), callable_mp(this, &EditorExportPlatformWeb::AsyncDialog::_on_confirmed));
+		} break;
+
 		case NOTIFICATION_VISIBILITY_CHANGED: {
 			if (!is_visible()) {
 				return;
@@ -185,6 +190,43 @@ void EditorExportPlatformWeb::AsyncDialog::_notification(int p_what) {
 			_update_theme();
 		} break;
 	}
+}
+
+Ref<EditorExportPreset> EditorExportPlatformWeb::AsyncDialog::_get_editor_export_preset() {
+	return EditorNode::get_singleton()->get_project_export_dialog()->get_current_preset();
+}
+
+HashSet<String> EditorExportPlatformWeb::AsyncDialog::_get_selected_resources() {
+	Ref<EditorExportPreset> current_preset = _get_editor_export_preset();
+	TreeItem *root = select_resources_tree->get_root();
+
+	HashSet<String> selected_resources;
+
+	std::function<void(TreeItem *)> loop_selected_resources_tree_item;
+	loop_selected_resources_tree_item = [&loop_selected_resources_tree_item, &selected_resources](TreeItem *p_tree_item) -> void {
+		if (p_tree_item->is_checked(0)) {
+			String path = p_tree_item->get_metadata(0);
+			selected_resources.insert(path);
+		}
+		for (int i = 0; i < p_tree_item->get_child_count(); i++) {
+			TreeItem *item = p_tree_item->get_child(i);
+			loop_selected_resources_tree_item(item);
+		}
+	};
+	loop_selected_resources_tree_item(root);
+
+	return selected_resources;
+}
+
+void EditorExportPlatformWeb::AsyncDialog::_on_confirmed() {
+	HashSet<String> selected_resources = _get_selected_resources();
+	Array selected_resources_array;
+	for (const String &selected_resource : selected_resources) {
+		selected_resources_array.push_back(selected_resource);
+	}
+
+	Ref<EditorExportPreset> current_preset = _get_editor_export_preset();
+	current_preset->set("async/initial_load_forced_resources", selected_resources_array);
 }
 
 void EditorExportPlatformWeb::AsyncDialog::_on_tab_container_tab_changed(int p_tab) {
@@ -206,15 +248,84 @@ void EditorExportPlatformWeb::AsyncDialog::_on_tab_container_tab_changed(int p_t
 	}
 }
 
+void EditorExportPlatformWeb::AsyncDialog::_on_select_resources_tree_item_edited() {
+	if (updating) {
+		return;
+	}
+
+	TreeItem *edited_tree_item = select_resources_tree->get_edited();
+	if (edited_tree_item == nullptr) {
+		return;
+	}
+	edited_tree_item->propagate_check(0);
+}
+
+void EditorExportPlatformWeb::AsyncDialog::_on_select_resources_tree_check_propagated_to_item(Object *p_tree_item, int p_column) {
+	if (updating) {
+		return;
+	}
+
+	ERR_FAIL_NULL(p_tree_item);
+	TreeItem *tree_item = Object::cast_to<TreeItem>(p_tree_item);
+	ERR_FAIL_NULL(tree_item);
+
+	String path = tree_item->get_metadata(0);
+	if (path.ends_with("/")) {
+		return;
+	}
+
+	if (!tree_item->is_checked(0)) {
+		_remove_selected_file(path);
+		return;
+	}
+
+	_add_selected_file(path);
+}
+
+void EditorExportPlatformWeb::AsyncDialog::_add_selected_file(const String &p_path) {
+	_update_selected_file(p_path, true);
+}
+
+void EditorExportPlatformWeb::AsyncDialog::_remove_selected_file(const String &p_path) {
+	_update_selected_file(p_path, false);
+}
+
+void EditorExportPlatformWeb::AsyncDialog::_update_selected_file(const String &p_path, bool p_add_to_selected_files) {
+	String updated_path = p_path.simplify_path();
+	TreeItem *root = select_resources_tree->get_root();
+	bool add_to_selected_files = p_add_to_selected_files;
+
+	std::function<void(TreeItem *)> loop_selected_resources_tree_item;
+	loop_selected_resources_tree_item = [&loop_selected_resources_tree_item, &updated_path, &add_to_selected_files](TreeItem *p_tree_item) -> void {
+		String tree_item_path = p_tree_item->get_metadata(0);
+		if (add_to_selected_files) {
+			if (!p_tree_item->is_checked(0) && tree_item_path == updated_path) {
+				p_tree_item->set_checked(0, true);
+			}
+		} else {
+			if (p_tree_item->is_checked(0) && tree_item_path == updated_path) {
+				p_tree_item->set_checked(0, false);
+			}
+		}
+		for (int i = 0; i < p_tree_item->get_child_count(); i++) {
+			TreeItem *item = p_tree_item->get_child(i);
+			loop_selected_resources_tree_item(item);
+		}
+	};
+	loop_selected_resources_tree_item(root);
+}
+
 void EditorExportPlatformWeb::AsyncDialog::_update_display() {
 	_on_tab_container_tab_changed(tab_container->get_current_tab());
 }
 
 void EditorExportPlatformWeb::AsyncDialog::_update_tab_main_scene() {
+	updating = true;
+
 	main_scene_tree->clear();
 	TreeItem *root = main_scene_tree->create_item();
 
-	Ref<EditorExportPreset> current_preset = EditorNode::get_singleton()->get_project_export_dialog()->get_current_preset();
+	Ref<EditorExportPreset> current_preset = _get_editor_export_preset();
 	HashSet<String> paths;
 
 	EditorExportPlatformUtils::export_find_files(current_preset, paths);
@@ -253,33 +364,49 @@ void EditorExportPlatformWeb::AsyncDialog::_update_tab_main_scene() {
 
 	std::function<void(TreeItem *)> loop_tree_items;
 	loop_tree_items = [&loop_tree_items, &dependencies](TreeItem *p_tree_item) -> void {
-		TypedArray<TreeItem *> items = p_tree_item->get_children();
-		for (int i = 0; i < items.size(); i++) {
-			TreeItem *item = Object::cast_to<TreeItem>(items[i]);
+		for (int i = 0; i < p_tree_item->get_child_count(); i++) {
+			TreeItem *item = p_tree_item->get_child(i);
 			String path = item->get_metadata(0);
 			if (dependencies.has(path)) {
 				item->set_checked(0, true);
 			}
-			if (p_tree_item->get_child_count() > 0) {
-				loop_tree_items(item);
-			}
+			loop_tree_items(item);
 		}
 	};
-	if (root->get_child_count() > 0) {
-		loop_tree_items(root);
-	}
+	loop_tree_items(root);
+
+	updating = false;
 }
 
 void EditorExportPlatformWeb::AsyncDialog::_update_tab_select_resources() {
+	updating = true;
+
 	select_resources_tree->clear();
 	TreeItem *root = select_resources_tree->create_item();
 
-	Ref<EditorExportPreset> current_preset = EditorNode::get_singleton()->get_project_export_dialog()->get_current_preset();
+	Ref<EditorExportPreset> current_preset = _get_editor_export_preset();
 	HashSet<String> paths;
 
 	EditorExportPlatformUtils::export_find_files(current_preset, paths);
 
 	_fill_tree(EditorFileSystem::get_singleton()->get_filesystem(), paths, select_resources_tree, root, false);
+
+	Array selected_resources = current_preset->get("async/initial_load_forced_resources");
+
+	std::function<void(TreeItem *)> loop_tree_items;
+	loop_tree_items = [&loop_tree_items, &selected_resources](TreeItem *p_tree_item) -> void {
+		for (int i = 0; i < p_tree_item->get_child_count(); i++) {
+			TreeItem *item = p_tree_item->get_child(i);
+			String path = item->get_metadata(0);
+			if (selected_resources.has(path)) {
+				item->set_checked(0, true);
+			}
+			loop_tree_items(item);
+		}
+	};
+	loop_tree_items(root);
+
+	updating = false;
 }
 
 void EditorExportPlatformWeb::AsyncDialog::_update_theme() {
@@ -292,7 +419,7 @@ bool EditorExportPlatformWeb::AsyncDialog::_fill_tree(EditorFileSystemDirectory 
 	p_tree_item->set_editable(0, !p_read_only);
 	p_tree_item->set_metadata(0, p_dir->get_path());
 
-	Ref<EditorExportPreset> current_preset = EditorNode::get_singleton()->get_project_export_dialog()->get_current_preset();
+	Ref<EditorExportPreset> current_preset = _get_editor_export_preset();
 	ERR_FAIL_COND_V(current_preset.is_null(), false);
 
 	bool used = false;
@@ -318,13 +445,11 @@ bool EditorExportPlatformWeb::AsyncDialog::_fill_tree(EditorFileSystemDirectory 
 		file->set_cell_mode(0, TreeItem::CELL_MODE_CHECK);
 		file->set_text(0, p_dir->get_file(i));
 
-		String path = p_dir->get_file_path(i);
-
 		file->set_icon(0, EditorNode::get_singleton()->get_class_icon(type));
 		file->set_editable(0, !p_read_only);
-		file->set_metadata(0, path);
+		file->set_metadata(0, file_path);
 
-		file->set_checked(0, current_preset->has_export_file(path));
+		file->set_checked(0, current_preset->has_export_file(file_path));
 		file->propagate_check(0);
 
 		used = true;
@@ -412,6 +537,8 @@ EditorExportPlatformWeb::AsyncDialog::AsyncDialog(EditorExportPlatformWeb *p_exp
 	select_resources_tree->set_columns(2);
 	select_resources_tree->set_column_expand(1, false);
 	select_resources_tree->set_column_custom_minimum_width(1, 50 * EDSCALE);
+	select_resources_tree->connect("item_edited", callable_mp(this, &EditorExportPlatformWeb::AsyncDialog::_on_select_resources_tree_item_edited));
+	select_resources_tree->connect("check_propagated_to_item", callable_mp(this, &EditorExportPlatformWeb::AsyncDialog::_on_select_resources_tree_check_propagated_to_item));
 	select_resources_tree_margin_container->add_child(select_resources_tree);
 }
 
@@ -746,6 +873,7 @@ void EditorExportPlatformWeb::get_export_options(List<ExportOption> *r_options) 
 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::INT, "async/initial_load_mode", PROPERTY_HINT_ENUM, "Load Everything,Only Load Main Scene Dependencies And Specified Resources"), 0, true));
 	r_options->push_back(ExportOption(PropertyInfo(Variant::CALLABLE, "async/initial_load_edit_button", PROPERTY_HINT_TOOL_BUTTON, vformat("%s,Edit", TTRC("Edit Initial Load Resources")), PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_NO_INSTANCE_STATE), callable_mp(const_cast<EditorExportPlatformWeb *>(this), &EditorExportPlatformWeb::_open_async_dialog)));
+	r_options->push_back(ExportOption(PropertyInfo(Variant::ARRAY, "async/initial_load_forced_resources", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), Array()));
 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "variant/extensions_support"), false)); // GDExtension support.
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "variant/thread_support"), false, true)); // Thread support (i.e. run with or without COEP/COOP headers).
