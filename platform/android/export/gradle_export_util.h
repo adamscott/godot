@@ -66,7 +66,7 @@ static const int XR_MODE_REGULAR = 0;
 static const int XR_MODE_OPENXR = 1;
 
 struct CustomExportData {
-	EditorExportPlatform::PackData pd;
+	EditorExportPlatformData::PackData pd;
 	String assets_directory;
 	String libs_directory;
 	bool debug;
@@ -85,17 +85,6 @@ String _get_android_orientation_label(DisplayServer::ScreenOrientation screen_or
 int _get_app_category_value(int category_index);
 
 String _get_app_category_label(int category_index);
-
-// Utility method used to create a directory.
-Error create_directory(const String &p_dir);
-
-// Writes p_data into a file at p_path, creating directories if necessary.
-// Note: this will overwrite the file at p_path if it already exists.
-Error store_file_at_path(const String &p_path, const Vector<uint8_t> &p_data);
-
-// Writes string p_data into a file at p_path, creating directories if necessary.
-// Note: this will overwrite the file at p_path if it already exists.
-Error store_string_at_path(const String &p_path, const String &p_data);
 
 // Implementation of EditorExportSaveFunction.
 // This method will only be called as an input to export_project_files.

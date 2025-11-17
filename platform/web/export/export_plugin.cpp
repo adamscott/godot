@@ -214,6 +214,13 @@ void EditorExportPlatformWeb::AsyncDialog::_update_tab_main_scene() {
 	main_scene_tree->clear();
 	TreeItem *root = main_scene_tree->create_item();
 
+	Ref<EditorExportPreset> current_preset = EditorNode::get_singleton()->get_project_export_dialog()->get_current_preset();
+	HashSet<String> paths;
+
+	if (current_preset->get_export_filter() == EditorExportPreset::EXPORT_ALL_RESOURCES) {
+		EditorExportPlatformUtils::export_find_resources(EditorFileSystem::get_singleton()->get_filesystem(), paths);
+	}
+
 	_fill_tree(EditorFileSystem::get_singleton()->get_filesystem(), main_scene_tree, root, true);
 
 	String main_scene_path = export_platform->_get_main_scene_path().simplify_path();
@@ -923,7 +930,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 		return error;
 	}
 
-	error = store_file_at_path(export_data.assets_directory.path_join("assets.sparsepck"), encoded_data);
+	error = EditorExportPlatformUtils::store_file_at_path(export_data.assets_directory.path_join("assets.sparsepck"), encoded_data);
 	if (error != OK) {
 		add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not store contents of async pck: \"%s\"."), pck_path));
 		return error;
@@ -969,7 +976,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 				const String remap_suffix = ".remap";
 				if (next.ends_with(remap_suffix)) {
 					String resource_path = export_data.global_to_res(path.path_join(next.trim_suffix(remap_suffix)));
-					Error err = export_data.add_dependencies(resource_path, is_encrypted, convert_string_encryption_key_to_bytes(_get_script_encryption_key(p_preset)));
+					Error err = export_data.add_dependencies(resource_path, is_encrypted, EditorExportPlatformUtils::convert_string_encryption_key_to_bytes(_get_script_encryption_key(p_preset)));
 					if (err != OK) {
 						return err;
 					}
@@ -999,7 +1006,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 		int added_size = 0;
 
 		{
-			PackedByteArray key = convert_string_encryption_key_to_bytes(_get_script_encryption_key(p_preset));
+			PackedByteArray key = EditorExportPlatformUtils::convert_string_encryption_key_to_bytes(_get_script_encryption_key(p_preset));
 			std::function<Error(String)> loop_asset_dir;
 			loop_asset_dir = [&loop_asset_dir, &export_data, &resources, &added_size, &is_encrypted, &key](const String &p_path) -> Error {
 				String path = p_path.simplify_path();
@@ -1449,15 +1456,15 @@ Error EditorExportPlatformWeb::_rename_and_store_file_in_async_pck(void *p_userd
 	const String simplified_path = EditorExportPlatform::simplify_path(p_path);
 
 	Vector<uint8_t> encoded_data;
-	EditorExportPlatform::SavedData saved_data;
-	Error err = store_temp_file(simplified_path, p_data, p_enc_in_filters, p_enc_ex_filters, p_key, p_seed, encoded_data, saved_data);
+	EditorExportPlatformData::SavedData saved_data;
+	Error err = EditorExportPlatformUtils::store_temp_file(simplified_path, p_data, p_enc_in_filters, p_enc_ex_filters, p_key, p_seed, encoded_data, saved_data);
 	if (err != OK) {
 		return err;
 	}
 
 	const String target_path = export_data->assets_directory.path_join(simplified_path.trim_prefix("res://"));
 	print_verbose("Saving project files from " + simplified_path + " into " + target_path);
-	err = store_file_at_path(target_path, encoded_data);
+	err = EditorExportPlatformUtils::store_file_at_path(target_path, encoded_data);
 
 	export_data->pack_data.file_ofs.push_back(saved_data);
 
@@ -1520,7 +1527,4 @@ void EditorExportPlatformWeb::initialize() {
 		stop_icon.instantiate();
 		restart_icon.instantiate();
 	}
-}
-
-EditorExportPlatformWeb::~EditorExportPlatformWeb() {
 }

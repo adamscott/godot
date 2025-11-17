@@ -47,6 +47,7 @@
 #include "editor/editor_node.h"
 #include "editor/editor_string_names.h"
 #include "editor/export/editor_export.h"
+#include "editor/export/editor_export_platform_data.h"
 #include "editor/export/editor_export_platform_utils.h"
 #include "editor/file_system/editor_file_system.h"
 #include "editor/file_system/editor_paths.h"
@@ -78,18 +79,6 @@ public:
 	EditorExportSaveProxy(EditorExportPlatform::EditorExportSaveFunction p_save_func, bool p_track_saves) :
 			save_func(p_save_func), tracking_saves(p_track_saves) {}
 };
-
-static int _get_pad(int p_alignment, int p_n) {
-	int rest = p_n % p_alignment;
-	int pad = 0;
-	if (rest > 0) {
-		pad = p_alignment - rest;
-	};
-
-	return pad;
-}
-
-static constexpr int PCK_PADDING = 16;
 
 Ref<Image> EditorExportPlatform::_load_icon_or_splash_image(const String &p_path, Error *r_error) const {
 	Ref<Image> image;
@@ -257,64 +246,10 @@ void EditorExportPlatform::_unload_patches() {
 	PackedData::get_singleton()->clear();
 }
 
-Error EditorExportPlatform::_encrypt_and_store_data(Ref<FileAccess> p_fd, const String &p_path, const Vector<uint8_t> &p_data, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const Vector<uint8_t> &p_key, uint64_t p_seed, bool &r_encrypt) {
-	r_encrypt = false;
-	for (int i = 0; i < p_enc_in_filters.size(); ++i) {
-		if (p_path.matchn(p_enc_in_filters[i]) || p_path.trim_prefix("res://").matchn(p_enc_in_filters[i])) {
-			r_encrypt = true;
-			break;
-		}
-	}
-
-	for (int i = 0; i < p_enc_ex_filters.size(); ++i) {
-		if (p_path.matchn(p_enc_ex_filters[i]) || p_path.trim_prefix("res://").matchn(p_enc_ex_filters[i])) {
-			r_encrypt = false;
-			break;
-		}
-	}
-
-	Ref<FileAccessEncrypted> fae;
-	Ref<FileAccess> ftmp = p_fd;
-	if (r_encrypt) {
-		Vector<uint8_t> iv;
-		if (p_seed != 0) {
-			uint64_t seed = p_seed;
-
-			const uint8_t *ptr = p_data.ptr();
-			int64_t len = p_data.size();
-			for (int64_t i = 0; i < len; i++) {
-				seed = ((seed << 5) + seed) ^ ptr[i];
-			}
-
-			RandomPCG rng = RandomPCG(seed);
-			iv.resize(16);
-			for (int i = 0; i < 16; i++) {
-				iv.write[i] = rng.rand() % 256;
-			}
-		}
-
-		fae.instantiate();
-		ERR_FAIL_COND_V(fae.is_null(), ERR_FILE_CANT_OPEN);
-
-		Error err = fae->open_and_parse(ftmp, p_key, FileAccessEncrypted::MODE_WRITE_AES256, false, iv);
-		ERR_FAIL_COND_V(err != OK, ERR_FILE_CANT_OPEN);
-		ftmp = fae;
-	}
-
-	// Store file content.
-	ftmp->store_buffer(p_data.ptr(), p_data.size());
-
-	if (fae.is_valid()) {
-		ftmp.unref();
-		fae.unref();
-	}
-	return OK;
-}
-
 Error EditorExportPlatform::_save_pack_file(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const Vector<uint8_t> &p_key, uint64_t p_seed) {
 	ERR_FAIL_COND_V_MSG(p_total < 1, ERR_PARAMETER_RANGE_ERROR, "Must select at least one file to export.");
 
-	PackData *pd = (PackData *)p_userdata;
+	EditorExportPlatformData::PackData *pd = (EditorExportPlatformData::PackData *)p_userdata;
 
 	const String simplified_path = simplify_path(p_path);
 
@@ -325,11 +260,11 @@ Error EditorExportPlatform::_save_pack_file(void *p_userdata, const String &p_pa
 		ftmp = pd->f;
 	}
 
-	SavedData sd;
+	EditorExportPlatformData::SavedData sd;
 	sd.path_utf8 = simplified_path.trim_prefix("res://").utf8();
 	sd.ofs = (pd->use_sparse_pck) ? 0 : pd->f->get_position();
 	sd.size = p_data.size();
-	Error err = _encrypt_and_store_data(ftmp, simplified_path, p_data, p_enc_in_filters, p_enc_ex_filters, p_key, p_seed, sd.encrypted);
+	Error err = EditorExportPlatformUtils::encrypt_and_store_data(ftmp, simplified_path, p_data, p_enc_in_filters, p_enc_ex_filters, p_key, p_seed, sd.encrypted);
 	if (err != OK) {
 		return err;
 	}
@@ -338,7 +273,7 @@ Error EditorExportPlatform::_save_pack_file(void *p_userdata, const String &p_pa
 	}
 
 	if (!pd->use_sparse_pck) {
-		int pad = _get_pad(PCK_PADDING, pd->f->get_position());
+		int pad = EditorExportPlatformUtils::get_pad(PCK_PADDING, pd->f->get_position());
 		for (int i = 0; i < pad; i++) {
 			pd->f->store_8(0);
 		}
@@ -458,125 +393,6 @@ Ref<EditorExportPreset> EditorExportPlatform::create_preset() {
 	}
 
 	return preset;
-}
-
-void EditorExportPlatform::_export_find_resources(EditorFileSystemDirectory *p_dir, HashSet<String> &p_paths) {
-	for (int i = 0; i < p_dir->get_subdir_count(); i++) {
-		_export_find_resources(p_dir->get_subdir(i), p_paths);
-	}
-
-	for (int i = 0; i < p_dir->get_file_count(); i++) {
-		if (p_dir->get_file_type(i) == "TextFile") {
-			continue;
-		}
-		p_paths.insert(p_dir->get_file_path(i));
-	}
-}
-
-void EditorExportPlatform::_export_find_customized_resources(const Ref<EditorExportPreset> &p_preset, EditorFileSystemDirectory *p_dir, EditorExportPreset::FileExportMode p_mode, HashSet<String> &p_paths) {
-	for (int i = 0; i < p_dir->get_subdir_count(); i++) {
-		EditorFileSystemDirectory *subdir = p_dir->get_subdir(i);
-		_export_find_customized_resources(p_preset, subdir, p_preset->get_file_export_mode(subdir->get_path(), p_mode), p_paths);
-	}
-
-	for (int i = 0; i < p_dir->get_file_count(); i++) {
-		if (p_dir->get_file_type(i) == "TextFile") {
-			continue;
-		}
-		String path = p_dir->get_file_path(i);
-		EditorExportPreset::FileExportMode file_mode = p_preset->get_file_export_mode(path, p_mode);
-		if (file_mode != EditorExportPreset::MODE_FILE_REMOVE) {
-			p_paths.insert(path);
-		}
-	}
-}
-
-void EditorExportPlatform::_export_find_dependencies(const String &p_path, HashSet<String> &p_paths) {
-	if (p_paths.has(p_path)) {
-		return;
-	}
-
-	p_paths.insert(p_path);
-
-	EditorFileSystemDirectory *dir;
-	int file_idx;
-	dir = EditorFileSystem::get_singleton()->find_file(p_path, &file_idx);
-	if (!dir) {
-		return;
-	}
-
-	Vector<String> deps = dir->get_file_deps(file_idx);
-
-	for (int i = 0; i < deps.size(); i++) {
-		_export_find_dependencies(deps[i], p_paths);
-	}
-}
-
-void EditorExportPlatform::_edit_files_with_filter(Ref<DirAccess> &da, const Vector<String> &p_filters, HashSet<String> &r_list, bool exclude) {
-	da->list_dir_begin();
-	String cur_dir = da->get_current_dir().replace_char('\\', '/');
-	if (!cur_dir.ends_with("/")) {
-		cur_dir += "/";
-	}
-	String cur_dir_no_prefix = cur_dir.replace("res://", "");
-
-	Vector<String> dirs;
-	String f = da->get_next();
-	while (!f.is_empty()) {
-		if (da->current_is_dir()) {
-			dirs.push_back(f);
-		} else {
-			String fullpath = cur_dir + f;
-			// Test also against path without res:// so that filters like `file.txt` can work.
-			String fullpath_no_prefix = cur_dir_no_prefix + f;
-			for (int i = 0; i < p_filters.size(); ++i) {
-				if (fullpath.matchn(p_filters[i]) || fullpath_no_prefix.matchn(p_filters[i])) {
-					if (!exclude) {
-						r_list.insert(fullpath);
-					} else {
-						r_list.erase(fullpath);
-					}
-				}
-			}
-		}
-		f = da->get_next();
-	}
-
-	da->list_dir_end();
-
-	for (int i = 0; i < dirs.size(); ++i) {
-		const String &dir = dirs[i];
-		if (dir.begins_with(".")) {
-			continue;
-		}
-
-		if (EditorFileSystem::_should_skip_directory(cur_dir + dir)) {
-			continue;
-		}
-
-		da->change_dir(dir);
-		_edit_files_with_filter(da, p_filters, r_list, exclude);
-		da->change_dir("..");
-	}
-}
-
-void EditorExportPlatform::_edit_filter_list(HashSet<String> &r_list, const String &p_filter, bool exclude) {
-	if (p_filter.is_empty()) {
-		return;
-	}
-	Vector<String> split = p_filter.split(",");
-	Vector<String> filters;
-	for (int i = 0; i < split.size(); i++) {
-		String f = split[i].strip_edges();
-		if (f.is_empty()) {
-			continue;
-		}
-		filters.push_back(f);
-	}
-
-	Ref<DirAccess> da = DirAccess::create(DirAccess::ACCESS_RESOURCES);
-	ERR_FAIL_COND(da.is_null());
-	_edit_files_with_filter(da, filters, r_list, exclude);
 }
 
 HashSet<String> EditorExportPlatform::get_features(const Ref<EditorExportPreset> &p_preset, bool p_debug) const {
@@ -961,7 +777,7 @@ String EditorExportPlatform::_get_script_encryption_key(const Ref<EditorExportPr
 	return p_preset->get_script_encryption_key().to_lower();
 }
 
-Error EditorExportPlatform::_generate_sparse_pck_metadata(const Ref<EditorExportPreset> &p_preset, PackData &p_pack_data, Vector<uint8_t> &r_data, bool p_async) {
+Error EditorExportPlatform::_generate_sparse_pck_metadata(const Ref<EditorExportPreset> &p_preset, EditorExportPlatformData::PackData &p_pack_data, Vector<uint8_t> &r_data, bool p_async) {
 	Error err;
 	Ref<FileAccess> ftmp = FileAccess::create_temp(FileAccess::WRITE_READ, "export_index", "tmp", false, &err);
 	if (err != OK) {
@@ -981,10 +797,10 @@ Error EditorExportPlatform::_generate_sparse_pck_metadata(const Ref<EditorExport
 
 	Vector<uint8_t> key;
 	if (p_preset->get_enc_pck() && p_preset->get_enc_directory()) {
-		key = convert_string_encryption_key_to_bytes(_get_script_encryption_key(p_preset));
+		key = EditorExportPlatformUtils::convert_string_encryption_key_to_bytes(_get_script_encryption_key(p_preset));
 	}
 
-	if (!EditorExportPlatform::_encrypt_and_store_directory(ftmp, p_pack_data, key, p_preset->get_seed(), 0)) {
+	if (!EditorExportPlatformUtils::encrypt_and_store_directory(ftmp, p_pack_data, key, p_preset->get_seed(), 0)) {
 		add_message(EXPORT_MESSAGE_ERROR, TTR("Save PCK"), TTR("Can't create encrypted file."));
 		return ERR_CANT_CREATE;
 	}
@@ -1131,15 +947,15 @@ Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &
 
 	if (p_preset->get_export_filter() == EditorExportPreset::EXPORT_ALL_RESOURCES) {
 		//find stuff
-		_export_find_resources(EditorFileSystem::get_singleton()->get_filesystem(), paths);
+		EditorExportPlatformUtils::export_find_resources(EditorFileSystem::get_singleton()->get_filesystem(), paths);
 	} else if (p_preset->get_export_filter() == EditorExportPreset::EXCLUDE_SELECTED_RESOURCES) {
-		_export_find_resources(EditorFileSystem::get_singleton()->get_filesystem(), paths);
+		EditorExportPlatformUtils::export_find_resources(EditorFileSystem::get_singleton()->get_filesystem(), paths);
 		Vector<String> files = p_preset->get_files_to_export();
 		for (int i = 0; i < files.size(); i++) {
 			paths.erase(files[i]);
 		}
 	} else if (p_preset->get_export_filter() == EditorExportPreset::EXPORT_CUSTOMIZED) {
-		_export_find_customized_resources(p_preset, EditorFileSystem::get_singleton()->get_filesystem(), p_preset->get_file_export_mode("res://"), paths);
+		EditorExportPlatformUtils::export_find_customized_resources(p_preset, EditorFileSystem::get_singleton()->get_filesystem(), p_preset->get_file_export_mode("res://"), paths);
 	} else {
 		bool scenes_only = p_preset->get_export_filter() == EditorExportPreset::EXPORT_SELECTED_SCENES;
 
@@ -1149,7 +965,7 @@ Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &
 				continue;
 			}
 
-			_export_find_dependencies(files[i], paths);
+			EditorExportPlatformUtils::export_find_dependencies(files[i], paths);
 		}
 
 		// Add autoload resources and their dependencies
@@ -1167,19 +983,19 @@ Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &
 				autoload_path = autoload_path.substr(1);
 			}
 
-			_export_find_dependencies(autoload_path, paths);
+			EditorExportPlatformUtils::export_find_dependencies(autoload_path, paths);
 		}
 	}
 
 	//add native icons to non-resource include list
-	_edit_filter_list(paths, String("*.icns"), false);
-	_edit_filter_list(paths, String("*.ico"), false);
+	EditorExportPlatformUtils::edit_filter_list(paths, String("*.icns"), false);
+	EditorExportPlatformUtils::edit_filter_list(paths, String("*.ico"), false);
 
-	_edit_filter_list(paths, p_preset->get_include_filter(), false);
-	_edit_filter_list(paths, p_preset->get_exclude_filter(), true);
+	EditorExportPlatformUtils::edit_filter_list(paths, p_preset->get_include_filter(), false);
+	EditorExportPlatformUtils::edit_filter_list(paths, p_preset->get_exclude_filter(), true);
 
 	// Ignore import files, since these are automatically added to the jar later with the resources
-	_edit_filter_list(paths, String("*.import"), true);
+	EditorExportPlatformUtils::edit_filter_list(paths, String("*.import"), true);
 
 	// Get encryption filters.
 	bool enc_pck = p_preset->get_enc_pck();
@@ -1209,33 +1025,7 @@ Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &
 		}
 
 		// Get encryption key.
-		String script_key = _get_script_encryption_key(p_preset);
-		key.resize(32);
-		if (script_key.length() == 64) {
-			for (int i = 0; i < 32; i++) {
-				int v = 0;
-				if (i * 2 < script_key.length()) {
-					char32_t ct = script_key[i * 2];
-					if (is_digit(ct)) {
-						ct = ct - '0';
-					} else if (ct >= 'a' && ct <= 'f') {
-						ct = 10 + ct - 'a';
-					}
-					v |= ct << 4;
-				}
-
-				if (i * 2 + 1 < script_key.length()) {
-					char32_t ct = script_key[i * 2 + 1];
-					if (is_digit(ct)) {
-						ct = ct - '0';
-					} else if (ct >= 'a' && ct <= 'f') {
-						ct = 10 + ct - 'a';
-					}
-					v |= ct;
-				}
-				key.write[i] = v;
-			}
-		}
+		key = EditorExportPlatformUtils::convert_string_encryption_key_to_bytes(_get_script_encryption_key(p_preset));
 	}
 
 	EditorExportSaveProxy save_proxy(p_save_func, p_remove_func != nullptr);
@@ -1704,7 +1494,7 @@ Vector<uint8_t> EditorExportPlatform::_filter_extension_list_config_file(const S
 }
 
 Error EditorExportPlatform::_pack_add_shared_object(void *p_userdata, const SharedObject &p_so) {
-	PackData *pack_data = (PackData *)p_userdata;
+	EditorExportPlatformData::PackData *pack_data = (EditorExportPlatformData::PackData *)p_userdata;
 	if (pack_data->so_files) {
 		pack_data->so_files->push_back(p_so);
 	}
@@ -1713,16 +1503,16 @@ Error EditorExportPlatform::_pack_add_shared_object(void *p_userdata, const Shar
 }
 
 Error EditorExportPlatform::_remove_pack_file(void *p_userdata, const String &p_path) {
-	PackData *pd = (PackData *)p_userdata;
+	EditorExportPlatformData::PackData *pd = (EditorExportPlatformData::PackData *)p_userdata;
 
-	SavedData sd;
+	EditorExportPlatformData::SavedData sd;
 	sd.path_utf8 = p_path.utf8();
 	sd.ofs = pd->f->get_position();
 	sd.size = 0;
 	sd.removal = true;
 
 	// This padding will likely never be added, as we should already be aligned when removals are added.
-	int pad = _get_pad(PCK_PADDING, pd->f->get_position());
+	int pad = EditorExportPlatformUtils::get_pad(PCK_PADDING, pd->f->get_position());
 	for (int i = 0; i < pad; i++) {
 		pd->f->store_8(0);
 	}
@@ -1982,76 +1772,6 @@ bool EditorExportPlatform::_store_header(Ref<FileAccess> p_fd, bool p_enc, bool 
 	return true;
 }
 
-bool EditorExportPlatform::_encrypt_and_store_directory(Ref<FileAccess> p_fd, PackData &p_pack_data, const Vector<uint8_t> &p_key, uint64_t p_seed, uint64_t p_file_base) {
-	Ref<FileAccessEncrypted> fae;
-	Ref<FileAccess> fhead = p_fd;
-
-	fhead->store_32(p_pack_data.file_ofs.size()); //amount of files
-
-	if (!p_key.is_empty()) {
-		uint64_t seed = p_seed;
-		fae.instantiate();
-		if (fae.is_null()) {
-			return false;
-		}
-
-		Vector<uint8_t> iv;
-		if (seed != 0) {
-			for (int i = 0; i < p_pack_data.file_ofs.size(); i++) {
-				for (int64_t j = 0; j < p_pack_data.file_ofs[i].path_utf8.length(); j++) {
-					seed = ((seed << 5) + seed) ^ p_pack_data.file_ofs[i].path_utf8.get_data()[j];
-				}
-				for (int64_t j = 0; j < p_pack_data.file_ofs[i].md5.size(); j++) {
-					seed = ((seed << 5) + seed) ^ p_pack_data.file_ofs[i].md5[j];
-				}
-				seed = ((seed << 5) + seed) ^ (p_pack_data.file_ofs[i].ofs - p_file_base);
-				seed = ((seed << 5) + seed) ^ p_pack_data.file_ofs[i].size;
-			}
-
-			RandomPCG rng = RandomPCG(seed);
-			iv.resize(16);
-			for (int i = 0; i < 16; i++) {
-				iv.write[i] = rng.rand() % 256;
-			}
-		}
-
-		Error err = fae->open_and_parse(fhead, p_key, FileAccessEncrypted::MODE_WRITE_AES256, false, iv);
-		if (err != OK) {
-			return false;
-		}
-
-		fhead = fae;
-	}
-	for (int i = 0; i < p_pack_data.file_ofs.size(); i++) {
-		uint32_t string_len = p_pack_data.file_ofs[i].path_utf8.length();
-		uint32_t pad = _get_pad(4, string_len);
-
-		fhead->store_32(string_len + pad);
-		fhead->store_buffer((const uint8_t *)p_pack_data.file_ofs[i].path_utf8.get_data(), string_len);
-		for (uint32_t j = 0; j < pad; j++) {
-			fhead->store_8(0);
-		}
-
-		fhead->store_64(p_pack_data.file_ofs[i].ofs - p_file_base);
-		fhead->store_64(p_pack_data.file_ofs[i].size); // pay attention here, this is where file is
-		fhead->store_buffer(p_pack_data.file_ofs[i].md5.ptr(), 16); //also save md5 for file
-		uint32_t flags = 0;
-		if (p_pack_data.file_ofs[i].encrypted) {
-			flags |= PACK_FILE_ENCRYPTED;
-		}
-		if (p_pack_data.file_ofs[i].removal) {
-			flags |= PACK_FILE_REMOVAL;
-		}
-		fhead->store_32(flags);
-	}
-
-	if (fae.is_valid()) {
-		fhead.unref();
-		fae.unref();
-	}
-	return true;
-}
-
 Error EditorExportPlatform::save_pack(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, Vector<SharedObject> *p_so_files, EditorExportSaveFunction p_save_func, EditorExportRemoveFunction p_remove_func, bool p_embed, int64_t *r_embedded_start, int64_t *r_embedded_size) {
 	EditorProgress ep("savepack", TTR("Packing"), 102, true);
 
@@ -2101,7 +1821,7 @@ Error EditorExportPlatform::save_pack(const Ref<EditorExportPreset> &p_preset, b
 	_store_header(f, p_preset->get_enc_pck() && p_preset->get_enc_directory(), false, false, file_base_ofs, dir_base_ofs);
 
 	// Align for first file.
-	int file_padding = _get_pad(PCK_PADDING, f->get_position());
+	int file_padding = EditorExportPlatformUtils::get_pad(PCK_PADDING, f->get_position());
 	for (int i = 0; i < file_padding; i++) {
 		f->store_8(0);
 	}
@@ -2112,7 +1832,7 @@ Error EditorExportPlatform::save_pack(const Ref<EditorExportPreset> &p_preset, b
 	f->seek(file_base);
 
 	// Write files.
-	PackData pd;
+	EditorExportPlatformData::PackData pd;
 	pd.ep = &ep;
 	pd.f = f;
 	pd.so_files = p_so_files;
@@ -2132,7 +1852,7 @@ Error EditorExportPlatform::save_pack(const Ref<EditorExportPreset> &p_preset, b
 
 	pd.file_ofs.sort(); // Do sort, so we can do binary search later (where ?).
 
-	int dir_padding = _get_pad(PCK_PADDING, f->get_position());
+	int dir_padding = EditorExportPlatformUtils::get_pad(PCK_PADDING, f->get_position());
 	for (int i = 0; i < dir_padding; i++) {
 		f->store_8(0);
 	}
@@ -2145,10 +1865,10 @@ Error EditorExportPlatform::save_pack(const Ref<EditorExportPreset> &p_preset, b
 
 	Vector<uint8_t> key;
 	if (p_preset->get_enc_pck() && p_preset->get_enc_directory()) {
-		key = convert_string_encryption_key_to_bytes(_get_script_encryption_key(p_preset));
+		key = EditorExportPlatformUtils::convert_string_encryption_key_to_bytes(_get_script_encryption_key(p_preset));
 	}
 
-	if (!_encrypt_and_store_directory(f, pd, key, p_preset->get_seed(), file_base)) {
+	if (!EditorExportPlatformUtils::encrypt_and_store_directory(f, pd, key, p_preset->get_seed(), file_base)) {
 		add_message(EXPORT_MESSAGE_ERROR, TTR("Save PCK"), TTR("Can't create encrypted file."));
 		return ERR_CANT_CREATE;
 	}
@@ -2509,6 +2229,7 @@ String EditorExportPlatform::simplify_path(const String &p_path) {
 }
 
 Variant EditorExportPlatform::get_project_setting(const Ref<EditorExportPreset> &p_preset, const StringName &p_name) {
+	return EditorExportPlatformUtils::get_project_setting(p_preset, p_name);
 	if (p_preset.is_valid()) {
 		return p_preset->get_project_setting(p_name);
 	} else {

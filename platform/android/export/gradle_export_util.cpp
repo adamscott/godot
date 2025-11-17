@@ -31,6 +31,7 @@
 #include "gradle_export_util.h"
 
 #include "core/string/translation_server.h"
+#include "editor/export/editor_export_platform_utils.h"
 
 int _get_android_orientation_value(DisplayServer::ScreenOrientation screen_orientation) {
 	switch (screen_orientation) {
@@ -133,15 +134,15 @@ Error rename_and_store_file_in_gradle_project(void *p_userdata, const String &p_
 	const String simplified_path = EditorExportPlatform::simplify_path(p_path);
 
 	Vector<uint8_t> enc_data;
-	EditorExportPlatform::SavedData sd;
-	Error err = store_temp_file(simplified_path, p_data, p_enc_in_filters, p_enc_ex_filters, p_key, p_seed, enc_data, sd);
+	EditorExportPlatformData::SavedData sd;
+	Error err = EditorExportPlatformUtils::store_temp_file(simplified_path, p_data, p_enc_in_filters, p_enc_ex_filters, p_key, p_seed, enc_data, sd);
 	if (err != OK) {
 		return err;
 	}
 
 	const String dst_path = export_data->assets_directory + String("/") + simplified_path.trim_prefix("res://");
 	print_verbose("Saving project files from " + simplified_path + " into " + dst_path);
-	err = store_file_at_path(dst_path, enc_data);
+	err = EditorExportPlatformUtils::store_file_at_path(dst_path, enc_data);
 
 	export_data->pd.file_ofs.push_back(sd);
 	return err;
@@ -167,7 +168,7 @@ Error _create_project_name_strings_files(const Ref<EditorExportPreset> &p_preset
 	print_verbose("Creating strings resources for supported locales for project " + p_project_name);
 	// Stores the string into the default values directory.
 	String processed_default_xml_string = vformat(GODOT_PROJECT_NAME_XML_STRING, _android_xml_escape(p_project_name));
-	store_string_at_path(p_gradle_build_dir.path_join("res/values/godot_project_name_string.xml"), processed_default_xml_string);
+	EditorExportPlatformUtils::store_string_at_path(p_gradle_build_dir.path_join("res/values/godot_project_name_string.xml"), processed_default_xml_string);
 
 	// Searches the Gradle project res/ directory to find all supported locales
 	Ref<DirAccess> da = DirAccess::open(p_gradle_build_dir.path_join("res"));
@@ -206,10 +207,10 @@ Error _create_project_name_strings_files(const Ref<EditorExportPreset> &p_preset
 		if (locale_project_name != p_project_name) {
 			String processed_xml_string = vformat(GODOT_PROJECT_NAME_XML_STRING, _android_xml_escape(locale_project_name));
 			print_verbose("Storing project name for locale " + locale + " under " + locale_directory);
-			store_string_at_path(locale_directory, processed_xml_string);
+			EditorExportPlatformUtils::store_string_at_path(locale_directory, processed_xml_string);
 		} else {
 			// TODO: Once the legacy build system is deprecated we don't need to have xml files for this else branch
-			store_string_at_path(locale_directory, processed_default_xml_string);
+			EditorExportPlatformUtils::store_string_at_path(locale_directory, processed_default_xml_string);
 		}
 	}
 	da->list_dir_end();

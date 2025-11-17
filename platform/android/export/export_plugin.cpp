@@ -44,6 +44,7 @@
 #include "editor/editor_log.h"
 #include "editor/editor_node.h"
 #include "editor/editor_string_names.h"
+#include "editor/export/editor_export_platform_utils.h"
 #include "editor/export/export_template_manager.h"
 #include "editor/file_system/editor_paths.h"
 #include "editor/import/resource_importer_texture_settings.h"
@@ -806,8 +807,8 @@ Error EditorExportPlatformAndroid::save_apk_file(void *p_userdata, const String 
 	const String simplified_path = simplify_path(p_path);
 
 	Vector<uint8_t> enc_data;
-	EditorExportPlatform::SavedData sd;
-	Error err = store_temp_file(simplified_path, p_data, p_enc_in_filters, p_enc_ex_filters, p_key, p_seed, enc_data, sd);
+	EditorExportPlatformData::SavedData sd;
+	Error err = EditorExportPlatformUtils::store_temp_file(simplified_path, p_data, p_enc_in_filters, p_enc_ex_filters, p_key, p_seed, enc_data, sd);
 	if (err != OK) {
 		return err;
 	}
@@ -847,7 +848,7 @@ Error EditorExportPlatformAndroid::copy_gradle_so(void *p_userdata, const Shared
 			String dst_path = export_data->libs_directory.path_join(type).path_join(abi).path_join(filename);
 			Vector<uint8_t> data = FileAccess::get_file_as_bytes(p_so.path);
 			print_verbose("Copying .so file from " + p_so.path + " to " + dst_path);
-			Error err = store_file_at_path(dst_path, data);
+			Error err = EditorExportPlatformUtils::store_file_at_path(dst_path, data);
 			ERR_FAIL_COND_V_MSG(err, err, "Failed to copy .so file from " + p_so.path + " to " + dst_path);
 			export_data->libs.push_back(dst_path);
 		}
@@ -1045,7 +1046,7 @@ void EditorExportPlatformAndroid::_write_tmp_manifest(const Ref<EditorExportPres
 	String manifest_path = ExportTemplateManager::get_android_build_directory(p_preset).path_join(vformat("src/%s/AndroidManifest.xml", (p_debug ? "debug" : "release")));
 
 	print_verbose("Storing manifest into " + manifest_path + ": " + "\n" + manifest_text);
-	store_string_at_path(manifest_path, manifest_text);
+	EditorExportPlatformUtils::store_string_at_path(manifest_path, manifest_text);
 }
 
 bool EditorExportPlatformAndroid::_is_transparency_allowed(const Ref<EditorExportPreset> &p_preset) const {
@@ -1158,7 +1159,7 @@ void EditorExportPlatformAndroid::_fix_themes_xml(const Ref<EditorExportPreset> 
 
 	// Reconstruct the XML content from the modified lines.
 	String xml_content = String("\n").join(new_lines);
-	store_string_at_path(themes_xml_path, xml_content);
+	EditorExportPlatformUtils::store_string_at_path(themes_xml_path, xml_content);
 	print_verbose("Successfully modified " + themes_xml_path + ": " + "\n" + xml_content);
 }
 
@@ -1929,7 +1930,7 @@ void EditorExportPlatformAndroid::_copy_icons_to_gradle_project(const Ref<Editor
 			print_verbose("Processing launcher icon for dimension " + itos(LAUNCHER_ICONS[i].dimensions) + " into " + LAUNCHER_ICONS[i].export_path);
 			Vector<uint8_t> data;
 			_process_launcher_icons(LAUNCHER_ICONS[i].export_path, p_main_image, LAUNCHER_ICONS[i].dimensions, data);
-			store_file_at_path(gradle_build_dir.path_join(LAUNCHER_ICONS[i].export_path), data);
+			EditorExportPlatformUtils::store_file_at_path(gradle_build_dir.path_join(LAUNCHER_ICONS[i].export_path), data);
 		}
 
 		if (p_foreground.is_valid() && !p_foreground->is_empty()) {
@@ -1937,7 +1938,7 @@ void EditorExportPlatformAndroid::_copy_icons_to_gradle_project(const Ref<Editor
 			Vector<uint8_t> data;
 			_process_launcher_icons(LAUNCHER_ADAPTIVE_ICON_FOREGROUNDS[i].export_path, p_foreground,
 					LAUNCHER_ADAPTIVE_ICON_FOREGROUNDS[i].dimensions, data);
-			store_file_at_path(gradle_build_dir.path_join(LAUNCHER_ADAPTIVE_ICON_FOREGROUNDS[i].export_path), data);
+			EditorExportPlatformUtils::store_file_at_path(gradle_build_dir.path_join(LAUNCHER_ADAPTIVE_ICON_FOREGROUNDS[i].export_path), data);
 		}
 
 		if (p_background.is_valid() && !p_background->is_empty()) {
@@ -1945,7 +1946,7 @@ void EditorExportPlatformAndroid::_copy_icons_to_gradle_project(const Ref<Editor
 			Vector<uint8_t> data;
 			_process_launcher_icons(LAUNCHER_ADAPTIVE_ICON_BACKGROUNDS[i].export_path, p_background,
 					LAUNCHER_ADAPTIVE_ICON_BACKGROUNDS[i].dimensions, data);
-			store_file_at_path(gradle_build_dir.path_join(LAUNCHER_ADAPTIVE_ICON_BACKGROUNDS[i].export_path), data);
+			EditorExportPlatformUtils::store_file_at_path(gradle_build_dir.path_join(LAUNCHER_ADAPTIVE_ICON_BACKGROUNDS[i].export_path), data);
 		}
 
 		if (p_monochrome.is_valid() && !p_monochrome->is_empty()) {
@@ -1953,13 +1954,13 @@ void EditorExportPlatformAndroid::_copy_icons_to_gradle_project(const Ref<Editor
 			Vector<uint8_t> data;
 			_process_launcher_icons(LAUNCHER_ADAPTIVE_ICON_MONOCHROMES[i].export_path, p_monochrome,
 					LAUNCHER_ADAPTIVE_ICON_MONOCHROMES[i].dimensions, data);
-			store_file_at_path(gradle_build_dir.path_join(LAUNCHER_ADAPTIVE_ICON_MONOCHROMES[i].export_path), data);
+			EditorExportPlatformUtils::store_file_at_path(gradle_build_dir.path_join(LAUNCHER_ADAPTIVE_ICON_MONOCHROMES[i].export_path), data);
 			monochrome_tag = "    <monochrome android:drawable=\"@mipmap/icon_monochrome\"/>\n";
 		}
 	}
 
 	// Finalize the icon.xml by formatting the template with the optional monochrome tag.
-	store_string_at_path(gradle_build_dir.path_join(ICON_XML_PATH), vformat(ICON_XML_TEMPLATE, monochrome_tag));
+	EditorExportPlatformUtils::store_string_at_path(gradle_build_dir.path_join(ICON_XML_PATH), vformat(ICON_XML_TEMPLATE, monochrome_tag));
 }
 
 Vector<EditorExportPlatformAndroid::ABI> EditorExportPlatformAndroid::get_enabled_abis(const Ref<EditorExportPreset> &p_preset) {
@@ -3653,7 +3654,7 @@ Error EditorExportPlatformAndroid::export_project_helper(const Ref<EditorExportP
 					return err;
 				}
 
-				err = store_file_at_path(user_data.assets_directory + "/assets.sparsepck", enc_data);
+				err = EditorExportPlatformUtils::store_file_at_path(user_data.assets_directory + "/assets.sparsepck", enc_data);
 				if (err != OK) {
 					add_message(EXPORT_MESSAGE_ERROR, TTR("Save PCK"), TTR("Could not write PCK directory!"));
 					return err;
@@ -3676,7 +3677,7 @@ Error EditorExportPlatformAndroid::export_project_helper(const Ref<EditorExportP
 			}
 		}
 		print_verbose("Storing command line flags...");
-		store_file_at_path(assets_directory + "/_cl_", command_line_flags);
+		EditorExportPlatformUtils::store_file_at_path(assets_directory + "/_cl_", command_line_flags);
 
 		print_verbose("Updating JAVA_HOME environment to " + java_sdk_path);
 		OS::get_singleton()->set_environment("JAVA_HOME", java_sdk_path);
