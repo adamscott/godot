@@ -1116,11 +1116,12 @@ void ResourceLoader::async_load(const String &p_path, Error *r_error) {
 	if (FileAccess::exists(p_path)) {
 		return;
 	}
-	ERR_FAIL_COND(!PackedData::get_singleton()->has_path(p_path));
-	String pck_path = PackedData::get_singleton()->get_file_pack_path(p_path);
+	bool has_path = PackedData::get_singleton()->has_async_path(p_path);
+	ERR_FAIL_COND(!has_path);
+	String pck_path = PackedData::get_singleton()->get_file_async_pack_path(p_path);
 	ERR_FAIL_COND(pck_path.is_empty());
 	Error error = OS::get_singleton()->async_load(pck_path, p_path);
-	if (error != OK) {
+	if (r_error != nullptr) {
 		*r_error = error;
 	}
 }

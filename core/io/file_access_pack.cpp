@@ -46,50 +46,56 @@ Error PackedData::add_pack(const String &p_path, bool p_replace_files, uint64_t 
 	return ERR_FILE_UNRECOGNIZED;
 }
 
-void PackedData::add_path(const String &p_pkg_path, const String &p_path, uint64_t p_ofs, uint64_t p_size, const uint8_t *p_md5, PackSource *p_src, bool p_replace_files, bool p_encrypted, bool p_bundle) {
+void PackedData::add_path(const String &p_pkg_path, const String &p_path, uint64_t p_ofs, uint64_t p_size, const uint8_t *p_md5, PackSource *p_src, bool p_replace_files, BitField<PackedFile::Property> p_properties) {
 	String simplified_path = p_path.simplify_path().trim_prefix("res://");
 	PathMD5 pmd5(simplified_path.md5_buffer());
 
 	bool exists = files.has(pmd5);
 
 	PackedFile pf;
-	pf.encrypted = p_encrypted;
-	pf.bundle = p_bundle;
+	pf.properties = p_properties;
 	pf.pack = p_pkg_path;
 	pf.offset = p_ofs;
 	pf.size = p_size;
-	for (int i = 0; i < 16; i++) {
-		pf.md5[i] = p_md5[i];
-	}
+	memcpy(pf.md5, p_md5, 16);
 	pf.src = p_src;
 
 	if (!exists || p_replace_files) {
 		files[pmd5] = pf;
 	}
 
-	if (!exists) {
-		// Search for directory.
-		PackedDir *cd = root;
+	if (exists) {
+		return;
+	}
 
-		if (simplified_path.contains_char('/')) { // In a subdirectory.
-			Vector<String> ds = simplified_path.get_base_dir().split("/");
+	// Search for directory.
+	PackedDir *cd = root;
 
-			for (int j = 0; j < ds.size(); j++) {
-				if (!cd->subdirs.has(ds[j])) {
-					PackedDir *pd = memnew(PackedDir);
-					pd->name = ds[j];
-					pd->parent = cd;
-					cd->subdirs[pd->name] = pd;
-					cd = pd;
-				} else {
-					cd = cd->subdirs[ds[j]];
-				}
+	if (simplified_path.contains_char('/')) { // In a subdirectory.
+		Vector<String> ds = simplified_path.get_base_dir().split("/");
+
+		for (int j = 0; j < ds.size(); j++) {
+			if (!cd->subdirs.has(ds[j])) {
+				PackedDir *pd = memnew(PackedDir);
+				pd->name = ds[j];
+				pd->parent = cd;
+				cd->subdirs[pd->name] = pd;
+				cd = pd;
+			} else {
+				cd = cd->subdirs[ds[j]];
 			}
 		}
-		String filename = simplified_path.get_file();
-		// Don't add as a file if the path points to a directory.
-		if (!filename.is_empty()) {
-			cd->files.insert(filename);
+	}
+	String filename = simplified_path.get_file();
+	// Don't add as a file if the path points to a directory.
+	if (!filename.is_empty()) {
+		cd->files.insert(filename);
+	}
+
+	if (p_properties.has_flag(PackedFile::Property::PROPERTY_ASYNC)) {
+		Ref<FileAccess> file = FileAccess::create_for_path(p_path);
+		if (!file->file_exists(p_path)) {
+			async_files[simplified_path].push_back(pf);
 		}
 	}
 }
@@ -146,6 +152,16 @@ String PackedData::get_file_pack_path(const String &p_path) {
 		return "";
 	}
 	return file_iterator->value.pack;
+}
+
+String PackedData::get_file_async_pack_path(const String &p_path) {
+	String simplified_path = p_path.simplify_path().trim_prefix("res://");
+	String remap_path = simplified_path + ".remap";
+	if (!async_files.has(remap_path)) {
+		return "";
+	}
+	String pack = async_files[remap_path][async_files[remap_path].size() - 1].pack;
+	return pack.path_join("..").path_join("..").simplify_path();
 }
 
 HashSet<String> PackedData::get_file_paths() const {
@@ -281,6 +297,7 @@ bool PackedSourcePCK::try_open_pack(const String &p_path, bool p_replace_files, 
 	bool enc_directory = (pack_flags & PACK_DIR_ENCRYPTED);
 	bool rel_filebase = (pack_flags & PACK_REL_FILEBASE); // Note: Always enabled for V3.
 	bool sparse_bundle = (pack_flags & PACK_SPARSE_BUNDLE);
+	bool async = (pack_flags & PACK_ASYNC);
 
 	uint64_t file_base = f->get_64();
 	if ((version == PACK_FORMAT_VERSION_V3) || (version == PACK_FORMAT_VERSION_V2 && rel_filebase)) {
@@ -333,7 +350,17 @@ bool PackedSourcePCK::try_open_pack(const String &p_path, bool p_replace_files, 
 		if (flags & PACK_FILE_REMOVAL) { // The file was removed.
 			PackedData::get_singleton()->remove_path(path);
 		} else {
-			PackedData::get_singleton()->add_path(p_path, path, file_base + ofs, size, md5, this, p_replace_files, (flags & PACK_FILE_ENCRYPTED), sparse_bundle);
+			BitField<PackedData::PackedFile::Property> properties = PackedData::PackedFile::Property::PROPERTY_NONE;
+			if (flags & PACK_FILE_ENCRYPTED) {
+				properties.set_flag(PackedData::PackedFile::Property::PROPERTY_ENCRYPTED);
+			}
+			if (sparse_bundle) {
+				properties.set_flag(PackedData::PackedFile::Property::PROPERTY_BUNDLED);
+			}
+			if (async) {
+				properties.set_flag(PackedData::PackedFile::Property::PROPERTY_ASYNC);
+			}
+			PackedData::get_singleton()->add_path(p_path, path, file_base + ofs, size, md5, this, p_replace_files, properties);
 		}
 	}
 
@@ -359,7 +386,6 @@ bool PackedSourceAsyncPCK::try_open_pack(const String &p_path, bool p_replace_fi
 }
 
 Ref<FileAccess> PackedSourceAsyncPCK::get_file(const String &p_path, PackedData::PackedFile *p_file) {
-	print_line(vformat("PackedSourceAsyncPCK::get_file(%s), %s", p_path, p_file->pack));
 	String pack = p_file->pack.get_base_dir();
 	String path = p_path.simplify_path().trim_prefix("res://");
 	String file_path = pack.path_join(path);
@@ -395,7 +421,7 @@ void PackedSourceDirectory::add_directory(const String &p_path, bool p_replace_f
 	for (const String &file_name : da->get_files()) {
 		String file_path = p_path.path_join(file_name);
 		uint8_t md5[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-		PackedData::get_singleton()->add_path(p_path, file_path, 0, 0, md5, this, p_replace_files, false, false);
+		PackedData::get_singleton()->add_path(p_path, file_path, 0, 0, md5, this, p_replace_files);
 	}
 
 	for (const String &sub_dir_name : da->get_directories()) {
@@ -504,7 +530,7 @@ void FileAccessPack::close() {
 
 FileAccessPack::FileAccessPack(const String &p_path, const PackedData::PackedFile &p_file) {
 	pf = p_file;
-	if (pf.bundle) {
+	if (pf.properties.has_flag(PackedData::PackedFile::Property::PROPERTY_BUNDLED)) {
 		String simplified_path = p_path.simplify_path();
 		f = FileAccess::open(simplified_path, FileAccess::READ | FileAccess::SKIP_PACK);
 		off = 0; // For the sparse pack offset is always zero.
@@ -516,7 +542,7 @@ FileAccessPack::FileAccessPack(const String &p_path, const PackedData::PackedFil
 
 	ERR_FAIL_COND_MSG(f.is_null(), vformat("Can't open pack-referenced file '%s'.", String(pf.pack)));
 
-	if (pf.encrypted) {
+	if (pf.properties.has_flag(PackedData::PackedFile::Property::PROPERTY_ENCRYPTED)) {
 		Ref<FileAccessEncrypted> fae;
 		fae.instantiate();
 		ERR_FAIL_COND_MSG(fae.is_null(), vformat("Can't open encrypted pack-referenced file '%s'.", String(pf.pack)));

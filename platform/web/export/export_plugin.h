@@ -68,7 +68,7 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 			String remap_sha256;
 			LocalVector<FileDependencies *> dependencies;
 
-			Error write_deps_file(const String &p_path);
+			Error write_deps_json_file(const String &p_path);
 			void flatten_dependencies(LocalVector<FileDependencies *> &r_deps) {
 				if (r_deps.has(this)) {
 					return;

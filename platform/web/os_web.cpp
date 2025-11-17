@@ -275,9 +275,6 @@ void OS_Web::update_pwa_state_callback() {
 char *OS_Web::get_config_as_json_callback(const char *p_config_file_data_ptr) {
 	ERR_FAIL_NULL_V(p_config_file_data_ptr, nullptr);
 	String config_file_data_as_string = String::utf8(p_config_file_data_ptr);
-	print_line(vformat("p_config_file_data_ptr: 0x%x", (uint64_t)p_config_file_data_ptr));
-	print_line("config_file_data_as_stringu: " + config_file_data_as_string);
-	print_line(vformat("is empty?: %s", config_file_data_as_string.is_empty()));
 	ERR_FAIL_COND_V(config_file_data_as_string.is_empty(), nullptr);
 
 	Ref<ConfigFile> config_file;
@@ -285,32 +282,22 @@ char *OS_Web::get_config_as_json_callback(const char *p_config_file_data_ptr) {
 	config_file->parse(config_file_data_as_string);
 
 	Dictionary json_config_file_data;
-	print_line(vformat("before loop of sections: %s", config_file->get_sections().size()));
 	for (const String &section : config_file->get_sections()) {
-		print_line(vformat("!!! [%s] !!!", section));
 		Dictionary sectionData;
 		for (const String &key : config_file->get_section_keys(section)) {
-			print_line(vformat("!!! %s = !!!", key));
 			sectionData[key] = config_file->get_value(section, key);
 		}
 		json_config_file_data[section] = sectionData;
 	}
 	String json_config_file_data_as_string = JSON::stringify(json_config_file_data, String(" ").repeat(2));
-	print_line(vformat("stringified: %s", json_config_file_data_as_string));
-	print_line("---");
-	print_line(String::utf8(json_config_file_data_as_string.utf8().get_data()));
-	print_line("---");
 	size_t json_config_file_data_len = json_config_file_data_as_string.utf8().size();
 	char *returned_json_config_file_data_ptr = (char *)memalloc(sizeof(char) * json_config_file_data_len);
 	ERR_FAIL_NULL_V(returned_json_config_file_data_ptr, nullptr);
 	memcpy(returned_json_config_file_data_ptr, json_config_file_data_as_string.utf8().ptr(), json_config_file_data_len);
-	print_line(vformat("returned json: 0x%x (%s)", (uint64_t)returned_json_config_file_data_ptr, (uint64_t)returned_json_config_file_data_ptr));
 	godot_js_string *js_string = (godot_js_string *)memalloc(sizeof(godot_js_string));
 	js_string->length = json_config_file_data_len;
 	js_string->data = returned_json_config_file_data_ptr;
 	ERR_FAIL_COND_V(js_string->data != returned_json_config_file_data_ptr, nullptr);
-	print_line(vformat("js_string->data: 0x%x (%s)", (uint64_t)returned_json_config_file_data_ptr, (uint64_t)returned_json_config_file_data_ptr));
-	// return js_string;
 	return returned_json_config_file_data_ptr;
 }
 
