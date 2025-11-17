@@ -945,57 +945,7 @@ Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &
 	HashSet<String> paths;
 	Vector<String> path_remaps;
 
-	if (p_preset->get_export_filter() == EditorExportPreset::EXPORT_ALL_RESOURCES) {
-		//find stuff
-		EditorExportPlatformUtils::export_find_resources(EditorFileSystem::get_singleton()->get_filesystem(), paths);
-	} else if (p_preset->get_export_filter() == EditorExportPreset::EXCLUDE_SELECTED_RESOURCES) {
-		EditorExportPlatformUtils::export_find_resources(EditorFileSystem::get_singleton()->get_filesystem(), paths);
-		Vector<String> files = p_preset->get_files_to_export();
-		for (int i = 0; i < files.size(); i++) {
-			paths.erase(files[i]);
-		}
-	} else if (p_preset->get_export_filter() == EditorExportPreset::EXPORT_CUSTOMIZED) {
-		EditorExportPlatformUtils::export_find_customized_resources(p_preset, EditorFileSystem::get_singleton()->get_filesystem(), p_preset->get_file_export_mode("res://"), paths);
-	} else {
-		bool scenes_only = p_preset->get_export_filter() == EditorExportPreset::EXPORT_SELECTED_SCENES;
-
-		Vector<String> files = p_preset->get_files_to_export();
-		for (int i = 0; i < files.size(); i++) {
-			if (scenes_only && ResourceLoader::get_resource_type(files[i]) != "PackedScene") {
-				continue;
-			}
-
-			EditorExportPlatformUtils::export_find_dependencies(files[i], paths);
-		}
-
-		// Add autoload resources and their dependencies
-		List<PropertyInfo> props;
-		ProjectSettings::get_singleton()->get_property_list(&props);
-
-		for (const PropertyInfo &pi : props) {
-			if (!pi.name.begins_with("autoload/")) {
-				continue;
-			}
-
-			String autoload_path = get_project_setting(p_preset, pi.name);
-
-			if (autoload_path.begins_with("*")) {
-				autoload_path = autoload_path.substr(1);
-			}
-
-			EditorExportPlatformUtils::export_find_dependencies(autoload_path, paths);
-		}
-	}
-
-	//add native icons to non-resource include list
-	EditorExportPlatformUtils::edit_filter_list(paths, String("*.icns"), false);
-	EditorExportPlatformUtils::edit_filter_list(paths, String("*.ico"), false);
-
-	EditorExportPlatformUtils::edit_filter_list(paths, p_preset->get_include_filter(), false);
-	EditorExportPlatformUtils::edit_filter_list(paths, p_preset->get_exclude_filter(), true);
-
-	// Ignore import files, since these are automatically added to the jar later with the resources
-	EditorExportPlatformUtils::edit_filter_list(paths, String("*.import"), true);
+	EditorExportPlatformUtils::export_find_files(p_preset, paths);
 
 	// Get encryption filters.
 	bool enc_pck = p_preset->get_enc_pck();
