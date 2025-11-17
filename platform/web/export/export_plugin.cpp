@@ -45,14 +45,22 @@
 #include "editor/editor_string_names.h"
 #include "editor/export/editor_export.h"
 #include "editor/export/editor_export_platform_utils.h"
+#include "editor/export/project_export.h"
 #include "editor/import/resource_importer_texture_settings.h"
 #include "editor/settings/editor_settings.h"
 #include "editor/themes/editor_scale.h"
+#include "scene/gui/tab_container.h"
+#include "scene/gui/tree.h"
+#include "scene/main/window.h"
 #include "scene/resources/image_texture.h"
 
 #include "modules/modules_enabled.gen.h" // For mono.
 #include "modules/svg/image_loader_svg.h"
 #include <functional>
+
+/**
+ * EditorExportPlatformWeb::ExportData::FileDependencies
+ */
 
 Error EditorExportPlatformWeb::ExportData::FileDependencies::write_deps_json_file(const String &p_path) {
 	ERR_FAIL_COND_V(p_path.is_empty(), ERR_INVALID_PARAMETER);
@@ -90,6 +98,10 @@ Error EditorExportPlatformWeb::ExportData::FileDependencies::write_deps_json_fil
 
 	return OK;
 }
+
+/**
+ * EditorExportPlatformWeb::ExportData
+ */
 
 Error EditorExportPlatformWeb::ExportData::add_dependencies(const String &p_resource_path, bool p_is_encrypted, const PackedByteArray &p_key) {
 	if (dependencies.has(p_resource_path)) {
@@ -143,6 +155,70 @@ Error EditorExportPlatformWeb::ExportData::add_dependencies(const String &p_reso
 
 	return dependencies.get(resource_path).write_deps_json_file(res_to_global(resource_path + ".deps.json"));
 }
+
+/**
+ * EditorExportPlatformWeb::AsyncDialog
+ */
+void EditorExportPlatformWeb::AsyncDialog::_notification(int p_what) {
+	switch (p_what) {
+		case NOTIFICATION_ENTER_TREE: {
+			_update_theme();
+		} break;
+
+		case NOTIFICATION_THEME_CHANGED: {
+			_update_theme();
+		} break;
+	}
+}
+
+void EditorExportPlatformWeb::AsyncDialog::_on_tab_container_tab_changed(int p_tab) {
+}
+
+void EditorExportPlatformWeb::AsyncDialog::_update_display() {
+	get_ok_button()->show();
+}
+
+void EditorExportPlatformWeb::AsyncDialog::_update_theme() {
+}
+
+EditorExportPlatformWeb::AsyncDialog::AsyncDialog(EditorExportPlatformWeb *p_export_platform) :
+		export_platform(p_export_platform) {
+	print_line(vformat("export_platform: 0x%x", (uint64_t)export_platform));
+
+	set_clamp_to_embedder(true);
+
+	tab_container = memnew(TabContainer);
+	add_child(tab_container);
+	tab_container->set_use_hidden_tabs_for_min_size(true);
+	tab_container->set_theme_type_variation("TabContainerOdd");
+	tab_container->connect("tab_changed", callable_mp(this, &EditorExportPlatformWeb::AsyncDialog::_on_tab_container_tab_changed));
+
+	// Main scene dependency tab.
+	VBoxContainer *main_scene_container = memnew(VBoxContainer);
+	tab_container->add_child(main_scene_container);
+	main_scene_container->set_name(TTRC("Main Scene Dependencies"));
+
+	main_scene_tree = memnew(Tree);
+	main_scene_container->add_child(main_scene_tree);
+	main_scene_tree->set_select_mode(Tree::SelectMode::SELECT_ROW);
+
+	Label *main_scene_context_label = memnew(Label);
+	main_scene_container->add_child(main_scene_context_label);
+	main_scene_context_label->set_text(TTRC("This list contains the currently detected dependencies of the main scene of the project. These resources will be loaded before launching the main scene."));
+
+	// Select resources tab.
+	VBoxContainer *select_resources_container = memnew(VBoxContainer);
+	tab_container->add_child(select_resources_container);
+	select_resources_container->set_name(TTRC("Additional Resources To Load"));
+
+	select_resources_tree = memnew(Tree);
+	select_resources_container->add_child(select_resources_tree);
+	select_resources_tree->set_select_mode(Tree::SelectMode::SELECT_ROW);
+}
+
+/**
+ * EditorExportPlatformWeb
+ */
 
 Error EditorExportPlatformWeb::_extract_template(const String &p_template, const String &p_dir, const String &p_name, bool pwa) {
 	Ref<FileAccess> io_fa;
@@ -469,6 +545,9 @@ void EditorExportPlatformWeb::get_export_options(List<ExportOption> *r_options) 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "custom_template/debug", PROPERTY_HINT_GLOBAL_FILE, "*.zip"), ""));
 	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "custom_template/release", PROPERTY_HINT_GLOBAL_FILE, "*.zip"), ""));
 
+	r_options->push_back(ExportOption(PropertyInfo(Variant::INT, "async/initial_load_mode", PROPERTY_HINT_ENUM, "Load Everything,Only Load Main Scene Dependencies And Specified Resources"), 0, true));
+	r_options->push_back(ExportOption(PropertyInfo(Variant::CALLABLE, "async/initial_load_edit_button", PROPERTY_HINT_TOOL_BUTTON, vformat("%s,Edit", TTRC("Edit Initial Load Resources")), PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_NO_INSTANCE_STATE), callable_mp(const_cast<EditorExportPlatformWeb *>(this), &EditorExportPlatformWeb::_open_async_dialog)));
+
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "variant/extensions_support"), false)); // GDExtension support.
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "variant/thread_support"), false, true)); // Thread support (i.e. run with or without COEP/COOP headers).
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "vram_texture_compression/for_desktop"), true)); // S3TC
@@ -495,6 +574,10 @@ void EditorExportPlatformWeb::get_export_options(List<ExportOption> *r_options) 
 }
 
 bool EditorExportPlatformWeb::get_export_option_visibility(const EditorExportPreset *p_preset, const String &p_option) const {
+	if (p_option == "async/initial_load_edit_button") {
+		return (int)p_preset->get("async/initial_load_mode") != ASYNC_LOAD_SETTING_LOAD_EVERYTHING;
+	}
+
 	bool advanced_options_enabled = p_preset->are_advanced_options_enabled();
 	if (p_option == "custom_template/debug" || p_option == "custom_template/release") {
 		return advanced_options_enabled;
@@ -1192,6 +1275,13 @@ Error EditorExportPlatformWeb::_rename_and_store_file_in_async_pck(void *p_userd
 	export_data->pack_data.file_ofs.push_back(saved_data);
 
 	return OK;
+}
+
+void EditorExportPlatformWeb::_open_async_dialog() {
+	if (async_dialog == nullptr) {
+		async_dialog = memnew(AsyncDialog(this));
+	}
+	async_dialog->popup_exclusive_centered(EditorNode::get_singleton()->get_project_export_dialog());
 }
 
 Ref<Texture2D> EditorExportPlatformWeb::get_run_icon() const {
