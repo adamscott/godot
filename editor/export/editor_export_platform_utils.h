@@ -30,24 +30,50 @@
 
 #pragma once
 
+#include "core/io/dir_access.h"
+#include "core/io/file_access.h"
 #include "core/string/ustring.h"
 #include "core/variant/variant.h"
-#include "editor/export/editor_export_platform.h"
+#include "editor/export/editor_export_platform_data.h"
+#include "editor/export/editor_export_preset.h"
 
-#include <cstdint>
+class EditorExportPlatformUtils {
+public:
+	static int get_pad(int p_alignment, int p_n);
 
-Error store_temp_file(const String &p_simplified_path, const PackedByteArray &p_data, const PackedStringArray &p_encoded_included_filters, const PackedStringArray &p_encoded_excluded_filters, const Vector<uint8_t> &p_key, uint64_t p_seed, PackedByteArray &r_encoded_data, EditorExportPlatform::SavedData &r_saved_data);
+	static Variant get_project_setting(const Ref<EditorExportPreset> &p_preset, const StringName &p_name);
 
-// Utility method used to create a directory.
-Error create_directory(const String &p_dir);
+	static bool encrypt_and_store_directory(Ref<FileAccess> p_fd, EditorExportPlatformData::PackData &p_pack_data, const Vector<uint8_t> &p_key, uint64_t p_seed, uint64_t p_file_base);
+	static Error encrypt_and_store_data(Ref<FileAccess> p_fd, const String &p_path, const Vector<uint8_t> &p_data, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const Vector<uint8_t> &p_key, uint64_t p_seed, bool &r_encrypt);
 
-// Writes p_data into a file at p_path, creating directories if necessary.
-// Note: this will overwrite the file at p_path if it already exists.
-Error store_file_at_path(const String &p_path, const PackedByteArray &p_data);
+	static Error store_temp_file(const String &p_simplified_path, const PackedByteArray &p_data, const PackedStringArray &p_encoded_included_filters, const PackedStringArray &p_encoded_excluded_filters, const Vector<uint8_t> &p_key, uint64_t p_seed, PackedByteArray &r_encoded_data, EditorExportPlatformData::SavedData &r_saved_data);
 
-// Writes string p_data into a file at p_path, creating directories if necessary.
-// Note: this will overwrite the file at p_path if it already exists.
-Error store_string_at_path(const String &p_path, const String &p_data);
+	// Utility method used to create a directory.
+	static Error create_directory(const String &p_dir);
 
-// Converts script encryption key to bytes.
-PackedByteArray convert_string_encryption_key_to_bytes(const String &p_encryption_key);
+	// Writes p_data into a file at p_path, creating directories if necessary.
+	// Note: this will overwrite the file at p_path if it already exists.
+	static Error store_file_at_path(const String &p_path, const PackedByteArray &p_data);
+
+	// Writes string p_data into a file at p_path, creating directories if necessary.
+	// Note: this will overwrite the file at p_path if it already exists.
+	static Error store_string_at_path(const String &p_path, const String &p_data);
+
+	// Converts script encryption key to bytes.
+	static PackedByteArray convert_string_encryption_key_to_bytes(const String &p_encryption_key);
+
+	// Finds resource files from a file system directory.
+	static void export_find_resources(EditorFileSystemDirectory *p_dir, HashSet<String> &p_paths);
+
+	//
+	static void export_find_customized_resources(const Ref<EditorExportPreset> &p_preset, EditorFileSystemDirectory *p_dir, EditorExportPreset::FileExportMode p_mode, HashSet<String> &p_paths);
+
+	//
+	static void export_find_dependencies(const String &p_path, HashSet<String> &p_paths);
+
+	static void export_find_files(const Ref<EditorExportPreset> &p_preset, HashSet<String> &p_paths);
+
+	static void edit_files_with_filter(Ref<DirAccess> &da, const Vector<String> &p_filters, HashSet<String> &r_list, bool exclude);
+
+	static void edit_filter_list(HashSet<String> &r_list, const String &p_filter, bool exclude);
+};

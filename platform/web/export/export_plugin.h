@@ -109,7 +109,7 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		};
 
 		HashMap<String, FileDependencies> dependencies;
-		EditorExportPlatform::PackData pack_data;
+		EditorExportPlatformData::PackData pack_data;
 		String assets_directory;
 		String libraries_directory;
 		bool debug;
@@ -262,5 +262,4 @@ public:
 	String get_debug_protocol() const override { return "ws://"; }
 
 	virtual void initialize() override;
-	~EditorExportPlatformWeb();
 };
