@@ -36,7 +36,9 @@
 #include "core/io/file_access_encrypted.h"
 #include "core/io/json.h"
 #include "core/io/resource_loader.h"
+#include "core/io/resource_uid.h"
 #include "core/variant/dictionary.h"
+#include "editor/export/editor_export_preset.h"
 #include "logo_svg.gen.h"
 #include "run_icon_svg.gen.h"
 
@@ -46,16 +48,21 @@
 #include "editor/export/editor_export.h"
 #include "editor/export/editor_export_platform_utils.h"
 #include "editor/export/project_export.h"
+#include "editor/file_system/editor_file_system.h"
 #include "editor/import/resource_importer_texture_settings.h"
 #include "editor/settings/editor_settings.h"
 #include "editor/themes/editor_scale.h"
+#include "scene/gui/margin_container.h"
 #include "scene/gui/tab_container.h"
 #include "scene/gui/tree.h"
+#include "scene/main/node.h"
 #include "scene/main/window.h"
 #include "scene/resources/image_texture.h"
+#include "scene/scene_string_names.h"
 
 #include "modules/modules_enabled.gen.h" // For mono.
 #include "modules/svg/image_loader_svg.h"
+
 #include <functional>
 
 /**
@@ -162,6 +169,15 @@ Error EditorExportPlatformWeb::ExportData::add_dependencies(const String &p_reso
 void EditorExportPlatformWeb::AsyncDialog::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_ENTER_TREE: {
+		} break;
+
+		case NOTIFICATION_VISIBILITY_CHANGED: {
+			if (!is_visible()) {
+				return;
+			}
+			_update_display();
+			_update_tab_main_scene();
+			_update_tab_select_resources();
 			_update_theme();
 		} break;
 
@@ -172,48 +188,218 @@ void EditorExportPlatformWeb::AsyncDialog::_notification(int p_what) {
 }
 
 void EditorExportPlatformWeb::AsyncDialog::_on_tab_container_tab_changed(int p_tab) {
+	ERR_FAIL_INDEX(p_tab, TAB_ID_MAX);
+	TabId tabId = (TabId)p_tab;
+
+	switch (tabId) {
+		case TAB_ID_MAIN_SCENE: {
+			// _update_tab_main_scene();
+		} break;
+
+		case TAB_ID_SELECT_RESOURCES: {
+			// _update_tab_select_resources();
+		} break;
+
+		default: {
+			ERR_FAIL();
+		} break;
+	}
 }
 
 void EditorExportPlatformWeb::AsyncDialog::_update_display() {
-	get_ok_button()->show();
+	_on_tab_container_tab_changed(tab_container->get_current_tab());
+}
+
+void EditorExportPlatformWeb::AsyncDialog::_update_tab_main_scene() {
+	main_scene_tree->clear();
+	TreeItem *root = main_scene_tree->create_item();
+
+	_fill_tree(EditorFileSystem::get_singleton()->get_filesystem(), main_scene_tree, root, true);
+
+	String main_scene_path = export_platform->_get_main_scene_path().simplify_path();
+	if (main_scene_path.is_empty()) {
+		return;
+	}
+
+	LocalVector<String> dependencies;
+	auto add_dependency = [&dependencies](const String &p_dependency) -> void {
+		String new_dependency_path = p_dependency;
+		if (new_dependency_path.contains("::")) {
+			new_dependency_path = new_dependency_path.get_slice("::", 2);
+		}
+		if (new_dependency_path.begins_with("uid://")) {
+			new_dependency_path = ResourceUID::get_singleton()->uid_to_path(new_dependency_path);
+		}
+		if (dependencies.has(new_dependency_path)) {
+			return;
+		}
+		dependencies.push_back(new_dependency_path);
+		print_line(vformat("EditorExportPlatformWeb::AsyncDialog::_update_tab_main_scene() adding dep: %s", new_dependency_path));
+	};
+	add_dependency(main_scene_path);
+
+	print_line(vformat("EditorExportPlatformWeb::AsyncDialog::_update_tab_main_scene() adding dep: %s", main_scene_path));
+	for (int32_t i = 0; i < (int32_t)dependencies.size(); i++) {
+		const String &dependency = dependencies[i];
+		List<String> new_dependencies;
+		ResourceLoader::get_dependencies(dependency, &new_dependencies);
+
+		for (const String &new_dependency : new_dependencies) {
+			add_dependency(new_dependency);
+		}
+	}
+
+	std::function<void(TreeItem *)> loop_tree_items;
+	loop_tree_items = [&loop_tree_items, &dependencies](TreeItem *p_tree_item) -> void {
+		TypedArray<TreeItem *> items = p_tree_item->get_children();
+		for (int i = 0; i < items.size(); i++) {
+			TreeItem *item = Object::cast_to<TreeItem>(items[i]);
+			String path = item->get_metadata(0);
+			if (dependencies.has(path)) {
+				item->set_checked(0, true);
+			}
+			if (p_tree_item->get_child_count() > 0) {
+				loop_tree_items(item);
+			}
+		}
+	};
+	if (root->get_child_count() > 0) {
+		loop_tree_items(root);
+	}
+}
+
+void EditorExportPlatformWeb::AsyncDialog::_update_tab_select_resources() {
+	select_resources_tree->clear();
+	TreeItem *root = select_resources_tree->create_item();
+
+	_fill_tree(EditorFileSystem::get_singleton()->get_filesystem(), select_resources_tree, root, false);
 }
 
 void EditorExportPlatformWeb::AsyncDialog::_update_theme() {
+}
+
+bool EditorExportPlatformWeb::AsyncDialog::_fill_tree(EditorFileSystemDirectory *p_dir, Tree *p_tree, TreeItem *p_tree_item, bool p_read_only) {
+	p_tree_item->set_cell_mode(0, TreeItem::CELL_MODE_CHECK);
+	p_tree_item->set_icon(0, get_theme_icon(SNAME("folder"), SNAME("FileDialog")));
+	p_tree_item->set_text(0, p_dir->get_name() + "/");
+	p_tree_item->set_editable(0, !p_read_only);
+	p_tree_item->set_metadata(0, p_dir->get_path());
+
+	Ref<EditorExportPreset> current_preset = EditorNode::get_singleton()->get_project_export_dialog()->get_current_preset();
+	ERR_FAIL_COND_V(current_preset.is_null(), false);
+
+	bool used = false;
+	for (int i = 0; i < p_dir->get_subdir_count(); i++) {
+		TreeItem *subdir = p_tree->create_item(p_tree_item);
+		if (_fill_tree(p_dir->get_subdir(i), p_tree, subdir, p_read_only)) {
+			used = true;
+		} else {
+			memdelete(subdir);
+		}
+	}
+
+	for (int i = 0; i < p_dir->get_file_count(); i++) {
+		String type = p_dir->get_file_type(i);
+
+		TreeItem *file = p_tree->create_item(p_tree_item);
+		file->set_cell_mode(0, TreeItem::CELL_MODE_CHECK);
+		file->set_text(0, p_dir->get_file(i));
+
+		String path = p_dir->get_file_path(i);
+
+		file->set_icon(0, EditorNode::get_singleton()->get_class_icon(type));
+		file->set_editable(0, !p_read_only);
+		file->set_metadata(0, path);
+
+		file->set_checked(0, current_preset->has_export_file(path));
+		file->propagate_check(0);
+
+		used = true;
+	}
+
+	return used;
 }
 
 EditorExportPlatformWeb::AsyncDialog::AsyncDialog(EditorExportPlatformWeb *p_export_platform) :
 		export_platform(p_export_platform) {
 	print_line(vformat("export_platform: 0x%x", (uint64_t)export_platform));
 
+	set_title(TTRC("Edit Initial Load Resources"));
+	set_flag(FLAG_MAXIMIZE_DISABLED, false);
 	set_clamp_to_embedder(true);
+	set_min_size(Size2i(500 * EDSCALE, 500 * EDSCALE));
 
 	tab_container = memnew(TabContainer);
-	add_child(tab_container);
 	tab_container->set_use_hidden_tabs_for_min_size(true);
 	tab_container->set_theme_type_variation("TabContainerOdd");
 	tab_container->connect("tab_changed", callable_mp(this, &EditorExportPlatformWeb::AsyncDialog::_on_tab_container_tab_changed));
+	tab_container->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+	tab_container->set_v_size_flags(Control::SIZE_EXPAND_FILL);
+	add_child(tab_container);
 
 	// Main scene dependency tab.
 	VBoxContainer *main_scene_container = memnew(VBoxContainer);
+	main_scene_container->set_name(TTRC("Main Scene"));
+	main_scene_container->set_v_size_flags(Control::SIZE_EXPAND_FILL);
 	tab_container->add_child(main_scene_container);
-	main_scene_container->set_name(TTRC("Main Scene Dependencies"));
-
-	main_scene_tree = memnew(Tree);
-	main_scene_container->add_child(main_scene_tree);
-	main_scene_tree->set_select_mode(Tree::SelectMode::SELECT_ROW);
 
 	Label *main_scene_context_label = memnew(Label);
-	main_scene_container->add_child(main_scene_context_label);
 	main_scene_context_label->set_text(TTRC("This list contains the currently detected dependencies of the main scene of the project. These resources will be loaded before launching the main scene."));
+	main_scene_context_label->set_focus_mode(Control::FOCUS_ACCESSIBILITY);
+	main_scene_context_label->set_autowrap_mode(TextServer::AUTOWRAP_WORD_SMART);
+	main_scene_context_label->set_custom_minimum_size(Size2(300, 1) * EDSCALE);
+	main_scene_container->add_child(main_scene_context_label);
+
+	MarginContainer *main_scene_tree_margin_container = memnew(MarginContainer);
+	main_scene_tree_margin_container->add_theme_constant_override("margin_top", 10 * EDSCALE);
+	main_scene_tree_margin_container->add_theme_constant_override("margin_left", 10 * EDSCALE);
+	main_scene_tree_margin_container->add_theme_constant_override("margin_right", 10 * EDSCALE);
+	main_scene_tree_margin_container->add_theme_constant_override("margin_bottom", 10 * EDSCALE);
+	main_scene_tree_margin_container->set_v_size_flags(Control::SIZE_EXPAND_FILL);
+	main_scene_container->add_child(main_scene_tree_margin_container);
+
+	main_scene_tree = memnew(Tree);
+	main_scene_tree->set_auto_translate_mode(AUTO_TRANSLATE_MODE_DISABLED);
+	main_scene_tree->set_hide_root(true);
+	main_scene_tree->set_select_mode(Tree::SelectMode::SELECT_ROW);
+	main_scene_tree->set_allow_reselect(true);
+	main_scene_tree->set_custom_minimum_size(Size2(1, 75 * EDSCALE));
+	main_scene_tree->set_v_size_flags(Control::SIZE_EXPAND_FILL);
+	main_scene_tree->set_columns(1);
+	main_scene_tree_margin_container->add_child(main_scene_tree);
 
 	// Select resources tab.
 	VBoxContainer *select_resources_container = memnew(VBoxContainer);
-	tab_container->add_child(select_resources_container);
 	select_resources_container->set_name(TTRC("Additional Resources To Load"));
+	select_resources_container->set_v_size_flags(Control::SIZE_EXPAND_FILL);
+	tab_container->add_child(select_resources_container);
+
+	Label *select_resources_context_label = memnew(Label);
+	select_resources_context_label->set_text(TTRC("Selected items of this list will force those resources to be preloaded before the game launch even if they don't depend on the main scene."));
+	select_resources_context_label->set_focus_mode(Control::FOCUS_ACCESSIBILITY);
+	select_resources_context_label->set_autowrap_mode(TextServer::AUTOWRAP_WORD_SMART);
+	select_resources_context_label->set_custom_minimum_size(Size2(300, 1) * EDSCALE);
+	select_resources_container->add_child(select_resources_context_label);
+
+	MarginContainer *select_resources_tree_margin_container = memnew(MarginContainer);
+	select_resources_tree_margin_container->add_theme_constant_override("margin_top", 10 * EDSCALE);
+	select_resources_tree_margin_container->add_theme_constant_override("margin_left", 10 * EDSCALE);
+	select_resources_tree_margin_container->add_theme_constant_override("margin_right", 10 * EDSCALE);
+	select_resources_tree_margin_container->add_theme_constant_override("margin_bottom", 10 * EDSCALE);
+	select_resources_tree_margin_container->set_v_size_flags(Control::SIZE_EXPAND_FILL);
+	select_resources_container->add_child(select_resources_tree_margin_container);
 
 	select_resources_tree = memnew(Tree);
-	select_resources_container->add_child(select_resources_tree);
+	select_resources_tree->set_auto_translate_mode(AUTO_TRANSLATE_MODE_DISABLED);
+	select_resources_tree->set_hide_root(true);
 	select_resources_tree->set_select_mode(Tree::SelectMode::SELECT_ROW);
+	select_resources_tree->set_allow_reselect(true);
+	select_resources_tree->set_custom_minimum_size(Size2(1, 75 * EDSCALE));
+	select_resources_tree->set_v_size_flags(Control::SIZE_EXPAND_FILL);
+	select_resources_tree->set_columns(2);
+	select_resources_tree->set_column_expand(1, false);
+	select_resources_tree->set_column_custom_minimum_width(1, 50 * EDSCALE);
+	select_resources_tree_margin_container->add_child(select_resources_tree);
 }
 
 /**
@@ -612,9 +798,10 @@ bool EditorExportPlatformWeb::has_valid_export_configuration(const Ref<EditorExp
 
 	String err;
 
-	String main_scene_path = p_preset->get_project_setting("application/run/main_scene");
-	if (main_scene_path.is_empty()) {
-		err += TTR("No main scene has been set. The main scene must be set for the web platform in order to preload the minimal files.") + "\n";
+	if ((int)p_preset->get("async/initial_load_mode") != AsyncLoadSetting::ASYNC_LOAD_SETTING_LOAD_EVERYTHING) {
+		if (_get_main_scene_path().is_empty()) {
+			err += TTR("No main scene has been set. The main scene must be set for the web platform in order to preload the minimal files.") + "\n";
+		}
 	}
 
 	bool valid = false;
@@ -1280,8 +1467,29 @@ Error EditorExportPlatformWeb::_rename_and_store_file_in_async_pck(void *p_userd
 void EditorExportPlatformWeb::_open_async_dialog() {
 	if (async_dialog == nullptr) {
 		async_dialog = memnew(AsyncDialog(this));
+		async_dialog->connect("visibility_changed", callable_mp(this, &EditorExportPlatformWeb::_on_async_dialog_visibility_changed));
 	}
+	print_line(vformat("async_dialog->get_size(): %s", async_dialog->get_size()));
 	async_dialog->popup_exclusive_centered(EditorNode::get_singleton()->get_project_export_dialog());
+	print_line(vformat("async_dialog->get_size(): %s", async_dialog->get_size()));
+}
+
+void EditorExportPlatformWeb::_on_async_dialog_visibility_changed() {
+	ERR_FAIL_NULL(async_dialog);
+	if (async_dialog->is_visible()) {
+		return;
+	}
+	async_dialog->disconnect("visibility_changed", callable_mp(this, &EditorExportPlatformWeb::_on_async_dialog_visibility_changed));
+	async_dialog->queue_free();
+	async_dialog = nullptr;
+}
+
+String EditorExportPlatformWeb::_get_main_scene_path() const {
+	return ProjectSettings::get_singleton()->get_setting(
+			"application/run/main_scene.web",
+			ProjectSettings::get_singleton()->get_setting(
+					"application/run/main_scene",
+					""));
 }
 
 Ref<Texture2D> EditorExportPlatformWeb::get_run_icon() const {
@@ -1289,26 +1497,28 @@ Ref<Texture2D> EditorExportPlatformWeb::get_run_icon() const {
 }
 
 void EditorExportPlatformWeb::initialize() {
-	if (EditorNode::get_singleton()) {
-		server.instantiate();
+	if (!EditorNode::get_singleton()) {
+		return;
+	}
 
-		Ref<Image> img = memnew(Image);
-		const bool upsample = !Math::is_equal_approx(Math::round(EDSCALE), EDSCALE);
+	server.instantiate();
 
-		ImageLoaderSVG::create_image_from_string(img, _web_logo_svg, EDSCALE, upsample, false);
-		logo = ImageTexture::create_from_image(img);
+	Ref<Image> img = memnew(Image);
+	const bool upsample = !Math::is_equal_approx(Math::round(EDSCALE), EDSCALE);
 
-		ImageLoaderSVG::create_image_from_string(img, _web_run_icon_svg, EDSCALE, upsample, false);
-		run_icon = ImageTexture::create_from_image(img);
+	ImageLoaderSVG::create_image_from_string(img, _web_logo_svg, EDSCALE, upsample, false);
+	logo = ImageTexture::create_from_image(img);
 
-		Ref<Theme> theme = EditorNode::get_singleton()->get_editor_theme();
-		if (theme.is_valid()) {
-			stop_icon = theme->get_icon(SNAME("Stop"), EditorStringName(EditorIcons));
-			restart_icon = theme->get_icon(SNAME("Reload"), EditorStringName(EditorIcons));
-		} else {
-			stop_icon.instantiate();
-			restart_icon.instantiate();
-		}
+	ImageLoaderSVG::create_image_from_string(img, _web_run_icon_svg, EDSCALE, upsample, false);
+	run_icon = ImageTexture::create_from_image(img);
+
+	Ref<Theme> theme = EditorNode::get_singleton()->get_editor_theme();
+	if (theme.is_valid()) {
+		stop_icon = theme->get_icon(SNAME("Stop"), EditorStringName(EditorIcons));
+		restart_icon = theme->get_icon(SNAME("Reload"), EditorStringName(EditorIcons));
+	} else {
+		stop_icon.instantiate();
+		restart_icon.instantiate();
 	}
 }
 
