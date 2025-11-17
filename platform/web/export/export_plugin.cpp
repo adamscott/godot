@@ -53,10 +53,9 @@
 #include "modules/svg/image_loader_svg.h"
 #include <functional>
 
-Error EditorExportPlatformWeb::ExportData::FileDependencies::write_deps_file(const String &p_path) {
+Error EditorExportPlatformWeb::ExportData::FileDependencies::write_deps_json_file(const String &p_path) {
 	ERR_FAIL_COND_V(p_path.is_empty(), ERR_INVALID_PARAMETER);
-	Ref<ConfigFile> deps_file;
-	deps_file.instantiate();
+	Dictionary deps_file;
 
 	LocalVector<FileDependencies *> dependencies;
 	flatten_dependencies(dependencies);
@@ -77,10 +76,18 @@ Error EditorExportPlatformWeb::ExportData::FileDependencies::write_deps_file(con
 		resources.set(dependency->remap_path, remap_path_entry);
 		total_size += dependency->remap_size;
 	}
-	deps_file->set_value("dependencies", "resources", resources);
-	deps_file->set_value("dependencies", "total_size", total_size);
+	deps_file.set("resources", resources);
+	deps_file.set("total_size", total_size);
 
-	return deps_file->save(p_path);
+	{
+		Ref<FileAccess> deps_file_access = FileAccess::open(p_path, FileAccess::WRITE);
+		if (deps_file_access.is_null()) {
+			return ERR_CANT_OPEN;
+		}
+		deps_file_access->store_string(JSON::stringify(deps_file, String(" ").repeat(2)));
+	}
+
+	return OK;
 }
 
 Error EditorExportPlatformWeb::ExportData::add_dependencies(const String &p_resource_path) {
@@ -122,9 +129,7 @@ Error EditorExportPlatformWeb::ExportData::add_dependencies(const String &p_reso
 		dependencies.get(resource_path).dependencies.push_back(&dependencies.get(simplified_resource_dependency));
 	}
 
-	dependencies.get(resource_path).write_deps_file(res_to_global(resource_path + ".deps"));
-
-	return OK;
+	return dependencies.get(resource_path).write_deps_json_file(res_to_global(resource_path + ".deps.json"));
 }
 
 Error EditorExportPlatformWeb::_extract_template(const String &p_template, const String &p_dir, const String &p_name, bool pwa) {
@@ -630,7 +635,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 	}
 
 	PackedByteArray encoded_data;
-	error = _generate_sparse_pck_metadata(p_preset, export_data.pack_data, encoded_data);
+	error = _generate_sparse_pck_metadata(p_preset, export_data.pack_data, encoded_data, true);
 	if (error != OK) {
 		add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not encode contents of async pck: \"%s\"."), pck_path));
 		return error;
@@ -698,16 +703,20 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 	String main_scene_deps_json;
 	{
 		String main_scene_path = export_data.res_to_global(get_project_setting(p_preset, "application/run/main_scene"));
-		Ref<ConfigFile> main_scene_deps;
-		main_scene_deps.instantiate();
-		error = main_scene_deps->load(main_scene_path + ".deps");
-		ERR_FAIL_COND_V(error != OK, ERR_CANT_OPEN);
-		Dictionary deps_data;
-		Dictionary resources = main_scene_deps->get_value("dependencies", "resources");
+
+		Dictionary main_scene_deps;
+		{
+			Ref<FileAccess> main_scene_deps_json_file = FileAccess::open(main_scene_path + ".deps.json", FileAccess::READ);
+			ERR_FAIL_COND_V(main_scene_deps_json_file.is_null(), FileAccess::get_open_error());
+			main_scene_deps = JSON::parse_string(main_scene_deps_json_file->get_as_text());
+		}
+
+		Dictionary resources = main_scene_deps.get("resources", Dictionary());
+		int added_size = 0;
 
 		{
 			std::function<Error(String)> loop_asset_dir;
-			loop_asset_dir = [&loop_asset_dir, &export_data, &resources](const String &p_path) -> Error {
+			loop_asset_dir = [&loop_asset_dir, &export_data, &resources, &added_size](const String &p_path) -> Error {
 				String path = p_path.simplify_path();
 				Ref<DirAccess> dir_access = DirAccess::open(path);
 				dir_access->list_dir_begin();
@@ -731,10 +740,12 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 						String file_path = export_data.global_to_res(path.simplify_path().path_join(next));
 						if (!resources.has(file_path)) {
 							Dictionary file_data;
-							file_data.set("size", FileAccess::get_size(export_data.res_to_global(file_path)));
+							int file_size = FileAccess::get_size(export_data.res_to_global(file_path));
+							file_data.set("size", file_size);
 							file_data.set("md5", export_data.res_to_global(file_path.md5_text()));
 							file_data.set("sha256", export_data.res_to_global(file_path.sha256_text()));
 							resources.set(file_path, file_data);
+							added_size += file_size;
 						}
 					}
 					next = dir_access->get_next();
@@ -747,9 +758,13 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 			loop_asset_dir(ProjectSettings::get_singleton()->globalize_path(export_data.assets_directory));
 		}
 
-		deps_data.set("total_size", main_scene_deps->get_value("dependencies", "total_size"));
-		deps_data.set("resources", resources);
-		main_scene_deps_json = JSON::stringify(deps_data);
+		main_scene_deps.set("total_size", int64_t(main_scene_deps.get("total_size", 0)) + added_size);
+		main_scene_deps_json = JSON::stringify(main_scene_deps);
+		{
+			Ref<FileAccess> main_scene_deps_json_file = FileAccess::open(main_scene_path + ".deps.json", FileAccess::WRITE);
+			ERR_FAIL_COND_V(main_scene_deps_json_file.is_null(), FileAccess::get_open_error());
+			main_scene_deps_json_file->store_string(main_scene_deps_json);
+		}
 	}
 
 	// Extract templates.

@@ -960,7 +960,7 @@ String EditorExportPlatform::_get_script_encryption_key(const Ref<EditorExportPr
 	return p_preset->get_script_encryption_key().to_lower();
 }
 
-Error EditorExportPlatform::_generate_sparse_pck_metadata(const Ref<EditorExportPreset> &p_preset, PackData &p_pack_data, Vector<uint8_t> &r_data) {
+Error EditorExportPlatform::_generate_sparse_pck_metadata(const Ref<EditorExportPreset> &p_preset, PackData &p_pack_data, Vector<uint8_t> &r_data, bool p_async) {
 	Error err;
 	Ref<FileAccess> ftmp = FileAccess::create_temp(FileAccess::WRITE_READ, "export_index", "tmp", false, &err);
 	if (err != OK) {
@@ -970,7 +970,7 @@ Error EditorExportPlatform::_generate_sparse_pck_metadata(const Ref<EditorExport
 	int64_t pck_start_pos = ftmp->get_position();
 	uint64_t file_base_ofs = 0;
 	uint64_t dir_base_ofs = 0;
-	EditorExportPlatform::_store_header(ftmp, p_preset->get_enc_pck() && p_preset->get_enc_directory(), true, file_base_ofs, dir_base_ofs);
+	EditorExportPlatform::_store_header(ftmp, p_preset->get_enc_pck() && p_preset->get_enc_directory(), true, p_async, file_base_ofs, dir_base_ofs);
 
 	// Write directory.
 	uint64_t dir_offset = ftmp->get_position();
@@ -1975,7 +1975,7 @@ Dictionary EditorExportPlatform::_save_zip_patch(const Ref<EditorExportPreset> &
 	return ret;
 }
 
-bool EditorExportPlatform::_store_header(Ref<FileAccess> p_fd, bool p_enc, bool p_sparse, uint64_t &r_file_base_ofs, uint64_t &r_dir_base_ofs) {
+bool EditorExportPlatform::_store_header(Ref<FileAccess> p_fd, bool p_enc, bool p_sparse, bool p_async, uint64_t &r_file_base_ofs, uint64_t &r_dir_base_ofs) {
 	p_fd->store_32(PACK_HEADER_MAGIC);
 	p_fd->store_32(PACK_FORMAT_VERSION);
 	p_fd->store_32(GODOT_VERSION_MAJOR);
@@ -1988,6 +1988,9 @@ bool EditorExportPlatform::_store_header(Ref<FileAccess> p_fd, bool p_enc, bool 
 	}
 	if (p_sparse) {
 		pack_flags |= PACK_SPARSE_BUNDLE;
+	}
+	if (p_async) {
+		pack_flags |= PACK_ASYNC;
 	}
 	p_fd->store_32(pack_flags); // Flags.
 
@@ -2120,7 +2123,7 @@ Error EditorExportPlatform::save_pack(const Ref<EditorExportPreset> &p_preset, b
 	uint64_t file_base_ofs = 0;
 	uint64_t dir_base_ofs = 0;
 
-	_store_header(f, p_preset->get_enc_pck() && p_preset->get_enc_directory(), false, file_base_ofs, dir_base_ofs);
+	_store_header(f, p_preset->get_enc_pck() && p_preset->get_enc_directory(), false, false, file_base_ofs, dir_base_ofs);
 
 	// Align for first file.
 	int file_padding = _get_pad(PCK_PADDING, f->get_position());

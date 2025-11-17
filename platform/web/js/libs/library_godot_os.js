@@ -221,8 +221,6 @@ const GodotFS = {
 				}
 				FS.mkdirTree(dir);
 			}
-
-			GodotRuntime.print(`FS.stat(${dir}):`, FS.stat(dir));
 			FS.writeFile(path, new Uint8Array(buffer));
 		},
 	},
@@ -271,52 +269,49 @@ const GodotOS = {
 			});
 		},
 
-		loadAsyncFile: function (pPckDir, pPath) {
-			GodotRuntime.print(`loading async "${pPath}" of "${pPckDir}"`);
-			let path = pPath;
-			if (path.startsWith('res://')) {
-				path = path.substring('res://'.length);
+		getAsyncFilePckDir: function (pPckDir) {
+			let pckDir = pPckDir;
+			if (pckDir.endsWith('/')) {
+				pckDir = pckDir.substring(0, pckDir.length - 1);
 			}
-
-			(async function () {
-				const remapResponse = await fetch(`${pPckDir}/${path}.remap`);
-				if (!remapResponse.ok) {
-					GodotRuntime.error(`couldn't load remap file "${pPckDir}/${path}.remap"`);
-					return;
-				}
-
-				const textDecoder = new TextDecoder();
-				const remapResponseData = await remapResponse.bytes();
-				const remapResponseString = textDecoder.decode(remapResponseData);
-				const configFile = GodotRuntime.getConfigFileFromString(remapResponseString);
-
-				GodotFS.copy_to_fs(`${path}.remap`, remapResponseData);
-				const promises = [
-					GodotOS.installFile(pPckDir, configFile['remap']['path']),
-				];
-				for (const file of configFile['dependencies']['files']) {
-					promises.push(GodotOS.loadAsyncFile(pPckDir, file['fallback_path']));
-				}
-				await Promise.allSettled(promises);
-			})().catch((err) => {
-				GodotRuntime.error('load file err', err);
-			});
+			if (pckDir.endsWith('.asyncpck')) {
+				pckDir = `${pckDir}/assets`;
+			}
+			return pckDir;
 		},
 
-		installFile: async function (pPckDir, pPath) {
-			GodotRuntime.print(`installing "${pPath}" of "${pPckDir}"`);
+		getAsyncFilePath: function (pPath) {
 			let path = pPath;
 			if (path.startsWith('res://')) {
 				path = path.substring('res://'.length);
 			}
+			return path;
+		},
 
-			const fileResponse = await fetch(`${pPckDir}/${path}`);
+		loadAsyncFile: async function (pPckDir, pPath) {
+			const depsJsonResponse = await fetch(`${pPckDir}/${pPath}.deps.json`);
+			if (!depsJsonResponse.ok) {
+				GodotRuntime.error(`couldn't load deps file "${pPckDir}/${pPath}.deps.json"`);
+				return;
+			}
+
+			const remapResponseJson = await depsJsonResponse.json();
+			await Promise.allSettled(
+				Object.keys(remapResponseJson['resources']).map(async (filePath) => {
+					const asyncFilePath = GodotOS.getAsyncFilePath(filePath);
+					await GodotOS.installAsyncFile(pPckDir, asyncFilePath);
+				})
+			);
+		},
+
+		installAsyncFile: async function (pPckDir, pPath) {
+			const fileResponse = await fetch(`${pPckDir}/${pPath}`);
 			if (!fileResponse.ok) {
-				throw new Error(`couldn't load file "${pPckDir}/${path}"`);
+				throw new Error(`couldn't load file "${pPckDir}/${pPath}"`);
 			}
 
 			const fileResponseBuffer = await fileResponse.bytes();
-			GodotFS.copy_to_fs(path, fileResponseBuffer);
+			GodotFS.copy_to_fs(`${pPckDir}/${pPath}`, fileResponseBuffer);
 		},
 	},
 
@@ -374,11 +369,16 @@ const GodotOS = {
 
 	godot_js_os_async_load__proxy: 'sync',
 	godot_js_os_async_load__sig: 'ipp',
-	godot_js_os_async_load: function (p_pck_dir_ptr, p_path_ptr) {
-		const pck_dir = GodotRuntime.parseString(p_pck_dir_ptr);
-		const path = GodotRuntime.parseString(p_path_ptr);
-		GodotOS.loadAsyncFile(pck_dir, path);
-		return 1;
+	godot_js_os_async_load: function (pPckDirPtr, pPathPtr) {
+		let pckDir = GodotRuntime.parseString(pPckDirPtr);
+		pckDir = GodotOS.getAsyncFilePckDir(pckDir);
+		let path = GodotRuntime.parseString(pPathPtr);
+		path = GodotOS.getAsyncFilePath(path);
+
+		GodotOS.loadAsyncFile(pckDir, path).catch((err) => {
+			GodotRuntime.error(`GodotOS.loadAsyncFile("${pckDir}", "${path}")`, err);
+		});
+		return 0;
 	},
 
 	godot_js_os_execute__proxy: 'sync',
