@@ -43,6 +43,7 @@
 #include "editor/editor_string_names.h"
 #include "editor/export/editor_export_platform.h"
 #include "main/splash.gen.h"
+#include "scene/gui/dialogs.h"
 
 class ImageTexture;
 
@@ -53,6 +54,11 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		REMOTE_DEBUG_STATE_UNAVAILABLE,
 		REMOTE_DEBUG_STATE_AVAILABLE,
 		REMOTE_DEBUG_STATE_SERVING,
+	};
+
+	enum AsyncLoadSetting {
+		ASYNC_LOAD_SETTING_LOAD_EVERYTHING = 0,
+		ASYNC_LOAD_SETTING_ONLY_LOAD_MAIN_SCENE_DEPENDENCIES_AND_SPECIFIED_RESOURCES = 1,
 	};
 
 	struct ExportData {
@@ -117,6 +123,28 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 			return "res://" + p_global_path.trim_prefix(assets_directory.trim_suffix("/") + "/");
 		}
 	};
+
+	class AsyncDialog : public ConfirmationDialog {
+	private:
+		EditorExportPlatformWeb *export_platform = nullptr;
+
+		TabContainer *tab_container = nullptr;
+		Tree *main_scene_tree = nullptr;
+		Tree *select_resources_tree = nullptr;
+
+		void _update_display();
+		void _update_theme();
+
+		void _on_tab_container_tab_changed(int p_tab);
+
+	protected:
+		void _notification(int p_what);
+
+	public:
+		AsyncDialog(EditorExportPlatformWeb *p_export_platform);
+	};
+
+	AsyncDialog *async_dialog = nullptr;
 
 	Ref<ImageTexture> logo;
 	Ref<ImageTexture> run_icon;
@@ -183,6 +211,7 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 	Error _stop_server();
 
 	static Error _rename_and_store_file_in_async_pck(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const PackedByteArray &p_key, uint64_t p_seed);
+	void _open_async_dialog();
 
 public:
 	virtual void get_preset_features(const Ref<EditorExportPreset> &p_preset, List<String> *r_features) const override;
