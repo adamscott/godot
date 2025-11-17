@@ -217,11 +217,8 @@ void EditorExportPlatformWeb::AsyncDialog::_update_tab_main_scene() {
 	Ref<EditorExportPreset> current_preset = EditorNode::get_singleton()->get_project_export_dialog()->get_current_preset();
 	HashSet<String> paths;
 
-	if (current_preset->get_export_filter() == EditorExportPreset::EXPORT_ALL_RESOURCES) {
-		EditorExportPlatformUtils::export_find_resources(EditorFileSystem::get_singleton()->get_filesystem(), paths);
-	}
-
-	_fill_tree(EditorFileSystem::get_singleton()->get_filesystem(), main_scene_tree, root, true);
+	EditorExportPlatformUtils::export_find_files(current_preset, paths);
+	_fill_tree(EditorFileSystem::get_singleton()->get_filesystem(), paths, main_scene_tree, root, true);
 
 	String main_scene_path = export_platform->_get_main_scene_path().simplify_path();
 	if (main_scene_path.is_empty()) {
@@ -241,11 +238,9 @@ void EditorExportPlatformWeb::AsyncDialog::_update_tab_main_scene() {
 			return;
 		}
 		dependencies.push_back(new_dependency_path);
-		print_line(vformat("EditorExportPlatformWeb::AsyncDialog::_update_tab_main_scene() adding dep: %s", new_dependency_path));
 	};
 	add_dependency(main_scene_path);
 
-	print_line(vformat("EditorExportPlatformWeb::AsyncDialog::_update_tab_main_scene() adding dep: %s", main_scene_path));
 	for (int32_t i = 0; i < (int32_t)dependencies.size(); i++) {
 		const String &dependency = dependencies[i];
 		List<String> new_dependencies;
@@ -279,13 +274,18 @@ void EditorExportPlatformWeb::AsyncDialog::_update_tab_select_resources() {
 	select_resources_tree->clear();
 	TreeItem *root = select_resources_tree->create_item();
 
-	_fill_tree(EditorFileSystem::get_singleton()->get_filesystem(), select_resources_tree, root, false);
+	Ref<EditorExportPreset> current_preset = EditorNode::get_singleton()->get_project_export_dialog()->get_current_preset();
+	HashSet<String> paths;
+
+	EditorExportPlatformUtils::export_find_files(current_preset, paths);
+
+	_fill_tree(EditorFileSystem::get_singleton()->get_filesystem(), paths, select_resources_tree, root, false);
 }
 
 void EditorExportPlatformWeb::AsyncDialog::_update_theme() {
 }
 
-bool EditorExportPlatformWeb::AsyncDialog::_fill_tree(EditorFileSystemDirectory *p_dir, Tree *p_tree, TreeItem *p_tree_item, bool p_read_only) {
+bool EditorExportPlatformWeb::AsyncDialog::_fill_tree(EditorFileSystemDirectory *p_dir, HashSet<String> &p_paths, Tree *p_tree, TreeItem *p_tree_item, bool p_read_only) {
 	p_tree_item->set_cell_mode(0, TreeItem::CELL_MODE_CHECK);
 	p_tree_item->set_icon(0, get_theme_icon(SNAME("folder"), SNAME("FileDialog")));
 	p_tree_item->set_text(0, p_dir->get_name() + "/");
@@ -298,7 +298,7 @@ bool EditorExportPlatformWeb::AsyncDialog::_fill_tree(EditorFileSystemDirectory 
 	bool used = false;
 	for (int i = 0; i < p_dir->get_subdir_count(); i++) {
 		TreeItem *subdir = p_tree->create_item(p_tree_item);
-		if (_fill_tree(p_dir->get_subdir(i), p_tree, subdir, p_read_only)) {
+		if (_fill_tree(p_dir->get_subdir(i), p_paths, p_tree, subdir, p_read_only)) {
 			used = true;
 		} else {
 			memdelete(subdir);
@@ -306,6 +306,12 @@ bool EditorExportPlatformWeb::AsyncDialog::_fill_tree(EditorFileSystemDirectory 
 	}
 
 	for (int i = 0; i < p_dir->get_file_count(); i++) {
+		String root = "res://" + p_dir->get_name();
+		String file_path = root.path_join(p_dir->get_file(i).simplify_path());
+		if (!p_paths.has(file_path)) {
+			continue;
+		}
+
 		String type = p_dir->get_file_type(i);
 
 		TreeItem *file = p_tree->create_item(p_tree_item);

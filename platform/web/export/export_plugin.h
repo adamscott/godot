@@ -140,7 +140,7 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		Tree *main_scene_tree = nullptr;
 		Tree *select_resources_tree = nullptr;
 
-		bool _fill_tree(EditorFileSystemDirectory *p_dir, Tree *p_tree, TreeItem *p_tree_item, bool p_read_only);
+		bool _fill_tree(EditorFileSystemDirectory *p_dir, HashSet<String> &p_paths, Tree *p_tree, TreeItem *p_tree_item, bool p_read_only);
 
 		void _update_display();
 		void _update_tab_main_scene();
