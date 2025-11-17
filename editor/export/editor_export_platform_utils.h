@@ -48,3 +48,6 @@ Error store_file_at_path(const String &p_path, const PackedByteArray &p_data);
 // Writes string p_data into a file at p_path, creating directories if necessary.
 // Note: this will overwrite the file at p_path if it already exists.
 Error store_string_at_path(const String &p_path, const String &p_data);
+
+// Converts script encryption key to bytes.
+PackedByteArray convert_string_encryption_key_to_bytes(const String &p_encryption_key);

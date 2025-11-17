@@ -47,6 +47,7 @@
 #include "editor/editor_node.h"
 #include "editor/editor_string_names.h"
 #include "editor/export/editor_export.h"
+#include "editor/export/editor_export_platform_utils.h"
 #include "editor/file_system/editor_file_system.h"
 #include "editor/file_system/editor_paths.h"
 #include "editor/script/script_editor_plugin.h"
@@ -980,33 +981,7 @@ Error EditorExportPlatform::_generate_sparse_pck_metadata(const Ref<EditorExport
 
 	Vector<uint8_t> key;
 	if (p_preset->get_enc_pck() && p_preset->get_enc_directory()) {
-		String script_key = _get_script_encryption_key(p_preset);
-		key.resize(32);
-		if (script_key.length() == 64) {
-			for (int i = 0; i < 32; i++) {
-				int v = 0;
-				if (i * 2 < script_key.length()) {
-					char32_t ct = script_key[i * 2];
-					if (is_digit(ct)) {
-						ct = ct - '0';
-					} else if (ct >= 'a' && ct <= 'f') {
-						ct = 10 + ct - 'a';
-					}
-					v |= ct << 4;
-				}
-
-				if (i * 2 + 1 < script_key.length()) {
-					char32_t ct = script_key[i * 2 + 1];
-					if (is_digit(ct)) {
-						ct = ct - '0';
-					} else if (ct >= 'a' && ct <= 'f') {
-						ct = 10 + ct - 'a';
-					}
-					v |= ct;
-				}
-				key.write[i] = v;
-			}
-		}
+		key = convert_string_encryption_key_to_bytes(_get_script_encryption_key(p_preset));
 	}
 
 	if (!EditorExportPlatform::_encrypt_and_store_directory(ftmp, p_pack_data, key, p_preset->get_seed(), 0)) {

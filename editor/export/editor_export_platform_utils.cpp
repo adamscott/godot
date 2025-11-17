@@ -106,3 +106,35 @@ Error store_string_at_path(const String &p_path, const String &p_data) {
 	fa->store_string(p_data);
 	return OK;
 }
+
+PackedByteArray convert_string_encryption_key_to_bytes(const String &p_encryption_key) {
+	PackedByteArray key;
+	key.resize_initialized(32);
+	ERR_FAIL_COND_V(p_encryption_key.length() != 64, key);
+
+	for (int i = 0; i < 32; i++) {
+		int v = 0;
+		if (i * 2 < p_encryption_key.length()) {
+			char32_t ct = p_encryption_key[i * 2];
+			if (is_digit(ct)) {
+				ct = ct - '0';
+			} else if (ct >= 'a' && ct <= 'f') {
+				ct = 10 + ct - 'a';
+			}
+			v |= ct << 4;
+		}
+
+		if (i * 2 + 1 < p_encryption_key.length()) {
+			char32_t ct = p_encryption_key[i * 2 + 1];
+			if (is_digit(ct)) {
+				ct = ct - '0';
+			} else if (ct >= 'a' && ct <= 'f') {
+				ct = 10 + ct - 'a';
+			}
+			v |= ct;
+		}
+		key.write[i] = v;
+	}
+
+	return key;
+}
