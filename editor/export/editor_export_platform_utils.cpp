@@ -382,6 +382,16 @@ void EditorExportPlatformUtils::export_find_files(const Ref<EditorExportPreset> 
 			EditorExportPlatformUtils::export_find_dependencies(autoload_path, p_paths);
 		}
 	}
+
+	//add native icons to non-resource include list
+	EditorExportPlatformUtils::edit_filter_list(p_paths, String("*.icns"), false);
+	EditorExportPlatformUtils::edit_filter_list(p_paths, String("*.ico"), false);
+
+	EditorExportPlatformUtils::edit_filter_list(p_paths, p_preset->get_include_filter(), false);
+	EditorExportPlatformUtils::edit_filter_list(p_paths, p_preset->get_exclude_filter(), true);
+
+	// Ignore import files, since these are automatically added to the jar later with the resources
+	EditorExportPlatformUtils::edit_filter_list(p_paths, String("*.import"), true);
 }
 
 void EditorExportPlatformUtils::edit_files_with_filter(Ref<DirAccess> &da, const Vector<String> &p_filters, HashSet<String> &r_list, bool exclude) {
