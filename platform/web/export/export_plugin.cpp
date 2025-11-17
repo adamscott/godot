@@ -33,6 +33,7 @@
 #include "core/error/error_list.h"
 #include "core/io/config_file.h"
 #include "core/io/file_access.h"
+#include "core/io/file_access_encrypted.h"
 #include "core/io/json.h"
 #include "core/io/resource_loader.h"
 #include "core/variant/dictionary.h"
@@ -90,7 +91,7 @@ Error EditorExportPlatformWeb::ExportData::FileDependencies::write_deps_json_fil
 	return OK;
 }
 
-Error EditorExportPlatformWeb::ExportData::add_dependencies(const String &p_resource_path) {
+Error EditorExportPlatformWeb::ExportData::add_dependencies(const String &p_resource_path, bool p_is_encrypted, const PackedByteArray &p_key) {
 	if (dependencies.has(p_resource_path)) {
 		return OK;
 	}
@@ -104,11 +105,22 @@ Error EditorExportPlatformWeb::ExportData::add_dependencies(const String &p_reso
 
 	const String remap_suffix = ".remap";
 	String remap_file_path = resource_path + remap_suffix;
+
+	Ref<FileAccess> remap_file_access = FileAccess::open(res_to_global(remap_file_path), FileAccess::READ);
+	ERR_FAIL_COND_V(remap_file_access.is_null(), FileAccess::get_open_error());
+
 	Ref<ConfigFile> remap_file;
 	remap_file.instantiate();
-	remap_file->load(res_to_global(remap_file_path));
+	if (p_is_encrypted) {
+		Ref<FileAccessEncrypted> remap_file_access_encrypted;
+		remap_file_access_encrypted.instantiate();
+		Error err = remap_file_access_encrypted->open_and_parse(remap_file_access, p_key, FileAccessEncrypted::MODE_READ, false);
+		ERR_FAIL_COND_V(err != OK, err);
+		remap_file_access = remap_file_access_encrypted;
+	}
+	remap_file->parse(remap_file_access->get_as_text());
+
 	String remap_path = remap_file->get_value("remap", "path");
-	print_line(vformat("-> resource_path: %s, remap_path: %s", resource_path, remap_path));
 
 	dependencies.insert(resource_path, ExportData::FileDependencies(this, resource_path, remap_file_path, remap_path));
 
@@ -121,7 +133,7 @@ Error EditorExportPlatformWeb::ExportData::add_dependencies(const String &p_reso
 			simplified_resource_dependency = simplified_resource_dependency.get_slice("::", 0);
 		}
 		simplified_resource_dependency = simplify_path(simplified_resource_dependency);
-		Error error = add_dependencies(simplified_resource_dependency);
+		Error error = add_dependencies(simplified_resource_dependency, p_is_encrypted, p_key);
 		if (error != OK) {
 			ERR_PRINT(vformat(R"*(Could not add dependencies of "%s".)*", simplified_resource_dependency));
 			return error;
@@ -647,6 +659,8 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 		return error;
 	}
 
+	bool is_encrypted = p_preset->get_enc_pck() && p_preset->get_enc_directory();
+
 	{
 		Ref<DirAccess> da = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
 		for (int i = 0; i < shared_objects.size(); i++) {
@@ -661,7 +675,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 
 	{
 		std::function<Error(String)> loop_asset_dir;
-		loop_asset_dir = [&loop_asset_dir, &export_data](const String &p_path) -> Error {
+		loop_asset_dir = [&loop_asset_dir, &export_data, &is_encrypted, &p_preset, this](const String &p_path) -> Error {
 			String path = p_path.simplify_path();
 			Ref<DirAccess> dir_access = DirAccess::open(path);
 			ERR_FAIL_COND_V(dir_access.is_null(), ERR_CANT_OPEN);
@@ -685,7 +699,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 				const String remap_suffix = ".remap";
 				if (next.ends_with(remap_suffix)) {
 					String resource_path = export_data.global_to_res(path.path_join(next.trim_suffix(remap_suffix)));
-					Error err = export_data.add_dependencies(resource_path);
+					Error err = export_data.add_dependencies(resource_path, is_encrypted, convert_string_encryption_key_to_bytes(_get_script_encryption_key(p_preset)));
 					if (err != OK) {
 						return err;
 					}
@@ -715,8 +729,9 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 		int added_size = 0;
 
 		{
+			PackedByteArray key = convert_string_encryption_key_to_bytes(_get_script_encryption_key(p_preset));
 			std::function<Error(String)> loop_asset_dir;
-			loop_asset_dir = [&loop_asset_dir, &export_data, &resources, &added_size](const String &p_path) -> Error {
+			loop_asset_dir = [&loop_asset_dir, &export_data, &resources, &added_size, &is_encrypted, &key](const String &p_path) -> Error {
 				String path = p_path.simplify_path();
 				Ref<DirAccess> dir_access = DirAccess::open(path);
 				dir_access->list_dir_begin();
@@ -735,18 +750,31 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 						continue;
 					}
 
-					const String remap_suffix = ".remap";
-					if (!next.ends_with(remap_suffix)) {
-						String file_path = export_data.global_to_res(path.simplify_path().path_join(next));
-						if (!resources.has(file_path)) {
-							Dictionary file_data;
-							int file_size = FileAccess::get_size(export_data.res_to_global(file_path));
-							file_data.set("size", file_size);
-							file_data.set("md5", export_data.res_to_global(file_path.md5_text()));
-							file_data.set("sha256", export_data.res_to_global(file_path.sha256_text()));
-							resources.set(file_path, file_data);
-							added_size += file_size;
+					String file_path = export_data.global_to_res(path.simplify_path().path_join(next));
+					if (!resources.has(file_path)) {
+						Dictionary file_data;
+						int file_size;
+
+						Ref<FileAccess> file_access = FileAccess::open(export_data.res_to_global(file_path), FileAccess::READ);
+						ERR_FAIL_COND_V(file_access.is_null(), FileAccess::get_open_error());
+
+						if (is_encrypted && !file_path.ends_with(".deps.json") && !file_path.ends_with("assets.sparsepck")) {
+							Ref<FileAccessEncrypted> file_access_encrypted;
+							file_access_encrypted.instantiate();
+							ERR_FAIL_COND_V(file_access_encrypted.is_null(), FAILED);
+							PackedByteArray new_key;
+							new_key.resize(32);
+							memcpy(new_key.ptrw(), key.ptr(), 32);
+							Error err = file_access_encrypted->open_and_parse(file_access, new_key, FileAccessEncrypted::MODE_READ, false);
+							ERR_FAIL_COND_V(err != OK, err);
+							file_access = file_access_encrypted;
 						}
+
+						file_size = file_access->get_length();
+
+						file_data.set("size", file_size);
+						resources.set(file_path, file_data);
+						added_size += file_size;
 					}
 					next = dir_access->get_next();
 				}

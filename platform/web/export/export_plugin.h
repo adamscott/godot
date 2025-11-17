@@ -108,7 +108,7 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		bool debug;
 		LocalVector<String> libraries;
 
-		Error add_dependencies(const String &p_resource_path);
+		Error add_dependencies(const String &p_resource_path, bool p_is_encrypted = false, const PackedByteArray &p_key = PackedByteArray());
 		String res_to_global(const String &p_res_path) const {
 			String res_path = simplify_path(p_res_path);
 			return assets_directory.path_join(res_path.trim_prefix("res://"));

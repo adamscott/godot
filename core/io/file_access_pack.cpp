@@ -324,9 +324,7 @@ bool PackedSourcePCK::try_open_pack(const String &p_path, bool p_replace_files, 
 
 		Vector<uint8_t> key;
 		key.resize(32);
-		for (int i = 0; i < key.size(); i++) {
-			key.write[i] = script_encryption_key[i];
-		}
+		memcpy(key.ptrw(), script_encryption_key, 32);
 
 		Error err = fae->open_and_parse(f, key, FileAccessEncrypted::MODE_READ, false);
 		ERR_FAIL_COND_V_MSG(err, false, "Can't open encrypted pack directory.");
@@ -549,9 +547,8 @@ FileAccessPack::FileAccessPack(const String &p_path, const PackedData::PackedFil
 
 		Vector<uint8_t> key;
 		key.resize(32);
-		for (int i = 0; i < key.size(); i++) {
-			key.write[i] = script_encryption_key[i];
-		}
+		memcpy(key.ptrw(), script_encryption_key, 32);
+		print_line(vformat("script_encryption_key: %s", String::hex_encode_buffer(key.ptr(), 32)));
 
 		Error err = fae->open_and_parse(f, key, FileAccessEncrypted::MODE_READ, false);
 		ERR_FAIL_COND_MSG(err, vformat("Can't open encrypted pack-referenced file '%s'.", String(pf.pack)));
