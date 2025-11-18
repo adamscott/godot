@@ -128,33 +128,28 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 	class AsyncDialog : public ConfirmationDialog {
 		GDCLASS(AsyncDialog, ConfirmationDialog);
 
-		enum TabId {
-			TAB_ID_MAIN_SCENE,
-			TAB_ID_SELECT_RESOURCES,
-			TAB_ID_MAX,
+		enum TreeColumn {
+			TREE_COLUMN_PATH = 0,
+			TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY = 1,
+			TREE_COLUMN_IS_FORCED_INITIAL_LOAD = 2,
 		};
 
 		bool updating = false;
 		EditorExportPlatformWeb *export_platform = nullptr;
 
-		TabContainer *tab_container = nullptr;
-		Tree *main_scene_tree = nullptr;
-		Tree *select_resources_tree = nullptr;
+		Tree *tree = nullptr;
 
-		bool _fill_tree(EditorFileSystemDirectory *p_dir, HashSet<String> &p_paths, Tree *p_tree, TreeItem *p_tree_item, bool p_read_only);
+		bool _fill_tree(EditorFileSystemDirectory *p_dir, HashSet<String> &p_paths, Tree *p_tree, TreeItem *p_tree_item);
 
-		void _update_display();
-		void _update_tab_main_scene();
-		void _update_tab_select_resources();
+		void _update_tree();
 		void _update_theme();
 
 		static Ref<EditorExportPreset> _get_editor_export_preset();
-		HashSet<String> _get_selected_resources();
+		HashSet<String> _get_forced_initial_load_resource_paths();
 
 		void _on_confirmed();
-		void _on_tab_container_tab_changed(int p_tab);
-		void _on_select_resources_tree_item_edited();
-		void _on_select_resources_tree_check_propagated_to_item(Object *p_tree_item, int p_column);
+		void _on_tree_item_edited();
+		void _on_tree_check_propagated_to_item(Object *p_tree_item, int p_column);
 
 		void _add_selected_file(const String &p_path);
 		void _remove_selected_file(const String &p_path);
