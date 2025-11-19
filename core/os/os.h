@@ -103,6 +103,15 @@ public:
 		STD_HANDLE_UNKNOWN,
 	};
 
+	class AsyncPreloadStatus : public RefCounted {
+		GDCLASS(AsyncPreloadStatus, RefCounted);
+
+	protected:
+		static void _bind_methods();
+
+	public:
+	};
+
 protected:
 	friend class Main;
 	// Needed by tests to setup command-line args.
@@ -126,6 +135,8 @@ protected:
 	virtual void set_cmdline(const char *p_execpath, const List<String> &p_args, const List<String> &p_user_args);
 
 	virtual bool _check_internal_feature_support(const String &p_feature) = 0;
+
+	virtual String async_preload_get_asyncpck(const String &p_path, Error *r_error);
 
 public:
 	typedef int64_t ProcessID;
@@ -211,8 +222,6 @@ public:
 	virtual void set_environment(const String &p_var, const String &p_value) const = 0;
 	virtual void unset_environment(const String &p_var) const = 0;
 	virtual void load_shell_environment() const {}
-
-	virtual Error async_load(const String &p_pck_dir, const String &p_path) const { return OK; }
 
 	virtual String get_name() const = 0;
 	virtual String get_identifier() const;
@@ -371,6 +380,12 @@ public:
 	};
 
 	virtual PreferredTextureFormat get_preferred_texture_format() const;
+
+	virtual bool async_pck_is_supported() { return false; }
+	virtual Error async_pck_preload_file(const String &p_path) {
+		return FAILED;
+	}
+	virtual Ref<AsyncPreloadStatus> async_pck_preload_file_get_status() { return Ref<AsyncPreloadStatus>(); }
 
 	// Load GDExtensions specific to this platform.
 	// This is invoked by the GDExtensionManager after loading GDExtensions specified by the project.

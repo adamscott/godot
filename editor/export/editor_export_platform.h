@@ -50,6 +50,8 @@ const String ENV_SCRIPT_ENCRYPTION_KEY = "GODOT_SCRIPT_ENCRYPTION_KEY";
 class EditorExportPlatform : public RefCounted {
 	GDCLASS(EditorExportPlatform, RefCounted);
 
+	friend class EditorExportPlatformUtils;
+
 protected:
 	static void _bind_methods();
 
@@ -58,26 +60,9 @@ public:
 	typedef Error (*EditorExportRemoveFunction)(void *p_userdata, const String &p_path);
 	typedef Error (*EditorExportSaveSharedObject)(void *p_userdata, const SharedObject &p_so);
 
-	enum DebugFlags {
-		DEBUG_FLAG_DUMB_CLIENT = 1,
-		DEBUG_FLAG_REMOTE_DEBUG = 2,
-		DEBUG_FLAG_REMOTE_DEBUG_LOCALHOST = 4,
-		DEBUG_FLAG_VIEW_COLLISIONS = 8,
-		DEBUG_FLAG_VIEW_NAVIGATION = 16,
-	};
-
-	enum ExportMessageType {
-		EXPORT_MESSAGE_NONE,
-		EXPORT_MESSAGE_INFO,
-		EXPORT_MESSAGE_WARNING,
-		EXPORT_MESSAGE_ERROR,
-	};
-
-	struct ExportMessage {
-		ExportMessageType msg_type;
-		String category;
-		String text;
-	};
+	typedef EditorExportPlatformData::DebugFlags DebugFlags;
+	typedef EditorExportPlatformData::ExportMessageType ExportMessageType;
+	typedef EditorExportPlatformData::ExportMessage ExportMessage;
 
 	friend bool EditorExportPlatformUtils::encrypt_and_store_directory(Ref<FileAccess> p_fd, EditorExportPlatformData::PackData &p_pack_data, const Vector<uint8_t> &p_key, uint64_t p_seed, uint64_t p_file_base);
 
@@ -86,13 +71,6 @@ public:
 	Error _generate_sparse_pck_metadata(const Ref<EditorExportPreset> &p_preset, EditorExportPlatformData::PackData &p_pack_data, Vector<uint8_t> &r_data, bool p_async = false);
 
 private:
-	struct ZipData {
-		void *zip = nullptr;
-		EditorProgress *ep = nullptr;
-		Vector<SharedObject> *so_files = nullptr;
-		int file_count = 0;
-	};
-
 	Vector<ExportMessage> messages;
 
 	static bool _check_hash(const uint8_t *p_hash, const Vector<uint8_t> &p_data);
@@ -114,8 +92,6 @@ private:
 
 	static Error _script_save_file(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const Vector<uint8_t> &p_key, uint64_t p_seed);
 	static Error _script_add_shared_object(void *p_userdata, const SharedObject &p_so);
-
-	static Vector<uint8_t> _filter_extension_list_config_file(const String &p_config_path, const HashSet<String> &p_paths);
 
 	struct FileExportCache {
 		uint64_t source_modified_time = 0;
@@ -219,13 +195,13 @@ public:
 		msg.msg_type = p_type;
 		messages.push_back(msg);
 		switch (p_type) {
-			case EXPORT_MESSAGE_INFO: {
+			case EditorExportPlatformData::EXPORT_MESSAGE_INFO: {
 				print_line(vformat("%s: %s", msg.category, msg.text));
 			} break;
-			case EXPORT_MESSAGE_WARNING: {
+			case EditorExportPlatformData::EXPORT_MESSAGE_WARNING: {
 				WARN_PRINT(vformat("%s: %s", msg.category, msg.text));
 			} break;
-			case EXPORT_MESSAGE_ERROR: {
+			case EditorExportPlatformData::EXPORT_MESSAGE_ERROR: {
 				ERR_PRINT(vformat("%s: %s", msg.category, msg.text));
 			} break;
 			default:
@@ -243,7 +219,7 @@ public:
 	}
 
 	virtual ExportMessageType _get_message_type(int p_index) const {
-		ERR_FAIL_INDEX_V(p_index, messages.size(), EXPORT_MESSAGE_NONE);
+		ERR_FAIL_INDEX_V(p_index, messages.size(), EditorExportPlatformData::EXPORT_MESSAGE_NONE);
 		return messages[p_index].msg_type;
 	}
 
@@ -258,7 +234,7 @@ public:
 	}
 
 	virtual ExportMessageType get_worst_message_type() const {
-		ExportMessageType worst_type = EXPORT_MESSAGE_NONE;
+		ExportMessageType worst_type = EditorExportPlatformData::EXPORT_MESSAGE_NONE;
 		for (int i = 0; i < messages.size(); i++) {
 			worst_type = MAX(worst_type, messages[i].msg_type);
 		}

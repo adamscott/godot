@@ -250,7 +250,6 @@ public:
 	static bool is_import_valid(const String &p_path);
 	static String get_import_group_file(const String &p_path);
 	static bool is_imported(const String &p_path);
-	static void async_load(const String &p_path, Error *r_error);
 
 	static void set_is_import_thread(bool p_import_thread);
 
