@@ -312,7 +312,7 @@ void EditorExportPlatformWeb::AsyncDialog::_update_tree() {
 	Array selected_resources = current_preset->get("async/initial_load_forced_resources");
 	print_line(vformat("EditorExportPlatformWeb::AsyncDialog::_update_tree(): %s", selected_resources));
 	HashSet<String> paths;
-	EditorExportPlatformUtils::export_find_files(current_preset, paths);
+	EditorExportPlatformUtils::export_find_resources(current_preset, paths);
 
 	HashSet<String> paths_with_selected_resources = paths;
 	for (const String &path : paths) {
@@ -505,12 +505,12 @@ Error EditorExportPlatformWeb::_extract_template(const String &p_template, const
 	unzFile pkg = unzOpen2(p_template.utf8().get_data(), &io);
 
 	if (!pkg) {
-		add_message(EXPORT_MESSAGE_ERROR, TTR("Prepare Templates"), vformat(TTR("Could not open template for export: \"%s\"."), p_template));
+		add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Prepare Templates"), vformat(TTR("Could not open template for export: \"%s\"."), p_template));
 		return ERR_FILE_NOT_FOUND;
 	}
 
 	if (unzGoToFirstFile(pkg) != UNZ_OK) {
-		add_message(EXPORT_MESSAGE_ERROR, TTR("Prepare Templates"), vformat(TTR("Invalid export template: \"%s\"."), p_template));
+		add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Prepare Templates"), vformat(TTR("Invalid export template: \"%s\"."), p_template));
 		unzClose(pkg);
 		return ERR_FILE_CORRUPT;
 	}
@@ -544,7 +544,7 @@ Error EditorExportPlatformWeb::_extract_template(const String &p_template, const
 		String dst = p_dir.path_join(file.replace("godot", p_name));
 		Ref<FileAccess> f = FileAccess::open(dst, FileAccess::WRITE);
 		if (f.is_null()) {
-			add_message(EXPORT_MESSAGE_ERROR, TTR("Prepare Templates"), vformat(TTR("Could not write file: \"%s\"."), dst));
+			add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Prepare Templates"), vformat(TTR("Could not write file: \"%s\"."), dst));
 			unzClose(pkg);
 			return ERR_FILE_CANT_WRITE;
 		}
@@ -558,7 +558,7 @@ Error EditorExportPlatformWeb::_extract_template(const String &p_template, const
 Error EditorExportPlatformWeb::_write_or_error(const uint8_t *p_content, int p_size, String p_path) {
 	Ref<FileAccess> f = FileAccess::open(p_path, FileAccess::WRITE);
 	if (f.is_null()) {
-		add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), p_path));
+		add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), p_path));
 		return ERR_FILE_CANT_WRITE;
 	}
 	f->store_buffer(p_content, p_size);
@@ -590,7 +590,7 @@ void EditorExportPlatformWeb::_fix_html(Vector<uint8_t> &p_html, const Ref<Edito
 	for (int i = 0; i < p_shared_objects.size(); i++) {
 		libs.push_back(p_shared_objects[i].path.get_file());
 	}
-	Vector<String> flags = gen_export_flags(p_flags & (~DEBUG_FLAG_DUMB_CLIENT));
+	Vector<String> flags = gen_export_flags(p_flags & (~EditorExportPlatformData::DEBUG_FLAG_DUMB_CLIENT));
 	Array args;
 	for (int i = 0; i < flags.size(); i++) {
 		args.push_back(flags[i]);
@@ -656,7 +656,7 @@ Error EditorExportPlatformWeb::_add_manifest_icon(const Ref<EditorExportPreset> 
 		Error err = OK;
 		icon = _load_icon_or_splash_image(p_icon, &err);
 		if (err != OK || icon.is_null() || icon->is_empty()) {
-			add_message(EXPORT_MESSAGE_ERROR, TTR("Icon Creation"), vformat(TTR("Could not read file: \"%s\"."), p_icon));
+			add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Icon Creation"), vformat(TTR("Could not read file: \"%s\"."), p_icon));
 			return err;
 		}
 		if (icon->get_width() != p_size || icon->get_height() != p_size) {
@@ -668,7 +668,7 @@ Error EditorExportPlatformWeb::_add_manifest_icon(const Ref<EditorExportPreset> 
 	}
 	const Error err = icon->save_png(icon_dest);
 	if (err != OK) {
-		add_message(EXPORT_MESSAGE_ERROR, TTR("Icon Creation"), vformat(TTR("Could not write file: \"%s\"."), icon_dest));
+		add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Icon Creation"), vformat(TTR("Could not write file: \"%s\"."), icon_dest));
 		return err;
 	}
 	Dictionary icon_dict;
@@ -729,7 +729,7 @@ Error EditorExportPlatformWeb::_build_pwa(const Ref<EditorExportPreset> &p_prese
 	{
 		Ref<FileAccess> f = FileAccess::open(sw_path, FileAccess::READ);
 		if (f.is_null()) {
-			add_message(EXPORT_MESSAGE_ERROR, TTR("PWA"), vformat(TTR("Could not read file: \"%s\"."), sw_path));
+			add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("PWA"), vformat(TTR("Could not read file: \"%s\"."), sw_path));
 			return ERR_FILE_CANT_READ;
 		}
 		sw.resize(f->get_length());
@@ -749,7 +749,7 @@ Error EditorExportPlatformWeb::_build_pwa(const Ref<EditorExportPreset> &p_prese
 		const String offline_dest = dir.path_join(name + ".offline.html");
 		err = da->copy(ProjectSettings::get_singleton()->globalize_path(offline_page), offline_dest);
 		if (err != OK) {
-			add_message(EXPORT_MESSAGE_ERROR, TTR("PWA"), vformat(TTR("Could not read file: \"%s\"."), offline_dest));
+			add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("PWA"), vformat(TTR("Could not read file: \"%s\"."), offline_dest));
 			return err;
 		}
 	}
@@ -977,7 +977,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 	const String base_name = path.get_file().get_basename();
 
 	if (!DirAccess::exists(base_dir)) {
-		add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Target folder does not exist or is inaccessible: \"%s\""), base_dir));
+		add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Target folder does not exist or is inaccessible: \"%s\""), base_dir));
 		return ERR_FILE_BAD_PATH;
 	}
 
@@ -991,7 +991,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 	}
 
 	if (!template_path.is_empty() && !FileAccess::exists(template_path)) {
-		add_message(EXPORT_MESSAGE_ERROR, TTR("Prepare Templates"), vformat(TTR("Template file not found: \"%s\"."), template_path));
+		add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Prepare Templates"), vformat(TTR("Template file not found: \"%s\"."), template_path));
 		return ERR_FILE_NOT_FOUND;
 	}
 
@@ -1006,20 +1006,20 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 	export_data.pack_data.use_sparse_pck = true;
 	Error error = export_project_files(p_preset, p_debug, &EditorExportPlatformWeb::_rename_and_store_file_in_async_pck, nullptr, &export_data);
 	if (error != OK) {
-		add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write async pck: \"%s\"."), pck_path));
+		add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write async pck: \"%s\"."), pck_path));
 		return error;
 	}
 
 	PackedByteArray encoded_data;
 	error = _generate_sparse_pck_metadata(p_preset, export_data.pack_data, encoded_data, true);
 	if (error != OK) {
-		add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not encode contents of async pck: \"%s\"."), pck_path));
+		add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not encode contents of async pck: \"%s\"."), pck_path));
 		return error;
 	}
 
 	error = EditorExportPlatformUtils::store_file_at_path(export_data.assets_directory.path_join("assets.sparsepck"), encoded_data);
 	if (error != OK) {
-		add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not store contents of async pck: \"%s\"."), pck_path));
+		add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not store contents of async pck: \"%s\"."), pck_path));
 		return error;
 	}
 
@@ -1031,7 +1031,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 			String dst = export_data.libraries_directory.path_join(shared_objects[i].path.get_file());
 			error = da->copy(shared_objects[i].path, dst);
 			if (error != OK) {
-				add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), shared_objects[i].path.get_file()));
+				add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), shared_objects[i].path.get_file()));
 				return error;
 			}
 		}
@@ -1183,7 +1183,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 	Vector<uint8_t> html;
 	f = FileAccess::open(html_path, FileAccess::READ);
 	if (f.is_null()) {
-		add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not read HTML shell: \"%s\"."), html_path));
+		add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not read HTML shell: \"%s\"."), html_path));
 		return ERR_FILE_CANT_READ;
 	}
 	html.resize(f->get_length());
@@ -1203,7 +1203,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 	Ref<Image> splash = _get_project_splash(p_preset);
 	const String splash_png_path = base_path + ".png";
 	if (splash->save_png(splash_png_path) != OK) {
-		add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), splash_png_path));
+		add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), splash_png_path));
 		return ERR_FILE_CANT_WRITE;
 	}
 
@@ -1213,13 +1213,13 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 		Ref<Image> favicon = _get_project_icon(p_preset);
 		const String favicon_png_path = base_path + ".icon.png";
 		if (favicon->save_png(favicon_png_path) != OK) {
-			add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), favicon_png_path));
+			add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), favicon_png_path));
 			return ERR_FILE_CANT_WRITE;
 		}
 		favicon->resize(180, 180);
 		const String apple_icon_png_path = base_path + ".apple-touch-icon.png";
 		if (favicon->save_png(apple_icon_png_path) != OK) {
-			add_message(EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), apple_icon_png_path));
+			add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), apple_icon_png_path));
 			return ERR_FILE_CANT_WRITE;
 		}
 	}
@@ -1479,7 +1479,7 @@ Error EditorExportPlatformWeb::_export_project(const Ref<EditorExportPreset> &p_
 	if (!da->dir_exists(dest)) {
 		Error err = da->make_dir_recursive(dest);
 		if (err != OK) {
-			add_message(EXPORT_MESSAGE_ERROR, TTR("Run"), vformat(TTR("Could not create HTTP server directory: %s."), dest));
+			add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Run"), vformat(TTR("Could not create HTTP server directory: %s."), dest));
 			return err;
 		}
 	}
@@ -1527,7 +1527,7 @@ Error EditorExportPlatformWeb::_start_server(const String &p_bind_host, const ui
 	server->stop();
 	Error err = server->listen(p_bind_port, bind_ip, p_use_tls, tls_key, tls_cert);
 	if (err != OK) {
-		add_message(EXPORT_MESSAGE_ERROR, TTR("Run"), vformat(TTR("Error starting HTTP server: %d."), err));
+		add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Run"), vformat(TTR("Error starting HTTP server: %d."), err));
 	}
 	return err;
 }

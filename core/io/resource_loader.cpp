@@ -1111,21 +1111,6 @@ bool ResourceLoader::is_imported(const String &p_path) {
 	return false; //not found
 }
 
-void ResourceLoader::async_load(const String &p_path, Error *r_error) {
-	ERR_FAIL_COND(p_path.is_empty());
-	if (FileAccess::exists(p_path)) {
-		return;
-	}
-	bool has_path = PackedData::get_singleton()->has_async_path(p_path);
-	ERR_FAIL_COND(!has_path);
-	String pck_path = PackedData::get_singleton()->get_file_async_pack_path(p_path);
-	ERR_FAIL_COND(pck_path.is_empty());
-	Error error = OS::get_singleton()->async_load(pck_path, p_path);
-	if (r_error != nullptr) {
-		*r_error = error;
-	}
-}
-
 void ResourceLoader::get_dependencies(const String &p_path, List<String> *p_dependencies, bool p_add_types) {
 	String local_path = _path_remap(_validate_local_path(p_path));
 

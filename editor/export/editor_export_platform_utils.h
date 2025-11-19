@@ -71,9 +71,15 @@ public:
 	//
 	static void export_find_dependencies(const String &p_path, HashSet<String> &p_paths);
 
-	static void export_find_files(const Ref<EditorExportPreset> &p_preset, HashSet<String> &p_paths);
+	static void export_find_resources(const Ref<EditorExportPreset> &p_preset, HashSet<String> &p_paths);
 
 	static void edit_files_with_filter(Ref<DirAccess> &da, const Vector<String> &p_filters, HashSet<String> &r_list, bool exclude);
 
 	static void edit_filter_list(HashSet<String> &r_list, const String &p_filter, bool exclude);
+
+	static Vector<uint8_t> filter_extension_list_config_file(const String &p_config_path, const HashSet<String> &p_paths);
+
+	static Vector<String> get_forced_export_files(const Ref<EditorExportPreset> &p_preset);
+
+	static HashMap<String, PackedByteArray> get_internal_export_files(const Ref<EditorExportPlatform> &p_editor_export_platform, const Ref<EditorExportPreset> &p_preset, bool p_debug);
 };

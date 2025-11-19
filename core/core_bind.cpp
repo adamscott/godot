@@ -136,14 +136,6 @@ Vector<String> ResourceLoader::list_directory(const String &p_directory) {
 	return ::ResourceLoader::list_directory(p_directory);
 }
 
-void ResourceLoader::async_load(const String &p_path) {
-	Error error;
-	::ResourceLoader::async_load(p_path, &error);
-	if (error != OK) {
-		ERR_PRINT("Couldn't async load " + p_path + ".");
-	}
-}
-
 void ResourceLoader::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("load_threaded_request", "path", "type_hint", "use_sub_threads", "cache_mode"), &ResourceLoader::load_threaded_request, DEFVAL(""), DEFVAL(false), DEFVAL(CACHE_MODE_REUSE));
 	ClassDB::bind_method(D_METHOD("load_threaded_get_status", "path", "progress"), &ResourceLoader::load_threaded_get_status, DEFVAL_ARRAY);
@@ -160,7 +152,6 @@ void ResourceLoader::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("exists", "path", "type_hint"), &ResourceLoader::exists, DEFVAL(""));
 	ClassDB::bind_method(D_METHOD("get_resource_uid", "path"), &ResourceLoader::get_resource_uid);
 	ClassDB::bind_method(D_METHOD("list_directory", "directory_path"), &ResourceLoader::list_directory);
-	ClassDB::bind_method(D_METHOD("async_load", "path"), &ResourceLoader::async_load);
 
 	BIND_ENUM_CONSTANT(THREAD_LOAD_INVALID_RESOURCE);
 	BIND_ENUM_CONSTANT(THREAD_LOAD_IN_PROGRESS);

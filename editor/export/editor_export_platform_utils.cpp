@@ -32,13 +32,18 @@
 
 #include "core/config/project_settings.h"
 #include "core/crypto/crypto_core.h"
+#include "core/error/error_macros.h"
+#include "core/extension/gdextension.h"
 #include "core/io/dir_access.h"
 #include "core/io/file_access_encrypted.h"
 #include "core/io/file_access_pack.h"
 #include "core/math/random_pcg.h"
+#include "core/version.h"
+#include "editor/export/editor_export_platform.h"
 #include "editor/export/editor_export_platform_data.h"
 #include "editor/export/editor_export_preset.h"
 #include "editor/file_system/editor_file_system.h"
+#include "editor/file_system/editor_paths.h"
 
 int EditorExportPlatformUtils::get_pad(int p_alignment, int p_n) {
 	int rest = p_n % p_alignment;
@@ -340,47 +345,55 @@ void EditorExportPlatformUtils::export_find_dependencies(const String &p_path, H
 	}
 }
 
-void EditorExportPlatformUtils::export_find_files(const Ref<EditorExportPreset> &p_preset, HashSet<String> &p_paths) {
-	if (p_preset->get_export_filter() == EditorExportPreset::EXPORT_ALL_RESOURCES) {
-		//find stuff
-		EditorExportPlatformUtils::export_find_resources(EditorFileSystem::get_singleton()->get_filesystem(), p_paths);
-	} else if (p_preset->get_export_filter() == EditorExportPreset::EXCLUDE_SELECTED_RESOURCES) {
-		EditorExportPlatformUtils::export_find_resources(EditorFileSystem::get_singleton()->get_filesystem(), p_paths);
-		Vector<String> files = p_preset->get_files_to_export();
-		for (int i = 0; i < files.size(); i++) {
-			p_paths.erase(files[i]);
-		}
-	} else if (p_preset->get_export_filter() == EditorExportPreset::EXPORT_CUSTOMIZED) {
-		EditorExportPlatformUtils::export_find_customized_resources(p_preset, EditorFileSystem::get_singleton()->get_filesystem(), p_preset->get_file_export_mode("res://"), p_paths);
-	} else {
-		bool scenes_only = p_preset->get_export_filter() == EditorExportPreset::EXPORT_SELECTED_SCENES;
+void EditorExportPlatformUtils::export_find_resources(const Ref<EditorExportPreset> &p_preset, HashSet<String> &p_paths) {
+	switch (p_preset->get_export_filter()) {
+		case EditorExportPreset::EXPORT_ALL_RESOURCES: {
+			EditorExportPlatformUtils::export_find_resources(EditorFileSystem::get_singleton()->get_filesystem(), p_paths);
+		} break;
 
-		Vector<String> files = p_preset->get_files_to_export();
-		for (int i = 0; i < files.size(); i++) {
-			if (scenes_only && ResourceLoader::get_resource_type(files[i]) != "PackedScene") {
-				continue;
+		case EditorExportPreset::EXPORT_SELECTED_RESOURCES: {
+			EditorExportPlatformUtils::export_find_resources(EditorFileSystem::get_singleton()->get_filesystem(), p_paths);
+			Vector<String> files = p_preset->get_files_to_export();
+			for (int i = 0; i < files.size(); i++) {
+				p_paths.erase(files[i]);
+			}
+		} break;
+
+		case EditorExportPreset::EXPORT_CUSTOMIZED: {
+			EditorExportPlatformUtils::export_find_customized_resources(p_preset, EditorFileSystem::get_singleton()->get_filesystem(), p_preset->get_file_export_mode("res://"), p_paths);
+		} break;
+
+		case EditorExportPreset::EXPORT_SELECTED_SCENES:
+		case EditorExportPreset::EXCLUDE_SELECTED_RESOURCES: {
+			bool scenes_only = p_preset->get_export_filter() == EditorExportPreset::EXPORT_SELECTED_SCENES;
+
+			Vector<String> files = p_preset->get_files_to_export();
+			for (int i = 0; i < files.size(); i++) {
+				if (scenes_only && ResourceLoader::get_resource_type(files[i]) != "PackedScene") {
+					continue;
+				}
+
+				EditorExportPlatformUtils::export_find_dependencies(files[i], p_paths);
 			}
 
-			EditorExportPlatformUtils::export_find_dependencies(files[i], p_paths);
-		}
+			// Add autoload resources and their dependencies
+			List<PropertyInfo> props;
+			ProjectSettings::get_singleton()->get_property_list(&props);
 
-		// Add autoload resources and their dependencies
-		List<PropertyInfo> props;
-		ProjectSettings::get_singleton()->get_property_list(&props);
+			for (const PropertyInfo &pi : props) {
+				if (!pi.name.begins_with("autoload/")) {
+					continue;
+				}
 
-		for (const PropertyInfo &pi : props) {
-			if (!pi.name.begins_with("autoload/")) {
-				continue;
+				String autoload_path = EditorExportPlatformUtils::get_project_setting(p_preset, pi.name);
+
+				if (autoload_path.begins_with("*")) {
+					autoload_path = autoload_path.substr(1);
+				}
+
+				EditorExportPlatformUtils::export_find_dependencies(autoload_path, p_paths);
 			}
-
-			String autoload_path = EditorExportPlatformUtils::get_project_setting(p_preset, pi.name);
-
-			if (autoload_path.begins_with("*")) {
-				autoload_path = autoload_path.substr(1);
-			}
-
-			EditorExportPlatformUtils::export_find_dependencies(autoload_path, p_paths);
-		}
+		} break;
 	}
 
 	//add native icons to non-resource include list
@@ -459,4 +472,101 @@ void EditorExportPlatformUtils::edit_filter_list(HashSet<String> &r_list, const 
 	Ref<DirAccess> da = DirAccess::create(DirAccess::ACCESS_RESOURCES);
 	ERR_FAIL_COND(da.is_null());
 	EditorExportPlatformUtils::edit_files_with_filter(da, filters, r_list, exclude);
+}
+
+Vector<uint8_t> EditorExportPlatformUtils::filter_extension_list_config_file(const String &p_config_path, const HashSet<String> &p_paths) {
+	Ref<FileAccess> f = FileAccess::open(p_config_path, FileAccess::READ);
+	if (f.is_null()) {
+		ERR_FAIL_V_MSG(Vector<uint8_t>(), "Can't open file from path '" + String(p_config_path) + "'.");
+	}
+	Vector<uint8_t> data;
+	while (!f->eof_reached()) {
+		String l = f->get_line().strip_edges();
+		if (p_paths.has(l)) {
+			data.append_array(l.to_utf8_buffer());
+			data.append('\n');
+		}
+	}
+	return data;
+}
+
+Vector<String> EditorExportPlatformUtils::get_forced_export_files(const Ref<EditorExportPreset> &p_preset) {
+	Vector<String> files;
+
+	files.push_back(ProjectSettings::get_singleton()->get_global_class_list_path());
+
+	String icon = ResourceUID::ensure_path(get_project_setting(p_preset, "application/config/icon"));
+	String splash = ResourceUID::ensure_path(get_project_setting(p_preset, "application/boot_splash/image"));
+	if (!icon.is_empty() && FileAccess::exists(icon)) {
+		files.push_back(icon);
+	}
+	if (!splash.is_empty() && FileAccess::exists(splash) && icon != splash) {
+		files.push_back(splash);
+	}
+	String resource_cache_file = ResourceUID::get_cache_file();
+	if (FileAccess::exists(resource_cache_file)) {
+		files.push_back(resource_cache_file);
+	}
+
+	String extension_list_config_file = GDExtension::get_extension_list_config_file();
+	if (FileAccess::exists(extension_list_config_file)) {
+		files.push_back(extension_list_config_file);
+	}
+
+	return files;
+}
+
+HashMap<String, PackedByteArray> EditorExportPlatformUtils::get_internal_export_files(const Ref<EditorExportPlatform> &p_editor_export_platform, const Ref<EditorExportPreset> &p_preset, bool p_debug) {
+	HashMap<String, PackedByteArray> files;
+
+	if (!TS->has_feature(TextServer::FEATURE_USE_SUPPORT_DATA) || !(bool)get_project_setting(p_preset, "internationalization/locale/include_text_server_data")) {
+		return files;
+	}
+
+	// Text server support data.
+	String ts_name = TS->get_support_data_filename();
+	String ts_target = "res://" + ts_name;
+	if (ts_name.is_empty()) {
+		return files;
+	}
+
+	bool export_ok = false;
+	if (FileAccess::exists(ts_target)) { // Include user supplied data file.
+		const PackedByteArray &ts_data = FileAccess::get_file_as_bytes(ts_target);
+		if (!ts_data.is_empty()) {
+			p_editor_export_platform->add_message(EditorExportPlatformData::EXPORT_MESSAGE_INFO, TTR("Export"), TTR("Using user provided text server data, text display in the exported project might be broken if export template was built with different ICU version!"));
+			files[ts_target] = ts_data;
+			export_ok = true;
+		}
+	} else {
+		String current_version = GODOT_VERSION_FULL_CONFIG;
+		String template_path = EditorPaths::get_singleton()->get_export_templates_dir().path_join(current_version);
+		if (p_debug && p_preset->has("custom_template/debug") && p_preset->get("custom_template/debug") != "") {
+			template_path = p_preset->get("custom_template/debug").operator String().get_base_dir();
+		} else if (!p_debug && p_preset->has("custom_template/release") && p_preset->get("custom_template/release") != "") {
+			template_path = p_preset->get("custom_template/release").operator String().get_base_dir();
+		}
+		String data_file_name = template_path.path_join(ts_name);
+		if (FileAccess::exists(data_file_name)) {
+			const PackedByteArray &ts_data = FileAccess::get_file_as_bytes(data_file_name);
+			if (!ts_data.is_empty()) {
+				print_line("Using text server data from export templates.");
+				files[ts_target] = ts_data;
+				export_ok = true;
+			}
+		} else {
+			const PackedByteArray &ts_data = TS->get_support_data();
+			if (!ts_data.is_empty()) {
+				p_editor_export_platform->add_message(EditorExportPlatformData::EXPORT_MESSAGE_INFO, TTR("Export"), TTR("Using editor embedded text server data, text display in the exported project might be broken if export template was built with different ICU version!"));
+				files[ts_target] = ts_data;
+				export_ok = true;
+			}
+		}
+	}
+
+	if (!export_ok) {
+		p_editor_export_platform->add_message(EditorExportPlatformData::EXPORT_MESSAGE_WARNING, TTR("Export"), TTR("Missing text server data, text display in the exported project might be broken!"));
+	}
+
+	return files;
 }

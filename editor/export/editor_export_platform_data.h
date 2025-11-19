@@ -61,4 +61,32 @@ public:
 		Vector<SharedObject> *so_files = nullptr;
 		bool use_sparse_pck = false;
 	};
+
+	enum DebugFlags {
+		DEBUG_FLAG_DUMB_CLIENT = 1,
+		DEBUG_FLAG_REMOTE_DEBUG = 2,
+		DEBUG_FLAG_REMOTE_DEBUG_LOCALHOST = 4,
+		DEBUG_FLAG_VIEW_COLLISIONS = 8,
+		DEBUG_FLAG_VIEW_NAVIGATION = 16,
+	};
+
+	enum ExportMessageType {
+		EXPORT_MESSAGE_NONE,
+		EXPORT_MESSAGE_INFO,
+		EXPORT_MESSAGE_WARNING,
+		EXPORT_MESSAGE_ERROR,
+	};
+
+	struct ExportMessage {
+		ExportMessageType msg_type;
+		String category;
+		String text;
+	};
+
+	struct ZipData {
+		void *zip = nullptr;
+		EditorProgress *ep = nullptr;
+		Vector<SharedObject> *so_files = nullptr;
+		int file_count = 0;
+	};
 };
