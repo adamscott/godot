@@ -227,17 +227,55 @@ const GodotFS = {
 };
 mergeInto(LibraryManager.library, GodotFS);
 
-const GodotOS = {
+class AsyncpckResource {
+	static get Status() {
+		return Object.freeze({
+			STATUS_ERROR: 'STATUS_ERROR',
+			STATUS_SUCCESS: 'STATUS_SUCCESS',
+		});
+	}
+
+	constructor(pAsyncpck, pPath) {
+		this.asyncpck = pAsyncpck;
+		this.path = pPath;
+
+		this.size = 0;
+		this._downloaded = 0;
+	}
+
+	get downloaded() {
+		return this._downloaded;
+	}
+
+	set downloaded(pDownloaded) {
+		this._downloaded = pDownloaded;
+		if (this._downloaded > this.size) {
+			this.size = this._downloaded;
+		}
+	}
+
+	insertInPreloadMap() {
+		if (!GodotOS._asyncpck_preload_map.has(this.asyncpck)) {
+			GodotOS._asyncpck_preload_map.set(this.asyncpck, new Map());
+		}
+		GodotOS._asyncpck_preload_map.get(this.asyncpck).set(this.path, this);
+	}
+}
+
+const _GodotOS = {
 	$GodotOS__deps: ['$GodotRuntime', '$GodotConfig', '$GodotFS'],
 	$GodotOS__postset: [
 		'Module["request_quit"] = function() { GodotOS.request_quit() };',
 		'Module["onExit"] = GodotOS.cleanup;',
 		'GodotOS._fs_sync_promise = Promise.resolve();',
-	].join(''),
+		'GodotOS._asyncpck_preload_map = new Map();',
+	].join(' '),
 	$GodotOS: {
 		request_quit: function () {},
 		_async_cbs: [],
 		_fs_sync_promise: null,
+		AsyncpckResource: AsyncpckResource,
+		_asyncpck_preload_map: null,
 
 		atexit: function (p_promise_cb) {
 			GodotOS._async_cbs.push(p_promise_cb);
@@ -269,18 +307,23 @@ const GodotOS = {
 			});
 		},
 
-		getAsyncFilePckDir: function (pPckDir) {
+		asyncpckGetAsyncpckDir: function (pPckDir) {
 			let pckDir = pPckDir;
 			if (pckDir.endsWith('/')) {
 				pckDir = pckDir.substring(0, pckDir.length - 1);
 			}
+			return pckDir;
+		},
+
+		asyncpckGetAsyncpckAssetsDir: function (pPckDir) {
+			let pckDir = GodotOS.asyncpckGetAsyncpckDir(pPckDir);
 			if (pckDir.endsWith('.asyncpck')) {
 				pckDir = `${pckDir}/assets`;
 			}
 			return pckDir;
 		},
 
-		getAsyncFilePath: function (pPath) {
+		asyncpckGetFilePath: function (pPath) {
 			let path = pPath;
 			if (path.startsWith('res://')) {
 				path = path.substring('res://'.length);
@@ -288,30 +331,106 @@ const GodotOS = {
 			return path;
 		},
 
-		loadAsyncFile: async function (pPckDir, pPath) {
-			const depsJsonResponse = await fetch(`${pPckDir}/${pPath}.deps.json`);
+		asyncpckGetAsyncpckResource: function (pPckDir, pPath) {
+			if (!GodotOS._asyncpck_preload_map.has(pPckDir)) {
+				return null;
+			}
+			if (!GodotOS._asyncpck_preload_map.get(pPckDir).has(pPath)) {
+				if (GodotOS._asyncpck_preload_map.get(pPckDir).has(`${pPath}.remap`)) {
+					return GodotOS._asyncpck_preload_map.get(pPckDir).get(`${pPath}.remap`);
+				}
+				return null;
+			}
+			return GodotOS._asyncpck_preload_map.get(pPckDir).get(pPath);
+		},
+
+		asyncpckPreloadResource: async function (pPckDir, pPath) {
+			let asyncpckResource = GodotOS.asyncpckGetAsyncpckResource(pPckDir, pPath);
+			if (asyncpckResource != null) {
+				return;
+			}
+
+			const assetsDir = GodotOS.asyncpckGetAsyncpckAssetsDir(pPckDir);
+			const depsJsonPath = `${assetsDir}/${pPath}.deps.json`;
+			const depsJsonResponse = await fetch(depsJsonPath);
 			if (!depsJsonResponse.ok) {
-				GodotRuntime.error(`couldn't load deps file "${pPckDir}/${pPath}.deps.json"`);
+				GodotRuntime.error(`Couldn't load deps file "${depsJsonPath}".`);
 				return;
 			}
 
 			const remapResponseJson = await depsJsonResponse.json();
+			const resources = remapResponseJson['resources'];
+			const resourceKeys = Object.keys(resources);
+			for (const resourceKey of resourceKeys) {
+				asyncpckResource = new GodotOS.AsyncpckResource(pPckDir, resourceKey);
+				asyncpckResource.insertInPreloadMap();
+
+				const size = resources[resourceKey]['size'];
+				if (size == null) {
+					GodotRuntime.error(`Couldn't get size of "${resourceKey}" of "${depsJsonPath}"`);
+					return;
+				}
+				asyncpckResource.size = size;
+			}
+
 			await Promise.allSettled(
 				Object.keys(remapResponseJson['resources']).map(async (filePath) => {
-					const asyncFilePath = GodotOS.getAsyncFilePath(filePath);
-					await GodotOS.installAsyncFile(pPckDir, asyncFilePath);
+					const asyncFilePath = GodotOS.asyncpckGetFilePath(filePath);
+					await GodotOS.asyncpckInstallResource(pPckDir, asyncFilePath);
 				})
 			);
 		},
 
-		installAsyncFile: async function (pPckDir, pPath) {
-			const fileResponse = await fetch(`${pPckDir}/${pPath}`);
-			if (!fileResponse.ok) {
-				throw new Error(`couldn't load file "${pPckDir}/${pPath}"`);
+		asyncpckPreloadResourceGetStatus: function (pPckDir, pPath) {
+			if (!GodotOS.asyncpckGetAsyncpckResource(pPckDir, pPath)) {
+				return {
+					status: 'NOT_PRELOADED',
+				};
+			}
+			return {};
+		},
+
+		asyncpckInstallResource: async function (pPckDir, pPath) {
+			const assetsDir = GodotOS.asyncpckGetAsyncpckAssetsDir(pPckDir);
+			const loadPath = `${assetsDir}/${pPath}`;
+
+			const asyncpckResource = GodotOS.asyncpckGetAsyncpckResource(pPckDir, pPath);
+			if (asyncpckResource == null) {
+				throw new Error(`Couldn't find asyncpckResource for "${loadPath}".`);
 			}
 
-			const fileResponseBuffer = await fileResponse.bytes();
-			GodotFS.copy_to_fs(`${pPckDir}/${pPath}`, fileResponseBuffer);
+			const fileResponse = await fetch(loadPath);
+			if (!fileResponse.ok) {
+				asyncpckResource.status = AsyncpckResource.Status.STATUS_ERROR;
+				throw new Error(`Couldn't load file "${loadPath}".`);
+			}
+
+			// const fileResponseBuffer = await fileResponse.bytes();
+			let receivedLength = 0;
+			const chunks = [];
+			const reader = fileResponse.body.getReader();
+
+			while (true) {
+				const { done, value: chunk } = await reader.read(); // eslint-disable-line no-await-in-loop
+				if (done) {
+					break;
+				}
+				receivedLength += chunk.byteLength;
+				if (asyncpckResource.size < receivedLength) {
+					asyncpckResource.size = receivedLength;
+				}
+				chunks.push(chunk);
+			}
+
+			const fileBuffer = new Uint8Array(receivedLength);
+			let filePosition = 0;
+			for (const chunk of chunks) {
+				fileBuffer.set(fileBuffer, filePosition);
+				filePosition += chunk.byteLength;
+			}
+
+			GodotFS.copy_to_fs(loadPath, fileBuffer);
+			asyncpckResource.status = AsyncpckResource.Status.STATUS_SUCCESS;
 		},
 	},
 
@@ -367,18 +486,36 @@ const GodotOS = {
 		return 0;
 	},
 
-	godot_js_os_async_load__proxy: 'sync',
-	godot_js_os_async_load__sig: 'ipp',
-	godot_js_os_async_load: function (pPckDirPtr, pPathPtr) {
+	godot_js_os_asyncpck_preload_resource__proxy: 'sync',
+	godot_js_os_asyncpck_preload_resource__sig: 'ipp',
+	godot_js_os_asyncpck_preload_resource: function (pPckDirPtr, pPathPtr) {
 		let pckDir = GodotRuntime.parseString(pPckDirPtr);
-		pckDir = GodotOS.getAsyncFilePckDir(pckDir);
+		pckDir = GodotOS.asyncpckGetAsyncpckDir(pckDir);
 		let path = GodotRuntime.parseString(pPathPtr);
-		path = GodotOS.getAsyncFilePath(path);
+		path = GodotOS.asyncpckGetFilePath(path);
 
-		GodotOS.loadAsyncFile(pckDir, path).catch((err) => {
+		GodotOS.asyncpckPreloadResource(pckDir, path).catch((err) => {
 			GodotRuntime.error(`GodotOS.loadAsyncFile("${pckDir}", "${path}")`, err);
 		});
 		return 0;
+	},
+
+	godot_js_os_asyncpck_preload_resource_get_status__proxy: 'sync',
+	godot_js_os_asyncpck_preload_resource_get_status__sig: 'ppp',
+	godot_js_os_asyncpck_preload_resource_get_status: function (pPckDirPtr, pPathPtr, pReturnStringLengthPtr) {
+		let pckDir = GodotRuntime.parseString(pPckDirPtr);
+		pckDir = GodotOS.asyncpckGetAsyncpckDir(pckDir);
+		let path = GodotRuntime.parseString(pPathPtr);
+		path = GodotOS.asyncpckGetFilePath(path);
+
+		const status = GodotOS.asyncpckPreloadResourceGetStatus(pckDir, path);
+
+		const statusJson = JSON.stringify(status);
+		const statusJsonPtr = GodotRuntime.allocString(statusJson);
+		if (pReturnStringLengthPtr !== 0) {
+			GodotRuntime.setHeapValue(pReturnStringLengthPtr, GodotRuntime.strlen(statusJson), 'i32');
+		}
+		return statusJsonPtr;
 	},
 
 	godot_js_os_execute__proxy: 'sync',
@@ -437,8 +574,8 @@ const GodotOS = {
 	},
 };
 
-autoAddDeps(GodotOS, '$GodotOS');
-mergeInto(LibraryManager.library, GodotOS);
+autoAddDeps(_GodotOS, '$GodotOS');
+mergeInto(LibraryManager.library, _GodotOS);
 
 /*
  * Godot event listeners.

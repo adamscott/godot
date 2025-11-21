@@ -313,6 +313,10 @@ public:
 	void remove_logger(const Ref<Logger> &p_logger);
 	void remove_script_loggers(const ScriptLanguage *p_script);
 
+	bool asyncpck_is_supported() const;
+	Error asyncpck_preload_resource(const String &p_path) const;
+	Ref<::OS::AsyncPreloadStatus> asyncpck_preload_resource_get_status(const String &p_path) const;
+
 	static OS *get_singleton() { return singleton; }
 
 	OS();

@@ -136,7 +136,7 @@ protected:
 
 	virtual bool _check_internal_feature_support(const String &p_feature) = 0;
 
-	virtual String async_preload_get_asyncpck(const String &p_path, Error *r_error);
+	virtual String asyncpck_get_asyncpck_path(const String &p_path, Error *r_error) const;
 
 public:
 	typedef int64_t ProcessID;
@@ -381,11 +381,11 @@ public:
 
 	virtual PreferredTextureFormat get_preferred_texture_format() const;
 
-	virtual bool async_pck_is_supported() { return false; }
-	virtual Error async_pck_preload_file(const String &p_path) {
+	virtual bool asyncpck_is_supported() const { return false; }
+	virtual Error asyncpck_preload_resource(const String &p_path) const {
 		return FAILED;
 	}
-	virtual Ref<AsyncPreloadStatus> async_pck_preload_file_get_status() { return Ref<AsyncPreloadStatus>(); }
+	virtual Ref<AsyncPreloadStatus> asyncpck_preload_resource_get_status(const String &p_path) const { return Ref<AsyncPreloadStatus>(); }
 
 	// Load GDExtensions specific to this platform.
 	// This is invoked by the GDExtensionManager after loading GDExtensions specified by the project.

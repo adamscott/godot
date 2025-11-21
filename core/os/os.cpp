@@ -818,7 +818,7 @@ void OS::benchmark_dump() {
 #endif
 }
 
-String OS::async_preload_get_asyncpck(const String &p_path, Error *r_error) {
+String OS::asyncpck_get_asyncpck_path(const String &p_path, Error *r_error) const {
 	Error err = OK;
 	bool has_path;
 	String pck_path;
@@ -831,9 +831,13 @@ String OS::async_preload_get_asyncpck(const String &p_path, Error *r_error) {
 
 	_ERR_FAIL_COND(p_path.is_empty(), ERR_INVALID_PARAMETER);
 	_ERR_FAIL_COND(FileAccess::exists(p_path), ERR_INVALID_PARAMETER);
+
 	has_path = PackedData::get_singleton()->has_async_path(p_path);
+
 	_ERR_FAIL_COND(!has_path, ERR_CANT_RESOLVE);
+
 	pck_path = PackedData::get_singleton()->get_file_async_pack_path(p_path);
+
 	_ERR_FAIL_COND(!has_path, ERR_CANT_RESOLVE);
 	_ERR_FAIL_COND(pck_path.is_empty(), ERR_CANT_RESOLVE);
 

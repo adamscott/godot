@@ -69,12 +69,47 @@
 /**
  * EditorExportPlatformWeb::ExportData::FileDependencies
  */
+Dictionary EditorExportPlatformWeb::ExportData::FileDependencies::get_deps_dictionary() const {
+	int64_t resources_size = 0;
+	// int64_t dependencies_size = 0;
+	Dictionary resources;
+
+	Dictionary remap_file_path_entry;
+	remap_file_path_entry.set("size", remap_file_size);
+	remap_file_path_entry.set("md5", remap_file_md5);
+	remap_file_path_entry.set("sha256", remap_file_sha256);
+	resources.set(remap_file_path, remap_file_path_entry);
+	resources_size += remap_file_size;
+
+	Dictionary remap_path_entry;
+	remap_path_entry.set("size", remap_size);
+	remap_path_entry.set("md5", remap_md5);
+	remap_path_entry.set("sha256", remap_sha256);
+	resources.set(remap_path, remap_path_entry);
+	resources_size += remap_size;
+
+	Array dependencies_array;
+	for (const FileDependencies *dependency : dependencies) {
+		Dictionary deps = dependency->get_deps_dictionary();
+		dependencies_array.push_back(deps);
+	}
+
+	Dictionary deps;
+	deps.set("path", resource_path);
+	deps.set("resources", resources);
+	deps.set("dependencies", dependencies_array);
+	deps.set("resources_size", resources_size);
+	deps.set("dependencies_size", resources_size);
+	deps.set("total_size", resources_size);
+
+	return deps;
+}
 
 Error EditorExportPlatformWeb::ExportData::FileDependencies::write_deps_json_file(const String &p_path) {
 	ERR_FAIL_COND_V(p_path.is_empty(), ERR_INVALID_PARAMETER);
 	Dictionary deps_file;
 
-	LocalVector<FileDependencies *> dependencies;
+	LocalVector<const FileDependencies *> dependencies;
 	flatten_dependencies(dependencies);
 
 	int64_t total_size = 0;
@@ -86,6 +121,7 @@ Error EditorExportPlatformWeb::ExportData::FileDependencies::write_deps_json_fil
 		remap_file_path_entry.set("sha256", dependency->remap_file_sha256);
 		resources.set(dependency->remap_file_path, remap_file_path_entry);
 		total_size += dependency->remap_file_size;
+
 		Dictionary remap_path_entry;
 		remap_path_entry.set("size", dependency->remap_size);
 		remap_path_entry.set("md5", dependency->remap_md5);
@@ -607,7 +643,15 @@ void EditorExportPlatformWeb::_fix_html(Vector<uint8_t> &p_html, const Ref<Edito
 	config["godotPoolSize"] = p_preset->get("threads/godot_pool_size");
 	config["emscriptenPoolSize"] = p_preset->get("threads/emscripten_pool_size");
 
-	config["mainSceneDepsJson"] = p_main_scene_deps_json;
+	AsyncLoadSetting async_initial_load_mode = (AsyncLoadSetting)(int)p_preset->get("async/initial_load_mode");
+	switch (async_initial_load_mode) {
+		case ASYNC_LOAD_SETTING_LOAD_EVERYTHING: {
+		} break;
+		case ASYNC_LOAD_SETTING_ONLY_LOAD_MAIN_SCENE_DEPENDENCIES_AND_SPECIFIED_RESOURCES: {
+			config["mainPack"] = p_name + ".asyncpck";
+			config["mainSceneDepsJson"] = p_main_scene_deps_json;
+		} break;
+	}
 
 	String head_include;
 	if (p_preset->get("html/export_icon")) {
@@ -995,168 +1039,217 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 		return ERR_FILE_NOT_FOUND;
 	}
 
+	Error error;
+
 	// Export pck and shared objects
 	Vector<SharedObject> shared_objects;
-	String pck_path = base_path + ".asyncpck";
+	String pck_path;
 
-	ExportData export_data;
-	export_data.assets_directory = pck_path.path_join("assets");
-	export_data.libraries_directory = pck_path.path_join("libraries");
-	export_data.pack_data.path = "assets.sparsepck";
-	export_data.pack_data.use_sparse_pck = true;
-	Error error = export_project_files(p_preset, p_debug, &EditorExportPlatformWeb::_rename_and_store_file_in_async_pck, nullptr, &export_data);
-	if (error != OK) {
-		add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write async pck: \"%s\"."), pck_path));
-		return error;
-	}
+	// Async PCK related.
+	String main_scene_deps_json;
+	// Parse generated file sizes (pck and wasm, to help show a meaningful loading bar).
+	Dictionary file_sizes;
 
-	PackedByteArray encoded_data;
-	error = _generate_sparse_pck_metadata(p_preset, export_data.pack_data, encoded_data, true);
-	if (error != OK) {
-		add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not encode contents of async pck: \"%s\"."), pck_path));
-		return error;
-	}
+	AsyncLoadSetting async_initial_load_mode = (AsyncLoadSetting)(int)p_preset->get("async/initial_load_mode");
+	switch (async_initial_load_mode) {
+		case ASYNC_LOAD_SETTING_LOAD_EVERYTHING: {
+			pck_path = base_path + ".pck";
 
-	error = EditorExportPlatformUtils::store_file_at_path(export_data.assets_directory.path_join("assets.sparsepck"), encoded_data);
-	if (error != OK) {
-		add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not store contents of async pck: \"%s\"."), pck_path));
-		return error;
-	}
-
-	bool is_encrypted = p_preset->get_enc_pck() && p_preset->get_enc_directory();
-
-	{
-		Ref<DirAccess> da = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
-		for (int i = 0; i < shared_objects.size(); i++) {
-			String dst = export_data.libraries_directory.path_join(shared_objects[i].path.get_file());
-			error = da->copy(shared_objects[i].path, dst);
+			error = save_pack(p_preset, p_debug, pck_path, &shared_objects);
 			if (error != OK) {
-				add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), shared_objects[i].path.get_file()));
+				add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), pck_path));
 				return error;
 			}
-		}
-	}
 
-	{
-		std::function<Error(String)> loop_asset_dir;
-		loop_asset_dir = [&loop_asset_dir, &export_data, &is_encrypted, &p_preset, this](const String &p_path) -> Error {
-			String path = p_path.simplify_path();
-			Ref<DirAccess> dir_access = DirAccess::open(path);
-			ERR_FAIL_COND_V(dir_access.is_null(), ERR_CANT_OPEN);
-
-			dir_access->list_dir_begin();
-			String next = dir_access->get_next();
-			while (!next.is_empty()) {
-				if (next == "." || next == "..") {
-					next = dir_access->get_next();
-					continue;
-				}
-				if (DirAccess::exists(path.path_join(next))) {
-					Error err = loop_asset_dir(path.path_join(next));
-					if (err != OK) {
-						return err;
-					}
-					next = dir_access->get_next();
-					continue;
-				}
-
-				const String remap_suffix = ".remap";
-				if (next.ends_with(remap_suffix)) {
-					String resource_path = export_data.global_to_res(path.path_join(next.trim_suffix(remap_suffix)));
-					Error err = export_data.add_dependencies(resource_path, is_encrypted, EditorExportPlatformUtils::convert_string_encryption_key_to_bytes(_get_script_encryption_key(p_preset)));
-					if (err != OK) {
-						return err;
+			{
+				Ref<DirAccess> da = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
+				for (int i = 0; i < shared_objects.size(); i++) {
+					String dst = base_dir.path_join(shared_objects[i].path.get_file());
+					error = da->copy(shared_objects[i].path, dst);
+					if (error != OK) {
+						add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), shared_objects[i].path.get_file()));
+						return error;
 					}
 				}
-				next = dir_access->get_next();
 			}
-			dir_access->list_dir_end();
 
-			return OK;
-		};
+			// Updating file sizes.
+			Ref<FileAccess> f = FileAccess::open(pck_path, FileAccess::READ);
+			if (f.is_valid()) {
+				file_sizes[pck_path.get_file()] = (uint64_t)f->get_length();
+			}
 
-		loop_asset_dir(ProjectSettings::get_singleton()->globalize_path(export_data.assets_directory));
-	}
+		} break;
 
-	String main_scene_deps_json;
-	{
-		String main_scene_path = export_data.res_to_global(get_project_setting(p_preset, "application/run/main_scene"));
+		case ASYNC_LOAD_SETTING_ONLY_LOAD_MAIN_SCENE_DEPENDENCIES_AND_SPECIFIED_RESOURCES: {
+			pck_path = base_path + ".asyncpck";
 
-		Dictionary main_scene_deps;
-		{
-			Ref<FileAccess> main_scene_deps_json_file = FileAccess::open(main_scene_path + ".deps.json", FileAccess::READ);
-			ERR_FAIL_COND_V(main_scene_deps_json_file.is_null(), FileAccess::get_open_error());
-			main_scene_deps = JSON::parse_string(main_scene_deps_json_file->get_as_text());
-		}
+			ExportData export_data;
+			export_data.assets_directory = pck_path.path_join("assets");
+			export_data.libraries_directory = pck_path.path_join("libraries");
+			export_data.pack_data.path = "assets.sparsepck";
+			export_data.pack_data.use_sparse_pck = true;
 
-		Dictionary resources = main_scene_deps.get("resources", Dictionary());
-		int added_size = 0;
+			error = export_project_files(p_preset, p_debug, &EditorExportPlatformWeb::_rename_and_store_file_in_async_pck, nullptr, &export_data);
+			if (error != OK) {
+				add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write async pck: \"%s\"."), pck_path));
+				return error;
+			}
 
-		{
-			PackedByteArray key = EditorExportPlatformUtils::convert_string_encryption_key_to_bytes(_get_script_encryption_key(p_preset));
-			std::function<Error(String)> loop_asset_dir;
-			loop_asset_dir = [&loop_asset_dir, &export_data, &resources, &added_size, &is_encrypted, &key](const String &p_path) -> Error {
-				String path = p_path.simplify_path();
-				Ref<DirAccess> dir_access = DirAccess::open(path);
-				dir_access->list_dir_begin();
-				String next = dir_access->get_next();
-				while (!next.is_empty()) {
-					if (next == "." || next == "..") {
-						next = dir_access->get_next();
-						continue;
+			PackedByteArray encoded_data;
+			error = _generate_sparse_pck_metadata(p_preset, export_data.pack_data, encoded_data, true);
+			if (error != OK) {
+				add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not encode contents of async pck: \"%s\"."), pck_path));
+				return error;
+			}
+
+			error = EditorExportPlatformUtils::store_file_at_path(export_data.assets_directory.path_join("assets.sparsepck"), encoded_data);
+			if (error != OK) {
+				add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not store contents of async pck: \"%s\"."), pck_path));
+				return error;
+			}
+
+			bool is_encrypted = p_preset->get_enc_pck() && p_preset->get_enc_directory();
+
+			{
+				Ref<DirAccess> da = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
+				for (int i = 0; i < shared_objects.size(); i++) {
+					String dst = export_data.libraries_directory.path_join(shared_objects[i].path.get_file());
+					error = da->copy(shared_objects[i].path, dst);
+					if (error != OK) {
+						add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\"."), shared_objects[i].path.get_file()));
+						return error;
 					}
-					if (DirAccess::exists(path.path_join(next))) {
-						Error err = loop_asset_dir(path.path_join(next));
-						if (err != OK) {
-							return err;
-						}
-						next = dir_access->get_next();
-						continue;
-					}
-
-					String file_path = export_data.global_to_res(path.simplify_path().path_join(next));
-					if (!resources.has(file_path)) {
-						Dictionary file_data;
-						int file_size;
-
-						Ref<FileAccess> file_access = FileAccess::open(export_data.res_to_global(file_path), FileAccess::READ);
-						ERR_FAIL_COND_V(file_access.is_null(), FileAccess::get_open_error());
-
-						if (is_encrypted && !file_path.ends_with(".deps.json") && !file_path.ends_with("assets.sparsepck")) {
-							Ref<FileAccessEncrypted> file_access_encrypted;
-							file_access_encrypted.instantiate();
-							ERR_FAIL_COND_V(file_access_encrypted.is_null(), FAILED);
-							PackedByteArray new_key;
-							new_key.resize(32);
-							memcpy(new_key.ptrw(), key.ptr(), 32);
-							Error err = file_access_encrypted->open_and_parse(file_access, new_key, FileAccessEncrypted::MODE_READ, false);
-							ERR_FAIL_COND_V(err != OK, err);
-							file_access = file_access_encrypted;
-						}
-
-						file_size = file_access->get_length();
-
-						file_data.set("size", file_size);
-						resources.set(file_path, file_data);
-						added_size += file_size;
-					}
-					next = dir_access->get_next();
 				}
-				dir_access->list_dir_end();
+			}
 
-				return OK;
-			};
+			{
+				std::function<Error(String)> loop_asset_dir;
+				loop_asset_dir = [&loop_asset_dir, &export_data, &is_encrypted, &p_preset, this](const String &p_path) -> Error {
+					String path = p_path.simplify_path();
+					Ref<DirAccess> dir_access = DirAccess::open(path);
+					ERR_FAIL_COND_V(dir_access.is_null(), ERR_CANT_OPEN);
 
-			loop_asset_dir(ProjectSettings::get_singleton()->globalize_path(export_data.assets_directory));
-		}
+					dir_access->list_dir_begin();
+					String next = dir_access->get_next();
+					while (!next.is_empty()) {
+						if (next == "." || next == "..") {
+							next = dir_access->get_next();
+							continue;
+						}
+						if (DirAccess::exists(path.path_join(next))) {
+							Error err = loop_asset_dir(path.path_join(next));
+							if (err != OK) {
+								return err;
+							}
+							next = dir_access->get_next();
+							continue;
+						}
 
-		main_scene_deps.set("total_size", int64_t(main_scene_deps.get("total_size", 0)) + added_size);
-		main_scene_deps_json = JSON::stringify(main_scene_deps);
-		{
-			Ref<FileAccess> main_scene_deps_json_file = FileAccess::open(main_scene_path + ".deps.json", FileAccess::WRITE);
-			ERR_FAIL_COND_V(main_scene_deps_json_file.is_null(), FileAccess::get_open_error());
-			main_scene_deps_json_file->store_string(main_scene_deps_json);
-		}
+						const String remap_suffix = ".remap";
+						if (next.ends_with(remap_suffix)) {
+							String resource_path = export_data.global_to_res(path.path_join(next.trim_suffix(remap_suffix)));
+							Error err = export_data.add_dependencies(resource_path, is_encrypted, EditorExportPlatformUtils::convert_string_encryption_key_to_bytes(_get_script_encryption_key(p_preset)));
+							if (err != OK) {
+								return err;
+							}
+						}
+						next = dir_access->get_next();
+					}
+					dir_access->list_dir_end();
+
+					return OK;
+				};
+
+				loop_asset_dir(ProjectSettings::get_singleton()->globalize_path(export_data.assets_directory));
+			}
+
+			{
+				String main_scene_path = export_data.res_to_global(get_project_setting(p_preset, "application/run/main_scene"));
+
+				Dictionary main_scene_deps;
+				{
+					Ref<FileAccess> main_scene_deps_json_file = FileAccess::open(main_scene_path + ".deps.json", FileAccess::READ);
+					ERR_FAIL_COND_V(main_scene_deps_json_file.is_null(), FileAccess::get_open_error());
+					main_scene_deps = JSON::parse_string(main_scene_deps_json_file->get_as_text());
+				}
+
+				Dictionary resources = main_scene_deps.get("resources", Dictionary());
+				int added_size = 0;
+
+				{
+					PackedByteArray key = EditorExportPlatformUtils::convert_string_encryption_key_to_bytes(_get_script_encryption_key(p_preset));
+					std::function<Error(String)> loop_asset_dir;
+					loop_asset_dir = [&loop_asset_dir, &export_data, &resources, &added_size, &is_encrypted, &key, &file_sizes](const String &p_path) -> Error {
+						String path = p_path.simplify_path();
+						Ref<DirAccess> dir_access = DirAccess::open(path);
+						dir_access->list_dir_begin();
+						String next = dir_access->get_next();
+						while (!next.is_empty()) {
+							if (next == "." || next == "..") {
+								next = dir_access->get_next();
+								continue;
+							}
+							if (DirAccess::exists(path.path_join(next))) {
+								Error err = loop_asset_dir(path.path_join(next));
+								if (err != OK) {
+									return err;
+								}
+								next = dir_access->get_next();
+								continue;
+							}
+
+							String file_path = export_data.global_to_res(path.simplify_path().path_join(next));
+							if (!resources.has(file_path)) {
+								Dictionary file_data;
+								int file_size;
+
+								Ref<FileAccess> file_access = FileAccess::open(export_data.res_to_global(file_path), FileAccess::READ);
+								ERR_FAIL_COND_V(file_access.is_null(), FileAccess::get_open_error());
+
+								if (is_encrypted && !file_path.ends_with(".deps.json") && !file_path.ends_with("assets.sparsepck")) {
+									Ref<FileAccessEncrypted> file_access_encrypted;
+									file_access_encrypted.instantiate();
+									ERR_FAIL_COND_V(file_access_encrypted.is_null(), FAILED);
+									PackedByteArray new_key;
+									new_key.resize(32);
+									memcpy(new_key.ptrw(), key.ptr(), 32);
+									Error err = file_access_encrypted->open_and_parse(file_access, new_key, FileAccessEncrypted::MODE_READ, false);
+									ERR_FAIL_COND_V(err != OK, err);
+									file_access = file_access_encrypted;
+								}
+
+								file_size = file_access->get_length();
+								file_sizes[file_path] = file_size;
+
+								file_data.set("size", file_size);
+								resources.set(file_path, file_data);
+								added_size += file_size;
+							}
+							next = dir_access->get_next();
+						}
+						dir_access->list_dir_end();
+
+						return OK;
+					};
+
+					loop_asset_dir(ProjectSettings::get_singleton()->globalize_path(export_data.assets_directory));
+				}
+
+				main_scene_deps.set("total_size", int64_t(main_scene_deps.get("total_size", 0)) + added_size);
+				main_scene_deps_json = JSON::stringify(main_scene_deps, String(" ").repeat(2));
+				{
+					Ref<FileAccess> main_scene_deps_json_file = FileAccess::open(main_scene_path + ".deps.json", FileAccess::WRITE);
+					ERR_FAIL_COND_V(main_scene_deps_json_file.is_null(), FileAccess::get_open_error());
+					main_scene_deps_json_file->store_string(main_scene_deps_json);
+				}
+			}
+		} break;
+
+		default: {
+			add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR(R"*(Invalid `async/initial_load_mode` value: %s)*"), async_initial_load_mode));
+			return ERR_INVALID_PARAMETER;
+		} break;
 	}
 
 	// Extract templates.
@@ -1165,13 +1258,6 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 		// Message is supplied by the subroutine method.
 		return error;
 	}
-
-	// Parse generated file sizes (pck and wasm, to help show a meaningful loading bar).
-	Dictionary file_sizes;
-	// Ref<FileAccess> f = FileAccess::open(pck_path, FileAccess::READ);
-	// if (f.is_valid()) {
-	// 	file_sizes[pck_path.get_file()] = (uint64_t)f->get_length();
-	// }
 
 	Ref<FileAccess> f = FileAccess::open(base_path + ".wasm", FileAccess::READ);
 	if (f.is_valid()) {

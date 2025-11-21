@@ -31,6 +31,7 @@
 #pragma once
 
 #include "core/io/file_access.h"
+#include "core/variant/dictionary.h"
 #include "core/variant/variant.h"
 #include "editor_http_server.h"
 
@@ -63,25 +64,62 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 	};
 
 	struct ExportData {
+		struct File {
+			String path;
+			uint32_t size;
+			String md5;
+			String sha256;
+		};
+
+		struct ResourceData {
+			String path;
+			File remap_file;
+			File remapped_file;
+			LocalVector<ResourceData *> dependencies;
+
+			uint32_t get_size() {
+				return remap_file.size + remapped_file.size;
+			}
+
+			Dictionary get_as_dictionary() {
+				Dictionary data;
+				return data;
+			}
+		};
+
 		struct FileDependencies {
 			String resource_path;
+
 			String remap_file_path;
-			int64_t remap_file_size;
+			int32_t remap_file_size = 0;
 			String remap_file_md5;
 			String remap_file_sha256;
+
 			String remap_path;
-			int64_t remap_size;
+			int32_t remap_size = 0;
 			String remap_md5;
 			String remap_sha256;
+
 			LocalVector<FileDependencies *> dependencies;
 
+			int32_t get_resources_size() const {
+				return remap_file_size + remap_size;
+			}
+
+			int32_t get_dependencies_size() const {
+				// for (const FileDependencies *dependency : dependencies) {
+				// }
+				return 0;
+			}
+
+			Dictionary get_deps_dictionary() const;
 			Error write_deps_json_file(const String &p_path);
-			void flatten_dependencies(LocalVector<FileDependencies *> &r_deps) {
+			void flatten_dependencies(LocalVector<const FileDependencies *> &r_deps) const {
 				if (r_deps.has(this)) {
 					return;
 				}
 				r_deps.push_back(this);
-				for (FileDependencies *dependency : dependencies) {
+				for (const FileDependencies *dependency : dependencies) {
 					dependency->flatten_dependencies(r_deps);
 				}
 			}
