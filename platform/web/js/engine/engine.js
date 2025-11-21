@@ -140,86 +140,98 @@ const Engine = (function () {
 			 *
 			 * Fails if a canvas cannot be found on the page, or not specified in the configuration.
 			 *
+			 * @async
 			 * @param {EngineConfig} override An optional configuration override.
-			 * @return {Promise} Promise that resolves once the engine started.
+			 * @return {void}
 			 */
-			start: function (override) {
+			start: async function (override) {
 				this.config.update(override);
 				const me = this;
-				return me.init().then(async function () {
-					if (!me.rtenv) {
-						return Promise.reject(new Error('The engine must be initialized before it can be started'));
-					}
+				await me.init();
 
-					let config = {};
-					try {
-						config = me.config.getGodotConfig(function () {
-							me.rtenv = null;
-						});
-					} catch (e) {
-						return Promise.reject(e);
-					}
-					// Godot configuration.
-					me.rtenv['initConfig'](config);
+				if (!me.rtenv) {
+					throw new Error('The engine must be initialized before it can be started');
+				}
 
-					await (async function () {
-						if (config.mainSceneDepsJson == null) {
-							return;
-						}
-						const json = JSON.parse(config.mainSceneDepsJson);
-						// const totalSize = json['total_size'];
-						const resources = json['resources'];
-						const exe = me.config.executable;
-						let pack = me.config.mainPack || `${exe}.asyncpck`;
-
-						const asyncPckSuffix = '.asyncpck';
-						if (pack.endsWith(`${asyncPckSuffix}/`)) {
-							pack = pack.substring(0, pack.length - 1);
-						}
-
-						if (pack.endsWith(asyncPckSuffix)) {
-							await Promise.allSettled(Object.keys(resources).map(async (resourcePath) => {
-								const resourcePathWithoutResPrefix = resourcePath.substring('res://'.length);
-								const resourceRealPath = `${pack}/assets/${resourcePathWithoutResPrefix}`;
-								const response = await fetch(resourceRealPath);
-								if (!response.ok) {
-									throw new Error(`Could not fetch "${resourceRealPath}"`);
-								}
-								const data = await response.bytes();
-
-								const loadPathLastSlash = loadPath.lastIndexOf('/');
-								let basePath;
-								if (loadPathLastSlash === -1) {
-									basePath = '';
-								} else {
-									basePath = loadPath.substring(0, loadPathLastSlash);
-								}
-
-								try {
-									me.rtenv['copyToFS'](`${basePath}/${pack}/assets/${resourcePathWithoutResPrefix}`, data);
-								} catch (err) {
-									window['console'].error('err!!!', err);
-								}
-							}));
-						}
-					})();
-
-					// Preload GDExtension libraries.
-					if (me.config.gdextensionLibs.length > 0 && !me.rtenv['loadDynamicLibrary']) {
-						return Promise.reject(new Error('GDExtension libraries are not supported by this engine version. '
-							+ 'Enable "Extensions Support" for your export preset and/or build your custom template with "dlink_enabled=yes".'));
-					}
-					return new Promise(function (resolve, reject) {
-						for (const file of preloader.preloadedFiles) {
-							me.rtenv['copyToFS'](file.path, file.buffer);
-						}
-						preloader.preloadedFiles.length = 0; // Clear memory
-						me.rtenv['callMain'](me.config.args);
-						initPromise = null;
-						me.installServiceWorker();
-						resolve();
+				let config = {};
+				try {
+					config = me.config.getGodotConfig(function () {
+						me.rtenv = null;
 					});
-				});
+				} catch (err) {
+					const newErr = new Error('Error geeting Godot config.');
+					newErr.cause = err;
+					throw newErr;
+				}
+
+				// Godot configuration.
+				me.rtenv['initConfig'](config);
+
+				/*
+				await (async function () {
+					if (config.mainSceneDepsJson == null) {
+					    return;
+					}
+					const json = JSON.parse(config.mainSceneDepsJson);
+					// const totalSize = json['total_size'];
+					const resources = json['resources'];
+					const exe = me.config.executable;
+					let pack = me.config.mainPack || `${exe}.asyncpck`;
+
+					const asyncPckSuffix = '.asyncpck';
+					if (pack.endsWith(`${asyncPckSuffix}/`)) {
+						pack = pack.substring(0, pack.length - 1);
+					}
+
+					if (pack.endsWith(asyncPckSuffix)) {
+						await Promise.allSettled(Object.keys(resources).map(async (resourcePath) => {
+							const resourcePathWithoutResPrefix = resourcePath.substring('res://'.length);
+							const resourceRealPath = `${pack}/assets/${resourcePathWithoutResPrefix}`;
+							const response = await fetch(resourceRealPath);
+							if (!response.ok) {
+								throw new Error(`Could not fetch "${resourceRealPath}"`);
+							}
+							const data = await response.bytes();
+
+							const loadPathLastSlash = loadPath.lastIndexOf('/');
+							let basePath;
+							if (loadPathLastSlash === -1) {
+								basePath = '';
+							} else {
+								basePath = loadPath.substring(0, loadPathLastSlash);
+							}
+
+							try {
+								me.rtenv['copyToFS'](`${basePath}/${pack}/assets/${resourcePathWithoutResPrefix}`, data);
+							} catch (err) {
+								window['console'].error('err!!!', err);
+							}
+						}));
+					}
+				})();
+				*/
+
+				// Preload GDExtension libraries.
+				if (me.config.gdextensionLibs.length > 0 && !me.rtenv['loadDynamicLibrary']) {
+					throw new Error(
+						'GDExtension libraries are not supported by this engine version. '
+						+ 'Enable "Extensions Support" for your export preset and/or build your custom template with "dlink_enabled=yes".'
+					);
+				}
+
+				try {
+					for (const file of preloader.preloadedFiles) {
+						me.rtenv['copyToFS'](file.path, file.buffer);
+					}
+					preloader.preloadedFiles.length = 0; // Clear memory
+					me.rtenv['callMain'](me.config.args);
+					initPromise = null;
+					me.installServiceWorker();
+				} catch (err) {
+					const newErr = new Error('Error while initializing.');
+					newErr.cause = err;
+					throw newErr;
+				}
 			},
 
 			/**
@@ -235,22 +247,33 @@ const Engine = (function () {
 			 * @param {EngineConfig} override An optional configuration override.
 			 * @return {Promise} Promise that resolves once the game started.
 			 */
-			startGame: function (override) {
+			startGame: async function (override) {
 				this.config.update(override);
 				// Add main-pack argument.
 				const exe = this.config.executable;
-				const pack = this.config.mainPack || `${exe}.asyncpck`;
+				let pack = this.config.mainPack || `${exe}.pck`;
+				if (pack.endsWith('/')) {
+					pack = pack.substring(0, pack.length - 1);
+				}
 
 				this.config.args = ['--main-pack', pack].concat(this.config.args);
 				// Start and init with execName as loadPath if not inited.
 				const me = this;
 
-				return Promise.all([
-					this.init(exe),
-					// this.preloadFile(pack, pack),
-				]).then(function () {
-					return me.start.apply(me);
-				});
+				const filesToPreload = [];
+				if (pack.endsWith('.asyncpck')) {
+					if ((this.config.mainSceneDepsJson ?? '').length > 0) {
+						throw new Error('No Main Scene dependencies found.');
+					}
+					const mainSceneDeps = JSON.parse(this.config['mainSceneDepsJson']);
+					window['console'].log(mainSceneDeps);
+				} else {
+					filesToPreload.push(this.preloadFile(pack, pack));
+				}
+
+				await Promise.all([this.init(exe), ...filesToPreload]);
+
+				return me.start.apply(me);
 			},
 
 			/**

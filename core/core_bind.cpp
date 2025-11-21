@@ -743,6 +743,18 @@ void OS::remove_script_loggers(const ScriptLanguage *p_script) {
 	}
 }
 
+bool OS::asyncpck_is_supported() const {
+	return ::OS::get_singleton()->asyncpck_is_supported();
+}
+
+Error OS::asyncpck_preload_resource(const String &p_path) const {
+	return ::OS::get_singleton()->asyncpck_preload_resource(p_path);
+}
+
+Ref<::OS::AsyncPreloadStatus> OS::asyncpck_preload_resource_get_status(const String &p_path) const {
+	return ::OS::get_singleton()->asyncpck_preload_resource_get_status(p_path);
+}
+
 void OS::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_entropy", "size"), &OS::get_entropy);
 	ClassDB::bind_method(D_METHOD("get_system_ca_certificates"), &OS::get_system_ca_certificates);
@@ -850,6 +862,10 @@ void OS::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("add_logger", "logger"), &OS::add_logger);
 	ClassDB::bind_method(D_METHOD("remove_logger", "logger"), &OS::remove_logger);
+
+	ClassDB::bind_method(D_METHOD("asyncpck_is_supported"), &OS::asyncpck_is_supported);
+	ClassDB::bind_method(D_METHOD("asyncpck_preload_resource", "path"), &OS::asyncpck_preload_resource);
+	ClassDB::bind_method(D_METHOD("asyncpck_preload_resource_get_status", "path"), &OS::asyncpck_preload_resource_get_status);
 
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "low_processor_usage_mode"), "set_low_processor_usage_mode", "is_in_low_processor_usage_mode");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "low_processor_usage_mode_sleep_usec"), "set_low_processor_usage_mode_sleep_usec", "get_low_processor_usage_mode_sleep_usec");
