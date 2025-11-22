@@ -30,6 +30,7 @@
 
 #pragma once
 
+#include "core/error/error_macros.h"
 #include "core/io/file_access.h"
 #include "core/variant/dictionary.h"
 #include "core/variant/variant.h"
@@ -66,24 +67,78 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 	struct ExportData {
 		struct File {
 			String path;
-			uint32_t size;
+			uint32_t size = 0;
 			String md5;
 			String sha256;
+
+			Dictionary get_as_dictionary() const {
+				Dictionary data;
+				data["size"] = size;
+				data["md5"] = md5;
+				data["sha256"] = sha256;
+				return data;
+			}
 		};
 
 		struct ResourceData {
+			const ExportData *export_data;
+
 			String path;
 			File remap_file;
 			File remapped_file;
-			LocalVector<ResourceData *> dependencies;
+			LocalVector<const ResourceData *> dependencies;
 
-			uint32_t get_size() {
+			uint32_t get_size() const {
 				return remap_file.size + remapped_file.size;
 			}
 
-			Dictionary get_as_dictionary() {
+			Dictionary get_as_resource_dictionary() const {
 				Dictionary data;
+				Dictionary resources;
+				resources[remap_file.path] = remap_file.get_as_dictionary();
+				resources[remapped_file.path] = remapped_file.get_as_dictionary();
+				data["resources"] = resources;
+				data["total_size"] = get_size();
 				return data;
+			}
+
+			void flatten_dependencies(LocalVector<const ResourceData *> *p_deps) const {
+				ERR_FAIL_NULL(p_deps);
+
+				for (const ResourceData *dependency : dependencies) {
+					if (p_deps->has(dependency)) {
+						continue;
+					}
+					p_deps->push_back(dependency);
+					dependency->flatten_dependencies(p_deps);
+				}
+			}
+
+			ResourceData(const ExportData *p_export_data, const String &p_path, const String &p_remap_file_path, const String &p_remapped_file_path) :
+					export_data(p_export_data), path(p_path) {
+				ERR_FAIL_NULL(export_data);
+				ERR_FAIL_COND(path.is_empty());
+				ERR_FAIL_COND(p_remap_file_path.is_empty());
+				ERR_FAIL_COND(p_remapped_file_path.is_empty());
+
+				remap_file.path = p_remap_file_path;
+				remapped_file.path = p_remapped_file_path;
+
+				String real_remap_file_path = p_export_data->res_to_global(p_remap_file_path);
+				String real_remapped_file_path = p_export_data->res_to_global(p_remapped_file_path);
+				ERR_FAIL_COND(real_remap_file_path.is_empty());
+				ERR_FAIL_COND(real_remapped_file_path.is_empty());
+
+				ERR_FAIL_COND(!FileAccess::exists(real_remap_file_path));
+				ERR_FAIL_COND(!FileAccess::exists(real_remapped_file_path));
+
+				remap_file.size = FileAccess::get_size(real_remap_file_path);
+				remapped_file.size = FileAccess::get_size(real_remapped_file_path);
+
+				remap_file.md5 = real_remap_file_path.md5_text();
+				remap_file.sha256 = real_remap_file_path.sha256_text();
+				remapped_file.md5 = real_remapped_file_path.md5_text();
+				remapped_file.sha256 = real_remapped_file_path.sha256_text();
 			}
 		};
 
@@ -118,8 +173,11 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 				if (r_deps.has(this)) {
 					return;
 				}
-				r_deps.push_back(this);
 				for (const FileDependencies *dependency : dependencies) {
+					if (r_deps.has(dependency)) {
+						continue;
+					}
+					r_deps.push_back(dependency);
 					dependency->flatten_dependencies(r_deps);
 				}
 			}
@@ -146,7 +204,7 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 			}
 		};
 
-		HashMap<String, FileDependencies> dependencies;
+		HashMap<String, ResourceData> dependencies;
 		EditorExportPlatformData::PackData pack_data;
 		String assets_directory;
 		String libraries_directory;
