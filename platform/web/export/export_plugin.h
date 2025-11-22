@@ -144,68 +144,6 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 			}
 		};
 
-		struct FileDependencies {
-			String resource_path;
-
-			String remap_file_path;
-			int32_t remap_file_size = 0;
-			String remap_file_md5;
-			String remap_file_sha256;
-
-			String remap_path;
-			int32_t remap_size = 0;
-			String remap_md5;
-			String remap_sha256;
-
-			LocalVector<FileDependencies *> dependencies;
-
-			int32_t get_resources_size() const {
-				return remap_file_size + remap_size;
-			}
-
-			int32_t get_dependencies_size() const {
-				// for (const FileDependencies *dependency : dependencies) {
-				// }
-				return 0;
-			}
-
-			Dictionary get_deps_dictionary() const;
-			Error write_deps_json_file(const String &p_path);
-			void flatten_dependencies(LocalVector<const FileDependencies *> &r_deps) const {
-				if (r_deps.has(this)) {
-					return;
-				}
-				for (const FileDependencies *dependency : dependencies) {
-					if (r_deps.has(dependency)) {
-						continue;
-					}
-					r_deps.push_back(dependency);
-					dependency->flatten_dependencies(r_deps);
-				}
-			}
-
-			FileDependencies(const ExportData *p_export_data, const String &p_resource_path, const String &p_remap_file_path, const String &p_remap_path) :
-					resource_path(p_resource_path), remap_file_path(p_remap_file_path), remap_path(p_remap_path) {
-				ERR_FAIL_COND(resource_path.is_empty());
-				ERR_FAIL_COND(remap_file_path.is_empty());
-				ERR_FAIL_COND(remap_path.is_empty());
-
-				String real_remap_file_path = p_export_data->res_to_global(remap_file_path);
-				String real_remap_path = p_export_data->res_to_global(remap_path);
-
-				ERR_FAIL_COND(!FileAccess::exists(real_remap_file_path));
-				ERR_FAIL_COND(!FileAccess::exists(real_remap_path));
-
-				remap_file_size = FileAccess::get_size(real_remap_file_path);
-				remap_size = FileAccess::get_size(real_remap_path);
-
-				remap_file_md5 = real_remap_file_path.md5_text();
-				remap_file_sha256 = real_remap_file_path.sha256_text();
-				remap_md5 = real_remap_path.md5_text();
-				remap_sha256 = real_remap_path.sha256_text();
-			}
-		};
-
 		HashMap<String, ResourceData> dependencies;
 		EditorExportPlatformData::PackData pack_data;
 		String assets_directory;
