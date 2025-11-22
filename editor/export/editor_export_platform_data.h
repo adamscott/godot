@@ -89,4 +89,28 @@ public:
 		Vector<SharedObject> *so_files = nullptr;
 		int file_count = 0;
 	};
+
+	typedef Error (*EditorExportSaveFunction)(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const Vector<uint8_t> &p_key, uint64_t p_seed);
+	typedef Error (*EditorExportRemoveFunction)(void *p_userdata, const String &p_path);
+	typedef Error (*EditorExportSaveSharedObject)(void *p_userdata, const SharedObject &p_so);
+
+	class EditorExportSaveProxy {
+		HashSet<String> saved_paths;
+		EditorExportSaveFunction save_func;
+		bool tracking_saves = false;
+
+	public:
+		bool has_saved(const String &p_path) const { return saved_paths.has(p_path); }
+
+		Error save_file(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const Vector<uint8_t> &p_key, uint64_t p_seed) {
+			if (tracking_saves) {
+				saved_paths.insert(p_path.simplify_path().trim_prefix("res://"));
+			}
+
+			return save_func(p_userdata, p_path, p_data, p_file, p_total, p_enc_in_filters, p_enc_ex_filters, p_key, p_seed);
+		}
+
+		EditorExportSaveProxy(EditorExportSaveFunction p_save_func, bool p_track_saves) :
+				save_func(p_save_func), tracking_saves(p_track_saves) {}
+	};
 };

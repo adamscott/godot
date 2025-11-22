@@ -59,26 +59,6 @@
 #include "scene/resources/packed_scene.h"
 #include "scene/resources/texture.h"
 
-class EditorExportSaveProxy {
-	HashSet<String> saved_paths;
-	EditorExportPlatform::EditorExportSaveFunction save_func;
-	bool tracking_saves = false;
-
-public:
-	bool has_saved(const String &p_path) const { return saved_paths.has(p_path); }
-
-	Error save_file(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const Vector<uint8_t> &p_key, uint64_t p_seed) {
-		if (tracking_saves) {
-			saved_paths.insert(p_path.simplify_path().trim_prefix("res://"));
-		}
-
-		return save_func(p_userdata, p_path, p_data, p_file, p_total, p_enc_in_filters, p_enc_ex_filters, p_key, p_seed);
-	}
-
-	EditorExportSaveProxy(EditorExportPlatform::EditorExportSaveFunction p_save_func, bool p_track_saves) :
-			save_func(p_save_func), tracking_saves(p_track_saves) {}
-};
-
 Ref<Image> EditorExportPlatform::_load_icon_or_splash_image(const String &p_path, Error *r_error) const {
 	Ref<Image> image;
 
@@ -813,53 +793,12 @@ Error EditorExportPlatform::_generate_sparse_pck_metadata(const Ref<EditorExport
 }
 
 Dictionary EditorExportPlatform::get_internal_export_files(const Ref<EditorExportPreset> &p_preset, bool p_debug) {
-	Dictionary files;
-
-	// Text server support data.
-	if (TS->has_feature(TextServer::FEATURE_USE_SUPPORT_DATA) && (bool)get_project_setting(p_preset, "internationalization/locale/include_text_server_data")) {
-		String ts_name = TS->get_support_data_filename();
-		String ts_target = "res://" + ts_name;
-		if (!ts_name.is_empty()) {
-			bool export_ok = false;
-			if (FileAccess::exists(ts_target)) { // Include user supplied data file.
-				const PackedByteArray &ts_data = FileAccess::get_file_as_bytes(ts_target);
-				if (!ts_data.is_empty()) {
-					add_message(EditorExportPlatformData::EXPORT_MESSAGE_INFO, TTR("Export"), TTR("Using user provided text server data, text display in the exported project might be broken if export template was built with different ICU version!"));
-					files[ts_target] = ts_data;
-					export_ok = true;
-				}
-			} else {
-				String current_version = GODOT_VERSION_FULL_CONFIG;
-				String template_path = EditorPaths::get_singleton()->get_export_templates_dir().path_join(current_version);
-				if (p_debug && p_preset->has("custom_template/debug") && p_preset->get("custom_template/debug") != "") {
-					template_path = p_preset->get("custom_template/debug").operator String().get_base_dir();
-				} else if (!p_debug && p_preset->has("custom_template/release") && p_preset->get("custom_template/release") != "") {
-					template_path = p_preset->get("custom_template/release").operator String().get_base_dir();
-				}
-				String data_file_name = template_path.path_join(ts_name);
-				if (FileAccess::exists(data_file_name)) {
-					const PackedByteArray &ts_data = FileAccess::get_file_as_bytes(data_file_name);
-					if (!ts_data.is_empty()) {
-						print_line("Using text server data from export templates.");
-						files[ts_target] = ts_data;
-						export_ok = true;
-					}
-				} else {
-					const PackedByteArray &ts_data = TS->get_support_data();
-					if (!ts_data.is_empty()) {
-						add_message(EditorExportPlatformData::EXPORT_MESSAGE_INFO, TTR("Export"), TTR("Using editor embedded text server data, text display in the exported project might be broken if export template was built with different ICU version!"));
-						files[ts_target] = ts_data;
-						export_ok = true;
-					}
-				}
-			}
-			if (!export_ok) {
-				add_message(EditorExportPlatformData::EXPORT_MESSAGE_WARNING, TTR("Export"), TTR("Missing text server data, text display in the exported project might be broken!"));
-			}
-		}
+	Dictionary internal_export_files;
+	HashMap<String, PackedByteArray> files = EditorExportPlatformUtils::get_internal_export_files(this, p_preset, p_debug);
+	for (const KeyValue<String, PackedByteArray> &key_value : files) {
+		internal_export_files[key_value.key] = key_value.value;
 	}
-
-	return files;
+	return internal_export_files;
 }
 
 Vector<String> EditorExportPlatform::get_forced_export_files(const Ref<EditorExportPreset> &p_preset) {
@@ -922,7 +861,7 @@ Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &
 	HashSet<String> paths;
 	Vector<String> path_remaps;
 
-	EditorExportPlatformUtils::export_find_resources(p_preset, paths);
+	EditorExportPlatformUtils::export_find_preset_resources(p_preset, paths);
 
 	// Get encryption filters.
 	bool enc_pck = p_preset->get_enc_pck();
@@ -955,7 +894,7 @@ Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &
 		key = EditorExportPlatformUtils::convert_string_encryption_key_to_bytes(_get_script_encryption_key(p_preset));
 	}
 
-	EditorExportSaveProxy save_proxy(p_save_func, p_remove_func != nullptr);
+	EditorExportPlatformData::EditorExportSaveProxy save_proxy(p_save_func, p_remove_func != nullptr);
 
 	Error err = OK;
 	Vector<Ref<EditorExportPlugin>> export_plugins = EditorExport::get_singleton()->get_export_plugins();
