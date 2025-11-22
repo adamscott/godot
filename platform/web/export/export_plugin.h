@@ -32,8 +32,10 @@
 
 #include "core/error/error_macros.h"
 #include "core/io/file_access.h"
+#include "core/object/object.h"
 #include "core/variant/dictionary.h"
 #include "core/variant/variant.h"
+#include "editor/export/editor_export_preset.h"
 #include "editor_http_server.h"
 
 #include "core/config/project_settings.h"
@@ -221,6 +223,25 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		}
 	};
 
+	struct AsyncState {
+	private:
+		void _get_file_dependencies_of(const String &p_file, HashMap<String, const HashSet<String> *> &p_dependencies);
+
+	public:
+		HashSet<String> exported_paths;
+		HashSet<String> exported_paths_and_forced_files_and_dependencies;
+		HashMap<String, HashSet<String>> file_dependencies;
+		String main_scene_path;
+		HashSet<String> forced_files;
+		HashMap<String, const HashSet<String> *> main_scene_dependencies;
+		HashMap<String, const HashSet<String> *> forced_files_dependencies;
+
+		void add_to_file_dependencies(const String &p_file);
+		void add_to_file_dependencies(const HashSet<String> &p_file_set);
+		HashMap<String, const HashSet<String> *> get_file_dependencies_of(const HashSet<String> &p_file_set);
+		HashMap<String, const HashSet<String> *> get_file_dependencies_of(const String &p_file);
+	};
+
 	class AsyncDialog : public ConfirmationDialog {
 		GDCLASS(AsyncDialog, ConfirmationDialog);
 
@@ -231,26 +252,45 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 			TREE_COLUMN_IS_DEPENDENCY = 3,
 		};
 
-		bool updating = false;
+		class TreePathMetadata : public Object {
+			GDCLASS(TreePathMetadata, Object);
+
+		public:
+			String path;
+			bool is_directory = false;
+
+			TreePathMetadata(const String &p_path, bool p_is_directory = false) :
+					path(p_path), is_directory(p_is_directory) {}
+		};
+
 		EditorExportPlatformWeb *export_platform = nullptr;
+		AsyncState state;
+
+		Ref<EditorExportPreset> preset;
+
+		bool updating = false;
 
 		Tree *tree = nullptr;
 
-		bool _fill_tree(EditorFileSystemDirectory *p_dir, HashSet<String> &p_paths, Tree *p_tree, TreeItem *p_tree_item);
+		void update_theme();
 
-		void _update_tree();
-		void _update_theme();
+		static Ref<EditorExportPreset> get_editor_export_preset();
+		void update_forced_files();
 
-		static Ref<EditorExportPreset> _get_editor_export_preset();
-		HashSet<String> _get_forced_initial_load_resource_paths();
+		void on_confirmed();
 
-		void _on_confirmed();
-		void _on_tree_item_edited();
-		void _on_tree_check_propagated_to_item(Object *p_tree_item, int p_column);
+		void on_tree_item_edited();
+		void on_tree_check_propagated_to_item(Object *p_tree_item, int p_column);
 
-		void _add_selected_file(const String &p_path);
-		void _remove_selected_file(const String &p_path);
-		void _update_selected_file(const String &p_path, bool p_add);
+		void add_selected_file(const String &p_path);
+		void remove_selected_file(const String &p_path);
+		void update_selected_file(const String &p_path, bool p_add);
+
+		void tree_add_callbacks();
+		void tree_remove_callbacks();
+		void tree_init();
+		void tree_update();
+		bool tree_fill(EditorFileSystemDirectory *p_dir, HashSet<String> &p_paths, Tree *p_tree, TreeItem *p_tree_item);
 
 	protected:
 		void _notification(int p_what);

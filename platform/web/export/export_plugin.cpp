@@ -258,38 +258,48 @@ void EditorExportPlatformWeb::AsyncDialog::_notification(int p_what) {
 		} break;
 
 		case NOTIFICATION_READY: {
-			connect(SceneStringName(confirmed), callable_mp(this, &EditorExportPlatformWeb::AsyncDialog::_on_confirmed));
+			connect(SceneStringName(confirmed), callable_mp(this, &EditorExportPlatformWeb::AsyncDialog::on_confirmed));
 		} break;
 
 		case NOTIFICATION_VISIBILITY_CHANGED: {
 			if (!is_visible()) {
 				return;
 			}
-			_update_tree();
-			_update_theme();
+			tree_update();
+			update_theme();
 		} break;
 
 		case NOTIFICATION_THEME_CHANGED: {
-			_update_theme();
+			update_theme();
 		} break;
 	}
 }
 
-Ref<EditorExportPreset> EditorExportPlatformWeb::AsyncDialog::_get_editor_export_preset() {
+Ref<EditorExportPreset> EditorExportPlatformWeb::AsyncDialog::get_editor_export_preset() {
 	return EditorNode::get_singleton()->get_project_export_dialog()->get_current_preset();
 }
 
-HashSet<String> EditorExportPlatformWeb::AsyncDialog::_get_forced_initial_load_resource_paths() {
-	Ref<EditorExportPreset> current_preset = _get_editor_export_preset();
+void EditorExportPlatformWeb::AsyncDialog::update_forced_files() {
 	TreeItem *root = tree->get_root();
 
-	HashSet<String> selected_resources;
+	for (const KeyValue<String, const HashSet<String> *> &key_value : state.forced_files_dependencies) {
+		if (state.main_scene_dependencies.has(key_value.key)) {
+			continue;
+		}
+		state.file_dependencies.erase(key_value.key);
+	}
+
+	state.forced_files.clear();
+	state.forced_files_dependencies.clear();
 
 	std::function<void(TreeItem *)> loop_selected_resources_tree_item;
-	loop_selected_resources_tree_item = [&loop_selected_resources_tree_item, &selected_resources](TreeItem *p_tree_item) -> void {
+	loop_selected_resources_tree_item = [this, &loop_selected_resources_tree_item](TreeItem *p_tree_item) -> void {
 		if (p_tree_item->is_checked(TREE_COLUMN_IS_FORCED_INITIAL_LOAD)) {
-			String path = p_tree_item->get_metadata(TREE_COLUMN_PATH);
-			selected_resources.insert(path);
+			TreePathMetadata *path_metadata = Object::cast_to<TreePathMetadata>(p_tree_item->get_metadata(TREE_COLUMN_PATH));
+			ERR_FAIL_NULL(path_metadata);
+			if (!path_metadata->is_directory) {
+				state.add_to_file_dependencies(path_metadata->path);
+			}
 		}
 		for (int i = 0; i < p_tree_item->get_child_count(); i++) {
 			TreeItem *item = p_tree_item->get_child(i);
@@ -298,22 +308,26 @@ HashSet<String> EditorExportPlatformWeb::AsyncDialog::_get_forced_initial_load_r
 	};
 	loop_selected_resources_tree_item(root);
 
-	return selected_resources;
+	state.forced_files_dependencies = state.get_file_dependencies_of(state.forced_files);
+	tree_update();
 }
 
-void EditorExportPlatformWeb::AsyncDialog::_on_confirmed() {
-	HashSet<String> selected_resources = _get_forced_initial_load_resource_paths();
+void EditorExportPlatformWeb::AsyncDialog::on_confirmed() {
+	update_forced_files();
 
-	Array selected_resources_array;
-	for (const String &selected_resource : selected_resources) {
-		selected_resources_array.push_back(selected_resource);
+	Array forced_files_array;
+	for (const String &forced_file : state.forced_files) {
+		forced_files_array.push_back(forced_file);
+	}
+	Array forced_files_with_dependencies_array;
+	for (const KeyValue<String, const HashSet<String> *> &key_value : state.forced_files_dependencies) {
+		forced_files_with_dependencies_array.push_back(key_value.key);
 	}
 
-	Ref<EditorExportPreset> current_preset = _get_editor_export_preset();
-	current_preset->set("async/initial_load_forced_resources", selected_resources_array);
+	preset->set("async/initial_load_forced_files", forced_files_array);
 }
 
-void EditorExportPlatformWeb::AsyncDialog::_on_tree_item_edited() {
+void EditorExportPlatformWeb::AsyncDialog::on_tree_item_edited() {
 	if (updating) {
 		return;
 	}
@@ -324,58 +338,37 @@ void EditorExportPlatformWeb::AsyncDialog::_on_tree_item_edited() {
 	}
 
 	edited_tree_item->propagate_check(TREE_COLUMN_IS_FORCED_INITIAL_LOAD);
+	update_forced_files();
 }
 
-void EditorExportPlatformWeb::AsyncDialog::_on_tree_check_propagated_to_item(Object *p_tree_item, int p_column) {
+void EditorExportPlatformWeb::AsyncDialog::on_tree_check_propagated_to_item(Object *p_tree_item, int p_column) {
 	if (updating) {
 		return;
 	}
 
-	if (p_column == TREE_COLUMN_PATH || p_column == TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY) {
+	if (p_column != TREE_COLUMN_IS_FORCED_INITIAL_LOAD) {
 		return;
 	}
-
-	ERR_FAIL_NULL(p_tree_item);
-	TreeItem *tree_item = Object::cast_to<TreeItem>(p_tree_item);
-	ERR_FAIL_NULL(tree_item);
-
-	String path = tree_item->get_metadata(TREE_COLUMN_PATH);
-	if (path.ends_with("/")) {
-		return;
-	}
-
-	if (!tree_item->is_checked(TREE_COLUMN_IS_FORCED_INITIAL_LOAD)) {
-		_remove_selected_file(path);
-		return;
-	}
-
-	_add_selected_file(path);
 }
 
-void EditorExportPlatformWeb::AsyncDialog::_add_selected_file(const String &p_path) {
-	_update_selected_file(p_path, true);
+void EditorExportPlatformWeb::AsyncDialog::add_selected_file(const String &p_path) {
+	update_selected_file(p_path, true);
 }
 
-void EditorExportPlatformWeb::AsyncDialog::_remove_selected_file(const String &p_path) {
-	_update_selected_file(p_path, false);
+void EditorExportPlatformWeb::AsyncDialog::remove_selected_file(const String &p_path) {
+	update_selected_file(p_path, false);
 }
 
-void EditorExportPlatformWeb::AsyncDialog::_update_selected_file(const String &p_path, bool p_add_to_selected_files) {
+void EditorExportPlatformWeb::AsyncDialog::update_selected_file(const String &p_path, bool p_add_to_selected_files) {
 	String updated_path = p_path.simplify_path();
 	TreeItem *root = tree->get_root();
 	bool add_to_selected_files = p_add_to_selected_files;
 
 	std::function<void(TreeItem *)> loop_selected_resources_tree_item;
 	loop_selected_resources_tree_item = [&loop_selected_resources_tree_item, &updated_path, &add_to_selected_files](TreeItem *p_tree_item) -> void {
-		String tree_item_path = p_tree_item->get_metadata(0);
-		if (add_to_selected_files) {
-			if (!p_tree_item->is_checked(0) && tree_item_path == updated_path) {
-				p_tree_item->set_checked(0, true);
-			}
-		} else {
-			if (p_tree_item->is_checked(0) && tree_item_path == updated_path) {
-				p_tree_item->set_checked(0, false);
-			}
+		String tree_item_path = p_tree_item->get_metadata(TREE_COLUMN_PATH);
+		if (add_to_selected_files == !p_tree_item->is_checked(TREE_COLUMN_IS_FORCED_INITIAL_LOAD) && tree_item_path == updated_path) {
+			p_tree_item->set_checked(TREE_COLUMN_IS_FORCED_INITIAL_LOAD, add_to_selected_files);
 		}
 		for (int i = 0; i < p_tree_item->get_child_count(); i++) {
 			TreeItem *item = p_tree_item->get_child(i);
@@ -385,91 +378,60 @@ void EditorExportPlatformWeb::AsyncDialog::_update_selected_file(const String &p
 	loop_selected_resources_tree_item(root);
 }
 
-void EditorExportPlatformWeb::AsyncDialog::_update_tree() {
-	updating = true;
+void EditorExportPlatformWeb::AsyncDialog::tree_init() {
+	state.file_dependencies.clear();
+	state.main_scene_dependencies.clear();
 
-	tree->clear();
+	state.main_scene_path = EditorExportPlatformUtils::get_path_from_dependency(export_platform->_get_main_scene_path());
+	state.add_to_file_dependencies(state.main_scene_path);
+	state.main_scene_dependencies = state.get_file_dependencies_of(state.main_scene_path);
 
-	TreeItem *root = tree->create_item();
+	state.forced_files.clear();
 
-	Ref<EditorExportPreset> current_preset = _get_editor_export_preset();
-	Array selected_resources_array = current_preset->get("async/initial_load_forced_resources");
+	state.exported_paths.clear();
+	EditorExportPlatformUtils::export_find_preset_resources(preset, state.exported_paths);
+}
 
-	HashSet<String> selected_resources;
-	for (String selected_resource : selected_resources_array) {
-		selected_resources.insert(selected_resource);
-	}
-
-	HashSet<String> selected_resources_dependencies;
-	HashMap<String, HashSet<String>> selected_resources_dependencies_by_parent;
-	for (const String &selected_resource : selected_resources) {
-		List<String> deps;
-		ResourceLoader::get_dependencies(selected_resource, &deps);
-		for (const String &dep : deps) {
-			String _dep = dep;
-			if (_dep.contains("::")) {
-				_dep = _dep.get_slice("::", 2);
-			}
-			selected_resources_dependencies.insert(_dep);
-			selected_resources_dependencies_by_parent[selected_resource].insert(_dep);
-		}
-	}
-
-	HashSet<String> paths;
-	EditorExportPlatformUtils::export_find_preset_resources(current_preset, paths);
-
-	HashSet<String> paths_with_selected_resources_and_dependencies = paths;
-	for (const String &path : paths) {
-		paths_with_selected_resources_and_dependencies.insert(path);
-	}
-	for (const String &selected_resource : selected_resources) {
-		paths_with_selected_resources_and_dependencies.insert(selected_resource);
-	}
-	for (const String &selected_resources_dependency : selected_resources_dependencies) {
-		paths_with_selected_resources_and_dependencies.insert(selected_resources_dependency);
-	}
-
-	_fill_tree(EditorFileSystem::get_singleton()->get_filesystem(), paths_with_selected_resources_and_dependencies, tree, root);
-
-	// Main scene dependencies.
-	String main_scene_path = export_platform->_get_main_scene_path().simplify_path();
-	if (main_scene_path.is_empty()) {
+void EditorExportPlatformWeb::AsyncDialog::tree_update() {
+	if (updating) {
 		return;
 	}
+	updating = true;
 
-	LocalVector<String> dependencies;
-	auto add_dependency = [&dependencies](const String &p_dependency) -> void {
-		String new_dependency_path = p_dependency;
-		if (new_dependency_path.contains("::")) {
-			new_dependency_path = new_dependency_path.get_slice("::", 2);
-		}
-		if (new_dependency_path.begins_with("uid://")) {
-			new_dependency_path = ResourceUID::get_singleton()->uid_to_path(new_dependency_path);
-		}
-		if (dependencies.has(new_dependency_path)) {
-			return;
-		}
-		dependencies.push_back(new_dependency_path);
-	};
-	add_dependency(main_scene_path);
+	tree_remove_callbacks();
+	tree->clear();
+	TreeItem *root = tree->create_item();
+	ERR_FAIL_NULL(root);
 
-	for (int32_t i = 0; i < (int32_t)dependencies.size(); i++) {
-		const String &dependency = dependencies[i];
-		List<String> new_dependencies;
-		ResourceLoader::get_dependencies(dependency, &new_dependencies);
+	state.add_to_file_dependencies(state.forced_files);
+	state.forced_files_dependencies = state.get_file_dependencies_of(state.forced_files);
 
-		for (const String &new_dependency : new_dependencies) {
-			add_dependency(new_dependency);
-		}
+	state.exported_paths_and_forced_files_and_dependencies = HashSet<String>(state.exported_paths);
+	for (const KeyValue<String, const HashSet<String> *> &key_value : state.forced_files_dependencies) {
+		state.exported_paths_and_forced_files_and_dependencies.insert(key_value.key);
 	}
 
+	tree_fill(EditorFileSystem::get_singleton()->get_filesystem(), state.exported_paths_and_forced_files_and_dependencies, tree, root);
+
+	// Main scene dependencies.
 	std::function<void(TreeItem *)> loop_tree_items_main_dependencies;
-	loop_tree_items_main_dependencies = [&loop_tree_items_main_dependencies, &dependencies](TreeItem *p_tree_item) -> void {
+	loop_tree_items_main_dependencies = [this, &loop_tree_items_main_dependencies](TreeItem *p_tree_item) -> void {
 		for (int i = 0; i < p_tree_item->get_child_count(); i++) {
 			TreeItem *item = p_tree_item->get_child(i);
-			String tree_item_path = item->get_metadata(TREE_COLUMN_PATH);
-			if (dependencies.has(tree_item_path)) {
+			TreePathMetadata *tree_item_path_metadata = Object::cast_to<TreePathMetadata>(item->get_metadata(TREE_COLUMN_PATH));
+			ERR_FAIL_NULL(tree_item_path_metadata);
+			String tree_item_path = tree_item_path_metadata->path;
+			bool tree_item_path_is_directory = tree_item_path_metadata->is_directory;
+
+			if (state.main_scene_dependencies.has(tree_item_path_metadata->path)) {
 				item->set_checked(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY, true);
+			} else if (tree_item_path_is_directory) {
+				for (const KeyValue<String, const HashSet<String> *> &key_value : state.main_scene_dependencies) {
+					if (key_value.key.begins_with(tree_item_path)) {
+						item->set_indeterminate(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY, true);
+						break;
+					}
+				}
 			}
 			loop_tree_items_main_dependencies(item);
 		}
@@ -477,17 +439,28 @@ void EditorExportPlatformWeb::AsyncDialog::_update_tree() {
 	loop_tree_items_main_dependencies(root);
 
 	// Forced initial load.
-	const Color error_color = get_theme_color("error_color", "Editor");
+	// const Color error_color = get_theme_color("error_color", "Editor");
 	std::function<void(TreeItem *)> loop_tree_items_forced_initial_load;
-	loop_tree_items_forced_initial_load = [&loop_tree_items_forced_initial_load, &selected_resources, &paths, &error_color](TreeItem *p_tree_item) -> void {
+	loop_tree_items_forced_initial_load = [this, &loop_tree_items_forced_initial_load /*, &error_color*/](TreeItem *p_tree_item) -> void {
 		for (int i = 0; i < p_tree_item->get_child_count(); i++) {
 			TreeItem *item = p_tree_item->get_child(i);
-			String tree_item_path = item->get_metadata(0);
-			if (selected_resources.has(tree_item_path)) {
+			TreePathMetadata *tree_item_path_metadata = Object::cast_to<TreePathMetadata>(item->get_metadata(TREE_COLUMN_PATH));
+			ERR_FAIL_NULL(tree_item_path_metadata);
+			String tree_item_path = tree_item_path_metadata->path;
+			bool tree_item_path_is_directory = tree_item_path_metadata->is_directory;
+
+			if (state.forced_files.has(tree_item_path)) {
 				item->set_checked(TREE_COLUMN_IS_FORCED_INITIAL_LOAD, true);
-				if (!paths.has(tree_item_path)) {
-					item->set_custom_bg_color(TREE_COLUMN_PATH, error_color);
-					item->set_tooltip_text(TREE_COLUMN_PATH, vformat(TTRC(R"*("%s" is currently set to be forced to load initially, but is not defined as an exported resource (see the Resources tab). So this resource will not be loaded.)*"), tree_item_path));
+				// if (!paths.has(tree_item_path)) {
+				// 	item->set_custom_bg_color(TREE_COLUMN_PATH, error_color);
+				// 	item->set_tooltip_text(TREE_COLUMN_PATH, vformat(TTRC(R"*("%s" is currently set to be forced to load initially, but is not defined as an exported resource (see the Resources tab). So this resource will not be loaded.)*"), tree_item_path));
+				// }
+			} else if (tree_item_path_is_directory) {
+				for (const String &dependency : state.forced_files) {
+					if (dependency.begins_with(tree_item_path)) {
+						item->set_indeterminate(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY, true);
+						break;
+					}
 				}
 			}
 			loop_tree_items_forced_initial_load(item);
@@ -497,34 +470,40 @@ void EditorExportPlatformWeb::AsyncDialog::_update_tree() {
 
 	// Is dependency.
 	std::function<void(TreeItem *)> loop_tree_items_is_dependency;
-	loop_tree_items_is_dependency = [&loop_tree_items_is_dependency, &selected_resources_dependencies, &selected_resources_dependencies_by_parent, &paths](TreeItem *p_tree_item) -> void {
+	loop_tree_items_is_dependency = [this, &loop_tree_items_is_dependency](TreeItem *p_tree_item) -> void {
 		for (int i = 0; i < p_tree_item->get_child_count(); i++) {
 			TreeItem *item = p_tree_item->get_child(i);
-			String tree_item_path = item->get_metadata(0);
+			TreePathMetadata *tree_item_path_metadata = Object::cast_to<TreePathMetadata>(item->get_metadata(TREE_COLUMN_PATH));
+			ERR_FAIL_NULL(tree_item_path_metadata);
+			String tree_item_path = tree_item_path_metadata->path;
+			bool tree_item_path_is_directory = tree_item_path_metadata->is_directory;
+
 			if (item->is_checked(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY)) {
-				if (paths.has(tree_item_path)) {
-					item->set_checked(TREE_COLUMN_IS_DEPENDENCY, true);
-					item->set_tooltip_text(TREE_COLUMN_IS_DEPENDENCY, TTRC(R"*(Added as a dependency of the main scene.)*"));
-				} else {
-				}
+				item->set_checked(TREE_COLUMN_IS_DEPENDENCY, true);
+				item->set_tooltip_text(TREE_COLUMN_IS_DEPENDENCY, TTRC(R"*(Added as a dependency of the main scene.)*"));
+			} else if (item->is_indeterminate(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY)) {
+				item->set_indeterminate(TREE_COLUMN_IS_DEPENDENCY, true);
 			} else if (item->is_checked(TREE_COLUMN_IS_FORCED_INITIAL_LOAD)) {
-				if (paths.has(tree_item_path)) {
-					item->set_checked(TREE_COLUMN_IS_DEPENDENCY, true);
-					item->set_tooltip_text(TREE_COLUMN_IS_DEPENDENCY, TTRC(R"*(Added as a it was forced.)*"));
-				} else {
-				}
-			} else if (selected_resources_dependencies.has(tree_item_path)) {
-				if (paths.has(tree_item_path)) {
-					item->set_checked(TREE_COLUMN_IS_DEPENDENCY, true);
-					String parent;
-					for (const KeyValue<String, HashSet<String>> &key_value : selected_resources_dependencies_by_parent) {
-						if (key_value.value.has(tree_item_path)) {
-							parent = key_value.key;
-							break;
-						}
+				item->set_checked(TREE_COLUMN_IS_DEPENDENCY, true);
+				item->set_tooltip_text(TREE_COLUMN_IS_DEPENDENCY, TTRC(R"*(Added as a it was forced.)*"));
+			} else if (item->is_indeterminate(TREE_COLUMN_IS_FORCED_INITIAL_LOAD)) {
+				item->set_indeterminate(TREE_COLUMN_IS_DEPENDENCY, true);
+			} else if (state.forced_files.has(tree_item_path)) {
+				item->set_checked(TREE_COLUMN_IS_DEPENDENCY, true);
+				String parent;
+				for (const KeyValue<String, const HashSet<String> *> &key_value : state.forced_files_dependencies) {
+					if (key_value.value->has(tree_item_path)) {
+						parent = key_value.key;
+						break;
 					}
-					item->set_tooltip_text(TREE_COLUMN_IS_DEPENDENCY, vformat(TTRC(R"*(Added as a it is a dependency of "%s".)*"), parent));
-				} else {
+				}
+				item->set_tooltip_text(TREE_COLUMN_IS_DEPENDENCY, vformat(TTRC(R"*(Added as a it is a dependency of "%s".)*"), parent));
+			} else if (tree_item_path_is_directory) {
+				for (const KeyValue<String, const HashSet<String> *> &key_value : state.main_scene_dependencies) {
+					if (key_value.key.begins_with(tree_item_path)) {
+						item->set_indeterminate(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY, true);
+						break;
+					}
 				}
 			}
 			loop_tree_items_is_dependency(item);
@@ -532,14 +511,17 @@ void EditorExportPlatformWeb::AsyncDialog::_update_tree() {
 	};
 	loop_tree_items_is_dependency(root);
 
+	tree_add_callbacks();
+
 	// Finalize updating tree.
 	updating = false;
 }
 
-bool EditorExportPlatformWeb::AsyncDialog::_fill_tree(EditorFileSystemDirectory *p_dir, HashSet<String> &p_paths, Tree *p_tree, TreeItem *p_tree_item) {
+bool EditorExportPlatformWeb::AsyncDialog::tree_fill(EditorFileSystemDirectory *p_dir, HashSet<String> &p_paths, Tree *p_tree, TreeItem *p_tree_item) {
 	p_tree_item->set_icon(TREE_COLUMN_PATH, get_theme_icon(SNAME("folder"), SNAME("FileDialog")));
 	p_tree_item->set_text(TREE_COLUMN_PATH, p_dir->get_name() + "/");
-	p_tree_item->set_metadata(TREE_COLUMN_PATH, p_dir->get_path());
+	p_tree_item->set_tooltip_text(TREE_COLUMN_PATH, p_dir->get_path());
+	p_tree_item->set_metadata(TREE_COLUMN_PATH, memnew(TreePathMetadata(p_dir->get_path(), true)));
 	p_tree_item->set_cell_mode(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY, TreeItem::CELL_MODE_CHECK);
 	p_tree_item->set_editable(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY, false);
 	p_tree_item->set_cell_mode(TREE_COLUMN_IS_FORCED_INITIAL_LOAD, TreeItem::CELL_MODE_CHECK);
@@ -547,13 +529,13 @@ bool EditorExportPlatformWeb::AsyncDialog::_fill_tree(EditorFileSystemDirectory 
 	p_tree_item->set_cell_mode(TREE_COLUMN_IS_DEPENDENCY, TreeItem::CELL_MODE_CHECK);
 	p_tree_item->set_editable(TREE_COLUMN_IS_DEPENDENCY, false);
 
-	Ref<EditorExportPreset> current_preset = _get_editor_export_preset();
+	Ref<EditorExportPreset> current_preset = get_editor_export_preset();
 	ERR_FAIL_COND_V(current_preset.is_null(), false);
 
 	bool used = false;
 	for (int i = 0; i < p_dir->get_subdir_count(); i++) {
 		TreeItem *subdir = p_tree->create_item(p_tree_item);
-		if (_fill_tree(p_dir->get_subdir(i), p_paths, p_tree, subdir)) {
+		if (tree_fill(p_dir->get_subdir(i), p_paths, p_tree, subdir)) {
 			used = true;
 		} else {
 			memdelete(subdir);
@@ -572,7 +554,8 @@ bool EditorExportPlatformWeb::AsyncDialog::_fill_tree(EditorFileSystemDirectory 
 		TreeItem *file = p_tree->create_item(p_tree_item);
 		file->set_icon(TREE_COLUMN_PATH, EditorNode::get_singleton()->get_class_icon(type));
 		file->set_text(TREE_COLUMN_PATH, p_dir->get_file(i));
-		file->set_metadata(TREE_COLUMN_PATH, file_path);
+		file->set_tooltip_text(TREE_COLUMN_PATH, p_dir->get_path().path_join(p_dir->get_file(i)));
+		file->set_metadata(TREE_COLUMN_PATH, memnew(TreePathMetadata(file_path, false)));
 		file->set_cell_mode(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY, TreeItem::CELL_MODE_CHECK);
 		file->set_text_alignment(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY, HORIZONTAL_ALIGNMENT_CENTER);
 		file->set_editable(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY, false);
@@ -589,12 +572,43 @@ bool EditorExportPlatformWeb::AsyncDialog::_fill_tree(EditorFileSystemDirectory 
 	return used;
 }
 
-void EditorExportPlatformWeb::AsyncDialog::_update_theme() {
+void EditorExportPlatformWeb::AsyncDialog::update_theme() {
+}
+
+void EditorExportPlatformWeb::AsyncDialog::tree_add_callbacks() {
+	Callable on_tree_item_edited_callable = callable_mp(this, &EditorExportPlatformWeb::AsyncDialog::on_tree_item_edited);
+	Callable on_tree_check_propagated_to_item_callable = callable_mp(this, &EditorExportPlatformWeb::AsyncDialog::on_tree_check_propagated_to_item);
+
+	if (!tree->is_connected(SceneStringName(item_edited), on_tree_item_edited_callable)) {
+		tree->connect(SceneStringName(item_edited), on_tree_item_edited_callable);
+	}
+	if (!tree->is_connected(SceneStringName(check_propagated_to_item), on_tree_check_propagated_to_item_callable)) {
+		tree->connect(SceneStringName(check_propagated_to_item), on_tree_check_propagated_to_item_callable);
+	}
+}
+
+void EditorExportPlatformWeb::AsyncDialog::tree_remove_callbacks() {
+	Callable on_tree_item_edited_callable = callable_mp(this, &EditorExportPlatformWeb::AsyncDialog::on_tree_item_edited);
+	Callable on_tree_check_propagated_to_item_callable = callable_mp(this, &EditorExportPlatformWeb::AsyncDialog::on_tree_check_propagated_to_item);
+
+	if (!tree->is_connected(SceneStringName(item_edited), on_tree_item_edited_callable)) {
+		tree->connect(SceneStringName(item_edited), on_tree_item_edited_callable);
+	}
+	if (!tree->is_connected(SceneStringName(check_propagated_to_item), on_tree_check_propagated_to_item_callable)) {
+		tree->connect(SceneStringName(check_propagated_to_item), on_tree_check_propagated_to_item_callable);
+	}
 }
 
 EditorExportPlatformWeb::AsyncDialog::AsyncDialog(EditorExportPlatformWeb *p_export_platform) :
 		export_platform(p_export_platform) {
 	print_line(vformat("export_platform: 0x%x", (uint64_t)export_platform));
+
+	preset = EditorNode::get_singleton()->get_project_export_dialog()->get_current_preset();
+
+	Array forced_files_array = preset->get("async/initial_load_forced_files");
+	for (const String selected_resource : forced_files_array) {
+		state.forced_files.insert(selected_resource);
+	}
 
 	set_title(TTRC("Edit Initial Load Resources"));
 	set_flag(FLAG_MAXIMIZE_DISABLED, false);
@@ -602,20 +616,21 @@ EditorExportPlatformWeb::AsyncDialog::AsyncDialog(EditorExportPlatformWeb *p_exp
 	set_min_size(Size2i(600 * EDSCALE, 500 * EDSCALE));
 
 	VBoxContainer *main_container = memnew(VBoxContainer);
+	add_child(main_container);
 	main_container->set_name(TTRC("Main Scene"));
 	main_container->set_h_size_flags(Control::SIZE_EXPAND_FILL);
 	main_container->set_v_size_flags(Control::SIZE_EXPAND_FILL);
-	add_child(main_container);
 
 	MarginContainer *tree_margin_container = memnew(MarginContainer);
+	main_container->add_child(tree_margin_container);
 	tree_margin_container->add_theme_constant_override("margin_top", 10 * EDSCALE);
 	tree_margin_container->add_theme_constant_override("margin_left", 10 * EDSCALE);
 	tree_margin_container->add_theme_constant_override("margin_right", 10 * EDSCALE);
 	tree_margin_container->add_theme_constant_override("margin_bottom", 10 * EDSCALE);
 	tree_margin_container->set_v_size_flags(Control::SIZE_EXPAND_FILL);
-	main_container->add_child(tree_margin_container);
 
 	tree = memnew(Tree);
+	tree_margin_container->add_child(tree);
 	tree->set_auto_translate_mode(AUTO_TRANSLATE_MODE_DISABLED);
 	tree->set_hide_root(false);
 	tree->set_select_mode(Tree::SelectMode::SELECT_ROW);
@@ -636,9 +651,9 @@ EditorExportPlatformWeb::AsyncDialog::AsyncDialog(EditorExportPlatformWeb *p_exp
 	tree->set_column_expand(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY, false);
 	tree->set_column_expand(TREE_COLUMN_IS_FORCED_INITIAL_LOAD, false);
 	tree->set_column_expand(TREE_COLUMN_IS_DEPENDENCY, false);
-	tree->connect("item_edited", callable_mp(this, &EditorExportPlatformWeb::AsyncDialog::_on_tree_item_edited));
-	tree->connect("check_propagated_to_item", callable_mp(this, &EditorExportPlatformWeb::AsyncDialog::_on_tree_check_propagated_to_item));
-	tree_margin_container->add_child(tree);
+
+	tree_init();
+	tree_add_callbacks();
 }
 
 /**
@@ -980,7 +995,7 @@ void EditorExportPlatformWeb::get_export_options(List<ExportOption> *r_options) 
 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::INT, "async/initial_load_mode", PROPERTY_HINT_ENUM, "Load Everything,Only Load Main Scene Dependencies And Specified Resources"), 0, true));
 	r_options->push_back(ExportOption(PropertyInfo(Variant::CALLABLE, "async/initial_load_edit_button", PROPERTY_HINT_TOOL_BUTTON, vformat("%s,Edit", TTRC("Edit Initial Load Resources")), PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_NO_INSTANCE_STATE), callable_mp(const_cast<EditorExportPlatformWeb *>(this), &EditorExportPlatformWeb::_open_async_dialog)));
-	r_options->push_back(ExportOption(PropertyInfo(Variant::ARRAY, "async/initial_load_forced_resources", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), Array()));
+	r_options->push_back(ExportOption(PropertyInfo(Variant::ARRAY, "async/initial_load_forced_files", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), Array()));
 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "variant/extensions_support"), false)); // GDExtension support.
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "variant/thread_support"), false, true)); // Thread support (i.e. run with or without COEP/COOP headers).
@@ -1784,6 +1799,52 @@ String EditorExportPlatformWeb::_get_main_scene_path() const {
 
 Ref<Texture2D> EditorExportPlatformWeb::get_run_icon() const {
 	return run_icon;
+}
+
+void EditorExportPlatformWeb::AsyncState::add_to_file_dependencies(const String &p_file) {
+	if (file_dependencies.has(p_file)) {
+		return;
+	}
+	List<String> dependencies;
+	ResourceLoader::get_dependencies(p_file, &dependencies);
+	for (const String &dependency : dependencies) {
+		String dependency_path = EditorExportPlatformUtils::get_path_from_dependency(dependency);
+		file_dependencies[p_file].insert(dependency_path);
+		add_to_file_dependencies(dependency_path);
+	}
+}
+
+void EditorExportPlatformWeb::AsyncState::add_to_file_dependencies(const HashSet<String> &p_file_set) {
+	for (const String &file : p_file_set) {
+		if (file.ends_with("/")) {
+			continue;
+		}
+		add_to_file_dependencies(file);
+	}
+}
+
+HashMap<String, const HashSet<String> *> EditorExportPlatformWeb::AsyncState::get_file_dependencies_of(const HashSet<String> &p_file_set) {
+	HashMap<String, const HashSet<String> *> dependencies;
+	for (const String &file : p_file_set) {
+		_get_file_dependencies_of(file, dependencies);
+	}
+	return dependencies;
+}
+
+HashMap<String, const HashSet<String> *> EditorExportPlatformWeb::AsyncState::get_file_dependencies_of(const String &p_file) {
+	HashMap<String, const HashSet<String> *> dependencies;
+	_get_file_dependencies_of(p_file, dependencies);
+	return dependencies;
+}
+
+void EditorExportPlatformWeb::AsyncState::_get_file_dependencies_of(const String &p_file, HashMap<String, const HashSet<String> *> &p_dependencies) {
+	if (!file_dependencies.has(p_file) || p_dependencies.has(p_file)) {
+		return;
+	}
+	p_dependencies[p_file] = &file_dependencies[p_file];
+	for (const String &file_dependency : file_dependencies[p_file]) {
+		_get_file_dependencies_of(file_dependency, p_dependencies);
+	}
 }
 
 void EditorExportPlatformWeb::initialize() {
