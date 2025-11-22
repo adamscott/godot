@@ -694,6 +694,7 @@ void EditorExportPlatformWeb::_fix_html(Vector<uint8_t> &p_html, const Ref<Edito
 	AsyncLoadSetting async_initial_load_mode = (AsyncLoadSetting)(int)p_preset->get("async/initial_load_mode");
 	switch (async_initial_load_mode) {
 		case ASYNC_LOAD_SETTING_LOAD_EVERYTHING: {
+			config["mainPack"] = p_name + ".pck";
 		} break;
 		case ASYNC_LOAD_SETTING_ONLY_LOAD_MAIN_SCENE_DEPENDENCIES_AND_SPECIFIED_RESOURCES: {
 			config["mainPack"] = p_name + ".asyncpck";
