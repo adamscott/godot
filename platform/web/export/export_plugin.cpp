@@ -176,9 +176,9 @@ Error EditorExportPlatformWeb::ExportData::add_dependencies(const String &p_reso
 	}
 	remap_file->parse(remap_file_access->get_as_text());
 
-	String remap_path = remap_file->get_value("remap", "path");
+	String remapped_file_path = remap_file->get_value("remap", "path");
 
-	dependencies.insert(resource_path, ExportData::FileDependencies(this, resource_path, remap_file_path, remap_path));
+	dependencies.insert(resource_path, ExportData::ResourceData(this, resource_path, remap_file_path, remapped_file_path));
 
 	List<String> resource_dependencies;
 	ResourceLoader::get_dependencies(resource_path, &resource_dependencies);
@@ -196,8 +196,56 @@ Error EditorExportPlatformWeb::ExportData::add_dependencies(const String &p_reso
 		}
 		dependencies.get(resource_path).dependencies.push_back(&dependencies.get(simplified_resource_dependency));
 	}
+	ExportData::ResourceData *dependency = &dependencies.get(resource_path);
 
-	return dependencies.get(resource_path).write_deps_json_file(res_to_global(resource_path + ".deps.json"));
+	LocalVector<const ExportData::ResourceData *> found_dependencies;
+	dependency->flatten_dependencies(&found_dependencies);
+
+	Dictionary deps;
+
+	// Resources.
+	Dictionary deps_resources;
+	deps["resources"] = deps_resources;
+
+	for (const ExportData::ResourceData *dependency : found_dependencies) {
+		deps_resources[dependency->path] = dependency->get_as_resource_dictionary();
+	}
+
+	// Dependencies.
+	Dictionary deps_dependencies;
+	deps["dependencies"] = deps_dependencies;
+
+	std::function<void(const ExportData::ResourceData *)> add_deps_dependencies;
+	add_deps_dependencies = [&add_deps_dependencies, &deps_dependencies](const ExportData::ResourceData *p_dependency) -> void {
+		LocalVector<const ExportData::ResourceData *> local_dependencies;
+		p_dependency->flatten_dependencies(&local_dependencies);
+
+		Array paths_array;
+		deps_dependencies[p_dependency->path] = paths_array;
+		for (const ExportData::ResourceData *local_dependency : local_dependencies) {
+			paths_array.push_back(local_dependency->path);
+			if (!deps_dependencies.has(local_dependency->path)) {
+				add_deps_dependencies(local_dependency);
+			}
+		}
+		paths_array.sort();
+	};
+
+	for (const ExportData::ResourceData *found_dependency : found_dependencies) {
+		add_deps_dependencies(found_dependency);
+	}
+
+	{
+		String deps_json_file_path = res_to_global(resource_path + ".deps.json");
+		Ref<FileAccess> deps_json_file = FileAccess::open(deps_json_file_path, FileAccess::WRITE);
+		if (deps_json_file.is_null()) {
+			ERR_PRINT(vformat(R"*(Could not write to "%s".)*", deps_json_file_path));
+			return FileAccess::get_open_error();
+		}
+		deps_json_file->store_string(JSON::stringify(deps, String(" ").repeat(2)));
+	}
+
+	return OK;
 }
 
 /**
@@ -649,7 +697,6 @@ void EditorExportPlatformWeb::_fix_html(Vector<uint8_t> &p_html, const Ref<Edito
 		} break;
 		case ASYNC_LOAD_SETTING_ONLY_LOAD_MAIN_SCENE_DEPENDENCIES_AND_SPECIFIED_RESOURCES: {
 			config["mainPack"] = p_name + ".asyncpck";
-			config["mainSceneDepsJson"] = p_main_scene_deps_json;
 		} break;
 	}
 
@@ -1164,86 +1211,88 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 				loop_asset_dir(ProjectSettings::get_singleton()->globalize_path(export_data.assets_directory));
 			}
 
-			{
-				String main_scene_path = export_data.res_to_global(get_project_setting(p_preset, "application/run/main_scene"));
+			// {
+			// 	String main_scene_path = export_data.res_to_global(get_project_setting(p_preset, "application/run/main_scene"));
 
-				Dictionary main_scene_deps;
-				{
-					Ref<FileAccess> main_scene_deps_json_file = FileAccess::open(main_scene_path + ".deps.json", FileAccess::READ);
-					ERR_FAIL_COND_V(main_scene_deps_json_file.is_null(), FileAccess::get_open_error());
-					main_scene_deps = JSON::parse_string(main_scene_deps_json_file->get_as_text());
-				}
+			// 	Dictionary main_scene_deps;
+			// 	{
+			// 		Ref<FileAccess> main_scene_deps_json_file = FileAccess::open(main_scene_path + ".deps.json", FileAccess::READ);
+			// 		ERR_FAIL_COND_V(main_scene_deps_json_file.is_null(), FileAccess::get_open_error());
+			// 		main_scene_deps = JSON::parse_string(main_scene_deps_json_file->get_as_text());
+			// 	}
 
-				Dictionary resources = main_scene_deps.get("resources", Dictionary());
-				int added_size = 0;
+			// 	Dictionary resources = main_scene_deps.get("resources", Dictionary());
+			// 	int added_size = 0;
 
-				{
-					PackedByteArray key = EditorExportPlatformUtils::convert_string_encryption_key_to_bytes(_get_script_encryption_key(p_preset));
-					std::function<Error(String)> loop_asset_dir;
-					loop_asset_dir = [&loop_asset_dir, &export_data, &resources, &added_size, &is_encrypted, &key, &file_sizes](const String &p_path) -> Error {
-						String path = p_path.simplify_path();
-						Ref<DirAccess> dir_access = DirAccess::open(path);
-						dir_access->list_dir_begin();
-						String next = dir_access->get_next();
-						while (!next.is_empty()) {
-							if (next == "." || next == "..") {
-								next = dir_access->get_next();
-								continue;
-							}
-							if (DirAccess::exists(path.path_join(next))) {
-								Error err = loop_asset_dir(path.path_join(next));
-								if (err != OK) {
-									return err;
-								}
-								next = dir_access->get_next();
-								continue;
-							}
+			// 	{
+			// 		PackedByteArray key = EditorExportPlatformUtils::convert_string_encryption_key_to_bytes(_get_script_encryption_key(p_preset));
+			// 		std::function<Error(String)> loop_asset_dir;
+			// 		loop_asset_dir = [&loop_asset_dir, &export_data, &resources, &added_size, &is_encrypted, &key, &file_sizes](const String &p_path) -> Error {
+			// 			String path = p_path.simplify_path();
+			// 			Ref<DirAccess> dir_access = DirAccess::open(path);
+			// 			dir_access->list_dir_begin();
+			// 			String next = dir_access->get_next();
+			// 			while (!next.is_empty()) {
+			// 				if (next == "." || next == "..") {
+			// 					next = dir_access->get_next();
+			// 					continue;
+			// 				}
+			// 				if (DirAccess::exists(path.path_join(next))) {
+			// 					Error err = loop_asset_dir(path.path_join(next));
+			// 					if (err != OK) {
+			// 						return err;
+			// 					}
+			// 					next = dir_access->get_next();
+			// 					continue;
+			// 				}
 
-							String file_path = export_data.global_to_res(path.simplify_path().path_join(next));
-							if (!resources.has(file_path)) {
-								Dictionary file_data;
-								int file_size;
+			// 				String file_path = export_data.global_to_res(path.simplify_path().path_join(next));
+			// 				if (!resources.has(file_path)) {
+			// 					Dictionary file_data;
+			// 					int file_size;
 
-								Ref<FileAccess> file_access = FileAccess::open(export_data.res_to_global(file_path), FileAccess::READ);
-								ERR_FAIL_COND_V(file_access.is_null(), FileAccess::get_open_error());
+			// 					Ref<FileAccess> file_access = FileAccess::open(export_data.res_to_global(file_path), FileAccess::READ);
+			// 					ERR_FAIL_COND_V(file_access.is_null(), FileAccess::get_open_error());
 
-								if (is_encrypted && !file_path.ends_with(".deps.json") && !file_path.ends_with("assets.sparsepck")) {
-									Ref<FileAccessEncrypted> file_access_encrypted;
-									file_access_encrypted.instantiate();
-									ERR_FAIL_COND_V(file_access_encrypted.is_null(), FAILED);
-									PackedByteArray new_key;
-									new_key.resize(32);
-									memcpy(new_key.ptrw(), key.ptr(), 32);
-									Error err = file_access_encrypted->open_and_parse(file_access, new_key, FileAccessEncrypted::MODE_READ, false);
-									ERR_FAIL_COND_V(err != OK, err);
-									file_access = file_access_encrypted;
-								}
+			// 					if (is_encrypted && !file_path.ends_with(".deps.json") && !file_path.ends_with("assets.sparsepck")) {
+			// 						Ref<FileAccessEncrypted> file_access_encrypted;
+			// 						file_access_encrypted.instantiate();
+			// 						ERR_FAIL_COND_V(file_access_encrypted.is_null(), FAILED);
+			// 						PackedByteArray new_key;
+			// 						new_key.resize(32);
+			// 						memcpy(new_key.ptrw(), key.ptr(), 32);
+			// 						Error err = file_access_encrypted->open_and_parse(file_access, new_key, FileAccessEncrypted::MODE_READ, false);
+			// 						ERR_FAIL_COND_V(err != OK, err);
+			// 						file_access = file_access_encrypted;
+			// 					}
 
-								file_size = file_access->get_length();
-								file_sizes[file_path] = file_size;
+			// 					file_size = file_access->get_length();
+			// 					file_sizes[file_path] = file_size;
 
-								file_data.set("size", file_size);
-								resources.set(file_path, file_data);
-								added_size += file_size;
-							}
-							next = dir_access->get_next();
-						}
-						dir_access->list_dir_end();
+			// 					file_data.set("size", file_size);
+			// 					resources.set(file_path, file_data);
+			// 					added_size += file_size;
+			// 				}
+			// 				next = dir_access->get_next();
+			// 			}
+			// 			dir_access->list_dir_end();
 
-						return OK;
-					};
+			// 			return OK;
+			// 		};
 
-					loop_asset_dir(ProjectSettings::get_singleton()->globalize_path(export_data.assets_directory));
-				}
+			// 		loop_asset_dir(ProjectSettings::get_singleton()->globalize_path(export_data.assets_directory));
+			// 	}
 
-				main_scene_deps.set("total_size", int64_t(main_scene_deps.get("total_size", 0)) + added_size);
-				main_scene_deps_json = JSON::stringify(main_scene_deps, String(" ").repeat(2));
-				{
-					Ref<FileAccess> main_scene_deps_json_file = FileAccess::open(main_scene_path + ".deps.json", FileAccess::WRITE);
-					ERR_FAIL_COND_V(main_scene_deps_json_file.is_null(), FileAccess::get_open_error());
-					main_scene_deps_json_file->store_string(main_scene_deps_json);
-				}
-			}
+			// 	main_scene_deps.set("total_size", int64_t(main_scene_deps.get("total_size", 0)) + added_size);
+			// 	main_scene_deps_json = JSON::stringify(main_scene_deps, String(" ").repeat(2));
+			// 	{
+			// 		Ref<FileAccess> main_scene_deps_json_file = FileAccess::open(main_scene_path + ".deps.json", FileAccess::WRITE);
+			// 		ERR_FAIL_COND_V(main_scene_deps_json_file.is_null(), FileAccess::get_open_error());
+			// 		main_scene_deps_json_file->store_string(main_scene_deps_json);
+			// 	}
+			// }
+
+			// main_scene_deps_json = "";
 		} break;
 
 		default: {
