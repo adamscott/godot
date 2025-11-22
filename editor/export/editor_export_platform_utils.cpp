@@ -345,7 +345,7 @@ void EditorExportPlatformUtils::export_find_dependencies(const String &p_path, H
 	}
 }
 
-void EditorExportPlatformUtils::export_find_resources(const Ref<EditorExportPreset> &p_preset, HashSet<String> &p_paths) {
+void EditorExportPlatformUtils::export_find_preset_resources(const Ref<EditorExportPreset> &p_preset, HashSet<String> &p_paths) {
 	switch (p_preset->get_export_filter()) {
 		case EditorExportPreset::EXPORT_ALL_RESOURCES: {
 			EditorExportPlatformUtils::export_find_resources(EditorFileSystem::get_singleton()->get_filesystem(), p_paths);

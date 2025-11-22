@@ -31,6 +31,7 @@
 #include "export_plugin.h"
 
 #include "core/error/error_list.h"
+#include "core/extension/gdextension.h"
 #include "core/io/config_file.h"
 #include "core/io/file_access.h"
 #include "core/io/file_access_encrypted.h"
@@ -307,8 +308,6 @@ void EditorExportPlatformWeb::AsyncDialog::_on_confirmed() {
 		selected_resources_array.push_back(selected_resource);
 	}
 
-	print_line(vformat("EditorExportPlatformWeb::AsyncDialog::_on_confirmed() %s", selected_resources_array));
-
 	Ref<EditorExportPreset> current_preset = _get_editor_export_preset();
 	current_preset->set("async/initial_load_forced_resources", selected_resources_array);
 }
@@ -394,9 +393,8 @@ void EditorExportPlatformWeb::AsyncDialog::_update_tree() {
 
 	Ref<EditorExportPreset> current_preset = _get_editor_export_preset();
 	Array selected_resources = current_preset->get("async/initial_load_forced_resources");
-	print_line(vformat("EditorExportPlatformWeb::AsyncDialog::_update_tree(): %s", selected_resources));
 	HashSet<String> paths;
-	EditorExportPlatformUtils::export_find_resources(current_preset, paths);
+	EditorExportPlatformUtils::export_find_preset_resources(current_preset, paths);
 
 	HashSet<String> paths_with_selected_resources = paths;
 	for (const String &path : paths) {
@@ -406,7 +404,6 @@ void EditorExportPlatformWeb::AsyncDialog::_update_tree() {
 		if (paths_with_selected_resources.has(selected_resource)) {
 			continue;
 		}
-		print_line(vformat("EditorExportPlatformWeb::AsyncDialog::_update_tree(): adding %s", selected_resource));
 		paths_with_selected_resources.insert(selected_resource);
 	}
 

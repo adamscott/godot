@@ -71,7 +71,7 @@ public:
 	//
 	static void export_find_dependencies(const String &p_path, HashSet<String> &p_paths);
 
-	static void export_find_resources(const Ref<EditorExportPreset> &p_preset, HashSet<String> &p_paths);
+	static void export_find_preset_resources(const Ref<EditorExportPreset> &p_preset, HashSet<String> &p_paths);
 
 	static void edit_files_with_filter(Ref<DirAccess> &da, const Vector<String> &p_filters, HashSet<String> &r_list, bool exclude);
 
