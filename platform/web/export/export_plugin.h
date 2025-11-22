@@ -228,6 +228,7 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 			TREE_COLUMN_PATH = 0,
 			TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY = 1,
 			TREE_COLUMN_IS_FORCED_INITIAL_LOAD = 2,
+			TREE_COLUMN_IS_DEPENDENCY = 3,
 		};
 
 		bool updating = false;
