@@ -186,19 +186,24 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		enum TreeColumn {
 			TREE_COLUMN_PATH = 0,
 			TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY = 1,
-			TREE_COLUMN_IS_FORCED_INITIAL_LOAD = 2,
+			TREE_COLUMN_IS_FORCED = 2,
 			TREE_COLUMN_IS_DEPENDENCY = 3,
 		};
 
-		class TreePathMetadata : public Object {
-			GDCLASS(TreePathMetadata, Object);
+		class TreePathMetadata : public RefCounted {
+			GDCLASS(TreePathMetadata, RefCounted);
 
 		public:
 			String path;
 			bool is_directory = false;
 
-			TreePathMetadata(const String &p_path, bool p_is_directory = false) :
-					path(p_path), is_directory(p_is_directory) {}
+			static Ref<TreePathMetadata> create(const String &p_path, bool is_directory = false) {
+				Ref<TreePathMetadata> meta;
+				meta.instantiate();
+				meta->path = p_path;
+				meta->is_directory = is_directory;
+				return meta;
+			}
 		};
 
 		EditorExportPlatformWeb *export_platform = nullptr;
@@ -209,16 +214,15 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		bool updating = false;
 
 		Tree *tree = nullptr;
+		bool tree_had_first_update = false;
 
 		void update_theme();
 
-		static Ref<EditorExportPreset> get_editor_export_preset();
 		void update_forced_files();
 
 		void on_confirmed();
 
 		void on_tree_item_edited();
-		void on_tree_check_propagated_to_item(Object *p_tree_item, int p_column);
 
 		void add_selected_file(const String &p_path);
 		void remove_selected_file(const String &p_path);
