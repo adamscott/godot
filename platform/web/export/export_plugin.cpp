@@ -500,7 +500,7 @@ bool EditorExportPlatformWeb::AsyncDialog::_fill_tree(EditorFileSystemDirectory 
 	}
 
 	for (int i = 0; i < p_dir->get_file_count(); i++) {
-		String root = "res://" + p_dir->get_name();
+		String root = p_dir->get_path();
 		String file_path = root.path_join(p_dir->get_file(i).simplify_path());
 		if (!p_paths.has(file_path)) {
 			continue;
