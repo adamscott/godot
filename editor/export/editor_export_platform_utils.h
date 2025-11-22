@@ -39,6 +39,9 @@
 
 class EditorExportPlatformUtils {
 public:
+	// Get the
+	static String get_path_from_dependency(const String &p_dependency);
+
 	static int get_pad(int p_alignment, int p_n);
 
 	static Variant get_project_setting(const Ref<EditorExportPreset> &p_preset, const StringName &p_name);

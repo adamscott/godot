@@ -45,6 +45,17 @@
 #include "editor/file_system/editor_file_system.h"
 #include "editor/file_system/editor_paths.h"
 
+String EditorExportPlatformUtils::get_path_from_dependency(const String &p_dependency) {
+	String path = p_dependency;
+	if (path.contains("::")) {
+		return path.get_slice("::", 2);
+	}
+	if (path.begins_with("uid://")) {
+		return ResourceUID::get_singleton()->uid_to_path(path);
+	}
+	return path.simplify_path();
+}
+
 int EditorExportPlatformUtils::get_pad(int p_alignment, int p_n) {
 	int rest = p_n % p_alignment;
 	int pad = 0;
