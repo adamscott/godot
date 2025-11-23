@@ -782,8 +782,19 @@ Error EditorExportPlatformWeb::_build_pwa(const Ref<EditorExportPreset> &p_prese
 	// Heavy files that are cached on demand.
 	Array opt_cache_files = {
 		name + ".wasm",
-		// name + ".asyncpck"
 	};
+
+	AsyncLoadSetting async_initial_load_mode = (AsyncLoadSetting)(int)p_preset->get("async/initial_load_mode");
+	switch (async_initial_load_mode) {
+		case ASYNC_LOAD_SETTING_LOAD_EVERYTHING: {
+			opt_cache_files.push_back(name + ".pck");
+		} break;
+
+		case ASYNC_LOAD_SETTING_ONLY_LOAD_MAIN_SCENE_DEPENDENCIES_AND_SPECIFIED_RESOURCES: {
+			// TODO: Add AsyncPCK contents to the cache.
+		} break;
+	}
+
 	if (extensions) {
 		opt_cache_files.push_back(name + ".side.wasm");
 		for (int i = 0; i < p_shared_objects.size(); i++) {
