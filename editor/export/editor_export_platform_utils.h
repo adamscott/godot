@@ -45,15 +45,13 @@ public:
 
 	public:
 		HashMap<String, HashSet<String>> file_dependencies;
-		String main_scene_path;
-		HashSet<String> forced_files;
-		HashMap<String, const HashSet<String> *> main_scene_dependencies;
-		HashMap<String, const HashSet<String> *> forced_files_dependencies;
 
 		void add_to_file_dependencies(const String &p_file);
 		void add_to_file_dependencies(const HashSet<String> &p_file_set);
 		HashMap<String, const HashSet<String> *> get_file_dependencies_of(const HashSet<String> &p_file_set);
 		HashMap<String, const HashSet<String> *> get_file_dependencies_of(const String &p_file);
+
+		void clear() { file_dependencies.clear(); }
 	};
 
 	// Get the
