@@ -161,25 +161,6 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		}
 	};
 
-	struct AsyncState {
-	private:
-		void _get_file_dependencies_of(const String &p_file, HashMap<String, const HashSet<String> *> &p_dependencies);
-
-	public:
-		HashSet<String> exported_paths;
-		HashSet<String> exported_paths_and_forced_files_and_dependencies;
-		HashMap<String, HashSet<String>> file_dependencies;
-		String main_scene_path;
-		HashSet<String> forced_files;
-		HashMap<String, const HashSet<String> *> main_scene_dependencies;
-		HashMap<String, const HashSet<String> *> forced_files_dependencies;
-
-		void add_to_file_dependencies(const String &p_file);
-		void add_to_file_dependencies(const HashSet<String> &p_file_set);
-		HashMap<String, const HashSet<String> *> get_file_dependencies_of(const HashSet<String> &p_file_set);
-		HashMap<String, const HashSet<String> *> get_file_dependencies_of(const String &p_file);
-	};
-
 	class AsyncDialog : public ConfirmationDialog {
 		GDCLASS(AsyncDialog, ConfirmationDialog);
 
@@ -207,7 +188,7 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		};
 
 		EditorExportPlatformWeb *export_platform = nullptr;
-		AsyncState state;
+		EditorExportPlatformUtils::AsyncPckFileDependencies state;
 
 		Ref<EditorExportPreset> preset;
 
