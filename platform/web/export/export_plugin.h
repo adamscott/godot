@@ -172,7 +172,9 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		};
 
 		EditorExportPlatformWeb *export_platform = nullptr;
-		EditorExportPlatformUtils::AsyncPckFileDependencies state;
+		EditorExportPlatformUtils::AsyncPckFileDependenciesState file_dependencies_state;
+		HashSet<String> exported_paths;
+		HashSet<String> exported_paths_and_forced_files_and_dependencies;
 
 		Ref<EditorExportPreset> preset;
 
