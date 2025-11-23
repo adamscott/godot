@@ -151,7 +151,7 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		bool debug;
 		LocalVector<String> libraries;
 
-		Error add_dependencies(const String &p_resource_path, bool p_is_encrypted = false, const PackedByteArray &p_key = PackedByteArray());
+		Error write_deps_json_file(const String &p_resource_path, bool p_recursive = true);
 		String res_to_global(const String &p_res_path) const {
 			String res_path = simplify_path(p_res_path);
 			return assets_directory.path_join(res_path.trim_prefix("res://"));
@@ -175,6 +175,10 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		EditorExportPlatformUtils::AsyncPckFileDependenciesState file_dependencies_state;
 		HashSet<String> exported_paths;
 		HashSet<String> exported_paths_and_forced_files_and_dependencies;
+		String main_scene_path;
+		HashSet<String> forced_files;
+		HashMap<String, const HashSet<String> *> main_scene_dependencies;
+		HashMap<String, const HashSet<String> *> forced_files_dependencies;
 
 		Ref<EditorExportPreset> preset;
 
