@@ -45,6 +45,58 @@
 #include "editor/file_system/editor_file_system.h"
 #include "editor/file_system/editor_paths.h"
 
+/**
+ * EditorExportPlatformUtils::AsyncPckFileDependencies
+ */
+void EditorExportPlatformUtils::AsyncPckFileDependencies::add_to_file_dependencies(const String &p_file) {
+	if (file_dependencies.has(p_file)) {
+		return;
+	}
+	List<String> dependencies;
+	ResourceLoader::get_dependencies(p_file, &dependencies);
+	for (const String &dependency : dependencies) {
+		String dependency_path = EditorExportPlatformUtils::get_path_from_dependency(dependency);
+		file_dependencies[p_file].insert(dependency_path);
+		add_to_file_dependencies(dependency_path);
+	}
+}
+
+void EditorExportPlatformUtils::AsyncPckFileDependencies::add_to_file_dependencies(const HashSet<String> &p_file_set) {
+	for (const String &file : p_file_set) {
+		if (file.ends_with("/")) {
+			continue;
+		}
+		add_to_file_dependencies(file);
+	}
+}
+
+HashMap<String, const HashSet<String> *> EditorExportPlatformUtils::AsyncPckFileDependencies::get_file_dependencies_of(const HashSet<String> &p_file_set) {
+	HashMap<String, const HashSet<String> *> dependencies;
+	for (const String &file : p_file_set) {
+		_get_file_dependencies_of(file, dependencies);
+	}
+	return dependencies;
+}
+
+HashMap<String, const HashSet<String> *> EditorExportPlatformUtils::AsyncPckFileDependencies::get_file_dependencies_of(const String &p_file) {
+	HashMap<String, const HashSet<String> *> dependencies;
+	_get_file_dependencies_of(p_file, dependencies);
+	return dependencies;
+}
+
+void EditorExportPlatformUtils::AsyncPckFileDependencies::_get_file_dependencies_of(const String &p_file, HashMap<String, const HashSet<String> *> &p_dependencies) {
+	if (!file_dependencies.has(p_file) || p_dependencies.has(p_file)) {
+		return;
+	}
+	p_dependencies[p_file] = &file_dependencies[p_file];
+	for (const String &file_dependency : file_dependencies[p_file]) {
+		_get_file_dependencies_of(file_dependency, p_dependencies);
+	}
+}
+
+/**
+ * EditorExportPlatformUtils
+ */
 String EditorExportPlatformUtils::get_path_from_dependency(const String &p_dependency) {
 	String path = p_dependency;
 	if (path.contains("::")) {
