@@ -171,22 +171,6 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 			TREE_COLUMN_IS_DEPENDENCY = 3,
 		};
 
-		class TreePathMetadata : public RefCounted {
-			GDCLASS(TreePathMetadata, RefCounted);
-
-		public:
-			String path;
-			bool is_directory = false;
-
-			static Ref<TreePathMetadata> create(const String &p_path, bool is_directory = false) {
-				Ref<TreePathMetadata> meta;
-				meta.instantiate();
-				meta->path = p_path;
-				meta->is_directory = is_directory;
-				return meta;
-			}
-		};
-
 		EditorExportPlatformWeb *export_platform = nullptr;
 		EditorExportPlatformUtils::AsyncPckFileDependencies state;
 
@@ -198,11 +182,9 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		bool tree_had_first_update = false;
 
 		void update_theme();
-
 		void update_forced_files();
 
 		void on_confirmed();
-
 		void on_tree_item_edited();
 
 		void add_selected_file(const String &p_path);
