@@ -46,9 +46,9 @@
 #include "editor/file_system/editor_paths.h"
 
 /**
- * EditorExportPlatformUtils::AsyncPckFileDependencies
+ * EditorExportPlatformUtils::AsyncPckFileDependenciesState
  */
-void EditorExportPlatformUtils::AsyncPckFileDependencies::add_to_file_dependencies(const String &p_file) {
+void EditorExportPlatformUtils::AsyncPckFileDependenciesState::add_to_file_dependencies(const String &p_file) {
 	if (file_dependencies.has(p_file)) {
 		return;
 	}
@@ -61,7 +61,7 @@ void EditorExportPlatformUtils::AsyncPckFileDependencies::add_to_file_dependenci
 	}
 }
 
-void EditorExportPlatformUtils::AsyncPckFileDependencies::add_to_file_dependencies(const HashSet<String> &p_file_set) {
+void EditorExportPlatformUtils::AsyncPckFileDependenciesState::add_to_file_dependencies(const HashSet<String> &p_file_set) {
 	for (const String &file : p_file_set) {
 		if (file.ends_with("/")) {
 			continue;
@@ -70,7 +70,7 @@ void EditorExportPlatformUtils::AsyncPckFileDependencies::add_to_file_dependenci
 	}
 }
 
-HashMap<String, const HashSet<String> *> EditorExportPlatformUtils::AsyncPckFileDependencies::get_file_dependencies_of(const HashSet<String> &p_file_set) {
+HashMap<String, const HashSet<String> *> EditorExportPlatformUtils::AsyncPckFileDependenciesState::get_file_dependencies_of(const HashSet<String> &p_file_set) {
 	HashMap<String, const HashSet<String> *> dependencies;
 	for (const String &file : p_file_set) {
 		_get_file_dependencies_of(file, dependencies);
@@ -78,13 +78,13 @@ HashMap<String, const HashSet<String> *> EditorExportPlatformUtils::AsyncPckFile
 	return dependencies;
 }
 
-HashMap<String, const HashSet<String> *> EditorExportPlatformUtils::AsyncPckFileDependencies::get_file_dependencies_of(const String &p_file) {
+HashMap<String, const HashSet<String> *> EditorExportPlatformUtils::AsyncPckFileDependenciesState::get_file_dependencies_of(const String &p_file) {
 	HashMap<String, const HashSet<String> *> dependencies;
 	_get_file_dependencies_of(p_file, dependencies);
 	return dependencies;
 }
 
-void EditorExportPlatformUtils::AsyncPckFileDependencies::_get_file_dependencies_of(const String &p_file, HashMap<String, const HashSet<String> *> &p_dependencies) {
+void EditorExportPlatformUtils::AsyncPckFileDependenciesState::_get_file_dependencies_of(const String &p_file, HashMap<String, const HashSet<String> *> &p_dependencies) {
 	if (p_dependencies.has(p_file)) {
 		return;
 	}
