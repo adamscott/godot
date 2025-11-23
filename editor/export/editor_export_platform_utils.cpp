@@ -85,7 +85,11 @@ HashMap<String, const HashSet<String> *> EditorExportPlatformUtils::AsyncPckFile
 }
 
 void EditorExportPlatformUtils::AsyncPckFileDependencies::_get_file_dependencies_of(const String &p_file, HashMap<String, const HashSet<String> *> &p_dependencies) {
-	if (!file_dependencies.has(p_file) || p_dependencies.has(p_file)) {
+	if (p_dependencies.has(p_file)) {
+		return;
+	}
+	if (!file_dependencies.has(p_file)) {
+		p_dependencies[p_file] = {};
 		return;
 	}
 	p_dependencies[p_file] = &file_dependencies[p_file];
