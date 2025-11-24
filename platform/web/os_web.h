@@ -95,8 +95,8 @@ public:
 	int get_default_thread_pool_size() const override;
 
 	bool asyncpck_is_supported() const override { return true; }
-	Error asyncpck_preload_resource(const String &p_path) const override;
-	Ref<AsyncPreloadStatus> asyncpck_preload_resource_get_status(const String &p_path) const override;
+	Error asyncpck_load_file(const String &p_path) const override;
+	Ref<AsyncLoadStatus> asyncpck_load_file_get_status(const String &p_path) const override;
 
 	String get_executable_path() const override;
 	Error shell_open(const String &p_uri) override;

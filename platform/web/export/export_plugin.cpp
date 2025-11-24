@@ -1482,14 +1482,25 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 			}
 
 			{
-				Array static_files;
+				Dictionary static_files;
 				async_pck_data.set("staticFiles", static_files);
 
-				auto _l_update_file_sizes = [&export_data, &pck_path, &file_sizes, &static_files](const String &l_file) -> void {
-					String global_path = export_data.res_to_global(l_file);
+				auto _l_update_file_sizes = [&export_data, &pck_path, &file_sizes, &static_files](const String &l_file_path) -> void {
+					String global_path = export_data.res_to_global(l_file_path);
 					String local_path = vformat("%s/%s", pck_path.get_file(), export_data.global_to_local(global_path)).simplify_path();
-					file_sizes[local_path] = FileAccess::get_size(global_path);
-					static_files.push_back(local_path);
+					int32_t file_size = FileAccess::get_size(global_path);
+					file_sizes[local_path] = file_size;
+					Dictionary static_file_data;
+					static_files[l_file_path] = static_file_data;
+
+					Dictionary static_file_data_files;
+					static_file_data["files"] = static_file_data_files;
+					static_file_data["totalSize"] = file_size;
+
+					Dictionary static_file_data_files_file;
+					static_file_data_files[l_file_path] = static_file_data_files_file;
+
+					static_file_data_files_file["size"] = file_size;
 				};
 				_l_update_file_sizes("res://project.binary");
 				_l_update_file_sizes("res://assets.sparsepck");
@@ -1499,8 +1510,8 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 
 			{
 				Dictionary directories;
-				directories.set("assets", export_data.global_to_local(export_data.assets_directory));
-				directories.set("libraries", export_data.global_to_local(export_data.libraries_directory));
+				directories.set("assets", vformat("%s/%s", pck_path.get_file(), export_data.global_to_local(export_data.assets_directory)).simplify_path());
+				directories.set("libraries", vformat("%s/%s", pck_path.get_file(), export_data.global_to_local(export_data.libraries_directory)).simplify_path());
 				async_pck_data.set("directories", directories);
 			}
 
