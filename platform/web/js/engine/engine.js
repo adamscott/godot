@@ -167,50 +167,6 @@ const Engine = (function () {
 				// Godot configuration.
 				me.rtenv['initConfig'](config);
 
-				/*
-				await (async function () {
-					if (config.mainSceneDepsJson == null) {
-					    return;
-					}
-					const json = JSON.parse(config.mainSceneDepsJson);
-					// const totalSize = json['total_size'];
-					const resources = json['resources'];
-					const exe = me.config.executable;
-					let pack = me.config.mainPack || `${exe}.asyncpck`;
-
-					const asyncPckSuffix = '.asyncpck';
-					if (pack.endsWith(`${asyncPckSuffix}/`)) {
-						pack = pack.substring(0, pack.length - 1);
-					}
-
-					if (pack.endsWith(asyncPckSuffix)) {
-						await Promise.allSettled(Object.keys(resources).map(async (resourcePath) => {
-							const resourcePathWithoutResPrefix = resourcePath.substring('res://'.length);
-							const resourceRealPath = `${pack}/assets/${resourcePathWithoutResPrefix}`;
-							const response = await fetch(resourceRealPath);
-							if (!response.ok) {
-								throw new Error(`Could not fetch "${resourceRealPath}"`);
-							}
-							const data = await response.bytes();
-
-							const loadPathLastSlash = loadPath.lastIndexOf('/');
-							let basePath;
-							if (loadPathLastSlash === -1) {
-								basePath = '';
-							} else {
-								basePath = loadPath.substring(0, loadPathLastSlash);
-							}
-
-							try {
-								me.rtenv['copyToFS'](`${basePath}/${pack}/assets/${resourcePathWithoutResPrefix}`, data);
-							} catch (err) {
-								window['console'].error('err!!!', err);
-							}
-						}));
-					}
-				})();
-				*/
-
 				// Preload GDExtension libraries.
 				if (me.config.gdextensionLibs.length > 0 && !me.rtenv['loadDynamicLibrary']) {
 					throw new Error(
@@ -266,15 +222,12 @@ const Engine = (function () {
 						throw new Error('No Main Scene dependencies found.');
 					}
 					const asyncPckData = this.config['asyncPckData'];
-					window['console'].log('asyncPckData:', asyncPckData);
 					const asyncPckAssetsDir = pack + asyncPckData['directories']['assets'];
 
 					const asyncPckInitialLoadFiles = new Set();
 					const asyncPckDataInitialLoad = asyncPckData['initialLoad'];
-					for (const [key, value] of Object.entries(asyncPckDataInitialLoad)) {
-						window['console'].log(`loading initial ${key}:`);
-						for (const [resourceKey, resourceValue] of Object.entries(value['resources'])) {
-							window['console'].log(`  loading res ${resourceKey}:`);
+					for (const value of Object.values(asyncPckDataInitialLoad)) {
+						for (const resourceValue of Object.values(value['resources'])) {
 							for (const fileKey of Object.keys(resourceValue['files'])) {
 								asyncPckInitialLoadFiles.add(fileKey);
 							}
@@ -284,7 +237,6 @@ const Engine = (function () {
 					for (const asyncPckInitialLoadFile of asyncPckInitialLoadFiles) {
 						const pathWithoutResPrefix = asyncPckInitialLoadFile.substring('res://'.length);
 						const pathToPush = `${asyncPckAssetsDir}/${pathWithoutResPrefix}`;
-						window['console'].log(`path pushed: ${pathToPush}`);
 						filesToPreload.push(this.preloadFile(pathToPush, pathToPush));
 					}
 
