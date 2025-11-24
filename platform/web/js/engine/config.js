@@ -59,7 +59,7 @@ const InternalConfig = function (initConfig) { // eslint-disable-line no-unused-
 		 * @default
 		 * @type {?string}
 		 */
-		mainSceneDepsJson: null,
+		asyncPckData: null,
 		/**
 		 * Specify a language code to select the proper localization for the game.
 		 *
@@ -279,7 +279,7 @@ const InternalConfig = function (initConfig) { // eslint-disable-line no-unused-
 		this.fileSizes = parse('fileSizes', this.fileSizes);
 		this.emscriptenPoolSize = parse('emscriptenPoolSize', this.emscriptenPoolSize);
 		this.godotPoolSize = parse('godotPoolSize', this.godotPoolSize);
-		this.mainSceneDepsJson = parse('mainSceneDepsJson', this.mainSceneDepsJson);
+		this.asyncPckData = parse('asyncPckData', this.asyncPckData);
 		this.args = parse('args', this.args);
 		this.onExecute = parse('onExecute', this.onExecute);
 		this.onExit = parse('onExit', this.onExit);
@@ -373,7 +373,7 @@ const InternalConfig = function (initConfig) { // eslint-disable-line no-unused-
 			'persistentDrops': this.persistentDrops,
 			'virtualKeyboard': this.experimentalVK,
 			'godotPoolSize': this.godotPoolSize,
-			'mainSceneDepsJson': this.mainSceneDepsJson,
+			'asyncPckData': this.asyncPckData,
 			'focusCanvas': this.focusCanvas,
 			'onExecute': this.onExecute,
 			'onExit': function (p_code) {

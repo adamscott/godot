@@ -262,11 +262,11 @@ const Engine = (function () {
 
 				const filesToPreload = [];
 				if (pack.endsWith('.asyncpck')) {
-					if ((this.config.mainSceneDepsJson ?? '').length > 0) {
+					if (this.config.asyncPckData == null) {
 						throw new Error('No Main Scene dependencies found.');
 					}
-					const mainSceneDeps = JSON.parse(this.config['mainSceneDepsJson']);
-					window['console'].log(mainSceneDeps);
+					const asyncPckData = this.config['asyncPckData'];
+					window['console'].log('asyncPckData:', asyncPckData);
 				} else {
 					filesToPreload.push(this.preloadFile(pack, pack));
 				}
