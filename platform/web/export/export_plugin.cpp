@@ -71,22 +71,22 @@
  * EditorExportPlatformWeb::ExportData
  */
 
-Error EditorExportPlatformWeb::ExportData::write_deps_json_file(const String &p_resource_path) {
+Error EditorExportPlatformWeb::ExportData::write_deps_json_file(const String &p_resource_path, HashSet<String> &p_features_set) {
 	if (dependencies.has(p_resource_path)) {
 		return OK;
 	}
 
-	const String import_suffix = ".import";
-	const String remap_suffix = ".remap";
+	const String SUFFIX_REMAP = ".remap";
+	const String SUFFIX_IMPORT = ".import";
 	String resource_path = EditorExportPlatformUtils::get_path_from_dependency(p_resource_path);
 	String remap_file_path;
 
-	if (FileAccess::exists(res_to_global(resource_path + import_suffix))) {
-		remap_file_path = resource_path + import_suffix;
-	} else if (FileAccess::exists(res_to_global(resource_path + remap_suffix))) {
-		remap_file_path = resource_path + remap_suffix;
+	if (FileAccess::exists(res_to_global(resource_path + SUFFIX_IMPORT))) {
+		remap_file_path = resource_path + SUFFIX_IMPORT;
+	} else if (FileAccess::exists(res_to_global(resource_path + SUFFIX_REMAP))) {
+		remap_file_path = resource_path + SUFFIX_REMAP;
 	} else {
-		ERR_FAIL_V_MSG(ERR_FILE_NOT_FOUND, vformat(TTRC(R"*(Neither "%s" nor "%s" exist, cannot write dependencies JSON file.)*"), resource_path + import_suffix, resource_path + remap_suffix));
+		ERR_FAIL_V_MSG(ERR_FILE_NOT_FOUND, vformat(TTRC(R"*(Neither "%s" nor "%s" exist, cannot write dependencies JSON file.)*"), resource_path + SUFFIX_IMPORT, resource_path + SUFFIX_REMAP));
 	}
 	Ref<FileAccess> remap_file_access = FileAccess::open(res_to_global(remap_file_path), FileAccess::READ);
 	ERR_FAIL_COND_V(remap_file_access.is_null(), FileAccess::get_open_error());
@@ -102,7 +102,27 @@ Error EditorExportPlatformWeb::ExportData::write_deps_json_file(const String &p_
 	// }
 	remap_file->parse(remap_file_access->get_as_text());
 
-	String remapped_file_path = remap_file->get_value("remap", "path");
+	String remapped_file_path;
+	Vector<String> remap_section_keys = remap_file->get_section_keys("remap");
+	for (const String &remap_section_key : remap_section_keys) {
+		bool found = false;
+		const String PREFIX_PATH = "path.";
+		if (remap_section_key.begins_with(PREFIX_PATH)) {
+			String type = remap_section_key.trim_prefix(PREFIX_PATH);
+			if (p_features_set.has(type)) {
+				found = true;
+			}
+		}
+		if (remap_section_key == "path") {
+			found = true;
+		}
+		if (!found) {
+			continue;
+		}
+		remapped_file_path = remap_file->get_value("remap", remap_section_key);
+		break;
+	}
+	ERR_FAIL_COND_V_MSG(remapped_file_path.is_empty(), ERR_FILE_NOT_FOUND, vformat(TTRC(R"*(Could not find a remap path in "%s".)*"), res_to_global(remap_file_path)));
 
 	dependencies.insert(resource_path, ExportData::ResourceData(this, resource_path, remap_file_path, remapped_file_path));
 
@@ -116,10 +136,7 @@ Error EditorExportPlatformWeb::ExportData::write_deps_json_file(const String &p_
 		}
 	}
 	for (const String &resource_dependency : resource_dependencies) {
-		if (resource_dependency == "res://undertale-flowey-the-flower/textures/texture_diffuse_1.png") {
-			(void)0;
-		}
-		Error error = write_deps_json_file(resource_dependency);
+		Error error = write_deps_json_file(resource_dependency, p_features_set);
 		if (error != OK) {
 			ERR_PRINT(vformat(R"*(Could not add dependencies of "%s".)*", resource_dependency));
 			return error;
@@ -176,6 +193,28 @@ Error EditorExportPlatformWeb::ExportData::write_deps_json_file(const String &p_
 	}
 
 	return OK;
+}
+
+HashSet<String> EditorExportPlatformWeb::ExportData::get_features_set() const {
+	List<String> features_list;
+
+	preset->get_platform()->get_platform_features(&features_list);
+	preset->get_platform()->get_preset_features(preset, &features_list);
+
+	String custom = preset->get_custom_features();
+	Vector<String> custom_list = custom.split(",");
+	for (int i = 0; i < custom_list.size(); i++) {
+		String f = custom_list[i].strip_edges();
+		if (!f.is_empty()) {
+			features_list.push_back(f);
+		}
+	}
+
+	HashSet<String> features_set;
+	for (const String &feature : features_list) {
+		features_set.insert(feature);
+	}
+	return features_set;
 }
 
 /**
@@ -1150,6 +1189,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 			export_data.libraries_directory = pck_path.path_join("libraries");
 			export_data.pack_data.path = "assets.sparsepck";
 			export_data.pack_data.use_sparse_pck = true;
+			export_data.preset = p_preset;
 
 			error = export_project_files(p_preset, p_debug, &EditorExportPlatformWeb::_rename_and_store_file_in_async_pck, nullptr, &export_data);
 			if (error != OK) {
@@ -1207,14 +1247,25 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 							continue;
 						}
 
-						const String remap_suffix = ".remap";
-						if (next.ends_with(remap_suffix)) {
-							String resource_path = export_data.global_to_res(path.path_join(next.trim_suffix(remap_suffix)));
-							Error err = export_data.write_deps_json_file(resource_path);
+						const String REMAP_SUFFIX = ".remap";
+						const String IMPORT_SUFFIX = ".import";
+						String suffix;
+
+						if (next.ends_with(REMAP_SUFFIX)) {
+							suffix = REMAP_SUFFIX;
+						} else if (next.ends_with(IMPORT_SUFFIX)) {
+							suffix = IMPORT_SUFFIX;
+						}
+
+						if (!suffix.is_empty()) {
+							String resource_path = export_data.global_to_res(path.path_join(next.trim_suffix(suffix)));
+							HashSet<String> features_set = export_data.get_features_set();
+							Error err = export_data.write_deps_json_file(resource_path, features_set);
 							if (err != OK) {
 								return err;
 							}
 						}
+
 						next = dir_access->get_next();
 					}
 					dir_access->list_dir_end();
@@ -1308,7 +1359,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 			// main_scene_deps_json = "";
 
 			{
-				String main_scene_path = EditorExportPlatformUtils::get_project_setting(p_preset, "application/run/main_scene");
+				String main_scene_path = EditorExportPlatformUtils::get_path_from_dependency(EditorExportPlatformUtils::get_project_setting(p_preset, "application/run/main_scene"));
 				HashSet<String> exported_files;
 				{
 					EditorExportPlatformUtils::AsyncPckFileDependenciesState file_dependencies_state;
@@ -1355,11 +1406,11 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 						file_dependencies_state.add_to_file_dependencies(forced_file);
 						HashMap<String, const HashSet<String> *> new_exported_dependencies = file_dependencies_state.get_file_dependencies_of(forced_file);
 						exported_files_dependencies[forced_file] = new_exported_dependencies[forced_file];
-						exported_files.insert(forced_file);
+						exported_files.insert(EditorExportPlatformUtils::get_path_from_dependency(forced_file));
 					}
 				}
 
-				HashMap<String, String> forced_files_deps_json;
+				Dictionary deps;
 				for (const String &forced_file : exported_files) {
 					String deps_json_file_path = export_data.res_to_global(forced_file) + ".deps.json";
 					Ref<FileAccess> deps_json_file = FileAccess::open(deps_json_file_path, FileAccess::READ);
@@ -1367,14 +1418,8 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 						add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not open file: \"%s\"."), deps_json_file_path));
 						return error;
 					}
-					forced_files_deps_json[forced_file] = deps_json_file->get_as_utf8_string();
+					deps[forced_file] = JSON::parse_string(deps_json_file->get_as_utf8_string());
 				}
-
-				Dictionary deps;
-				for (const KeyValue<String, String> &key_value : forced_files_deps_json) {
-					deps.set(key_value.key, key_value.value);
-				}
-
 				async_pck_data.set("initialLoad", deps);
 			}
 
