@@ -264,7 +264,7 @@ bool PackedData::has_async_path(const String &p_path) {
 	String md5_path = p_path.simplify_path().trim_prefix("res://");
 	PathMD5 md5_data(md5_path.md5_buffer());
 	String md5_text = md5_path.md5_text();
-	return async_files.has(md5_path + ".remap");
+	return async_files.has(md5_path) || async_files.has(md5_path + ".remap") || async_files.has(md5_path + ".import");
 }
 
 bool PackedData::has_directory(const String &p_path) {

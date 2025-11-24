@@ -52,6 +52,7 @@ void EditorExportPlatformUtils::AsyncPckFileDependenciesState::add_to_file_depen
 	if (file_dependencies.has(p_file)) {
 		return;
 	}
+
 	List<String> dependencies;
 	ResourceLoader::get_dependencies(p_file, &dependencies);
 	for (const String &dependency : dependencies) {

@@ -334,9 +334,23 @@ void EditorExportPlatformWeb::AsyncDialog::tree_init() {
 	file_dependencies_state.clear();
 	main_scene_dependencies.clear();
 
-	main_scene_path = EditorExportPlatformUtils::get_path_from_dependency(export_platform->_get_main_scene_path());
+	main_scene_path = EditorExportPlatformUtils::get_path_from_dependency(export_platform->_get_main_scene_path(preset));
 	file_dependencies_state.add_to_file_dependencies(main_scene_path);
-	main_scene_dependencies = file_dependencies_state.get_file_dependencies_of(main_scene_path);
+	HashSet<String> main_scene_dependencies_set = { main_scene_path };
+
+	default_bus_layout_path = EditorExportPlatformUtils::get_path_from_dependency(export_platform->_get_default_bus_layout_path(preset));
+	if (FileAccess::exists(default_bus_layout_path)) {
+		file_dependencies_state.add_to_file_dependencies(default_bus_layout_path);
+		main_scene_dependencies_set.insert(default_bus_layout_path);
+	}
+
+	icon_path = EditorExportPlatformUtils::get_path_from_dependency(export_platform->_get_icon_path(preset));
+	if (FileAccess::exists(icon_path)) {
+		file_dependencies_state.add_to_file_dependencies(icon_path);
+		main_scene_dependencies_set.insert(icon_path);
+	}
+
+	main_scene_dependencies = file_dependencies_state.get_file_dependencies_of(main_scene_dependencies_set);
 
 	forced_files.clear();
 
@@ -1037,7 +1051,7 @@ bool EditorExportPlatformWeb::has_valid_export_configuration(const Ref<EditorExp
 	String err;
 
 	if ((int)p_preset->get("async/initial_load_mode") != AsyncLoadSetting::ASYNC_LOAD_SETTING_LOAD_EVERYTHING) {
-		if (_get_main_scene_path().is_empty()) {
+		if (_get_main_scene_path(p_preset).is_empty()) {
 			err += TTR("No main scene has been set. The main scene must be set for the web platform in order to preload the minimal files.") + "\n";
 		}
 	}
@@ -1225,8 +1239,9 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 			}
 
 			{
+				HashSet<String> features_set = export_data.get_features_set();
 				std::function<Error(String)> _l_loop_asset_dir;
-				_l_loop_asset_dir = [&_l_loop_asset_dir, &export_data](const String &l_path) -> Error {
+				_l_loop_asset_dir = [&_l_loop_asset_dir, &export_data, &features_set](const String &l_path) -> Error {
 					String path = l_path.simplify_path();
 					Ref<DirAccess> dir_access = DirAccess::open(path);
 					ERR_FAIL_COND_V(dir_access.is_null(), ERR_CANT_OPEN);
@@ -1259,7 +1274,6 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 
 						if (!suffix.is_empty()) {
 							String resource_path = export_data.global_to_res(path.path_join(next.trim_suffix(suffix)));
-							HashSet<String> features_set = export_data.get_features_set();
 							Error err = export_data.write_deps_json_file(resource_path, features_set);
 							if (err != OK) {
 								return err;
@@ -1359,11 +1373,25 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 			// main_scene_deps_json = "";
 
 			{
-				String main_scene_path = EditorExportPlatformUtils::get_path_from_dependency(EditorExportPlatformUtils::get_project_setting(p_preset, "application/run/main_scene"));
+				String main_scene_path = EditorExportPlatformUtils::get_path_from_dependency(_get_main_scene_path(p_preset));
+
+				String default_bus_layout_path = EditorExportPlatformUtils::get_path_from_dependency(_get_default_bus_layout_path(p_preset));
+				String icon_path = EditorExportPlatformUtils::get_path_from_dependency(_get_icon_path(p_preset));
+
+				bool default_bus_layout_exists = FileAccess::exists(default_bus_layout_path);
+				bool icon_exists = FileAccess::exists(icon_path);
+
 				HashSet<String> exported_files;
+
 				{
 					EditorExportPlatformUtils::AsyncPckFileDependenciesState file_dependencies_state;
 					file_dependencies_state.add_to_file_dependencies(main_scene_path);
+					if (default_bus_layout_exists) {
+						file_dependencies_state.add_to_file_dependencies(default_bus_layout_path);
+					}
+					if (icon_exists) {
+						file_dependencies_state.add_to_file_dependencies(icon_path);
+					}
 
 					HashSet<String> forced_files;
 					Variant forced_files_variant = p_preset->get("async/initial_load_forced_files");
@@ -1389,11 +1417,25 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 						HashMap<String, const HashSet<String> *> main_scene_dependencies = file_dependencies_state.get_file_dependencies_of(main_scene_path);
 						exported_files_dependencies[main_scene_path] = main_scene_dependencies[main_scene_path];
 						exported_files.insert(main_scene_path);
+
+						if (default_bus_layout_exists) {
+							HashMap<String, const HashSet<String> *> default_bus_layout_dependencies = file_dependencies_state.get_file_dependencies_of(default_bus_layout_path);
+							exported_files_dependencies[default_bus_layout_path] = default_bus_layout_dependencies[default_bus_layout_path];
+							exported_files.insert(default_bus_layout_path);
+						}
+						if (icon_exists) {
+							HashMap<String, const HashSet<String> *> icon_dependencies = file_dependencies_state.get_file_dependencies_of(icon_path);
+							exported_files_dependencies[icon_path] = icon_dependencies[icon_path];
+							exported_files.insert(icon_path);
+						}
 					}
 
 					for (const String &forced_file : forced_files) {
 						bool found = false;
 						for (const String &exported_file : exported_files) {
+							if (exported_files_dependencies[exported_file] == nullptr) {
+								continue;
+							}
 							if (exported_files_dependencies[exported_file]->has(forced_file)) {
 								found = true;
 								break;
@@ -1404,6 +1446,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 						}
 
 						file_dependencies_state.add_to_file_dependencies(forced_file);
+
 						HashMap<String, const HashSet<String> *> new_exported_dependencies = file_dependencies_state.get_file_dependencies_of(forced_file);
 						exported_files_dependencies[forced_file] = new_exported_dependencies[forced_file];
 						exported_files.insert(EditorExportPlatformUtils::get_path_from_dependency(forced_file));
@@ -1419,8 +1462,46 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 						return error;
 					}
 					deps[forced_file] = JSON::parse_string(deps_json_file->get_as_utf8_string());
+
+					Dictionary resources = Dictionary(deps[forced_file])["resources"];
+					Array resources_keys = resources.keys();
+					for (const String resources_key : resources_keys) {
+						Dictionary resource_data = resources[resources_key];
+						Dictionary resource_files = resource_data["files"];
+						Array resource_files_keys = resource_files.keys();
+						for (const String resource_files_key : resource_files_keys) {
+							Dictionary resource_file = resource_files[resource_files_key];
+							uint32_t resource_files_size = resource_file["size"];
+							String global_path = export_data.res_to_global(resource_files_key);
+							String local_path = vformat("%s/%s", pck_path.get_file(), export_data.global_to_local(global_path)).simplify_path();
+							file_sizes[local_path] = resource_files_size;
+						}
+					}
 				}
 				async_pck_data.set("initialLoad", deps);
+			}
+
+			{
+				Array static_files;
+				async_pck_data.set("staticFiles", static_files);
+
+				auto _l_update_file_sizes = [&export_data, &pck_path, &file_sizes, &static_files](const String &l_file) -> void {
+					String global_path = export_data.res_to_global(l_file);
+					String local_path = vformat("%s/%s", pck_path.get_file(), export_data.global_to_local(global_path)).simplify_path();
+					file_sizes[local_path] = FileAccess::get_size(global_path);
+					static_files.push_back(local_path);
+				};
+				_l_update_file_sizes("res://project.binary");
+				_l_update_file_sizes("res://assets.sparsepck");
+				_l_update_file_sizes("res://.godot/uid_cache.bin");
+				_l_update_file_sizes("res://.godot/global_script_class_cache.cfg");
+			}
+
+			{
+				Dictionary directories;
+				directories.set("assets", export_data.global_to_local(export_data.assets_directory));
+				directories.set("libraries", export_data.global_to_local(export_data.libraries_directory));
+				async_pck_data.set("directories", directories);
 			}
 
 		} break;
@@ -1840,12 +1921,16 @@ void EditorExportPlatformWeb::_on_async_dialog_visibility_changed() {
 	async_dialog = nullptr;
 }
 
-String EditorExportPlatformWeb::_get_main_scene_path() const {
-	return ProjectSettings::get_singleton()->get_setting(
-			"application/run/main_scene.web",
-			ProjectSettings::get_singleton()->get_setting(
-					"application/run/main_scene",
-					""));
+String EditorExportPlatformWeb::_get_main_scene_path(Ref<EditorExportPreset> p_preset) const {
+	return EditorExportPlatformUtils::get_project_setting(p_preset, "application/run/main_scene");
+}
+
+String EditorExportPlatformWeb::_get_default_bus_layout_path(Ref<EditorExportPreset> p_preset) const {
+	return EditorExportPlatformUtils::get_project_setting(p_preset, "audio/buses/default_bus_layout");
+}
+
+String EditorExportPlatformWeb::_get_icon_path(Ref<EditorExportPreset> p_preset) const {
+	return EditorExportPlatformUtils::get_project_setting(p_preset, "application/config/icon");
 }
 
 Ref<Texture2D> EditorExportPlatformWeb::get_run_icon() const {

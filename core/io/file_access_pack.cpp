@@ -156,11 +156,17 @@ String PackedData::get_file_pack_path(const String &p_path) {
 
 String PackedData::get_file_async_pack_path(const String &p_path) {
 	String simplified_path = p_path.simplify_path().trim_prefix("res://");
-	String remap_path = simplified_path + ".remap";
-	if (!async_files.has(remap_path)) {
+	String path;
+	if (async_files.has(simplified_path)) {
+		path = simplified_path;
+	} else if (async_files.has(simplified_path + ".remap")) {
+		path = simplified_path + ".remap";
+	} else if (async_files.has(simplified_path + ".import")) {
+		path = simplified_path + ".import";
+	} else {
 		return "";
 	}
-	String pack = async_files[remap_path][async_files[remap_path].size() - 1].pack;
+	String pack = async_files[path][async_files[path].size() - 1].pack;
 	return pack.path_join("..").path_join("..").simplify_path();
 }
 
@@ -527,12 +533,16 @@ void FileAccessPack::close() {
 }
 
 FileAccessPack::FileAccessPack(const String &p_path, const PackedData::PackedFile &p_file) {
+	print_line(vformat("FileAccessPack::FileAccessPack() %s, %s", p_path, p_file.pack));
 	pf = p_file;
+
 	if (pf.properties.has_flag(PackedData::PackedFile::Property::PROPERTY_BUNDLED)) {
+		print_line(vformat("FileAccessPack::FileAccessPack() bundled"));
 		String simplified_path = p_path.simplify_path();
 		f = FileAccess::open(simplified_path, FileAccess::READ | FileAccess::SKIP_PACK);
 		off = 0; // For the sparse pack offset is always zero.
 	} else {
+		print_line(vformat("FileAccessPack::FileAccessPack() not bundled"));
 		f = FileAccess::open(pf.pack, FileAccess::READ);
 		f->seek(pf.offset);
 		off = pf.offset;
