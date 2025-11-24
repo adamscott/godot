@@ -94,7 +94,7 @@
 #include "scene/gui/texture_rect.h"
 #include "scene/gui/tree.h"
 #include "scene/gui/video_stream_player.h"
-#include "scene/main/async_loader.h"
+#include "scene/main/async_installer.h"
 #include "scene/main/canvas_item.h"
 #include "scene/main/canvas_layer.h"
 #include "scene/main/http_request.h"
@@ -455,7 +455,7 @@ void register_scene_types() {
 	GDREGISTER_CLASS(CanvasLayer);
 	GDREGISTER_CLASS(ResourcePreloader);
 	GDREGISTER_CLASS(Window);
-	GDREGISTER_CLASS(AsyncLoader);
+	GDREGISTER_CLASS(AsyncInstaller);
 
 	GDREGISTER_CLASS(StatusIndicator);
 

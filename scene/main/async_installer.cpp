@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  async_loader.cpp                                                      */
+/*  async_installer.cpp                                                   */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,7 +28,8 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#include "async_loader.h"
+#include "async_installer.h"
+
 #include "core/config/engine.h"
 #include "core/io/file_access.h"
 #include "core/object/object.h"
@@ -36,7 +37,7 @@
 #include "core/variant/variant.h"
 #include "scene/main/node.h"
 
-void AsyncLoader::_notification(int p_what) {
+void AsyncInstaller::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_ENTER_TREE: {
 		} break;
@@ -52,7 +53,7 @@ void AsyncLoader::_notification(int p_what) {
 	}
 }
 
-void AsyncLoader::start() {
+void AsyncInstaller::start() {
 	if (Engine::get_singleton()->is_editor_hint()) {
 		return;
 	}
@@ -73,19 +74,19 @@ void AsyncLoader::start() {
 	}
 
 	for (const String &file_path : file_paths) {
-		OS::get_singleton()->asyncpck_load_file(file_path);
+		OS::get_singleton()->asyncpck_install_file(file_path);
 	}
 }
 
-void AsyncLoader::set_autostart(bool p_autostart) {
+void AsyncInstaller::set_autostart(bool p_autostart) {
 	autostart = p_autostart;
 }
 
-bool AsyncLoader::get_autostart() const {
+bool AsyncInstaller::get_autostart() const {
 	return autostart;
 }
 
-void AsyncLoader::set_file_paths(const PackedStringArray &p_file_paths) {
+void AsyncInstaller::set_file_paths(const PackedStringArray &p_file_paths) {
 	ERR_MAIN_THREAD_GUARD;
 	if (file_paths == p_file_paths) {
 		return;
@@ -93,15 +94,15 @@ void AsyncLoader::set_file_paths(const PackedStringArray &p_file_paths) {
 	file_paths = p_file_paths;
 }
 
-PackedStringArray AsyncLoader::get_file_paths() const {
+PackedStringArray AsyncInstaller::get_file_paths() const {
 	return file_paths;
 }
 
-void AsyncLoader::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("set_autostart", "autostart"), &AsyncLoader::set_autostart);
-	ClassDB::bind_method(D_METHOD("get_autostart"), &AsyncLoader::get_autostart);
-	ClassDB::bind_method(D_METHOD("set_resources_paths", "resources_paths"), &AsyncLoader::set_file_paths);
-	ClassDB::bind_method(D_METHOD("get_resources_paths"), &AsyncLoader::get_file_paths);
+void AsyncInstaller::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("set_autostart", "autostart"), &AsyncInstaller::set_autostart);
+	ClassDB::bind_method(D_METHOD("get_autostart"), &AsyncInstaller::get_autostart);
+	ClassDB::bind_method(D_METHOD("set_resources_paths", "resources_paths"), &AsyncInstaller::set_file_paths);
+	ClassDB::bind_method(D_METHOD("get_resources_paths"), &AsyncInstaller::get_file_paths);
 
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "autostart"), "set_autostart", "get_autostart");
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_STRING_ARRAY, "resources_paths", PROPERTY_HINT_FILE_PATH, "*"), "set_resources_paths", "get_resources_paths");

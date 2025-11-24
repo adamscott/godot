@@ -315,7 +315,7 @@ public:
 
 	bool asyncpck_is_supported() const;
 	Error asyncpck_load_file(const String &p_path) const;
-	Ref<::OS::AsyncLoadStatus> asyncpck_load_file_get_status(const String &p_path) const;
+	Ref<::OS::AsyncInstallStatus> asyncpck_load_file_get_status(const String &p_path) const;
 
 	static OS *get_singleton() { return singleton; }
 
