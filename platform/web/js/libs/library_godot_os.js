@@ -338,6 +338,8 @@ const _GodotOS = {
 			if (!GodotOS._asyncpck_preload_map.get(pPckDir).has(pPath)) {
 				if (GodotOS._asyncpck_preload_map.get(pPckDir).has(`${pPath}.remap`)) {
 					return GodotOS._asyncpck_preload_map.get(pPckDir).get(`${pPath}.remap`);
+				} else if (GodotOS._asyncpck_preload_map.get(pPckDir).has(`${pPath}.import`)) {
+					return GodotOS._asyncpck_preload_map.get(pPckDir).get(`${pPath}.import`);
 				}
 				return null;
 			}

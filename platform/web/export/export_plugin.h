@@ -68,6 +68,7 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 
 	struct ExportData {
 		struct File {
+			bool exists = false;
 			String path;
 			uint32_t size = 0;
 			String md5;
@@ -86,20 +87,38 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 			const ExportData *export_data;
 
 			String path;
+			File native_file;
 			File remap_file;
 			File remapped_file;
 			LocalVector<const ResourceData *> dependencies;
 
 			uint32_t get_size() const {
-				return remap_file.size + remapped_file.size;
+				uint32_t size = 0;
+				if (native_file.exists) {
+					size += native_file.size;
+				}
+				if (remap_file.exists) {
+					size += remap_file.size;
+				}
+				if (remapped_file.exists) {
+					size += remapped_file.size;
+				}
+				return size;
 			}
 
 			Dictionary get_as_resource_dictionary() const {
 				Dictionary data;
 				Dictionary resources;
-				resources[remap_file.path] = remap_file.get_as_dictionary();
-				resources[remapped_file.path] = remapped_file.get_as_dictionary();
-				data["resources"] = resources;
+				if (native_file.exists) {
+					resources[native_file.path] = native_file.get_as_dictionary();
+				}
+				if (remap_file.exists) {
+					resources[remap_file.path] = remap_file.get_as_dictionary();
+				}
+				if (remapped_file.exists) {
+					resources[remapped_file.path] = remapped_file.get_as_dictionary();
+				}
+				data["files"] = resources;
 				data["total_size"] = get_size();
 				return data;
 			}
@@ -123,20 +142,35 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 				ERR_FAIL_COND(p_remap_file_path.is_empty());
 				ERR_FAIL_COND(p_remapped_file_path.is_empty());
 
+				native_file.path = p_path;
 				remap_file.path = p_remap_file_path;
 				remapped_file.path = p_remapped_file_path;
 
+				String real_native_file_path = p_export_data->res_to_global(p_path);
 				String real_remap_file_path = p_export_data->res_to_global(p_remap_file_path);
 				String real_remapped_file_path = p_export_data->res_to_global(p_remapped_file_path);
+
+				ERR_FAIL_COND(real_native_file_path.is_empty());
 				ERR_FAIL_COND(real_remap_file_path.is_empty());
 				ERR_FAIL_COND(real_remapped_file_path.is_empty());
 
 				ERR_FAIL_COND(!FileAccess::exists(real_remap_file_path));
 				ERR_FAIL_COND(!FileAccess::exists(real_remapped_file_path));
 
+				native_file.exists = FileAccess::exists(real_native_file_path);
+				remap_file.exists = true;
+				remapped_file.exists = true;
+
+				if (native_file.exists) {
+					native_file.size = FileAccess::get_size(real_native_file_path);
+				}
 				remap_file.size = FileAccess::get_size(real_remap_file_path);
 				remapped_file.size = FileAccess::get_size(real_remapped_file_path);
 
+				if (native_file.exists) {
+					native_file.md5 = real_native_file_path.md5_text();
+					native_file.sha256 = real_native_file_path.sha256_text();
+				}
 				remap_file.md5 = real_remap_file_path.md5_text();
 				remap_file.sha256 = real_remap_file_path.sha256_text();
 				remapped_file.md5 = real_remapped_file_path.md5_text();
@@ -160,6 +194,9 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		String global_to_res(const String &p_global_path) const {
 			return "res://" + p_global_path.trim_prefix(assets_directory.trim_suffix("/") + "/");
 		}
+		String global_to_local(const String &p_global_path) const {
+			return p_global_path.trim_prefix(assets_directory.get_base_dir());
+		}
 
 		Error write_deps_json_file(const String &p_resource_path, HashSet<String> &p_features_set);
 	};
@@ -179,8 +216,12 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		HashSet<String> exported_paths;
 		HashSet<String> exported_paths_and_forced_files_and_dependencies;
 		String main_scene_path;
+		String default_bus_layout_path;
+		String icon_path;
 		HashSet<String> forced_files;
 		HashMap<String, const HashSet<String> *> main_scene_dependencies;
+		HashMap<String, const HashSet<String> *> default_bus_layout_dependencies;
+		HashMap<String, const HashSet<String> *> icon_dependencies;
 		HashMap<String, const HashSet<String> *> forced_files_dependencies;
 
 		Ref<EditorExportPreset> preset;
@@ -284,7 +325,9 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 	void _open_async_dialog();
 	void _on_async_dialog_visibility_changed();
 
-	String _get_main_scene_path() const;
+	String _get_main_scene_path(Ref<EditorExportPreset> p_preset) const;
+	String _get_default_bus_layout_path(Ref<EditorExportPreset> p_preset) const;
+	String _get_icon_path(Ref<EditorExportPreset> p_preset) const;
 
 public:
 	virtual void get_preset_features(const Ref<EditorExportPreset> &p_preset, List<String> *r_features) const override;

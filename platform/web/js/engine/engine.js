@@ -267,6 +267,31 @@ const Engine = (function () {
 					}
 					const asyncPckData = this.config['asyncPckData'];
 					window['console'].log('asyncPckData:', asyncPckData);
+					const asyncPckAssetsDir = pack + asyncPckData['directories']['assets'];
+
+					const asyncPckInitialLoadFiles = new Set();
+					const asyncPckDataInitialLoad = asyncPckData['initialLoad'];
+					for (const [key, value] of Object.entries(asyncPckDataInitialLoad)) {
+						window['console'].log(`loading initial ${key}:`);
+						for (const [resourceKey, resourceValue] of Object.entries(value['resources'])) {
+							window['console'].log(`  loading res ${resourceKey}:`);
+							for (const fileKey of Object.keys(resourceValue['files'])) {
+								asyncPckInitialLoadFiles.add(fileKey);
+							}
+						}
+					}
+
+					for (const asyncPckInitialLoadFile of asyncPckInitialLoadFiles) {
+						const pathWithoutResPrefix = asyncPckInitialLoadFile.substring('res://'.length);
+						const pathToPush = `${asyncPckAssetsDir}/${pathWithoutResPrefix}`;
+						window['console'].log(`path pushed: ${pathToPush}`);
+						filesToPreload.push(this.preloadFile(pathToPush, pathToPush));
+					}
+
+					const asyncPckStaticFiles = asyncPckData['staticFiles'];
+					for (const asyncPckStaticFile of asyncPckStaticFiles) {
+						filesToPreload.push(this.preloadFile(asyncPckStaticFile, asyncPckStaticFile));
+					}
 				} else {
 					filesToPreload.push(this.preloadFile(pack, pack));
 				}
