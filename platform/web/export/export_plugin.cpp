@@ -71,21 +71,23 @@
  * EditorExportPlatformWeb::ExportData
  */
 
-Error EditorExportPlatformWeb::ExportData::write_deps_json_file(const String &p_resource_path, bool p_recursive) {
+Error EditorExportPlatformWeb::ExportData::write_deps_json_file(const String &p_resource_path) {
 	if (dependencies.has(p_resource_path)) {
 		return OK;
 	}
 
-	String resource_path;
-	if (p_resource_path.contains("::")) {
-		resource_path = p_resource_path.get_slice("::", 2);
-	} else {
-		resource_path = p_resource_path;
-	}
-
+	const String import_suffix = ".import";
 	const String remap_suffix = ".remap";
-	String remap_file_path = resource_path + remap_suffix;
+	String resource_path = EditorExportPlatformUtils::get_path_from_dependency(p_resource_path);
+	String remap_file_path;
 
+	if (FileAccess::exists(res_to_global(resource_path + import_suffix))) {
+		remap_file_path = resource_path + import_suffix;
+	} else if (FileAccess::exists(res_to_global(resource_path + remap_suffix))) {
+		remap_file_path = resource_path + remap_suffix;
+	} else {
+		ERR_FAIL_V_MSG(ERR_FILE_NOT_FOUND, vformat(TTRC(R"*(Neither "%s" nor "%s" exist, cannot write dependencies JSON file.)*"), resource_path + import_suffix, resource_path + remap_suffix));
+	}
 	Ref<FileAccess> remap_file_access = FileAccess::open(res_to_global(remap_file_path), FileAccess::READ);
 	ERR_FAIL_COND_V(remap_file_access.is_null(), FileAccess::get_open_error());
 
@@ -114,12 +116,13 @@ Error EditorExportPlatformWeb::ExportData::write_deps_json_file(const String &p_
 		}
 	}
 	for (const String &resource_dependency : resource_dependencies) {
-		if (p_recursive) {
-			Error error = write_deps_json_file(resource_dependency, true);
-			if (error != OK) {
-				ERR_PRINT(vformat(R"*(Could not add dependencies of "%s".)*", resource_dependency));
-				return error;
-			}
+		if (resource_dependency == "res://undertale-flowey-the-flower/textures/texture_diffuse_1.png") {
+			(void)0;
+		}
+		Error error = write_deps_json_file(resource_dependency);
+		if (error != OK) {
+			ERR_PRINT(vformat(R"*(Could not add dependencies of "%s".)*", resource_dependency));
+			return error;
 		}
 		dependencies.get(resource_path).dependencies.push_back(&dependencies.get(resource_dependency));
 	}
@@ -163,7 +166,7 @@ Error EditorExportPlatformWeb::ExportData::write_deps_json_file(const String &p_
 	}
 
 	{
-		String deps_json_file_path = res_to_global(resource_path + ".deps.json");
+		String deps_json_file_path = res_to_global(resource_path) + ".deps.json";
 		Ref<FileAccess> deps_json_file = FileAccess::open(deps_json_file_path, FileAccess::WRITE);
 		if (deps_json_file.is_null()) {
 			ERR_PRINT(vformat(R"*(Could not write to "%s".)*", deps_json_file_path));
@@ -665,7 +668,7 @@ void EditorExportPlatformWeb::_replace_strings(const HashMap<String, String> &p_
 	}
 }
 
-void EditorExportPlatformWeb::_fix_html(Vector<uint8_t> &p_html, const Ref<EditorExportPreset> &p_preset, const String &p_name, bool p_debug, BitField<EditorExportPlatform::DebugFlags> p_flags, const Vector<SharedObject> p_shared_objects, const Dictionary &p_file_sizes, const String &p_main_scene_deps_json) {
+void EditorExportPlatformWeb::_fix_html(Vector<uint8_t> &p_html, const Ref<EditorExportPreset> &p_preset, const String &p_name, bool p_debug, BitField<EditorExportPlatform::DebugFlags> p_flags, const Vector<SharedObject> p_shared_objects, const Dictionary &p_file_sizes, const Dictionary &p_async_pck_data) {
 	// Engine.js config
 	Dictionary config;
 	Array libs;
@@ -696,6 +699,7 @@ void EditorExportPlatformWeb::_fix_html(Vector<uint8_t> &p_html, const Ref<Edito
 		} break;
 		case ASYNC_LOAD_SETTING_ONLY_LOAD_MAIN_SCENE_DEPENDENCIES_AND_SPECIFIED_RESOURCES: {
 			config["mainPack"] = p_name + ".asyncpck";
+			config["asyncPckData"] = p_async_pck_data;
 		} break;
 	}
 
@@ -1103,7 +1107,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 	String pck_path;
 
 	// Async PCK related.
-	String main_scene_deps_json;
+	Dictionary async_pck_data;
 	// Parse generated file sizes (pck and wasm, to help show a meaningful loading bar).
 	Dictionary file_sizes;
 
@@ -1304,13 +1308,13 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 			// main_scene_deps_json = "";
 
 			{
-				String main_scene_path = export_data.res_to_global(EditorExportPlatformUtils::get_project_setting(p_preset, "application/run/main_scene"));
-				HashSet<String> forced_files;
-
+				String main_scene_path = EditorExportPlatformUtils::get_project_setting(p_preset, "application/run/main_scene");
+				HashSet<String> exported_files;
 				{
 					EditorExportPlatformUtils::AsyncPckFileDependenciesState file_dependencies_state;
 					file_dependencies_state.add_to_file_dependencies(main_scene_path);
 
+					HashSet<String> forced_files;
 					Variant forced_files_variant = p_preset->get("async/initial_load_forced_files");
 					if (forced_files_variant.get_type() != Variant::ARRAY && forced_files_variant.get_type() != Variant::PACKED_STRING_ARRAY) {
 						add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), TTR(R"*(Export option "async/initial_load_forced_files" is not a valid array.)*"));
@@ -1329,11 +1333,49 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 					}
 					file_dependencies_state.add_to_file_dependencies(forced_files);
 
-					HashMap<String, const HashSet<String> *> main_scene_dependencies = file_dependencies_state.get_file_dependencies_of(main_scene_path);
-					for (const KeyValue<String, const HashSet<String> *> &key_value : main_scene_dependencies) {
-						forced_files.insert(key_value.key);
+					HashMap<String, const HashSet<String> *> exported_files_dependencies;
+					{
+						HashMap<String, const HashSet<String> *> main_scene_dependencies = file_dependencies_state.get_file_dependencies_of(main_scene_path);
+						exported_files_dependencies[main_scene_path] = main_scene_dependencies[main_scene_path];
+						exported_files.insert(main_scene_path);
+					}
+
+					for (const String &forced_file : forced_files) {
+						bool found = false;
+						for (const String &exported_file : exported_files) {
+							if (exported_files_dependencies[exported_file]->has(forced_file)) {
+								found = true;
+								break;
+							}
+						}
+						if (found) {
+							continue;
+						}
+
+						file_dependencies_state.add_to_file_dependencies(forced_file);
+						HashMap<String, const HashSet<String> *> new_exported_dependencies = file_dependencies_state.get_file_dependencies_of(forced_file);
+						exported_files_dependencies[forced_file] = new_exported_dependencies[forced_file];
+						exported_files.insert(forced_file);
 					}
 				}
+
+				HashMap<String, String> forced_files_deps_json;
+				for (const String &forced_file : exported_files) {
+					String deps_json_file_path = export_data.res_to_global(forced_file) + ".deps.json";
+					Ref<FileAccess> deps_json_file = FileAccess::open(deps_json_file_path, FileAccess::READ);
+					if (deps_json_file.is_null()) {
+						add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not open file: \"%s\"."), deps_json_file_path));
+						return error;
+					}
+					forced_files_deps_json[forced_file] = deps_json_file->get_as_utf8_string();
+				}
+
+				Dictionary deps;
+				for (const KeyValue<String, String> &key_value : forced_files_deps_json) {
+					deps.set(key_value.key, key_value.value);
+				}
+
+				async_pck_data.set("initialLoad", deps);
 			}
 
 		} break;
@@ -1369,7 +1411,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 	f.unref(); // close file.
 
 	// Generate HTML file with replaced strings.
-	_fix_html(html, p_preset, base_name, p_debug, p_flags, shared_objects, file_sizes, main_scene_deps_json);
+	_fix_html(html, p_preset, base_name, p_debug, p_flags, shared_objects, file_sizes, async_pck_data);
 	Error err = _write_or_error(html.ptr(), html.size(), path);
 	if (err != OK) {
 		// Message is supplied by the subroutine method.
