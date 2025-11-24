@@ -166,6 +166,7 @@ const Engine = (function () {
 
 				// Godot configuration.
 				me.rtenv['initConfig'](config);
+				me.rtenv['initOS']();
 
 				// Preload GDExtension libraries.
 				if (me.config.gdextensionLibs.length > 0 && !me.rtenv['loadDynamicLibrary']) {
@@ -222,7 +223,7 @@ const Engine = (function () {
 						throw new Error('No Main Scene dependencies found.');
 					}
 					const asyncPckData = this.config['asyncPckData'];
-					const asyncPckAssetsDir = pack + asyncPckData['directories']['assets'];
+					const asyncPckAssetsDir = asyncPckData['directories']['assets'];
 
 					const asyncPckInitialLoadFiles = new Set();
 					const asyncPckDataInitialLoad = asyncPckData['initialLoad'];
@@ -234,15 +235,24 @@ const Engine = (function () {
 						}
 					}
 
+					const resToLocal = (pPath) => {
+						const PREFIX_RES = 'res://';
+						let path = pPath;
+						if (path.startsWith(PREFIX_RES)) {
+							path = path.substring('res://'.length);
+						}
+						return `${asyncPckAssetsDir}/${path}`;
+					};
+
 					for (const asyncPckInitialLoadFile of asyncPckInitialLoadFiles) {
-						const pathWithoutResPrefix = asyncPckInitialLoadFile.substring('res://'.length);
-						const pathToPush = `${asyncPckAssetsDir}/${pathWithoutResPrefix}`;
-						filesToPreload.push(this.preloadFile(pathToPush, pathToPush));
+						const pathToPreload = resToLocal(asyncPckInitialLoadFile);
+						filesToPreload.push(this.preloadFile(pathToPreload, pathToPreload));
 					}
 
 					const asyncPckStaticFiles = asyncPckData['staticFiles'];
-					for (const asyncPckStaticFile of asyncPckStaticFiles) {
-						filesToPreload.push(this.preloadFile(asyncPckStaticFile, asyncPckStaticFile));
+					for (const asyncPckStaticFilePath of Object.keys(asyncPckStaticFiles)) {
+						const pathToPreload = resToLocal(asyncPckStaticFilePath);
+						filesToPreload.push(this.preloadFile(pathToPreload, pathToPreload));
 					}
 				} else {
 					filesToPreload.push(this.preloadFile(pack, pack));

@@ -119,7 +119,7 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 					resources[remapped_file.path] = remapped_file.get_as_dictionary();
 				}
 				data["files"] = resources;
-				data["total_size"] = get_size();
+				data["totalSize"] = get_size();
 				return data;
 			}
 

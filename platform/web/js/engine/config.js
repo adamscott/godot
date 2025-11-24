@@ -57,7 +57,7 @@ const InternalConfig = function (initConfig) { // eslint-disable-line no-unused-
 		 *
 		 * @memberof EngineConfig
 		 * @default
-		 * @type {?string}
+		 * @type {?Object}
 		 */
 		asyncPckData: null,
 		/**
@@ -369,11 +369,12 @@ const InternalConfig = function (initConfig) { // eslint-disable-line no-unused-
 		return {
 			'canvas': this.canvas,
 			'canvasResizePolicy': this.canvasResizePolicy,
+			'mainPack': this.mainPack,
+			'asyncPckData': this.asyncPckData,
 			'locale': locale,
 			'persistentDrops': this.persistentDrops,
 			'virtualKeyboard': this.experimentalVK,
 			'godotPoolSize': this.godotPoolSize,
-			'asyncPckData': this.asyncPckData,
 			'focusCanvas': this.focusCanvas,
 			'onExecute': this.onExecute,
 			'onExit': function (p_code) {

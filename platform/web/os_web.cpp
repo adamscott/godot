@@ -31,6 +31,7 @@
 #include "os_web.h"
 
 #include "api/javascript_bridge_singleton.h"
+#include "core/error/error_list.h"
 #include "core/error/error_macros.h"
 #include "core/io/config_file.h"
 #include "core/io/json.h"
@@ -165,29 +166,32 @@ int OS_Web::get_default_thread_pool_size() const {
 #endif
 }
 
-Error OS_Web::asyncpck_preload_resource(const String &p_path) const {
+Error OS_Web::asyncpck_load_file(const String &p_path) const {
+	String path = ResourceUID::ensure_path(p_path);
+	ERR_FAIL_COND_V_MSG(!p_path.begins_with("res://"), ERR_FILE_BAD_PATH, vformat(TTRC(R"*(Not able to load "%s" from an ".asyncpck".)*"), path));
+
 	Error err;
 	String pck_path = asyncpck_get_asyncpck_path(p_path, &err);
 	if (err != OK) {
 		return err;
 	}
-	err = static_cast<Error>(godot_js_os_asyncpck_preload_resource(pck_path.utf8().get_data(), p_path.utf8().get_data()));
+	err = static_cast<Error>(godot_js_os_asyncpck_load_file(pck_path.utf8().get_data(), p_path.utf8().get_data()));
 	return err;
 }
 
-Ref<OS::AsyncPreloadStatus> OS_Web::asyncpck_preload_resource_get_status(const String &p_path) const {
+Ref<OS::AsyncLoadStatus> OS_Web::asyncpck_load_file_get_status(const String &p_path) const {
 	Error err;
 	String pck_path = asyncpck_get_asyncpck_path(p_path, &err);
 	if (err != OK) {
-		return Ref<AsyncPreloadStatus>();
+		return Ref<AsyncLoadStatus>();
 	}
 	int32_t status_text_length = 0;
-	char *status_text_ptr = godot_js_os_asyncpck_preload_resource_get_status(pck_path.utf8().get_data(), p_path.utf8().get_data(), &status_text_length);
+	char *status_text_ptr = godot_js_os_asyncpck_load_file_get_status(pck_path.utf8().get_data(), p_path.utf8().get_data(), &status_text_length);
 	if (status_text_ptr == nullptr || status_text_length <= 0) {
-		return Ref<AsyncPreloadStatus>();
+		return Ref<AsyncLoadStatus>();
 	}
-	String status_text = String::utf8(status_text_ptr, status_text_length);
-	return Ref<AsyncPreloadStatus>();
+	Dictionary status = JSON::parse_string(String::utf8(status_text_ptr, status_text_length));
+	return AsyncLoadStatus::from_dictionary(status);
 }
 
 bool OS_Web::_check_internal_feature_support(const String &p_feature) {

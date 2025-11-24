@@ -533,16 +533,13 @@ void FileAccessPack::close() {
 }
 
 FileAccessPack::FileAccessPack(const String &p_path, const PackedData::PackedFile &p_file) {
-	print_line(vformat("FileAccessPack::FileAccessPack() %s, %s", p_path, p_file.pack));
 	pf = p_file;
 
 	if (pf.properties.has_flag(PackedData::PackedFile::Property::PROPERTY_BUNDLED)) {
-		print_line(vformat("FileAccessPack::FileAccessPack() bundled"));
 		String simplified_path = p_path.simplify_path();
 		f = FileAccess::open(simplified_path, FileAccess::READ | FileAccess::SKIP_PACK);
 		off = 0; // For the sparse pack offset is always zero.
 	} else {
-		print_line(vformat("FileAccessPack::FileAccessPack() not bundled"));
 		f = FileAccess::open(pf.pack, FileAccess::READ);
 		f->seek(pf.offset);
 		off = pf.offset;
