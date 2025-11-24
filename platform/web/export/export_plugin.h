@@ -150,8 +150,9 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		String libraries_directory;
 		bool debug;
 		LocalVector<String> libraries;
+		Ref<EditorExportPreset> preset;
 
-		Error write_deps_json_file(const String &p_resource_path);
+		HashSet<String> get_features_set() const;
 		String res_to_global(const String &p_res_path) const {
 			String res_path = simplify_path(p_res_path);
 			return assets_directory.path_join(res_path.trim_prefix("res://"));
@@ -159,6 +160,8 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		String global_to_res(const String &p_global_path) const {
 			return "res://" + p_global_path.trim_prefix(assets_directory.trim_suffix("/") + "/");
 		}
+
+		Error write_deps_json_file(const String &p_resource_path, HashSet<String> &p_features_set);
 	};
 
 	class AsyncDialog : public ConfirmationDialog {
