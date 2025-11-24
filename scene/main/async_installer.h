@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  async_loader.h                                                        */
+/*  async_installer.h                                                     */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -32,13 +32,13 @@
 
 #include "scene/main/node.h"
 
-class AsyncLoader : public Node {
-	GDCLASS(AsyncLoader, Node);
+class AsyncInstaller : public Node {
+	GDCLASS(AsyncInstaller, Node);
 
-	enum AsyncLoaderState {
-		ASYNC_LOADER_STATE_IDLE,
-		ASYNC_LOADER_STATE_LOADING,
-		ASYNC_LOADER_STATE_INSTALLED,
+	enum AsyncInstallerState {
+		ASYNC_INSTALLER_STATE_IDLE,
+		ASYNC_INSTALLER_STATE_LOADING,
+		ASYNC_INSTALLER_STATE_INSTALLED,
 	};
 
 	PackedStringArray file_paths;

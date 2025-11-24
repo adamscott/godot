@@ -103,15 +103,15 @@ public:
 		STD_HANDLE_UNKNOWN,
 	};
 
-	class AsyncLoadStatus : public RefCounted {
-		GDCLASS(AsyncLoadStatus, RefCounted);
+	class AsyncInstallStatus : public RefCounted {
+		GDCLASS(AsyncInstallStatus, RefCounted);
 
 	protected:
 		// static void _bind_methods();
 
 	public:
-		static Ref<AsyncLoadStatus> from_dictionary(const Dictionary &p_dictionary) {
-			Ref<AsyncLoadStatus> status;
+		static Ref<AsyncInstallStatus> from_dictionary(const Dictionary &p_dictionary) {
+			Ref<AsyncInstallStatus> status;
 			status.instantiate();
 
 			return status;
@@ -388,10 +388,10 @@ public:
 	virtual PreferredTextureFormat get_preferred_texture_format() const;
 
 	virtual bool asyncpck_is_supported() const { return false; }
-	virtual Error asyncpck_load_file(const String &p_path) const {
+	virtual Error asyncpck_install_file(const String &p_path) const {
 		return FAILED;
 	}
-	virtual Ref<AsyncLoadStatus> asyncpck_load_file_get_status(const String &p_path) const { return Ref<AsyncLoadStatus>(); }
+	virtual Ref<AsyncInstallStatus> asyncpck_install_file_get_status(const String &p_path) const { return Ref<AsyncInstallStatus>(); }
 
 	// Load GDExtensions specific to this platform.
 	// This is invoked by the GDExtensionManager after loading GDExtensions specified by the project.

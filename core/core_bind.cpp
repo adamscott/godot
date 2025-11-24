@@ -746,11 +746,11 @@ bool OS::asyncpck_is_supported() const {
 }
 
 Error OS::asyncpck_load_file(const String &p_path) const {
-	return ::OS::get_singleton()->asyncpck_load_file(p_path);
+	return ::OS::get_singleton()->asyncpck_install_file(p_path);
 }
 
-Ref<::OS::AsyncLoadStatus> OS::asyncpck_load_file_get_status(const String &p_path) const {
-	return ::OS::get_singleton()->asyncpck_load_file_get_status(p_path);
+Ref<::OS::AsyncInstallStatus> OS::asyncpck_load_file_get_status(const String &p_path) const {
+	return ::OS::get_singleton()->asyncpck_install_file_get_status(p_path);
 }
 
 void OS::_bind_methods() {

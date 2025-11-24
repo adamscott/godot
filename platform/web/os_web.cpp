@@ -166,32 +166,32 @@ int OS_Web::get_default_thread_pool_size() const {
 #endif
 }
 
-Error OS_Web::asyncpck_load_file(const String &p_path) const {
+Error OS_Web::asyncpck_install_file(const String &p_path) const {
 	String path = ResourceUID::ensure_path(p_path);
-	ERR_FAIL_COND_V_MSG(!p_path.begins_with("res://"), ERR_FILE_BAD_PATH, vformat(TTRC(R"*(Not able to load "%s" from an ".asyncpck".)*"), path));
+	ERR_FAIL_COND_V_MSG(!p_path.begins_with("res://"), ERR_FILE_BAD_PATH, vformat(TTRC(R"*(Not able to install "%s" from an ".asyncpck".)*"), path));
 
 	Error err;
 	String pck_path = asyncpck_get_asyncpck_path(p_path, &err);
 	if (err != OK) {
 		return err;
 	}
-	err = static_cast<Error>(godot_js_os_asyncpck_load_file(pck_path.utf8().get_data(), p_path.utf8().get_data()));
+	err = static_cast<Error>(godot_js_os_asyncpck_install_file(pck_path.utf8().get_data(), p_path.utf8().get_data()));
 	return err;
 }
 
-Ref<OS::AsyncLoadStatus> OS_Web::asyncpck_load_file_get_status(const String &p_path) const {
+Ref<OS::AsyncInstallStatus> OS_Web::asyncpck_install_file_get_status(const String &p_path) const {
 	Error err;
 	String pck_path = asyncpck_get_asyncpck_path(p_path, &err);
 	if (err != OK) {
-		return Ref<AsyncLoadStatus>();
+		return Ref<AsyncInstallStatus>();
 	}
 	int32_t status_text_length = 0;
-	char *status_text_ptr = godot_js_os_asyncpck_load_file_get_status(pck_path.utf8().get_data(), p_path.utf8().get_data(), &status_text_length);
+	char *status_text_ptr = godot_js_os_asyncpck_install_file_get_status(pck_path.utf8().get_data(), p_path.utf8().get_data(), &status_text_length);
 	if (status_text_ptr == nullptr || status_text_length <= 0) {
-		return Ref<AsyncLoadStatus>();
+		return Ref<AsyncInstallStatus>();
 	}
 	Dictionary status = JSON::parse_string(String::utf8(status_text_ptr, status_text_length));
-	return AsyncLoadStatus::from_dictionary(status);
+	return AsyncInstallStatus::from_dictionary(status);
 }
 
 bool OS_Web::_check_internal_feature_support(const String &p_feature) {
