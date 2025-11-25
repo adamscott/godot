@@ -103,21 +103,6 @@ public:
 		STD_HANDLE_UNKNOWN,
 	};
 
-	class AsyncInstallStatus : public RefCounted {
-		GDCLASS(AsyncInstallStatus, RefCounted);
-
-	protected:
-		// static void _bind_methods();
-
-	public:
-		static Ref<AsyncInstallStatus> from_dictionary(const Dictionary &p_dictionary) {
-			Ref<AsyncInstallStatus> status;
-			status.instantiate();
-
-			return status;
-		}
-	};
-
 protected:
 	friend class Main;
 	// Needed by tests to setup command-line args.
@@ -391,7 +376,7 @@ public:
 	virtual Error asyncpck_install_file(const String &p_path) const {
 		return FAILED;
 	}
-	virtual Ref<AsyncInstallStatus> asyncpck_install_file_get_status(const String &p_path) const { return Ref<AsyncInstallStatus>(); }
+	virtual Dictionary asyncpck_install_file_get_status(const String &p_path) const { return Dictionary(); }
 
 	// Load GDExtensions specific to this platform.
 	// This is invoked by the GDExtensionManager after loading GDExtensions specified by the project.

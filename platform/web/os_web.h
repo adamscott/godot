@@ -96,7 +96,7 @@ public:
 
 	bool asyncpck_is_supported() const override { return true; }
 	Error asyncpck_install_file(const String &p_path) const override;
-	Ref<AsyncInstallStatus> asyncpck_install_file_get_status(const String &p_path) const override;
+	Dictionary asyncpck_install_file_get_status(const String &p_path) const override;
 
 	String get_executable_path() const override;
 	Error shell_open(const String &p_uri) override;

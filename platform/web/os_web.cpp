@@ -179,19 +179,19 @@ Error OS_Web::asyncpck_install_file(const String &p_path) const {
 	return err;
 }
 
-Ref<OS::AsyncInstallStatus> OS_Web::asyncpck_install_file_get_status(const String &p_path) const {
+Dictionary OS_Web::asyncpck_install_file_get_status(const String &p_path) const {
 	Error err;
 	String pck_path = asyncpck_get_asyncpck_path(p_path, &err);
 	if (err != OK) {
-		return Ref<AsyncInstallStatus>();
+		return Dictionary();
 	}
 	int32_t status_text_length = 0;
 	char *status_text_ptr = godot_js_os_asyncpck_install_file_get_status(pck_path.utf8().get_data(), p_path.utf8().get_data(), &status_text_length);
 	if (status_text_ptr == nullptr || status_text_length <= 0) {
-		return Ref<AsyncInstallStatus>();
+		return Dictionary();
 	}
 	Dictionary status = JSON::parse_string(String::utf8(status_text_ptr, status_text_length));
-	return AsyncInstallStatus::from_dictionary(status);
+	return status;
 }
 
 bool OS_Web::_check_internal_feature_support(const String &p_feature) {
