@@ -85,8 +85,10 @@ Error EditorExportPlatformWeb::ExportData::write_deps_json_file(const String &p_
 		remap_file_path = resource_path + SUFFIX_IMPORT;
 	} else if (FileAccess::exists(res_to_global(resource_path + SUFFIX_REMAP))) {
 		remap_file_path = resource_path + SUFFIX_REMAP;
+	} else if (FileAccess::exists(res_to_global(resource_path))) {
+		remap_file_path = resource_path;
 	} else {
-		ERR_FAIL_V_MSG(ERR_FILE_NOT_FOUND, vformat(TTRC(R"*(Neither "%s" nor "%s" exist, cannot write dependencies JSON file.)*"), resource_path + SUFFIX_IMPORT, resource_path + SUFFIX_REMAP));
+		ERR_FAIL_V_MSG(ERR_FILE_NOT_FOUND, vformat(TTRC(R"*(Cannot write dependencies JSON file of "%s".)*"), resource_path + SUFFIX_IMPORT, resource_path + SUFFIX_REMAP));
 	}
 	Ref<FileAccess> remap_file_access = FileAccess::open(res_to_global(remap_file_path), FileAccess::READ);
 	ERR_FAIL_COND_V(remap_file_access.is_null(), FileAccess::get_open_error());
