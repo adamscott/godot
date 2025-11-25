@@ -489,16 +489,14 @@ class AsyncPckResource {
 		const jsonData = {
 		};
 		if (withDependencies) {
-			jsonData['target'] = this.getAsJsonObject({ withDependencies: false });
-
-			const dependencies = [];
 			const dependenciesResources = this.allDependenciesResources;
+			jsonData['files'] = {};
+			jsonData['files'][this.path] = this.getAsJsonObject({ withDependencies: false });
 			for (const dependencyResource of dependenciesResources) {
-				dependencies.push(dependencyResource.getAsJsonObject({ withDependencies: false }));
+				jsonData['files'][dependencyResource.path] = dependencyResource.getAsJsonObject({ withDependencies: false });
 			}
-			jsonData['dependencies'] = dependencies;
-			jsonData['size'] = jsonData['target'].size + dependencies.reduce((pAccumulator, pDependency) => pAccumulator + pDependency.size, 0);
-			jsonData['downloaded'] = jsonData['target'].downloaded + dependencies.reduce((pAccumulator, pDependency) => pAccumulator + pDependency.downloaded, 0);
+			jsonData['size'] = this.size + dependenciesResources.reduce((pAccumulator, pDependencyResource) => pAccumulator + pDependencyResource.size, 0);
+			jsonData['downloaded'] = this.downloaded + dependenciesResources.reduce((pAccumulator, pDependencyResource) => pAccumulator + pDependencyResource.downloaded, 0);
 
 			let status = this.status;
 			if (status == GodotOS.AsyncPckFile.Status.STATUS_IDLE || this.status == GodotOS.AsyncPckFile.Status.STATUS_INSTALLED) {
@@ -514,10 +512,6 @@ class AsyncPckResource {
 			}
 			jsonData['status'] = status;
 		} else {
-			jsonData['files'] = {};
-			for (const file of this.files) {
-				jsonData['files'][file.path] = file.getAsJsonObject();
-			}
 			jsonData['size'] = this.size;
 			jsonData['downloaded'] = this.downloaded;
 			jsonData['status'] = this.status;

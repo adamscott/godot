@@ -751,7 +751,7 @@ Error OS::asyncpck_load_file(const String &p_path) const {
 	return ::OS::get_singleton()->asyncpck_install_file(p_path);
 }
 
-Ref<::OS::AsyncInstallStatus> OS::asyncpck_load_file_get_status(const String &p_path) const {
+Dictionary OS::asyncpck_load_file_get_status(const String &p_path) const {
 	return ::OS::get_singleton()->asyncpck_install_file_get_status(p_path);
 }
 
