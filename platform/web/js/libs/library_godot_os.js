@@ -327,7 +327,7 @@ class AsyncPckFile {
 			const fileBuffer = new Uint8Array(this._downloaded);
 			let filePosition = 0;
 			for (const chunk of chunks) {
-				fileBuffer.set(fileBuffer, filePosition);
+				fileBuffer.set(chunk, filePosition);
 				filePosition += chunk.byteLength;
 			}
 
