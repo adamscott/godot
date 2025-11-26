@@ -1,4 +1,62 @@
 const Preloader = /** @constructor */ function () { // eslint-disable-line no-unused-vars
+	const CONCURRENCY_LIMIT = 5;
+	const concurrency = {
+		queue: [],
+		active: [],
+		eventTarget: new EventTarget(),
+	};
+
+	const _waitForProcessQueue = (pPromiseFn) => {
+		const symbol = Symbol('QueueItemId');
+		let queueItem = {
+			promiseFn: pPromiseFn,
+			symbol,
+		};
+
+		if (concurrency.active.length < CONCURRENCY_LIMIT) {
+			concurrency.active.push(queueItem);
+			return queueItem;
+		}
+
+		concurrency.queue.push(queueItem);
+		return new Promise((resolve, reject) => {
+			const onQueueNext = (prevent) => {
+				if (prevent?.detail?.symbol !== symbol) {
+					return;
+				}
+				queueItem = prevent.detail;
+				concurrency.eventTarget.removeEventListener('queuenext', onQueueNext);
+				if (concurrency.active.length >= CONCURRENCY_LIMIT) {
+					reject(new Error('Something went wrong, concurrency is too high.'));
+					return;
+				}
+				concurrency.active.push(queueItem);
+				resolve(queueItem);
+			};
+			concurrency.eventTarget.addEventListener('queuenext', onQueueNext);
+		});
+	};
+
+	const waitForConcurrency = async (pPromiseFn) => {
+		const queueItem = await _waitForProcessQueue(pPromiseFn);
+		let returnValue;
+		try {
+			returnValue = await queueItem.promiseFn();
+		} catch (error) {
+			const newError = new Error('An error occurred while waiting for concurrency.');
+			newError.cause = error;
+			throw error;
+		}
+		const queueIndex = concurrency.active.indexOf(queueItem);
+		concurrency.active.splice(queueIndex, 1);
+		while (concurrency.queue.length > 0 && concurrency.active.length < CONCURRENCY_LIMIT) {
+			const concurrencyQueueItem = concurrency.queue[0];
+			concurrency.queue.splice(0, 1);
+			concurrency.eventTarget.dispatchEvent(new CustomEvent('queuenext', { detail: concurrencyQueueItem }));
+		}
+		return returnValue;
+	};
+
 	function getTrackedResponse(response, load_status) {
 		function onloadprogress(reader, controller) {
 			return reader.read().then(function (result) {
@@ -26,22 +84,29 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 		}), { headers: response.headers });
 	}
 
-	function loadFetch(file, tracker, fileSize, raw) {
+	async function loadFetch(file, tracker, fileSize, raw) {
 		tracker[file] = {
 			total: fileSize || 0,
 			loaded: 0,
 			done: false,
 		};
-		return fetch(file).then(function (response) {
+		try {
+			const response = await fetch(file);
+
 			if (!response.ok) {
-				return Promise.reject(new Error(`Failed loading file '${file}'`));
+				throw new Error(`Got response ${response.status}: ${response.statusText}`);
 			}
 			const tr = getTrackedResponse(response, tracker[file]);
 			if (raw) {
 				return Promise.resolve(tr);
 			}
+
 			return tr.arrayBuffer();
-		});
+		} catch (error) {
+			const newError = new Error(`loadFetch for "${file}" failed:`);
+			newError.cause = error;
+			throw newError;
+		}
 	}
 
 	function retry(func, attempts = 1) {
@@ -100,22 +165,27 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 		progressFunc = callback;
 	};
 
-	this.loadPromise = function (file, fileSize, raw = false) {
-		return retry(loadFetch.bind(null, file, loadingFiles, fileSize, raw), DOWNLOAD_ATTEMPTS_MAX);
+	this.loadPromise = async function (file, fileSize, raw = false) {
+		try {
+			return await waitForConcurrency(() => retry(loadFetch.bind(null, file, loadingFiles, fileSize, raw), DOWNLOAD_ATTEMPTS_MAX));
+		} catch (error) {
+			const newError = new Error(`An error occurred while running Preloader.loadPromise("${file}", ${fileSize}, raw = ${raw})`);
+			newError.cause = error;
+			throw error;
+		}
 	};
 
 	this.preloadedFiles = [];
-	this.preload = function (pathOrBuffer, destPath, fileSize) {
+	this.preload = async function (pathOrBuffer, destPath, fileSize) {
 		let buffer = null;
 		if (typeof pathOrBuffer === 'string') {
 			const me = this;
-			return this.loadPromise(pathOrBuffer, fileSize).then(function (buf) {
-				me.preloadedFiles.push({
-					path: destPath || pathOrBuffer,
-					buffer: buf,
-				});
-				return Promise.resolve();
+			const buf = await this.loadPromise(pathOrBuffer, fileSize);
+			me.preloadedFiles.push({
+				path: destPath || pathOrBuffer,
+				buffer: buf,
 			});
+			return;
 		} else if (pathOrBuffer instanceof ArrayBuffer) {
 			buffer = new Uint8Array(pathOrBuffer);
 		} else if (ArrayBuffer.isView(pathOrBuffer)) {
@@ -126,8 +196,8 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 				path: destPath,
 				buffer: pathOrBuffer,
 			});
-			return Promise.resolve();
+			return;
 		}
-		return Promise.reject(new Error('Invalid object for preloading'));
+		throw new Error('Invalid object for preloading');
 	};
 };
