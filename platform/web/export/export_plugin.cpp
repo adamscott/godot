@@ -313,6 +313,7 @@ void EditorExportPlatformWeb::AsyncDialog::update_forced_files() {
 			for (int i = 0; i < l_tree_item->get_child_count(); i++) {
 				_l_loop_forced_tree_item_push_to_forced_files(l_tree_item->get_child(i));
 			}
+			return;
 		}
 
 		if (!l_tree_item->is_checked(TREE_COLUMN_IS_FORCED)) {
@@ -332,13 +333,9 @@ void EditorExportPlatformWeb::AsyncDialog::update_forced_files() {
 void EditorExportPlatformWeb::AsyncDialog::on_confirmed() {
 	update_forced_files();
 
-	Array forced_files_array;
+	PackedStringArray forced_files_array;
 	for (const String &forced_file : forced_files) {
 		forced_files_array.push_back(forced_file);
-	}
-	Array forced_files_with_dependencies_array;
-	for (const KeyValue<String, const HashSet<String> *> &key_value : forced_files_dependencies) {
-		forced_files_with_dependencies_array.push_back(key_value.key);
 	}
 
 	preset->set("async/initial_load_forced_files", forced_files_array);
@@ -370,6 +367,11 @@ void EditorExportPlatformWeb::AsyncDialog::tree_init() {
 	main_scene_dependencies = file_dependencies_state.get_file_dependencies_of(mandatory_initial_load_files);
 
 	forced_files.clear();
+
+	PackedStringArray forced_files_array = preset->get("async/initial_load_forced_files");
+	for (const String &forced_file : forced_files_array) {
+		forced_files.insert(forced_file);
+	}
 
 	exported_paths.clear();
 	EditorExportPlatformUtils::export_find_preset_resources(preset, exported_paths);
@@ -599,11 +601,6 @@ void EditorExportPlatformWeb::AsyncDialog::tree_remove_callbacks() {
 EditorExportPlatformWeb::AsyncDialog::AsyncDialog(EditorExportPlatformWeb *p_export_platform) :
 		export_platform(p_export_platform) {
 	preset = EditorNode::get_singleton()->get_project_export_dialog()->get_current_preset();
-
-	Array forced_files_array = preset->get("async/initial_load_forced_files");
-	for (const String selected_resource : forced_files_array) {
-		forced_files.insert(selected_resource);
-	}
 
 	set_title(TTRC("Edit Initial Load Resources"));
 	set_flag(FLAG_MAXIMIZE_DISABLED, false);
@@ -1448,20 +1445,8 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 					file_dependencies_state.add_to_file_dependencies(mandatory_files);
 
 					HashSet<String> forced_files;
-					Variant forced_files_variant = p_preset->get("async/initial_load_forced_files");
-					if (forced_files_variant.get_type() != Variant::ARRAY && forced_files_variant.get_type() != Variant::PACKED_STRING_ARRAY) {
-						add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), TTR(R"*(Export option "async/initial_load_forced_files" is not a valid array.)*"));
-						return ERR_INVALID_DATA;
-					}
-					Array forced_files_array = forced_files_variant;
-
-					for (int i = 0; i < forced_files_array.size(); i++) {
-						Variant forced_file_variant = forced_files_array[i];
-						if (forced_file_variant.get_type() != Variant::STRING) {
-							add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), TTR(R"*(Export option "async/initial_load_forced_files" has an non-String value.)*"));
-							return ERR_INVALID_DATA;
-						}
-						String forced_file = forced_file_variant;
+					PackedStringArray forced_files_array = p_preset->get("async/initial_load_forced_files");
+					for (const String &forced_file : forced_files_array) {
 						forced_files.insert(forced_file);
 					}
 					file_dependencies_state.add_to_file_dependencies(forced_files);
