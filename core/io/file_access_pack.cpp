@@ -539,13 +539,13 @@ FileAccessPack::FileAccessPack(const String &p_path, const PackedData::PackedFil
 		String simplified_path = p_path.simplify_path();
 		f = FileAccess::open(simplified_path, FileAccess::READ | FileAccess::SKIP_PACK);
 		off = 0; // For the sparse pack offset is always zero.
+		ERR_FAIL_COND_MSG(f.is_null(), vformat("Can't open pack-referenced file '%s' from '%s'.", simplified_path, String(pf.pack)));
 	} else {
 		f = FileAccess::open(pf.pack, FileAccess::READ);
 		f->seek(pf.offset);
 		off = pf.offset;
+		ERR_FAIL_COND_MSG(f.is_null(), vformat("Can't open pack-referenced file '%s'.", String(pf.pack)));
 	}
-
-	ERR_FAIL_COND_MSG(f.is_null(), vformat("Can't open pack-referenced file '%s'.", String(pf.pack)));
 
 	if (pf.properties.has_flag(PackedData::PackedFile::Property::PROPERTY_ENCRYPTED)) {
 		Ref<FileAccessEncrypted> fae;
