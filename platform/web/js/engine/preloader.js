@@ -1,65 +1,9 @@
 const Preloader = /** @constructor */ function () { // eslint-disable-line no-unused-vars
-	const CONCURRENCY_LIMIT = 5;
-	const concurrency = {
-		queue: [],
-		active: [],
-		eventTarget: new EventTarget(),
-	};
+	let concurrencyQueueManager = null;
 
 	const fileSizes = {
 		totalSet: false,
 		total: 0,
-	};
-
-	const _waitForProcessQueue = (pPromiseFn) => {
-		const symbol = Symbol('QueueItemId');
-		let queueItem = {
-			promiseFn: pPromiseFn,
-			symbol,
-		};
-
-		if (concurrency.active.length < CONCURRENCY_LIMIT) {
-			concurrency.active.push(queueItem);
-			return queueItem;
-		}
-
-		concurrency.queue.push(queueItem);
-		return new Promise((pResolve, pReject) => {
-			const onQueueNext = (pEvent) => {
-				if (pEvent?.detail?.symbol !== symbol) {
-					return;
-				}
-				queueItem = pEvent.detail;
-				concurrency.eventTarget.removeEventListener('queuenext', onQueueNext);
-				if (concurrency.active.length >= CONCURRENCY_LIMIT) {
-					pReject(new Error('Something went wrong, concurrency is too high.'));
-					return;
-				}
-				concurrency.active.push(queueItem);
-				pResolve(queueItem);
-			};
-			concurrency.eventTarget.addEventListener('queuenext', onQueueNext);
-		});
-	};
-
-	const waitForConcurrency = async (pPromiseFn) => {
-		const queueItem = await _waitForProcessQueue(pPromiseFn);
-		try {
-			const returnValue = await queueItem.promiseFn();
-			return returnValue;
-		} catch (error) {
-			const newError = new Error('An error occurred while waiting for concurrency.');
-			newError.cause = error;
-			throw error;
-		} finally {
-			const queueIndex = concurrency.active.indexOf(queueItem);
-			concurrency.active.splice(queueIndex, 1);
-			while (concurrency.queue.length > 0 && concurrency.active.length < CONCURRENCY_LIMIT) {
-				const concurrencyQueueItem = concurrency.queue[0];
-				concurrency.queue.splice(0, 1);
-				concurrency.eventTarget.dispatchEvent(new CustomEvent('queuenext', { detail: concurrencyQueueItem }));
-			}
-		}
 	};
 
 	function getTrackedResponse(response, load_status) {
@@ -178,7 +122,14 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 
 	this.loadPromise = async function (file, fileSize, raw = false) {
 		try {
-			return await waitForConcurrency(() => retry(loadFetch.bind(null, file, loadingFiles, fileSize, raw), DOWNLOAD_ATTEMPTS_MAX));
+			let manager;
+			if (concurrencyQueueManager == null) {
+				// The fake manager will just run the promise directly.
+				manager = (pPromiseFunction) => pPromiseFunction();
+			} else {
+				manager = (pPromiseFunction) => concurrencyQueueManager.waitForCurrency(pPromiseFunction);
+			}
+			return await manager(() => retry(loadFetch.bind(null, file, loadingFiles, fileSize, raw), DOWNLOAD_ATTEMPTS_MAX));
 		} catch (error) {
 			const newError = new Error(`An error occurred while running Preloader.loadPromise("${file}", ${fileSize}, raw = ${raw})`);
 			newError.cause = error;
@@ -215,5 +166,15 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 	this.setFileSizesTotal = (pFileSizesTotal) => {
 		fileSizes.total = pFileSizesTotal;
 		fileSizes.totalSet = true;
+	};
+
+	this.init = (pOptions = {}) => {
+		const {
+			concurrencyQueueManager: optionConcurrencyQueueManager,
+		} = pOptions;
+
+		if (optionConcurrencyQueueManager != null) {
+			concurrencyQueueManager = optionConcurrencyQueueManager;
+		}
 	};
 };

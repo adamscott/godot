@@ -306,7 +306,7 @@ class AsyncPckFile {
 
 	async _load() {
 		try {
-			const fileResponse = await fetch(this.localPath);
+			const fileResponse = await GodotOS.asyncPckFetch(this.localPath);
 			if (!fileResponse.ok) {
 				this._status = GodotOS.AsyncPckFile.Status.STATUS_ERROR;
 				throw new Error(`Couldn't load file "${this.localPath}".`);
@@ -540,7 +540,7 @@ class AsyncPckResource {
 const _GodotOS = {
 	$GodotOS__deps: ['$GodotRuntime', '$GodotConfig', '$GodotFS'],
 	$GodotOS__postset: [
-		'Module["initOS"] = () => { GodotOS.init(); };',
+		'Module["initOS"] = async () => { await GodotOS.init(); };',
 		'Module["request_quit"] = function() { GodotOS.request_quit() };',
 		'Module["onExit"] = GodotOS.cleanup;',
 		'GodotOS._fs_sync_promise = Promise.resolve();',
@@ -555,6 +555,7 @@ const _GodotOS = {
 		_asyncPckInstallMap: null,
 		_mainPack: '',
 		_prefixRes: 'res://',
+		_concurrencyQueueManager: null,
 
 		_trimLastSlash: function (pPath) {
 			if (pPath.endsWith('/')) {
@@ -577,9 +578,12 @@ const _GodotOS = {
 			return path;
 		},
 
-		init: function () {
+		init: async function () {
 			GodotOS._mainPack = GodotConfig.mainPack ?? '';
 			if (GodotOS._mainPack.endsWith('.asyncpck')) {
+				const { ConcurrencyQueueManager } = await import('@godotengine/utils/concurrencyQueueManager');
+				// eslint-disable-next-line require-atomic-updates -- We set `GodotOS._concurrencyQueueManager` only once: at init time.
+				GodotOS._concurrencyQueueManager = new ConcurrencyQueueManager();
 				GodotOS.initAsyncPck();
 			}
 		},
@@ -647,6 +651,10 @@ const _GodotOS = {
 				});
 		},
 
+		asyncPckFetch: async function (...args) {
+			return await GodotOS?._concurrencyQueueManager?.queue(() => fetch(...args));
+		},
+
 		asyncPckGetAsyncpckAssetsDir: function (pPckDir) {
 			let pckDir = GodotOS._trimLastSlash(pPckDir);
 			if (pckDir.endsWith('.asyncpck')) {
@@ -681,7 +689,7 @@ const _GodotOS = {
 			const assetsDir = GodotOS.asyncPckGetAsyncpckAssetsDir(pPckDir);
 			const path = GodotOS._removeResPrefix(pPath);
 			const depsJsonPath = `${assetsDir}/${path}.deps.json`;
-			const depsJsonResponse = await fetch(depsJsonPath);
+			const depsJsonResponse = await GodotOS.asyncPckFetch(depsJsonPath);
 			if (!depsJsonResponse.ok) {
 				GodotRuntime.error(`Couldn't load dependencies file "${depsJsonPath}".`);
 				return;

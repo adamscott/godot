@@ -80,34 +80,31 @@ const Engine = (function () {
 				}
 				if (loadPromise == null) {
 					if (!basePath) {
-						initPromise = Promise.reject(new Error('A base path must be provided when calling `init` and the engine is not loaded.'));
+						const initPromiseError = new Error('A base path must be provided when calling `init` and the engine is not loaded.');
+						initPromise = Promise.reject(initPromiseError);
 						return initPromise;
 					}
+
 					Engine.load(basePath, this.config.fileSizes[`${basePath}.wasm`]);
 				}
-				const me = this;
-				function doInit(promise) {
-					// Care! Promise chaining is bogus with old emscripten versions.
-					// This caused a regression with the Mono build (which uses an older emscripten version).
-					// Make sure to test that when refactoring.
-					return new Promise(function (resolve, reject) {
-						promise.then(function (response) {
-							const cloned = new Response(response.clone().body, { 'headers': [['content-type', 'application/wasm']] });
-							Godot(me.config.getModuleConfig(loadPath, cloned)).then(function (module) {
-								const paths = me.config.persistentPaths;
-								module['initFS'](paths).then(function (err) {
-									me.rtenv = module;
-									if (me.config.unloadAfterInit) {
-										Engine.unload();
-									}
-									resolve();
-								});
-							});
-						});
-					});
-				}
+
+				const doInit = async () => {
+					const loadResponse = await loadPromise;
+					const clonedResponse = new Response(loadResponse.clone().body, { 'headers': [['content-type', 'application/wasm']] });
+					const module = await Godot(this.config.getModuleConfig(loadPath, clonedResponse));
+					const paths = this.config.persistentPaths;
+					const err = await module['initFS'](paths);
+					if (err != null) {
+						window['console'].error('Error while initializing Godot:', err);
+					}
+					this.rtenv = module;
+					if (this.config.unloadAfterInit) {
+						Engine.unload();
+					}
+				};
+
 				preloader.setProgressFunc(this.config.onProgress);
-				initPromise = doInit(loadPromise);
+				initPromise = doInit();
 				return initPromise;
 			},
 
@@ -211,6 +208,8 @@ const Engine = (function () {
 			 */
 			startGame: async function (override) {
 				this.config.update(override);
+				this.insertImportMap();
+
 				// Add main-pack argument.
 				const exe = this.config.executable;
 				let pack = this.config.mainPack || `${exe}.pck`;
@@ -223,6 +222,8 @@ const Engine = (function () {
 				const me = this;
 				const filesToPreload = [];
 
+				let concurrencyQueueManager = null;
+
 				if (pack.endsWith('.asyncpck')) {
 					if (this.config.asyncPckData == null) {
 						throw new Error('No Main Scene dependencies found.');
@@ -230,6 +231,13 @@ const Engine = (function () {
 
 					this.calculateFileSizesTotal();
 
+					const { ConcurrencyQueueManager } = await import('@godotengine/utils/concurrencyQueueManager');
+					concurrencyQueueManager = new ConcurrencyQueueManager();
+				}
+
+				preloader.init({ concurrencyQueueManager });
+
+				if (pack.endsWith('.asyncpck')) {
 					const asyncPckData = this.config['asyncPckData'];
 					const asyncPckAssetsDir = asyncPckData['directories']['assets'];
 
@@ -310,6 +318,26 @@ const Engine = (function () {
 					}
 				}
 				return Promise.resolve();
+			},
+
+			/**
+			 * Install the JavaScript module import map.
+			 */
+			insertImportMap() {
+				const IMPORTMAP_ID = 'godotengine-importmap-engine';
+				if (document.getElementById(IMPORTMAP_ID)) {
+					return;
+				}
+				const scriptElement = document.createElement('script');
+				scriptElement.id = IMPORTMAP_ID;
+				scriptElement.type = 'importmap';
+				const scriptElementContent = {
+					imports: {
+						'@godotengine/utils/concurrencyQueueManager': `./${this.config.executable}.concurrency.js`,
+					},
+				};
+				scriptElement.textContent = JSON.stringify(scriptElementContent, null, 2);
+				document.head.insertAdjacentElement('beforeend', scriptElement);
 			},
 		};
 
