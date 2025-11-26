@@ -111,6 +111,11 @@ const Engine = (function () {
 				return initPromise;
 			},
 
+			calculateFileSizesTotal: function () {
+				const totalSize = Object.values(this.config.fileSizes).reduce((pAccumulator, pFileSize) => pAccumulator + pFileSize, 0);
+				preloader.setFileSizesTotal(totalSize);
+			},
+
 			/**
 			 * Load a file so it is available in the instance's file system once it runs. Must be called **before** starting the
 			 * instance.
@@ -216,12 +221,15 @@ const Engine = (function () {
 				this.config.args = ['--main-pack', pack].concat(this.config.args);
 				// Start and init with execName as loadPath if not inited.
 				const me = this;
-
 				const filesToPreload = [];
+
 				if (pack.endsWith('.asyncpck')) {
 					if (this.config.asyncPckData == null) {
 						throw new Error('No Main Scene dependencies found.');
 					}
+
+					this.calculateFileSizesTotal();
+
 					const asyncPckData = this.config['asyncPckData'];
 					const asyncPckAssetsDir = asyncPckData['directories']['assets'];
 

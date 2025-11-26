@@ -6,6 +6,11 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 		eventTarget: new EventTarget(),
 	};
 
+	const fileSizes = {
+		totalSet: false,
+		total: 0,
+	};
+
 	const _waitForProcessQueue = (pPromiseFn) => {
 		const symbol = Symbol('QueueItemId');
 		let queueItem = {
@@ -139,7 +144,9 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 			if (!stat.done) {
 				progressIsFinal = false;
 			}
-			if (!totalIsValid || stat.total === 0) {
+			if (fileSizes.totalSet) {
+				total = fileSizes.total;
+			} else if (!totalIsValid || stat.total === 0) {
 				totalIsValid = false;
 				total = 0;
 			} else {
@@ -147,9 +154,13 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 			}
 			loaded += stat.loaded;
 		});
-		if (loaded !== lastProgress.loaded || total !== lastProgress.total) {
+		if (loaded !== lastProgress.loaded || (!fileSizes.totalSet && total !== lastProgress.total)) {
 			lastProgress.loaded = loaded;
-			lastProgress.total = total;
+			if (fileSizes.totalSet) {
+				lastProgress.total = fileSizes.total;
+			} else {
+				lastProgress.total = total;
+			}
 			if (typeof progressFunc === 'function') {
 				progressFunc(loaded, total);
 			}
@@ -199,5 +210,10 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 			return;
 		}
 		throw new Error('Invalid object for preloading');
+	};
+
+	this.setFileSizesTotal = (pFileSizesTotal) => {
+		fileSizes.total = pFileSizesTotal;
+		fileSizes.totalSet = true;
 	};
 };
