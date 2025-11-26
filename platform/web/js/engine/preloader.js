@@ -44,22 +44,22 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 
 	const waitForConcurrency = async (pPromiseFn) => {
 		const queueItem = await _waitForProcessQueue(pPromiseFn);
-		let returnValue;
 		try {
-			returnValue = await queueItem.promiseFn();
+			const returnValue = await queueItem.promiseFn();
+			return returnValue;
 		} catch (error) {
 			const newError = new Error('An error occurred while waiting for concurrency.');
 			newError.cause = error;
 			throw error;
+		} finally {
+			const queueIndex = concurrency.active.indexOf(queueItem);
+			concurrency.active.splice(queueIndex, 1);
+			while (concurrency.queue.length > 0 && concurrency.active.length < CONCURRENCY_LIMIT) {
+				const concurrencyQueueItem = concurrency.queue[0];
+				concurrency.queue.splice(0, 1);
+				concurrency.eventTarget.dispatchEvent(new CustomEvent('queuenext', { detail: concurrencyQueueItem }));
+			}
 		}
-		const queueIndex = concurrency.active.indexOf(queueItem);
-		concurrency.active.splice(queueIndex, 1);
-		while (concurrency.queue.length > 0 && concurrency.active.length < CONCURRENCY_LIMIT) {
-			const concurrencyQueueItem = concurrency.queue[0];
-			concurrency.queue.splice(0, 1);
-			concurrency.eventTarget.dispatchEvent(new CustomEvent('queuenext', { detail: concurrencyQueueItem }));
-		}
-		return returnValue;
 	};
 
 	function getTrackedResponse(response, load_status) {
