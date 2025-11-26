@@ -30,6 +30,7 @@
 
 #pragma once
 
+#include "core/error/error_list.h"
 #include "core/error/error_macros.h"
 #include "core/io/file_access.h"
 #include "core/object/object.h"
@@ -109,6 +110,7 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 			Dictionary get_as_resource_dictionary() const {
 				Dictionary data;
 				Dictionary resources;
+
 				if (native_file.exists) {
 					resources[native_file.path] = native_file.get_as_dictionary();
 				}
@@ -135,46 +137,76 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 				}
 			}
 
-			ResourceData(const ExportData *p_export_data, const String &p_path, const String &p_remap_file_path, const String &p_remapped_file_path) :
-					export_data(p_export_data), path(p_path) {
-				ERR_FAIL_NULL(export_data);
-				ERR_FAIL_COND(path.is_empty());
-				ERR_FAIL_COND(p_remap_file_path.is_empty());
-				ERR_FAIL_COND(p_remapped_file_path.is_empty());
+			static ResourceData create(const ExportData *p_export_data, const String &p_path, const String &p_remap_file_path = "", const String &p_remapped_file_path = "", Error *r_error = nullptr) {
+				Error error = OK;
+#define HANDLE_ERR(m_cond, m_err) \
+	if (unlikely(m_cond)) {       \
+		error = (m_err);          \
+		goto return_error;        \
+	}                             \
+	(void)0
 
-				native_file.path = p_path;
-				remap_file.path = p_remap_file_path;
-				remapped_file.path = p_remapped_file_path;
+				ResourceData data;
+				String real_native_file_path;
+				String real_remap_file_path;
+				String real_remapped_file_path;
 
-				String real_native_file_path = p_export_data->res_to_global(p_path);
-				String real_remap_file_path = p_export_data->res_to_global(p_remap_file_path);
-				String real_remapped_file_path = p_export_data->res_to_global(p_remapped_file_path);
-
-				ERR_FAIL_COND(real_native_file_path.is_empty());
-				ERR_FAIL_COND(real_remap_file_path.is_empty());
-				ERR_FAIL_COND(real_remapped_file_path.is_empty());
-
-				ERR_FAIL_COND(!FileAccess::exists(real_remap_file_path));
-				ERR_FAIL_COND(!FileAccess::exists(real_remapped_file_path));
-
-				native_file.exists = FileAccess::exists(real_native_file_path);
-				remap_file.exists = true;
-				remapped_file.exists = true;
-
-				if (native_file.exists) {
-					native_file.size = FileAccess::get_size(real_native_file_path);
+				HANDLE_ERR(p_export_data == nullptr, ERR_INVALID_PARAMETER);
+				HANDLE_ERR(p_path.is_empty(), ERR_INVALID_PARAMETER);
+				if (!p_remap_file_path.is_empty()) {
+					HANDLE_ERR(p_remapped_file_path.is_empty(), ERR_INVALID_PARAMETER);
 				}
-				remap_file.size = FileAccess::get_size(real_remap_file_path);
-				remapped_file.size = FileAccess::get_size(real_remapped_file_path);
 
-				if (native_file.exists) {
-					native_file.md5 = real_native_file_path.md5_text();
-					native_file.sha256 = real_native_file_path.sha256_text();
+				data.path = p_path;
+				data.native_file.path = p_path;
+				data.remap_file.path = p_remap_file_path;
+				data.remapped_file.path = p_remapped_file_path;
+
+				real_native_file_path = p_export_data->res_to_global(p_path);
+				real_remap_file_path = !p_remap_file_path.is_empty()
+						? p_export_data->res_to_global(p_remap_file_path)
+						: "";
+				real_remapped_file_path = !p_remapped_file_path.is_empty()
+						? p_export_data->res_to_global(p_remapped_file_path)
+						: "";
+
+				data.native_file.exists = FileAccess::exists(real_native_file_path);
+				data.remap_file.exists = FileAccess::exists(real_remap_file_path);
+				data.remapped_file.exists = FileAccess::exists(real_remapped_file_path);
+				if (!data.remap_file.path.is_empty()) {
+					HANDLE_ERR(!data.remap_file.exists, ERR_FILE_NOT_FOUND);
+					HANDLE_ERR(!data.remapped_file.exists, ERR_FILE_NOT_FOUND);
 				}
-				remap_file.md5 = real_remap_file_path.md5_text();
-				remap_file.sha256 = real_remap_file_path.sha256_text();
-				remapped_file.md5 = real_remapped_file_path.md5_text();
-				remapped_file.sha256 = real_remapped_file_path.sha256_text();
+
+				if (data.native_file.exists) {
+					data.native_file.size = FileAccess::get_size(real_native_file_path);
+				}
+				if (data.remap_file.exists) {
+					data.remap_file.size = FileAccess::get_size(real_remap_file_path);
+					data.remapped_file.size = FileAccess::get_size(real_remapped_file_path);
+				}
+
+				if (data.native_file.exists) {
+					data.native_file.md5 = real_native_file_path.md5_text();
+					data.native_file.sha256 = real_native_file_path.sha256_text();
+				}
+				if (data.remap_file.exists) {
+					data.remap_file.md5 = real_remap_file_path.md5_text();
+					data.remap_file.sha256 = real_remap_file_path.sha256_text();
+					data.remapped_file.md5 = real_remapped_file_path.md5_text();
+					data.remapped_file.sha256 = real_remapped_file_path.sha256_text();
+				}
+
+			return_error:
+				if (r_error != nullptr) {
+					*r_error = error;
+				}
+
+				if (error != OK) {
+					return ResourceData();
+				}
+				return data;
+#undef HANDLE_ERR
 			}
 		};
 

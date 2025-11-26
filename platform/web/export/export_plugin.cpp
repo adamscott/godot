@@ -76,57 +76,82 @@ Error EditorExportPlatformWeb::ExportData::write_deps_json_file(const String &p_
 		return OK;
 	}
 
-	const String SUFFIX_REMAP = ".remap";
-	const String SUFFIX_IMPORT = ".import";
+	Error error;
+
 	String resource_path = EditorExportPlatformUtils::get_path_from_dependency(p_resource_path);
 	String remap_file_path;
-
-	if (FileAccess::exists(res_to_global(resource_path + SUFFIX_IMPORT))) {
-		remap_file_path = resource_path + SUFFIX_IMPORT;
-	} else if (FileAccess::exists(res_to_global(resource_path + SUFFIX_REMAP))) {
-		remap_file_path = resource_path + SUFFIX_REMAP;
-	} else if (FileAccess::exists(res_to_global(resource_path))) {
-		remap_file_path = resource_path;
-	} else {
-		ERR_FAIL_V_MSG(ERR_FILE_NOT_FOUND, vformat(TTRC(R"*(Cannot write dependencies JSON file of "%s".)*"), resource_path + SUFFIX_IMPORT, resource_path + SUFFIX_REMAP));
-	}
-	Ref<FileAccess> remap_file_access = FileAccess::open(res_to_global(remap_file_path), FileAccess::READ);
-	ERR_FAIL_COND_V(remap_file_access.is_null(), FileAccess::get_open_error());
-
-	Ref<ConfigFile> remap_file;
-	remap_file.instantiate();
-	// if (p_is_encrypted) {
-	// 	Ref<FileAccessEncrypted> remap_file_access_encrypted;
-	// 	remap_file_access_encrypted.instantiate();
-	// 	Error err = remap_file_access_encrypted->open_and_parse(remap_file_access, p_key, FileAccessEncrypted::MODE_READ, false);
-	// 	ERR_FAIL_COND_V(err != OK, err);
-	// 	remap_file_access = remap_file_access_encrypted;
-	// }
-	remap_file->parse(remap_file_access->get_as_text());
-
 	String remapped_file_path;
-	Vector<String> remap_section_keys = remap_file->get_section_keys("remap");
-	for (const String &remap_section_key : remap_section_keys) {
-		bool found = false;
-		const String PREFIX_PATH = "path.";
-		if (remap_section_key.begins_with(PREFIX_PATH)) {
-			String type = remap_section_key.trim_prefix(PREFIX_PATH);
-			if (p_features_set.has(type)) {
+
+	const String SUFFIX_REMAP = ".remap";
+	const String SUFFIX_IMPORT = ".import";
+
+	bool exists_import = FileAccess::exists(res_to_global(resource_path + SUFFIX_IMPORT));
+	bool exists_remap = FileAccess::exists(res_to_global(resource_path + SUFFIX_REMAP));
+
+	if (exists_import || exists_remap) {
+		if (exists_import) {
+			remap_file_path = resource_path + SUFFIX_IMPORT;
+		} else {
+			remap_file_path = resource_path + SUFFIX_REMAP;
+		}
+		Ref<FileAccess> remap_file_access = FileAccess::open(res_to_global(remap_file_path), FileAccess::READ);
+		ERR_FAIL_COND_V(remap_file_access.is_null(), FileAccess::get_open_error());
+
+		Ref<ConfigFile> remap_file;
+		remap_file.instantiate();
+		// if (p_is_encrypted) {
+		// 	Ref<FileAccessEncrypted> remap_file_access_encrypted;
+		// 	remap_file_access_encrypted.instantiate();
+		// 	Error err = remap_file_access_encrypted->open_and_parse(remap_file_access, p_key, FileAccessEncrypted::MODE_READ, false);
+		// 	ERR_FAIL_COND_V(err != OK, err);
+		// 	remap_file_access = remap_file_access_encrypted;
+		// }
+		remap_file->parse(remap_file_access->get_as_text());
+
+		Vector<String> remap_section_keys = remap_file->get_section_keys("remap");
+		for (const String &remap_section_key : remap_section_keys) {
+			bool found = false;
+			const String PREFIX_PATH = "path.";
+			if (remap_section_key.begins_with(PREFIX_PATH)) {
+				String type = remap_section_key.trim_prefix(PREFIX_PATH);
+				if (p_features_set.has(type)) {
+					found = true;
+				}
+			}
+			if (remap_section_key == "path") {
 				found = true;
 			}
+			if (!found) {
+				continue;
+			}
+			remapped_file_path = ResourceUID::ensure_path(remap_file->get_value("remap", remap_section_key));
+			break;
 		}
-		if (remap_section_key == "path") {
-			found = true;
-		}
-		if (!found) {
-			continue;
-		}
-		remapped_file_path = remap_file->get_value("remap", remap_section_key);
-		break;
-	}
-	ERR_FAIL_COND_V_MSG(remapped_file_path.is_empty(), ERR_FILE_NOT_FOUND, vformat(TTRC(R"*(Could not find a remap path in "%s".)*"), res_to_global(remap_file_path)));
 
-	dependencies.insert(resource_path, ExportData::ResourceData(this, resource_path, remap_file_path, remapped_file_path));
+		// Let's try again for .uid instead.
+		if (remapped_file_path.is_empty()) {
+			remap_section_keys = remap_file->get_section_keys("remap");
+			for (const String &remap_section_key : remap_section_keys) {
+				bool found = false;
+				if (remap_section_key == "uid") {
+					found = true;
+				}
+				if (!found) {
+					continue;
+				}
+				remapped_file_path = ResourceUID::ensure_path(remap_file->get_value("remap", remap_section_key));
+				break;
+			}
+		}
+
+		ERR_FAIL_COND_V_MSG(remapped_file_path.is_empty(), ERR_FILE_NOT_FOUND, vformat(TTRC(R"*(Could not find a remap path in "%s".)*"), res_to_global(remap_file_path)));
+	}
+
+	ExportData::ResourceData resource = ExportData::ResourceData::create(this, resource_path, remap_file_path, remapped_file_path, &error);
+	if (error != OK) {
+		return error;
+	}
+	dependencies.insert(resource_path, resource);
 
 	HashSet<String> resource_dependencies;
 	{
@@ -140,7 +165,7 @@ Error EditorExportPlatformWeb::ExportData::write_deps_json_file(const String &p_
 	for (const String &resource_dependency : resource_dependencies) {
 		Error error = write_deps_json_file(resource_dependency, p_features_set);
 		if (error != OK) {
-			ERR_PRINT(vformat(R"*(Could not add dependencies of "%s".)*", resource_dependency));
+			ERR_PRINT(vformat(TTRC(R"*(Could not add dependencies of "%s".)*"), resource_dependency));
 			return error;
 		}
 		dependencies.get(resource_path).dependencies.push_back(&dependencies.get(resource_dependency));
@@ -172,7 +197,9 @@ Error EditorExportPlatformWeb::ExportData::write_deps_json_file(const String &p_
 		Array paths_array;
 		deps_dependencies[l_dependency->path] = paths_array;
 		for (const ExportData::ResourceData *local_dependency : local_dependencies) {
-			paths_array.push_back(local_dependency->path);
+			if (local_dependency->path != l_dependency->path) {
+				paths_array.push_back(local_dependency->path);
+			}
 			if (!deps_dependencies.has(local_dependency->path)) {
 				_l_add_deps_dependencies(local_dependency);
 			}
@@ -1207,6 +1234,8 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 			export_data.pack_data.use_sparse_pck = true;
 			export_data.preset = p_preset;
 
+			HashSet<String> features_set = export_data.get_features_set();
+
 			error = export_project_files(p_preset, p_debug, &EditorExportPlatformWeb::_rename_and_store_file_in_async_pck, nullptr, &export_data);
 			if (error != OK) {
 				add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write async pck: \"%s\"."), pck_path));
@@ -1241,9 +1270,16 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 			}
 
 			{
-				HashSet<String> features_set = export_data.get_features_set();
-				std::function<Error(String)> _l_loop_asset_dir;
-				_l_loop_asset_dir = [&_l_loop_asset_dir, &export_data, &features_set](const String &l_path) -> Error {
+				enum Pass {
+					PASS_REMAP_IMPORT,
+					PASS_NON_REMAP_IMPORT
+				};
+
+				std::function<Error(String, Pass)> _l_loop_asset_dir;
+				_l_loop_asset_dir = [&_l_loop_asset_dir, &export_data, &features_set](const String &l_path, Pass l_pass) -> Error {
+					const String SUFFIX_DEPS_JSON = ".deps.json";
+					const String SUFFIX_REMAP = ".remap";
+					const String SUFFIX_IMPORT = ".import";
 					String path = l_path.simplify_path();
 					Ref<DirAccess> dir_access = DirAccess::open(path);
 					ERR_FAIL_COND_V(dir_access.is_null(), ERR_CANT_OPEN);
@@ -1251,44 +1287,85 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 					dir_access->list_dir_begin();
 					String next = dir_access->get_next();
 					while (!next.is_empty()) {
+#define CONTINUE_TO_NEXT()         \
+	next = dir_access->get_next(); \
+	continue
 						if (next == "." || next == "..") {
-							next = dir_access->get_next();
-							continue;
+							CONTINUE_TO_NEXT();
 						}
 						if (DirAccess::exists(path.path_join(next))) {
-							Error err = _l_loop_asset_dir(path.path_join(next));
+							Error err = _l_loop_asset_dir(path.path_join(next), l_pass);
 							if (err != OK) {
 								return err;
 							}
-							next = dir_access->get_next();
-							continue;
+							CONTINUE_TO_NEXT();
+						}
+						if (next.ends_with(SUFFIX_DEPS_JSON)) {
+							CONTINUE_TO_NEXT();
 						}
 
-						const String REMAP_SUFFIX = ".remap";
-						const String IMPORT_SUFFIX = ".import";
 						String suffix;
+						String resource_path;
 
-						if (next.ends_with(REMAP_SUFFIX)) {
-							suffix = REMAP_SUFFIX;
-						} else if (next.ends_with(IMPORT_SUFFIX)) {
-							suffix = IMPORT_SUFFIX;
+						switch (l_pass) {
+							case PASS_REMAP_IMPORT: {
+								if (next.ends_with(SUFFIX_REMAP)) {
+									suffix = SUFFIX_REMAP;
+								} else if (next.ends_with(SUFFIX_IMPORT)) {
+									suffix = SUFFIX_IMPORT;
+								} else {
+									CONTINUE_TO_NEXT();
+								}
+								resource_path = export_data.global_to_res(path.path_join(next.trim_suffix(suffix)));
+							} break;
+							case PASS_NON_REMAP_IMPORT: {
+								if (next.ends_with(SUFFIX_REMAP) || next.ends_with(SUFFIX_IMPORT)) {
+									CONTINUE_TO_NEXT();
+								}
+								resource_path = export_data.global_to_res(path.path_join(next));
+
+								bool found = false;
+								for (const KeyValue<String, ExportData::ResourceData> &key_value : export_data.dependencies) {
+									const String &dependency_path = key_value.key;
+									const ExportData::ResourceData &dependency_data = key_value.value;
+
+									if (resource_path == dependency_path) {
+										found = true;
+										break;
+									}
+									if (dependency_data.native_file.exists && resource_path == dependency_data.native_file.path) {
+										found = true;
+										break;
+									}
+									if (dependency_data.remap_file.exists && resource_path == dependency_data.remap_file.path) {
+										found = true;
+										break;
+									}
+									if (dependency_data.remapped_file.exists && resource_path == dependency_data.remapped_file.path) {
+										found = true;
+										break;
+									}
+								}
+								if (found) {
+									CONTINUE_TO_NEXT();
+								}
+							} break;
 						}
 
-						if (!suffix.is_empty()) {
-							String resource_path = export_data.global_to_res(path.path_join(next.trim_suffix(suffix)));
-							Error err = export_data.write_deps_json_file(resource_path, features_set);
-							if (err != OK) {
-								return err;
-							}
+						Error err = export_data.write_deps_json_file(resource_path, features_set);
+						if (err != OK) {
+							return err;
 						}
 
-						next = dir_access->get_next();
+						CONTINUE_TO_NEXT();
 					}
 					dir_access->list_dir_end();
 
 					return OK;
+#undef CONTINUE_TO_NEXT
 				};
-				_l_loop_asset_dir(ProjectSettings::get_singleton()->globalize_path(export_data.assets_directory));
+				_l_loop_asset_dir(ProjectSettings::get_singleton()->globalize_path(export_data.assets_directory), PASS_REMAP_IMPORT);
+				_l_loop_asset_dir(ProjectSettings::get_singleton()->globalize_path(export_data.assets_directory), PASS_NON_REMAP_IMPORT);
 			}
 
 			// {
