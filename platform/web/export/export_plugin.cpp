@@ -40,6 +40,7 @@
 #include "core/io/resource_uid.h"
 #include "core/variant/dictionary.h"
 #include "editor/editor_node.h"
+#include "editor/export/editor_export_platform.h"
 #include "editor/export/editor_export_preset.h"
 #include "logo_svg.gen.h"
 #include "run_icon_svg.gen.h"
@@ -363,23 +364,10 @@ void EditorExportPlatformWeb::AsyncDialog::tree_init() {
 	file_dependencies_state.clear();
 	main_scene_dependencies.clear();
 
-	main_scene_path = EditorExportPlatformUtils::get_path_from_dependency(export_platform->_get_main_scene_path(preset));
-	file_dependencies_state.add_to_file_dependencies(main_scene_path);
-	HashSet<String> main_scene_dependencies_set = { main_scene_path };
+	HashSet<String> mandatory_initial_load_files = EditorExportPlatformWeb::_get_mandatory_initial_load_files(preset);
+	file_dependencies_state.add_to_file_dependencies(mandatory_initial_load_files);
 
-	default_bus_layout_path = EditorExportPlatformUtils::get_path_from_dependency(export_platform->_get_default_bus_layout_path(preset));
-	if (FileAccess::exists(default_bus_layout_path)) {
-		file_dependencies_state.add_to_file_dependencies(default_bus_layout_path);
-		main_scene_dependencies_set.insert(default_bus_layout_path);
-	}
-
-	icon_path = EditorExportPlatformUtils::get_path_from_dependency(export_platform->_get_icon_path(preset));
-	if (FileAccess::exists(icon_path)) {
-		file_dependencies_state.add_to_file_dependencies(icon_path);
-		main_scene_dependencies_set.insert(icon_path);
-	}
-
-	main_scene_dependencies = file_dependencies_state.get_file_dependencies_of(main_scene_dependencies_set);
+	main_scene_dependencies = file_dependencies_state.get_file_dependencies_of(mandatory_initial_load_files);
 
 	forced_files.clear();
 
@@ -1080,7 +1068,7 @@ bool EditorExportPlatformWeb::has_valid_export_configuration(const Ref<EditorExp
 	String err;
 
 	if ((int)p_preset->get("async/initial_load_mode") != AsyncLoadSetting::ASYNC_LOAD_SETTING_LOAD_EVERYTHING) {
-		if (_get_main_scene_path(p_preset).is_empty()) {
+		if (String(EditorExportPlatformUtils::get_project_setting(p_preset, "application/run/main_scene")).is_empty()) {
 			err += TTR("No main scene has been set. The main scene must be set for the web platform in order to preload the minimal files.") + "\n";
 		}
 	}
@@ -1452,25 +1440,12 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 			// main_scene_deps_json = "";
 
 			{
-				String main_scene_path = EditorExportPlatformUtils::get_path_from_dependency(_get_main_scene_path(p_preset));
-
-				String default_bus_layout_path = EditorExportPlatformUtils::get_path_from_dependency(_get_default_bus_layout_path(p_preset));
-				String icon_path = EditorExportPlatformUtils::get_path_from_dependency(_get_icon_path(p_preset));
-
-				bool default_bus_layout_exists = FileAccess::exists(default_bus_layout_path);
-				bool icon_exists = FileAccess::exists(icon_path);
-
+				HashSet<String> mandatory_files = EditorExportPlatformWeb::_get_mandatory_initial_load_files(p_preset);
 				HashSet<String> exported_files;
 
 				{
 					EditorExportPlatformUtils::AsyncPckFileDependenciesState file_dependencies_state;
-					file_dependencies_state.add_to_file_dependencies(main_scene_path);
-					if (default_bus_layout_exists) {
-						file_dependencies_state.add_to_file_dependencies(default_bus_layout_path);
-					}
-					if (icon_exists) {
-						file_dependencies_state.add_to_file_dependencies(icon_path);
-					}
+					file_dependencies_state.add_to_file_dependencies(mandatory_files);
 
 					HashSet<String> forced_files;
 					Variant forced_files_variant = p_preset->get("async/initial_load_forced_files");
@@ -1493,19 +1468,10 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 
 					HashMap<String, const HashSet<String> *> exported_files_dependencies;
 					{
-						HashMap<String, const HashSet<String> *> main_scene_dependencies = file_dependencies_state.get_file_dependencies_of(main_scene_path);
-						exported_files_dependencies[main_scene_path] = main_scene_dependencies[main_scene_path];
-						exported_files.insert(main_scene_path);
-
-						if (default_bus_layout_exists) {
-							HashMap<String, const HashSet<String> *> default_bus_layout_dependencies = file_dependencies_state.get_file_dependencies_of(default_bus_layout_path);
-							exported_files_dependencies[default_bus_layout_path] = default_bus_layout_dependencies[default_bus_layout_path];
-							exported_files.insert(default_bus_layout_path);
-						}
-						if (icon_exists) {
-							HashMap<String, const HashSet<String> *> icon_dependencies = file_dependencies_state.get_file_dependencies_of(icon_path);
-							exported_files_dependencies[icon_path] = icon_dependencies[icon_path];
-							exported_files.insert(icon_path);
+						HashMap<String, const HashSet<String> *> mandatory_dependencies = file_dependencies_state.get_file_dependencies_of(mandatory_files);
+						for (const KeyValue<String, const HashSet<String> *> &key_value : mandatory_dependencies) {
+							exported_files_dependencies[key_value.key] = key_value.value;
+							exported_files.insert(key_value.key);
 						}
 					}
 
@@ -2011,16 +1977,52 @@ void EditorExportPlatformWeb::_on_async_dialog_visibility_changed() {
 	async_dialog = nullptr;
 }
 
-String EditorExportPlatformWeb::_get_main_scene_path(Ref<EditorExportPreset> p_preset) const {
-	return EditorExportPlatformUtils::get_project_setting(p_preset, "application/run/main_scene");
-}
+HashSet<String> EditorExportPlatformWeb::_get_mandatory_initial_load_files(const Ref<EditorExportPreset> &p_preset) {
+	HashSet<String> mandatory_initial_load_files;
 
-String EditorExportPlatformWeb::_get_default_bus_layout_path(Ref<EditorExportPreset> p_preset) const {
-	return EditorExportPlatformUtils::get_project_setting(p_preset, "audio/buses/default_bus_layout");
-}
+	{
+		// Main scene.
+		mandatory_initial_load_files.insert(
+				EditorExportPlatformUtils::get_path_from_dependency(
+						EditorExportPlatformUtils::get_project_setting(p_preset, "application/run/main_scene")));
+	}
 
-String EditorExportPlatformWeb::_get_icon_path(Ref<EditorExportPreset> p_preset) const {
-	return EditorExportPlatformUtils::get_project_setting(p_preset, "application/config/icon");
+	{
+		// Translation files.
+		PackedStringArray translations = EditorExportPlatformUtils::get_project_setting(p_preset, "internationalization/locale/translations");
+		for (const String &translation : translations) {
+			mandatory_initial_load_files.insert(EditorExportPlatformUtils::get_path_from_dependency(translation));
+		}
+	}
+
+	{
+		// Autoload files.
+		HashMap<StringName, ProjectSettings::AutoloadInfo> autoload_list = ProjectSettings::get_singleton()->get_autoload_list();
+		for (const KeyValue<StringName, ProjectSettings::AutoloadInfo> &key_value : autoload_list) {
+			mandatory_initial_load_files.insert(
+					EditorExportPlatformUtils::get_path_from_dependency(
+							key_value.value.path));
+		}
+	}
+
+	{
+		// Single files.
+		auto _l_add_project_setting_if_file_exists = [&p_preset, &mandatory_initial_load_files](const String &l_project_setting) -> void {
+			String path = EditorExportPlatformUtils::get_path_from_dependency(EditorExportPlatformUtils::get_project_setting(p_preset, l_project_setting));
+			if (FileAccess::exists(path)) {
+				mandatory_initial_load_files.insert(path);
+			}
+		};
+
+		// Default bus layout path.
+		_l_add_project_setting_if_file_exists("audio/buses/default_bus_layout");
+		// Icon path.
+		_l_add_project_setting_if_file_exists("application/config/icon");
+		// Certificate bundle override.
+		_l_add_project_setting_if_file_exists("network/tls/certificate_bundle_override");
+	}
+
+	return mandatory_initial_load_files;
 }
 
 Ref<Texture2D> EditorExportPlatformWeb::get_run_icon() const {

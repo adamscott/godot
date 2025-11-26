@@ -353,13 +353,10 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 	Error _start_server(const String &p_bind_host, uint16_t p_bind_port, bool p_use_tls);
 	Error _stop_server();
 
+	static HashSet<String> _get_mandatory_initial_load_files(const Ref<EditorExportPreset> &p_preset);
 	static Error _rename_and_store_file_in_async_pck(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const PackedByteArray &p_key, uint64_t p_seed);
 	void _open_async_dialog();
 	void _on_async_dialog_visibility_changed();
-
-	String _get_main_scene_path(Ref<EditorExportPreset> p_preset) const;
-	String _get_default_bus_layout_path(Ref<EditorExportPreset> p_preset) const;
-	String _get_icon_path(Ref<EditorExportPreset> p_preset) const;
 
 public:
 	virtual void get_preset_features(const Ref<EditorExportPreset> &p_preset, List<String> *r_features) const override;
