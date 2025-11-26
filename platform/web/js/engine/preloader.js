@@ -19,19 +19,19 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 		}
 
 		concurrency.queue.push(queueItem);
-		return new Promise((resolve, reject) => {
-			const onQueueNext = (prevent) => {
-				if (prevent?.detail?.symbol !== symbol) {
+		return new Promise((pResolve, pReject) => {
+			const onQueueNext = (pEvent) => {
+				if (pEvent?.detail?.symbol !== symbol) {
 					return;
 				}
-				queueItem = prevent.detail;
+				queueItem = pEvent.detail;
 				concurrency.eventTarget.removeEventListener('queuenext', onQueueNext);
 				if (concurrency.active.length >= CONCURRENCY_LIMIT) {
-					reject(new Error('Something went wrong, concurrency is too high.'));
+					pReject(new Error('Something went wrong, concurrency is too high.'));
 					return;
 				}
 				concurrency.active.push(queueItem);
-				resolve(queueItem);
+				pResolve(queueItem);
 			};
 			concurrency.eventTarget.addEventListener('queuenext', onQueueNext);
 		});
