@@ -65,7 +65,7 @@ def package_js_module_action_ensure_copyright_buffer(target, source, env, filena
 
     with open(source, mode="r", encoding="utf-8") as source_file:
         with open(target, mode="w", encoding="utf-8") as target_file:
-            new_contents = process_file_buffer_copyright_buffer(source_file, filename)
+            new_contents = process_file_buffer_copyright_buffer(filename, source_file)
             CHUNK_SIZE = 1024
             while True:
                 chunk = new_contents.read(CHUNK_SIZE)
