@@ -34,9 +34,11 @@
 #include "core/error/error_macros.h"
 #include "core/io/file_access.h"
 #include "core/object/object.h"
+#include "core/string/fuzzy_search.h"
 #include "core/variant/dictionary.h"
 #include "core/variant/variant.h"
 #include "editor/export/editor_export_preset.h"
+#include "editor/file_system/editor_file_system.h"
 #include "editor_http_server.h"
 
 #include "core/config/project_settings.h"
@@ -133,31 +135,79 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 			TREE_COLUMN_IS_DEPENDENCY = 3,
 		};
 
+		struct TreePaths {
+			struct TreePath {
+				struct Comparator {
+					bool operator()(const TreePath &p_a, const TreePath &p_b) const {
+						return p_a.path.filenocasecmp_to(p_b.path) < 0;
+					}
+				};
+
+				enum TreePathValue {
+					TREE_PATH_VALUE_MAIN,
+					TREE_PATH_VALUE_FORCED,
+					TREE_PATH_VALUE_DEPENDENCY,
+				};
+
+				enum TreePathState {
+					TREE_PATH_STATE_UNCHECKED,
+					TREE_PATH_STATE_INDETERMINATE,
+					TREE_PATH_STATE_CHECKED,
+				};
+
+				String path;
+
+				TreePath *parent = nullptr;
+				LocalVector<TreePath *> children;
+				bool is_directory = false;
+
+				bool main = false;
+				bool forced = false;
+
+				TreePathState get_state(TreePathValue p_value) const;
+				void set_state(TreePathState p_state, TreePathValue p_value);
+			};
+
+			List<TreePath> paths;
+			HashMap<String, TreePath *> paths_map;
+			LocalVector<String> paths_ordered;
+
+			static TreePaths create(const HashSet<String> &p_file_paths);
+		};
+
 		EditorExportPlatformWeb *export_platform = nullptr;
 		EditorExportPlatformUtils::AsyncPckFileDependenciesState file_dependencies_state;
 		HashSet<String> exported_paths;
 		HashSet<String> exported_paths_and_forced_files_and_dependencies;
+		TreePaths tree_paths;
 		String main_scene_path;
 		String default_bus_layout_path;
 		String icon_path;
 		HashSet<String> forced_files;
 		HashMap<String, const HashSet<String> *> main_scene_dependencies;
-		HashMap<String, const HashSet<String> *> default_bus_layout_dependencies;
-		HashMap<String, const HashSet<String> *> icon_dependencies;
 		HashMap<String, const HashSet<String> *> forced_files_dependencies;
 
 		Ref<EditorExportPreset> preset;
 
 		bool updating = false;
 
-		Tree *tree = nullptr;
+		LineEdit *tree_search_line_edit = nullptr;
+
+		Tree *tree_hierarchical = nullptr;
+		Tree *tree_search = nullptr;
+		Timer *tree_search_debounce_timer = nullptr;
 		bool tree_had_first_update = false;
+
+		FuzzySearch tree_fuzzy_search;
 
 		void update_theme();
 		void update_forced_files();
 
 		void on_confirmed();
-		void on_tree_item_edited();
+		void on_tree_item_edited(Tree *p_edited_tree);
+		void on_tree_pro(Tree *p_edited_tree);
+		void on_tree_search_line_edit_text_changed(const String &p_new_text);
+		void on_tree_search_debounce_timer_timeout();
 
 		void add_selected_file(const String &p_path);
 		void remove_selected_file(const String &p_path);
@@ -167,7 +217,9 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		void tree_remove_callbacks();
 		void tree_init();
 		void tree_update();
-		bool tree_fill(EditorFileSystemDirectory *p_dir, HashSet<String> &p_paths, Tree *p_tree, TreeItem *p_tree_item);
+		void tree_get_paths_and_dirs(const HashSet<String> &p_file_paths, HashMap<String, LocalVector<String>> &r_paths_map, LocalVector<String> &r_paths_list) const;
+		void tree_fill_hierarchical(const TreePaths &p_paths);
+		void tree_fill_search(const TreePaths &p_paths);
 
 	protected:
 		void _notification(int p_what);
