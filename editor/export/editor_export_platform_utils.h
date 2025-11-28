@@ -44,7 +44,8 @@ public:
 		void _get_file_dependencies_of(const String &p_file, HashMap<String, const HashSet<String> *> &p_dependencies);
 
 	public:
-		HashMap<String, HashSet<String>> file_dependencies;
+		List<HashSet<String>> file_dependencies_lists;
+		HashMap<String, HashSet<String> *> file_dependencies;
 
 		void add_to_file_dependencies(const String &p_file);
 		void add_to_file_dependencies(const HashSet<String> &p_file_set);

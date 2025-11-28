@@ -102,7 +102,8 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 			static ResourceData create(const ExportData *p_export_data, const String &p_path, const String &p_remap_file_path = "", const String &p_remapped_file_path = "", Error *r_error = nullptr);
 		};
 
-		HashMap<String, ResourceData> dependencies;
+		List<ResourceData> dependencies;
+		HashMap<String, ResourceData *> dependencies_map;
 		EditorExportPlatformData::PackData pack_data;
 		String assets_directory;
 		String libraries_directory;
@@ -127,6 +128,12 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 
 	class AsyncDialog : public ConfirmationDialog {
 		GDCLASS(AsyncDialog, ConfirmationDialog);
+
+		enum TreeState {
+			TREE_STATE_NONE,
+			TREE_STATE_HIERARCHICAL,
+			TREE_STATE_SEARCH,
+		};
 
 		enum TreeColumn {
 			TREE_COLUMN_PATH = 0,
@@ -155,7 +162,19 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 					TREE_PATH_STATE_CHECKED,
 				};
 
+			private:
+				mutable bool main_state_cached = false;
+				mutable bool forced_state_cached = false;
+				mutable bool dependency_state_cached = false;
+
+				mutable TreePathState main_state_cache;
+				mutable TreePathState forced_state_cache;
+				mutable TreePathState dependency_state_cache;
+
 				String path;
+
+			public:
+				uint64_t path_file_size = 0;
 
 				TreePath *parent = nullptr;
 				LocalVector<TreePath *> children;
@@ -163,22 +182,42 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 
 				bool main = false;
 				bool forced = false;
+				bool dependency = false;
 
+				TreeItem *tree_item = nullptr;
+				bool tree_item_in_tree = false;
+
+				void set_path(const String &p_path);
+				String get_path() const;
+
+				void set_state(TreePathValue p_value, TreePathState p_state);
 				TreePathState get_state(TreePathValue p_value) const;
-				void set_state(TreePathState p_state, TreePathValue p_value);
+
+				void update_tree_item();
+
+				~TreePath();
 			};
 
+		private:
+			bool _initialized = false;
+
+		public:
 			List<TreePath> paths;
 			HashMap<String, TreePath *> paths_map;
 			LocalVector<String> paths_ordered;
 
-			static TreePaths create(const HashSet<String> &p_file_paths);
+			void initialize(const HashSet<String> &p_file_paths);
+			bool is_initialized() const {
+				return _initialized;
+			}
 		};
+
+		inline static const String PREFIX_RES = "res://";
+		inline static const int PREFIX_RES_LENGTH = PREFIX_RES.length();
 
 		EditorExportPlatformWeb *export_platform = nullptr;
 		EditorExportPlatformUtils::AsyncPckFileDependenciesState file_dependencies_state;
 		HashSet<String> exported_paths;
-		HashSet<String> exported_paths_and_forced_files_and_dependencies;
 		TreePaths tree_paths;
 		String main_scene_path;
 		String default_bus_layout_path;
@@ -193,19 +232,25 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 
 		LineEdit *tree_search_line_edit = nullptr;
 
-		Tree *tree_hierarchical = nullptr;
-		Tree *tree_search = nullptr;
+		Tree *tree = nullptr;
 		Timer *tree_search_debounce_timer = nullptr;
 		bool tree_had_first_update = false;
+		TreeState tree_state_current = TREE_STATE_HIERARCHICAL;
+		TreeState tree_state_new = TREE_STATE_NONE;
 
 		FuzzySearch tree_fuzzy_search;
 
+		Label *file_size_main_title_label = nullptr;
+		Label *file_size_main_size_label = nullptr;
+		Label *file_size_forced_title_label = nullptr;
+		Label *file_size_forced_size_label = nullptr;
+		Label *file_size_dependencies_title_label = nullptr;
+		Label *file_size_dependencies_size_label = nullptr;
+
 		void update_theme();
-		void update_forced_files();
 
 		void on_confirmed();
-		void on_tree_item_edited(Tree *p_edited_tree);
-		void on_tree_pro(Tree *p_edited_tree);
+		void on_tree_item_edited();
 		void on_tree_search_line_edit_text_changed(const String &p_new_text);
 		void on_tree_search_debounce_timer_timeout();
 
@@ -216,10 +261,12 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		void tree_add_callbacks();
 		void tree_remove_callbacks();
 		void tree_init();
+		void tree_init_tree_items();
 		void tree_update();
+		void tree_update_hierarchical(bool p_add_tree_items_to_tree);
+		void tree_update_search();
+		void tree_unset_tree_item_parents();
 		void tree_get_paths_and_dirs(const HashSet<String> &p_file_paths, HashMap<String, LocalVector<String>> &r_paths_map, LocalVector<String> &r_paths_list) const;
-		void tree_fill_hierarchical(const TreePaths &p_paths);
-		void tree_fill_search(const TreePaths &p_paths);
 
 	protected:
 		void _notification(int p_what);

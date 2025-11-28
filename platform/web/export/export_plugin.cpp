@@ -31,6 +31,7 @@
 #include "export_plugin.h"
 
 #include "core/error/error_list.h"
+#include "core/error/error_macros.h"
 #include "core/extension/gdextension.h"
 #include "core/io/config_file.h"
 #include "core/io/file_access.h"
@@ -38,6 +39,7 @@
 #include "core/io/json.h"
 #include "core/io/resource_loader.h"
 #include "core/io/resource_uid.h"
+#include "core/os/memory.h"
 #include "core/string/fuzzy_search.h"
 #include "core/variant/dictionary.h"
 #include "editor/editor_node.h"
@@ -56,6 +58,8 @@
 #include "editor/import/resource_importer_texture_settings.h"
 #include "editor/settings/editor_settings.h"
 #include "editor/themes/editor_scale.h"
+#include "scene/gui/box_container.h"
+#include "scene/gui/grid_container.h"
 #include "scene/gui/line_edit.h"
 #include "scene/gui/margin_container.h"
 #include "scene/gui/tab_container.h"
@@ -195,7 +199,7 @@ return_error:
  */
 
 Error EditorExportPlatformWeb::ExportData::write_deps_json_file(const String &p_resource_path, HashSet<String> &p_features_set) {
-	if (dependencies.has(p_resource_path)) {
+	if (dependencies_map.has(p_resource_path)) {
 		return OK;
 	}
 
@@ -274,7 +278,8 @@ Error EditorExportPlatformWeb::ExportData::write_deps_json_file(const String &p_
 	if (error != OK) {
 		return error;
 	}
-	dependencies.insert(resource_path, resource);
+
+	dependencies_map.insert(resource_path, &dependencies.push_back(resource)->get());
 
 	HashSet<String> resource_dependencies;
 	{
@@ -291,9 +296,9 @@ Error EditorExportPlatformWeb::ExportData::write_deps_json_file(const String &p_
 			ERR_PRINT(vformat(TTRC(R"*(Could not add dependencies of "%s".)*"), resource_dependency));
 			return error;
 		}
-		dependencies.get(resource_path).dependencies.push_back(&dependencies.get(resource_dependency));
+		dependencies_map.get(resource_path)->dependencies.push_back(dependencies_map.get(resource_dependency));
 	}
-	ExportData::ResourceData *dependency = &dependencies.get(resource_path);
+	ExportData::ResourceData *dependency = dependencies_map.get(resource_path);
 
 	LocalVector<const ExportData::ResourceData *> found_dependencies;
 	dependency->flatten_dependencies(&found_dependencies);
@@ -372,29 +377,65 @@ HashSet<String> EditorExportPlatformWeb::ExportData::get_features_set() const {
 /**
  * EditorExportPlatformWeb::AsyncDialog::TreePaths::TreePath
  */
-#define TREE_PATHS EditorExportPlatformWeb::AsyncDialog::TreePaths
+void EditorExportPlatformWeb::AsyncDialog::TreePaths::TreePath::set_path(const String &p_path) {
+	ERR_FAIL_COND(p_path.is_empty());
+	path = p_path;
+	print_line(vformat("TreePath: %s", path));
+	is_directory = DirAccess::exists(path);
+	if (!is_directory) {
+		path_file_size = FileAccess::get_size(path);
+	}
+}
 
-TREE_PATHS::TreePath::TreePathState TREE_PATHS::TreePath::get_state(TreePathValue p_value) const {
+String EditorExportPlatformWeb::AsyncDialog::TreePaths::TreePath::get_path() const {
+	return path;
+}
+
+EditorExportPlatformWeb::AsyncDialog::TreePaths::TreePath::TreePathState EditorExportPlatformWeb::AsyncDialog::TreePaths::TreePath::get_state(TreePathValue p_value) const {
+	bool *is_cached;
+	TreePathState *cached_value;
+
+	if (p_value == TREE_PATH_VALUE_MAIN) {
+		is_cached = &main_state_cached;
+		cached_value = &main_state_cache;
+	} else if (p_value == TREE_PATH_VALUE_FORCED) {
+		is_cached = &forced_state_cached;
+		cached_value = &forced_state_cache;
+	} else if (p_value == TREE_PATH_VALUE_DEPENDENCY) {
+		is_cached = &dependency_state_cached;
+		cached_value = &dependency_state_cache;
+	} else {
+		ERR_FAIL_V(TREE_PATH_STATE_UNCHECKED);
+	}
+
+	if (*is_cached) {
+		return *cached_value;
+	} else {
+		*is_cached = true;
+	}
+
 	if (!is_directory) {
 		switch (p_value) {
 			case TREE_PATH_VALUE_MAIN: {
-				return main
+				*cached_value = main
 						? TREE_PATH_STATE_CHECKED
 						: TREE_PATH_STATE_UNCHECKED;
 			} break;
 
 			case TREE_PATH_VALUE_FORCED: {
-				return forced
+				*cached_value = forced
 						? TREE_PATH_STATE_CHECKED
 						: TREE_PATH_STATE_UNCHECKED;
 			} break;
 
 			case TREE_PATH_VALUE_DEPENDENCY: {
-				return main || forced
+				*cached_value = dependency
 						? TREE_PATH_STATE_CHECKED
 						: TREE_PATH_STATE_UNCHECKED;
 			} break;
 		}
+
+		return *cached_value;
 	}
 
 	uint32_t checked_count = 0;
@@ -405,7 +446,8 @@ TREE_PATHS::TreePath::TreePathState TREE_PATHS::TreePath::get_state(TreePathValu
 				checked_count += 1;
 			} break;
 			case TREE_PATH_STATE_INDETERMINATE: {
-				return TREE_PATH_STATE_INDETERMINATE;
+				*cached_value = TREE_PATH_STATE_INDETERMINATE;
+				return *cached_value;
 			} break;
 			case TREE_PATH_STATE_UNCHECKED: {
 				// Do nothing.
@@ -414,54 +456,102 @@ TREE_PATHS::TreePath::TreePathState TREE_PATHS::TreePath::get_state(TreePathValu
 	}
 
 	if (checked_count == 0) {
-		return TREE_PATH_STATE_UNCHECKED;
+		*cached_value = TREE_PATH_STATE_UNCHECKED;
+		return *cached_value;
 	} else if (checked_count == children.size()) {
-		return TREE_PATH_STATE_CHECKED;
+		*cached_value = TREE_PATH_STATE_CHECKED;
+		return *cached_value;
 	}
-	return TREE_PATH_STATE_INDETERMINATE;
+	*cached_value = TREE_PATH_STATE_INDETERMINATE;
+	return *cached_value;
 }
 
-void TREE_PATHS::TreePath::set_state(TreePathState p_state, TreePathValue p_value) {
-	ERR_FAIL_COND_MSG(p_value == TREE_PATH_VALUE_DEPENDENCY, "Cannot manually set TreePath value of dependency.");
+void EditorExportPlatformWeb::AsyncDialog::TreePaths::TreePath::set_state(TreePathValue p_value, TreePathState p_state) {
 	ERR_FAIL_COND_MSG(p_state == TREE_PATH_STATE_INDETERMINATE, "Cannot manually set TreePath state to indeterminate.");
 
-	if (!is_directory) {
+#define STATE_CHECK(m_state_variable)                  \
+	if (p_state == TREE_PATH_STATE_CHECKED) {          \
+		m_state_variable = true;                       \
+	} else if (p_state == TREE_PATH_STATE_UNCHECKED) { \
+		m_state_variable = false;                      \
+	} else {                                           \
+		ERR_FAIL();                                    \
+	}                                                  \
+	(void)0
+
+	if (p_value == TREE_PATH_VALUE_MAIN) {
+		main_state_cached = false;
+	} else if (p_value == TREE_PATH_VALUE_FORCED) {
+		forced_state_cached = false;
+	} else if (p_value == TREE_PATH_VALUE_DEPENDENCY) {
+		dependency_state_cached = false;
+	} else {
+		ERR_FAIL();
+	}
+
+	if (is_directory) {
+		for (TreePath *child : children) {
+			child->set_state(p_value, p_state);
+		}
+	} else {
 		if (p_value == TREE_PATH_VALUE_MAIN) {
-			if (p_state == TREE_PATH_STATE_CHECKED) {
-				main = true;
-			} else if (p_state == TREE_PATH_STATE_UNCHECKED) {
-				main = false;
-			} else {
-				ERR_FAIL();
-			}
+			STATE_CHECK(main);
 		} else if (p_value == TREE_PATH_VALUE_FORCED) {
-			if (p_state == TREE_PATH_STATE_CHECKED) {
-				forced = true;
-			} else if (p_state == TREE_PATH_STATE_UNCHECKED) {
-				forced = false;
-			} else {
-				ERR_FAIL();
-			}
+			STATE_CHECK(forced);
+		} else if (p_value == TREE_PATH_VALUE_DEPENDENCY) {
+			STATE_CHECK(dependency);
 		} else {
 			ERR_FAIL();
 		}
 	}
-
-	for (TreePath *child : children) {
-		child->set_state(p_state, p_value);
-	}
 }
 
-#undef TREE_PATHS
+void EditorExportPlatformWeb::AsyncDialog::TreePaths::TreePath::update_tree_item() {
+	if (tree_item == nullptr) {
+		return;
+	}
+
+#define STATE_UPDATE_VALUE(m_value, m_column)                                       \
+	switch (get_state(TreePathValue::m_value)) {                                    \
+		case TREE_PATH_STATE_CHECKED: {                                             \
+			tree_item->set_checked(AsyncDialog::TreeColumn::m_column, true);        \
+			tree_item->set_indeterminate(AsyncDialog::TreeColumn::m_column, false); \
+		} break;                                                                    \
+		case TREE_PATH_STATE_INDETERMINATE: {                                       \
+			tree_item->set_checked(AsyncDialog::TreeColumn::m_column, false);       \
+			tree_item->set_indeterminate(AsyncDialog::TreeColumn::m_column, true);  \
+		} break;                                                                    \
+		case TREE_PATH_STATE_UNCHECKED: {                                           \
+			tree_item->set_checked(AsyncDialog::TreeColumn::m_column, false);       \
+			tree_item->set_indeterminate(AsyncDialog::TreeColumn::m_column, false); \
+		} break;                                                                    \
+	}                                                                               \
+	(void)0
+
+	STATE_UPDATE_VALUE(TREE_PATH_VALUE_MAIN, TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY);
+	STATE_UPDATE_VALUE(TREE_PATH_VALUE_FORCED, TREE_COLUMN_IS_FORCED);
+	STATE_UPDATE_VALUE(TREE_PATH_VALUE_DEPENDENCY, TREE_COLUMN_IS_DEPENDENCY);
+
+#undef STATE_UPDATE_VALUE
+}
+
+EditorExportPlatformWeb::AsyncDialog::TreePaths::TreePath::~TreePath() {
+	if (!tree_item_in_tree && tree_item != nullptr) {
+		memfree(tree_item);
+		tree_item = nullptr;
+	}
+}
 
 /**
  * EditorExportPlatformWeb::AsyncDialog::TreePaths
  */
-EditorExportPlatformWeb::AsyncDialog::TreePaths EditorExportPlatformWeb::AsyncDialog::TreePaths::create(const HashSet<String> &p_file_paths) {
-	TreePaths tree_paths;
-	tree_paths.paths.clear();
-	tree_paths.paths_map.clear();
-	tree_paths.paths_ordered.clear();
+void EditorExportPlatformWeb::AsyncDialog::TreePaths::initialize(const HashSet<String> &p_file_paths) {
+	ERR_FAIL_COND(_initialized);
+	_initialized = true;
+
+	paths.clear();
+	paths_map.clear();
+	paths_ordered.clear();
 
 	const String PREFIX_RES = "res://";
 	HashSet<String> paths_set;
@@ -470,6 +560,10 @@ EditorExportPlatformWeb::AsyncDialog::TreePaths EditorExportPlatformWeb::AsyncDi
 	for (const String &file_path : p_file_paths) {
 		String path = file_path;
 		while (true) {
+			if (paths_set.has(path)) {
+				break;
+			}
+			print_line(vformat("inserting \"%s\"", path));
 			paths_set.insert(path);
 			String parent_dir = path.get_base_dir();
 			if (parent_dir == path) {
@@ -481,36 +575,27 @@ EditorExportPlatformWeb::AsyncDialog::TreePaths EditorExportPlatformWeb::AsyncDi
 
 	// Ordered list.
 	for (const String &path_set_element : paths_set) {
-		if (path_set_element.is_empty()) {
-			CRASH_NOW();
-		}
-		tree_paths.paths_ordered.push_back(path_set_element);
+		paths_ordered.push_back(path_set_element);
 	}
-	tree_paths.paths_ordered.sort_custom<FileNoCaseComparator>();
+	paths_ordered.sort_custom<FileNoCaseComparator>();
 
 	// Set TreePath list.
-	for (uint64_t i = 0; i < tree_paths.paths_ordered.size(); i++) {
-		String &path = tree_paths.paths_ordered[i];
-		if (path.is_empty()) {
-			CRASH_NOW();
-		}
-		List<TreePath>::Element *tree_path_element = tree_paths.paths.push_back({});
+	for (uint64_t i = 0; i < paths_ordered.size(); i++) {
+		String &path = paths_ordered[i];
+		List<TreePath>::Element *tree_path_element = paths.push_back({});
 		TreePath *tree_path = &tree_path_element->get();
-		tree_path->path = path;
-		tree_path->is_directory = !p_file_paths.has(path);
+		tree_path->set_path(path);
 
-		tree_paths.paths_map.insert(path, tree_path);
+		paths_map.insert(path, tree_path);
 
 		if (path != PREFIX_RES) {
 			String path_base_dir = path.get_base_dir();
-			if (tree_paths.paths_map.has(path_base_dir)) {
-				tree_path->parent = tree_paths.paths_map[path_base_dir];
+			if (paths_map.has(path_base_dir)) {
+				tree_path->parent = paths_map[path_base_dir];
 				tree_path->parent->children.push_back(tree_path);
 			}
 		}
 	}
-
-	return tree_paths;
 }
 
 /**
@@ -541,64 +626,7 @@ void EditorExportPlatformWeb::AsyncDialog::_notification(int p_what) {
 	}
 }
 
-void EditorExportPlatformWeb::AsyncDialog::update_forced_files() {
-	TreeItem *root = tree_hierarchical->get_root();
-
-	for (const KeyValue<String, const HashSet<String> *> &key_value : forced_files_dependencies) {
-		if (main_scene_dependencies.has(key_value.key)) {
-			continue;
-		}
-		file_dependencies_state.file_dependencies.erase(key_value.key);
-	}
-
-	file_dependencies_state.clear();
-	forced_files.clear();
-	forced_files_dependencies.clear();
-
-	LocalVector<TreeItem *> checked_items;
-	std::function<void(TreeItem *)> _l_loop_forced_tree_item_push_to_checked_items;
-	_l_loop_forced_tree_item_push_to_checked_items = [&_l_loop_forced_tree_item_push_to_checked_items, &checked_items](TreeItem *l_tree_item) -> void {
-		for (int i = 0; i < l_tree_item->get_child_count(); i++) {
-			_l_loop_forced_tree_item_push_to_checked_items(l_tree_item->get_child(i));
-		}
-		String tree_item_path = l_tree_item->get_metadata(TREE_COLUMN_PATH);
-		if (!l_tree_item->is_checked(TREE_COLUMN_IS_FORCED)) {
-			return;
-		}
-		checked_items.push_back(l_tree_item);
-	};
-	_l_loop_forced_tree_item_push_to_checked_items(root);
-
-	for (TreeItem *checked_item : checked_items) {
-		checked_item->propagate_check(TREE_COLUMN_IS_FORCED, false);
-	}
-
-	std::function<void(TreeItem *)> _l_loop_forced_tree_item_push_to_forced_files;
-	_l_loop_forced_tree_item_push_to_forced_files = [this, &_l_loop_forced_tree_item_push_to_forced_files](TreeItem *l_tree_item) -> void {
-		if (l_tree_item->get_child_count() > 0) {
-			for (int i = 0; i < l_tree_item->get_child_count(); i++) {
-				_l_loop_forced_tree_item_push_to_forced_files(l_tree_item->get_child(i));
-			}
-			return;
-		}
-
-		if (!l_tree_item->is_checked(TREE_COLUMN_IS_FORCED)) {
-			return;
-		}
-
-		String tree_item_path = l_tree_item->get_metadata(TREE_COLUMN_PATH);
-		file_dependencies_state.add_to_file_dependencies(tree_item_path);
-		forced_files.insert(tree_item_path);
-	};
-	_l_loop_forced_tree_item_push_to_forced_files(root);
-
-	forced_files_dependencies = file_dependencies_state.get_file_dependencies_of(forced_files);
-	tree_update();
-}
-
 void EditorExportPlatformWeb::AsyncDialog::on_confirmed() {
-	update_forced_files();
-
 	PackedStringArray forced_files_array;
 	for (const String &forced_file : forced_files) {
 		forced_files_array.push_back(forced_file);
@@ -607,39 +635,29 @@ void EditorExportPlatformWeb::AsyncDialog::on_confirmed() {
 	preset->set("async/initial_load_forced_files", forced_files_array);
 }
 
-void EditorExportPlatformWeb::AsyncDialog::on_tree_item_edited(Tree *p_edited_tree) {
-	ERR_FAIL_NULL(p_edited_tree);
+void EditorExportPlatformWeb::AsyncDialog::on_tree_item_edited() {
+	using TreePath = TreePaths::TreePath;
+	using TreePathValue = TreePath::TreePathValue;
+	using TreePathState = TreePath::TreePathState;
 
 	if (updating) {
 		return;
 	}
 
-	TreeItem *edited_item = p_edited_tree->get_edited();
+	TreeItem *edited_item = tree->get_edited();
 	TreePaths::TreePath *tree_path = static_cast<TreePaths::TreePath *>((void *)(uint64_t)edited_item->get_metadata(TREE_COLUMN_PATH));
 	ERR_FAIL_NULL(tree_path);
 
 	bool forced = edited_item->is_checked(TREE_COLUMN_IS_FORCED);
-	tree_path->set_state(forced
-					? TreePaths::TreePath::TREE_PATH_STATE_CHECKED
-					: TreePaths::TreePath::TREE_PATH_STATE_UNCHECKED,
-			TreePaths::TreePath::TREE_PATH_VALUE_FORCED);
+	tree_path->set_state(TreePathValue::TREE_PATH_VALUE_FORCED,
+			forced
+					? TreePathState::TREE_PATH_STATE_CHECKED
+					: TreePathState::TREE_PATH_STATE_UNCHECKED);
 
-	callable_mp(this, &EditorExportPlatformWeb::AsyncDialog::update_forced_files).call_deferred();
+	callable_mp(this, &EditorExportPlatformWeb::AsyncDialog::tree_update).call_deferred();
 }
 
 void EditorExportPlatformWeb::AsyncDialog::on_tree_search_line_edit_text_changed(const String &p_new_text) {
-	if (p_new_text.is_empty()) {
-		tree_hierarchical->show();
-		tree_search->hide();
-	} else {
-		tree_hierarchical->hide();
-		tree_search->show();
-	}
-
-	if (!p_new_text.is_empty()) {
-		tree_fuzzy_search.set_query(p_new_text);
-	}
-
 	tree_search_debounce_timer->start();
 }
 
@@ -655,6 +673,9 @@ void EditorExportPlatformWeb::AsyncDialog::tree_init() {
 	file_dependencies_state.add_to_file_dependencies(mandatory_initial_load_files);
 
 	main_scene_dependencies = file_dependencies_state.get_file_dependencies_of(mandatory_initial_load_files);
+	for (const KeyValue<String, const HashSet<String> *> &key_value : main_scene_dependencies) {
+		print_line(vformat("main_dependency: \"%s\"", key_value.key));
+	}
 
 	forced_files.clear();
 
@@ -668,6 +689,10 @@ void EditorExportPlatformWeb::AsyncDialog::tree_init() {
 }
 
 void EditorExportPlatformWeb::AsyncDialog::tree_update() {
+	using TreePath = TreePaths::TreePath;
+	using TreePathValue = TreePath::TreePathValue;
+	using TreePathState = TreePath::TreePathState;
+
 	if (updating) {
 		return;
 	}
@@ -676,174 +701,110 @@ void EditorExportPlatformWeb::AsyncDialog::tree_update() {
 	tree_search_debounce_timer->stop();
 	tree_remove_callbacks();
 
-	for (const String &forced_file : forced_files) {
-		print_line(vformat("forced_file: %s", forced_file));
+	// Update search.
+	String tree_search_line_edit_text = tree_search_line_edit->get_text();
+	tree_state_new = tree_search_line_edit_text.length() > 3
+			? TREE_STATE_SEARCH
+			: TREE_STATE_HIERARCHICAL;
+
+	// Update `forced_files`.
+	if (tree_paths.is_initialized()) {
+		forced_files.clear();
+
+		for (const TreePaths::TreePath &tree_path : tree_paths.paths) {
+			if (tree_path.is_directory || !tree_path.forced) {
+				continue;
+			}
+			forced_files.insert(tree_path.get_path());
+		}
 	}
 
 	file_dependencies_state.add_to_file_dependencies(forced_files);
 	forced_files_dependencies = file_dependencies_state.get_file_dependencies_of(forced_files);
 
-	exported_paths_and_forced_files_and_dependencies = HashSet<String>(exported_paths);
+	HashSet<String> all_files = HashSet<String>(exported_paths);
 	for (const KeyValue<String, const HashSet<String> *> &key_value : forced_files_dependencies) {
-		print_line(vformat("inserting %s inside exported_paths_and_forced_files...", key_value.key));
-		if (key_value.key.is_empty()) {
-			CRASH_NOW();
-		}
-		exported_paths_and_forced_files_and_dependencies.insert(key_value.key);
+		all_files.insert(key_value.key);
 	}
 
-	tree_paths = TreePaths::create(exported_paths_and_forced_files_and_dependencies);
-
-	for (TreePaths::TreePath &tree_path : tree_paths.paths) {
-		if (tree_path.is_directory) {
-			continue;
+	if (tree_paths.is_initialized()) {
+		for (TreePaths::TreePath &tree_path : tree_paths.paths) {
+			if (tree_path.is_directory) {
+				continue;
+			}
+			String path = tree_path.get_path();
+			tree_path.set_state(TreePathValue::TREE_PATH_VALUE_DEPENDENCY,
+					tree_path.main || tree_path.forced || forced_files_dependencies.has(path)
+							? TreePathState::TREE_PATH_STATE_CHECKED
+							: TreePathState::TREE_PATH_STATE_UNCHECKED);
 		}
-		String path = tree_path.path;
-		if (main_scene_dependencies.has(path)) {
-			tree_path.main = true;
-		}
-		if (forced_files.has(path)) {
-			tree_path.forced = true;
-		}
-	}
-
-	if (tree_hierarchical->is_visible()) {
-		tree_fill_hierarchical(tree_paths);
 	} else {
-		tree_fill_search(tree_paths);
+		tree_paths.initialize(all_files);
+
+		for (TreePaths::TreePath &tree_path : tree_paths.paths) {
+			if (tree_path.is_directory) {
+				continue;
+			}
+			String path = tree_path.get_path();
+			tree_path.set_state(TreePathValue::TREE_PATH_VALUE_MAIN,
+					main_scene_dependencies.has(path)
+							? TreePathState::TREE_PATH_STATE_CHECKED
+							: TreePathState::TREE_PATH_STATE_UNCHECKED);
+			tree_path.set_state(TreePathValue::TREE_PATH_VALUE_FORCED,
+					forced_files.has(path)
+							? TreePathState::TREE_PATH_STATE_CHECKED
+							: TreePathState::TREE_PATH_STATE_UNCHECKED);
+			tree_path.set_state(TreePathValue::TREE_PATH_VALUE_DEPENDENCY,
+					tree_path.main || tree_path.forced || forced_files_dependencies.has(path)
+							? TreePathState::TREE_PATH_STATE_CHECKED
+							: TreePathState::TREE_PATH_STATE_UNCHECKED);
+		}
 	}
 
-	// tree_fill()
+	if (tree_state_new == tree_state_current) {
+		tree_state_new = TREE_STATE_NONE;
+	}
 
-	// if (!tree_had_first_update) {
-	// 	if (tree_hierarchical->is_visible()) {
-	// 		tree_hierarchical_fill(tree_paths, tree_hierarchical);
-	// 	} else {
-	// 		tree_search_fill(tree_paths, tree_hierarchical);
-	// 	}
+	bool tree_item_parents_unset = false;
+	if (tree_had_first_update) {
+		bool unset_tree_item_parents = false;
+		// Check if the state has changed since the last update.
+		if (tree_state_new == TREE_STATE_NONE) {
+			// State hasn't changed.
+			switch (tree_state_current) {
+				case TREE_STATE_SEARCH: {
+					// We always need to reset the tree with search.
+					unset_tree_item_parents = true;
+					tree_fuzzy_search.set_query(tree_search_line_edit_text);
+				} break;
+				case TREE_STATE_HIERARCHICAL: {
+					// Do nothing.
+				} break;
+				case TREE_STATE_NONE: {
+					ERR_FAIL();
+				} break;
+			}
+		} else {
+			unset_tree_item_parents = true;
+			tree_state_current = tree_state_new;
+			tree_state_new = TREE_STATE_NONE;
+		}
 
-	// 	LocalVector<TreeItem *> checked_items;
+		if (unset_tree_item_parents) {
+			tree_item_parents_unset = true;
+			tree_unset_tree_item_parents();
+		}
+	} else {
+		// First update.
+		tree_item_parents_unset = true;
+		tree_init_tree_items();
+	}
 
-	// 	// Main scene dependencies.
-	// 	std::function<void(TreeItem *)> _l_loop_tree_items_main_dependencies;
-	// 	_l_loop_tree_items_main_dependencies = [this, &_l_loop_tree_items_main_dependencies, &checked_items](TreeItem *l_tree_item) -> void {
-	// 		String tree_item_path = l_tree_item->get_metadata(TREE_COLUMN_PATH);
-
-	// 		if (l_tree_item->get_child_count() > 0) {
-	// 			// Tree item is a directory.
-	// 			for (int i = 0; i < l_tree_item->get_child_count(); i++) {
-	// 				_l_loop_tree_items_main_dependencies(l_tree_item->get_child(i));
-	// 			}
-	// 			return;
-	// 		}
-
-	// 		if (main_scene_dependencies.has(tree_item_path)) {
-	// 			l_tree_item->set_checked(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY, true);
-	// 			checked_items.push_back(l_tree_item);
-	// 		}
-	// 	};
-	// 	_l_loop_tree_items_main_dependencies(root);
-
-	// 	for (TreeItem *checked_item : checked_items) {
-	// 		checked_item->propagate_check(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY, false);
-	// 	}
-	// }
-
-	// // Forced initial load.
-	// {
-	// 	// const Color error_color = get_theme_color("error_color", "Editor");
-	// 	LocalVector<TreeItem *> checked_items;
-
-	// 	std::function<void(TreeItem *)> _l_loop_tree_items_forced;
-	// 	_l_loop_tree_items_forced = [this, &_l_loop_tree_items_forced, &checked_items](TreeItem *l_tree_item) -> void {
-	// 		String tree_item_path = l_tree_item->get_metadata(TREE_COLUMN_PATH);
-
-	// 		if (l_tree_item->get_child_count() > 0) {
-	// 			for (int i = 0; i < l_tree_item->get_child_count(); i++) {
-	// 				_l_loop_tree_items_forced(l_tree_item->get_child(i));
-	// 			}
-	// 			l_tree_item->set_checked(TREE_COLUMN_IS_FORCED, false);
-	// 			return;
-	// 		}
-
-	// 		if (!forced_files.has(tree_item_path)) {
-	// 			l_tree_item->set_checked(TREE_COLUMN_IS_FORCED, false);
-	// 			return;
-	// 		}
-
-	// 		l_tree_item->set_checked(TREE_COLUMN_IS_FORCED, true);
-	// 		checked_items.push_back(l_tree_item);
-	// 	};
-	// 	_l_loop_tree_items_forced(root);
-
-	// 	for (TreeItem *checked_item : checked_items) {
-	// 		checked_item->propagate_check(TREE_COLUMN_IS_FORCED, false);
-	// 	}
-	// }
-
-	// // Is dependency.
-	// {
-	// 	LocalVector<TreeItem *> checked_items;
-
-	// 	std::function<void(TreeItem *)> loop_tree_items_is_dependency;
-	// 	loop_tree_items_is_dependency = [this, &loop_tree_items_is_dependency, &checked_items](TreeItem *p_tree_item) -> void {
-	// 		String tree_item_path = p_tree_item->get_metadata(TREE_COLUMN_PATH);
-
-	// 		if (p_tree_item->get_child_count() > 0) {
-	// 			for (int i = 0; i < p_tree_item->get_child_count(); i++) {
-	// 				TreeItem *child = p_tree_item->get_child(i);
-	// 				loop_tree_items_is_dependency(child);
-	// 			}
-	// 			return;
-	// 		}
-
-	// 		if (p_tree_item->is_checked(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY)) {
-	// 			p_tree_item->set_checked(TREE_COLUMN_IS_DEPENDENCY, true);
-	// 			p_tree_item->set_tooltip_text(TREE_COLUMN_IS_DEPENDENCY, TTRC(R"*(Added as a dependency of the main scene.)*"));
-	// 			checked_items.push_back(p_tree_item);
-	// 			return;
-	// 		}
-	// 		if (p_tree_item->is_indeterminate(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY)) {
-	// 			p_tree_item->set_indeterminate(TREE_COLUMN_IS_DEPENDENCY, true);
-	// 			return;
-	// 		}
-	// 		if (p_tree_item->is_checked(TREE_COLUMN_IS_FORCED)) {
-	// 			p_tree_item->set_checked(TREE_COLUMN_IS_DEPENDENCY, true);
-	// 			p_tree_item->set_tooltip_text(TREE_COLUMN_IS_DEPENDENCY, TTRC(R"*(Added as a it was forced.)*"));
-	// 			checked_items.push_back(p_tree_item);
-	// 			return;
-	// 		}
-	// 		if (p_tree_item->is_indeterminate(TREE_COLUMN_IS_FORCED)) {
-	// 			p_tree_item->set_indeterminate(TREE_COLUMN_IS_DEPENDENCY, true);
-	// 			return;
-	// 		}
-	// 		if (forced_files.has(tree_item_path)) {
-	// 			p_tree_item->set_checked(TREE_COLUMN_IS_DEPENDENCY, true);
-	// 			String parent;
-	// 			for (const KeyValue<String, const HashSet<String> *> &key_value : forced_files_dependencies) {
-	// 				if (key_value.value->has(tree_item_path)) {
-	// 					parent = key_value.key;
-	// 					break;
-	// 				}
-	// 			}
-	// 			p_tree_item->set_tooltip_text(TREE_COLUMN_IS_DEPENDENCY, vformat(TTRC(R"*(Added as a it is a dependency of "%s".)*"), parent));
-	// 			checked_items.push_back(p_tree_item);
-	// 			return;
-	// 		}
-
-	// 		p_tree_item->set_checked(TREE_COLUMN_IS_DEPENDENCY, false);
-	// 		p_tree_item->set_indeterminate(TREE_COLUMN_IS_DEPENDENCY, false);
-
-	// 		if (p_tree_item->get_child_count() == 0) {
-	// 			checked_items.push_back(p_tree_item);
-	// 		}
-	// 	};
-	// 	loop_tree_items_is_dependency(root);
-
-	// 	for (TreeItem *checked_item : checked_items) {
-	// 		checked_item->propagate_check(TREE_COLUMN_IS_DEPENDENCY, false);
-	// 	}
-	// }
+	if (tree_state_current == TREE_STATE_SEARCH) {
+		tree_update_search();
+	} else {
+		tree_update_hierarchical(tree_item_parents_unset);
+	}
 
 	tree_add_callbacks();
 
@@ -852,100 +813,228 @@ void EditorExportPlatformWeb::AsyncDialog::tree_update() {
 	tree_had_first_update = true;
 }
 
-void EditorExportPlatformWeb::AsyncDialog::tree_fill_hierarchical(const TreePaths &p_tree_paths) {
-	const String PREFIX_RES = "res://";
+void EditorExportPlatformWeb::AsyncDialog::tree_init_tree_items() {
+	using TreePath = TreePaths::TreePath;
 
-	HashMap<const TreePaths::TreePath *, TreeItem *> tree_items_map;
-	TreeItem *root = tree_hierarchical->get_root() == nullptr
-			? tree_hierarchical->create_item()
-			: tree_hierarchical->get_root();
+	TreeItem *tree_root_item = tree->create_item();
 
-	for (const TreePaths::TreePath &tree_path : p_tree_paths.paths) {
-		String path = tree_path.path;
-		TreeItem *path_item;
-		bool is_root = tree_path.path == PREFIX_RES;
-
+	for (TreePath &tree_path : tree_paths.paths) {
+		String path = tree_path.get_path();
+		bool is_root = tree_path.parent == nullptr;
+		TreeItem *tree_item;
 		if (is_root) {
-			path_item = root;
+			tree_item = tree_root_item;
+			tree_path.tree_item_in_tree = true;
 		} else {
-			TreeItem *parent_item = tree_items_map[tree_path.parent];
-			path_item = parent_item->create_child();
+			tree_item = tree_root_item->create_child();
+			tree_root_item->remove_child(tree_item);
 		}
-		tree_items_map.insert(&tree_path, path_item);
+		tree_path.tree_item = tree_item;
 
-		path_item->set_tooltip_text(TREE_COLUMN_PATH, path);
-		path_item->set_metadata(TREE_COLUMN_PATH, (uint64_t)&tree_path);
-		path_item->set_cell_mode(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY, TreeItem::CELL_MODE_CHECK);
-		path_item->set_text_alignment(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY, HORIZONTAL_ALIGNMENT_CENTER);
-		path_item->set_editable(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY, false);
-		path_item->set_cell_mode(TREE_COLUMN_IS_FORCED, TreeItem::CELL_MODE_CHECK);
-		path_item->set_text_alignment(TREE_COLUMN_IS_FORCED, HORIZONTAL_ALIGNMENT_CENTER);
-		path_item->set_editable(TREE_COLUMN_IS_FORCED, true);
-		path_item->set_cell_mode(TREE_COLUMN_IS_DEPENDENCY, TreeItem::CELL_MODE_CHECK);
-		path_item->set_text_alignment(TREE_COLUMN_IS_DEPENDENCY, HORIZONTAL_ALIGNMENT_CENTER);
-		path_item->set_editable(TREE_COLUMN_IS_DEPENDENCY, false);
+		tree_item->set_tooltip_text(TREE_COLUMN_PATH, path);
+		tree_item->set_metadata(TREE_COLUMN_PATH, (uint64_t)&tree_path);
+		tree_item->set_cell_mode(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY, TreeItem::CELL_MODE_CHECK);
+		tree_item->set_text_alignment(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY, HORIZONTAL_ALIGNMENT_CENTER);
+		tree_item->set_editable(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY, false);
+		tree_item->set_cell_mode(TREE_COLUMN_IS_FORCED, TreeItem::CELL_MODE_CHECK);
+		tree_item->set_text_alignment(TREE_COLUMN_IS_FORCED, HORIZONTAL_ALIGNMENT_CENTER);
+		tree_item->set_editable(TREE_COLUMN_IS_FORCED, true);
+		tree_item->set_cell_mode(TREE_COLUMN_IS_DEPENDENCY, TreeItem::CELL_MODE_CHECK);
+		tree_item->set_text_alignment(TREE_COLUMN_IS_DEPENDENCY, HORIZONTAL_ALIGNMENT_CENTER);
+		tree_item->set_editable(TREE_COLUMN_IS_DEPENDENCY, false);
 
 		if (tree_path.is_directory) {
-			path_item->set_icon(TREE_COLUMN_PATH, get_theme_icon(SNAME("folder"), SNAME("FileDialog")));
-			path_item->set_text(TREE_COLUMN_PATH, is_root ? path : path + "/");
+			tree_item->set_icon(TREE_COLUMN_PATH, get_theme_icon(SNAME("folder"), SNAME("FileDialog")));
+			tree_item->set_text(TREE_COLUMN_PATH, is_root ? path : path + "/");
 		} else {
 			String type = EditorFileSystem::get_singleton()->get_file_type(path);
-			path_item->set_icon(TREE_COLUMN_PATH, EditorNode::get_singleton()->get_class_icon(type));
-			path_item->set_text(TREE_COLUMN_PATH, path.get_file());
+			tree_item->set_icon(TREE_COLUMN_PATH, EditorNode::get_singleton()->get_class_icon(type));
+			tree_item->set_text(TREE_COLUMN_PATH, path.get_file());
 		}
 	}
 }
 
-void EditorExportPlatformWeb::AsyncDialog::tree_fill_search(const TreePaths &p_paths) {
-	const String PREFIX_RES = "res://";
+void EditorExportPlatformWeb::AsyncDialog::tree_unset_tree_item_parents() {
+	using TreePath = TreePaths::TreePath;
+
+	print_line(vformat("EditorExportPlatformWeb::AsyncDialog::tree_unset_tree_item_parents()"));
+	for (TreePath &tree_path : tree_paths.paths) {
+		print_line(vformat("removing children of \"%s\"", tree_path.get_path()));
+		TreeItem *tree_item = tree_path.tree_item;
+		if (tree_item != nullptr) {
+			for (int i = 0; i < tree_item->get_child_count(); i++) {
+				TreeItem *child_tree_item = tree_item->get_child(i);
+				TreePath *child_tree_path = (TreePath *)(uint64_t)child_tree_item->get_metadata(TREE_COLUMN_PATH);
+				tree_item->remove_child(child_tree_item);
+				child_tree_path->tree_item_in_tree = false;
+			}
+		}
+	}
+}
+
+#define SET_TREE_ITEM_STATE(m_tree_path, m_tree_item, m_tree_column, m_tree_path_value) \
+	switch ((m_tree_path)->get_state(TreePathValue::m_tree_path_value)) {               \
+		case TreePathState::TREE_PATH_STATE_CHECKED: {                                  \
+			(m_tree_item)->set_checked(TreeColumn::m_tree_column, true);                \
+			(m_tree_item)->set_indeterminate(TreeColumn::m_tree_column, false);         \
+		} break;                                                                        \
+		case TreePathState::TREE_PATH_STATE_INDETERMINATE: {                            \
+			(m_tree_item)->set_checked(TreeColumn::m_tree_column, false);               \
+			(m_tree_item)->set_indeterminate(TreeColumn::m_tree_column, true);          \
+		} break;                                                                        \
+		case TreePathState::TREE_PATH_STATE_UNCHECKED: {                                \
+			(m_tree_item)->set_checked(TreeColumn::m_tree_column, false);               \
+			(m_tree_item)->set_indeterminate(TreeColumn::m_tree_column, false);         \
+		} break;                                                                        \
+	}                                                                                   \
+	(void)0
+
+void EditorExportPlatformWeb::AsyncDialog::tree_update_hierarchical(bool p_add_tree_items_to_tree) {
+	using TreePath = TreePaths::TreePath;
+	using TreePathState = TreePath::TreePathState;
+	using TreePathValue = TreePath::TreePathValue;
+
+	uint64_t start_time = OS::get_singleton()->get_ticks_usec();
+	uint64_t child_time = 0;
+
+	uint64_t main_size = 0;
+	uint64_t forced_size = 0;
+	uint64_t dependencies_size = 0;
+
+	bool for_started = false;
+
+	for (uint64_t i = 0; i < tree_paths.paths_ordered.size(); i++) {
+		String &path = tree_paths.paths_ordered[i];
+		// for (const String &path : tree_paths.paths_ordered) {
+		if (!for_started) {
+			for_started = true;
+
+			uint64_t end_time_2 = OS::get_singleton()->get_ticks_usec();
+			double elapsed_time_2 = USEC_TO_SEC(end_time_2 - start_time);
+			double child_total_time_2 = USEC_TO_SEC(child_time);
+			print_line(vformat("%10.6fs: EditorExportPlatformWeb::AsyncDialog::tree_update_hierarchical() before for loop (child total time: %10.6fs)", elapsed_time_2, child_total_time_2));
+		}
+
+		uint64_t path_start_time = OS::get_singleton()->get_ticks_usec();
+
+		TreePath *tree_path = tree_paths.paths_map[path];
+		TreeItem *tree_item = tree_path->tree_item;
+
+		if (p_add_tree_items_to_tree && tree_path->parent != nullptr) {
+			TreePath *tree_parent_path = tree_paths.paths_map[tree_path->parent->get_path()];
+			TreeItem *tree_parent_item = tree_parent_path->tree_item;
+			tree_parent_item->add_child(tree_item);
+			tree_path->tree_item_in_tree = true;
+		}
+
+		if (!tree_path->is_directory) {
+			tree_item->set_text(TREE_COLUMN_PATH, path.get_basename());
+		}
+
+		SET_TREE_ITEM_STATE(tree_path, tree_item, TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY, TREE_PATH_VALUE_MAIN);
+		SET_TREE_ITEM_STATE(tree_path, tree_item, TREE_COLUMN_IS_FORCED, TREE_PATH_VALUE_FORCED);
+		SET_TREE_ITEM_STATE(tree_path, tree_item, TREE_COLUMN_IS_DEPENDENCY, TREE_PATH_VALUE_DEPENDENCY);
+		tree_path->update_tree_item();
+
+		if (!tree_path->is_directory) {
+			if (tree_path->get_state(TreePathValue::TREE_PATH_VALUE_MAIN) == TreePathState::TREE_PATH_STATE_CHECKED) {
+				main_size += tree_path->path_file_size;
+			}
+			if (tree_path->get_state(TreePathValue::TREE_PATH_VALUE_FORCED) == TreePathState::TREE_PATH_STATE_CHECKED) {
+				forced_size += tree_path->path_file_size;
+			}
+			if (tree_path->get_state(TreePathValue::TREE_PATH_VALUE_DEPENDENCY) == TreePathState::TREE_PATH_STATE_CHECKED) {
+				dependencies_size += tree_path->path_file_size;
+			}
+		}
+
+		uint64_t path_end_time = OS::get_singleton()->get_ticks_usec();
+		child_time += path_end_time - path_start_time;
+		double path_elapsed_time = USEC_TO_SEC(path_end_time - path_start_time);
+
+		print_line(vformat("%10.6fs: \"%s\"", path_elapsed_time, path));
+	}
+	uint64_t end_time_2 = OS::get_singleton()->get_ticks_usec();
+	double elapsed_time_2 = USEC_TO_SEC(end_time_2 - start_time);
+	double child_total_time_2 = USEC_TO_SEC(child_time);
+	print_line(vformat("%10.6fs: EditorExportPlatformWeb::AsyncDialog::tree_update_hierarchical() before (child total time: %10.6fs)", elapsed_time_2, child_total_time_2));
+
+	file_size_main_size_label->set_text(String::humanize_size(main_size));
+	file_size_forced_size_label->set_text(String::humanize_size(forced_size));
+	file_size_dependencies_size_label->set_text(String::humanize_size(dependencies_size));
+
+	uint64_t end_time = OS::get_singleton()->get_ticks_usec();
+	double elapsed_time = USEC_TO_SEC(end_time - start_time);
+	double child_total_time = USEC_TO_SEC(child_time);
+	print_line(vformat("%10.6fs: EditorExportPlatformWeb::AsyncDialog::tree_update_hierarchical() (child total time: %10.6fs)", elapsed_time, child_total_time));
+}
+
+void EditorExportPlatformWeb::AsyncDialog::tree_update_search() {
+	using TreePath = TreePaths::TreePath;
+	using TreePathState = TreePath::TreePathState;
+	using TreePathValue = TreePath::TreePathValue;
 
 	Vector<String> search_targets;
 	Vector<FuzzySearchResult> search_results;
 
-	for (const String &path : p_paths.paths_ordered) {
-		search_targets.push_back(path);
+	for (const String &path : tree_paths.paths_ordered) {
+		if (path == PREFIX_RES) {
+			continue;
+		}
+		search_targets.push_back(path.substr(PREFIX_RES_LENGTH));
 	}
 	tree_fuzzy_search.search_all(search_targets, search_results);
 
-	TreeItem *root = tree_search->get_root() == nullptr
-			? tree_search->create_item()
-			: tree_search->get_root();
+	TreePath *tree_root_path = tree_paths.paths_map[PREFIX_RES];
+	TreeItem *tree_root_item = tree_root_path->tree_item;
+
+	uint64_t main_size = 0;
+	uint64_t forced_size = 0;
+	uint64_t dependencies_size = 0;
+
+	tree_root_path->update_tree_item();
 
 	for (const FuzzySearchResult &search_result : search_results) {
-		String path = search_result.target;
-		TreePaths::TreePath *tree_path = p_paths.paths_map[path];
+		String path = PREFIX_RES + search_result.target;
+		TreePath *tree_path = tree_paths.paths_map[path];
+		TreeItem *tree_item = tree_path->tree_item;
+		tree_root_item->add_child(tree_item);
+		tree_path->tree_item_in_tree = true;
 
-		TreeItem *path_item;
-		if (path == PREFIX_RES) {
-			path_item = root;
-		} else {
-			path_item = root->create_child();
+		if (!tree_path->is_directory) {
+			tree_item->set_text(TREE_COLUMN_PATH, path);
 		}
 
-		path_item->set_tooltip_text(TREE_COLUMN_PATH, path);
-		path_item->set_metadata(TREE_COLUMN_PATH, path);
-		path_item->set_cell_mode(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY, TreeItem::CELL_MODE_CHECK);
-		path_item->set_text_alignment(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY, HORIZONTAL_ALIGNMENT_CENTER);
-		path_item->set_editable(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY, false);
-		path_item->set_cell_mode(TREE_COLUMN_IS_FORCED, TreeItem::CELL_MODE_CHECK);
-		path_item->set_text_alignment(TREE_COLUMN_IS_FORCED, HORIZONTAL_ALIGNMENT_CENTER);
-		path_item->set_editable(TREE_COLUMN_IS_FORCED, true);
-		path_item->set_cell_mode(TREE_COLUMN_IS_DEPENDENCY, TreeItem::CELL_MODE_CHECK);
-		path_item->set_text_alignment(TREE_COLUMN_IS_DEPENDENCY, HORIZONTAL_ALIGNMENT_CENTER);
-		path_item->set_editable(TREE_COLUMN_IS_DEPENDENCY, false);
+		SET_TREE_ITEM_STATE(tree_path, tree_item, TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY, TREE_PATH_VALUE_MAIN);
+		SET_TREE_ITEM_STATE(tree_path, tree_item, TREE_COLUMN_IS_FORCED, TREE_PATH_VALUE_FORCED);
+		SET_TREE_ITEM_STATE(tree_path, tree_item, TREE_COLUMN_IS_DEPENDENCY, TREE_PATH_VALUE_DEPENDENCY);
 
-		if (tree_path->is_directory) {
-			path_item->set_icon(TREE_COLUMN_PATH, get_theme_icon(SNAME("folder"), SNAME("FileDialog")));
-			path_item->set_text(TREE_COLUMN_PATH, path == PREFIX_RES ? path : path + "/");
-		} else {
-			String type = EditorFileSystem::get_singleton()->get_file_type(path);
-			path_item->set_icon(TREE_COLUMN_PATH, EditorNode::get_singleton()->get_class_icon(type));
-			path_item->set_text(TREE_COLUMN_PATH, path.get_file());
+		tree_path->update_tree_item();
+
+		if (!tree_path->is_directory) {
+			if (tree_path->get_state(TreePathValue::TREE_PATH_VALUE_MAIN) == TreePathState::TREE_PATH_STATE_CHECKED) {
+				main_size += tree_path->path_file_size;
+			}
+			if (tree_path->get_state(TreePathValue::TREE_PATH_VALUE_FORCED) == TreePathState::TREE_PATH_STATE_CHECKED) {
+				forced_size += tree_path->path_file_size;
+			}
+			if (tree_path->get_state(TreePathValue::TREE_PATH_VALUE_DEPENDENCY) == TreePathState::TREE_PATH_STATE_CHECKED) {
+				dependencies_size += tree_path->path_file_size;
+			}
 		}
 	}
+
+	file_size_main_size_label->set_text(String::humanize_size(main_size));
+	file_size_forced_size_label->set_text(String::humanize_size(forced_size));
+	file_size_dependencies_size_label->set_text(String::humanize_size(dependencies_size));
 }
+#undef SET_TREE_ITEM_STATE
 
 void EditorExportPlatformWeb::AsyncDialog::update_theme() {
+	Ref<Font> title_label_font = get_theme_font("bold", "EditorFonts");
+	file_size_main_title_label->add_theme_font_override(SceneStringName(font), title_label_font);
+	file_size_forced_title_label->add_theme_font_override(SceneStringName(font), title_label_font);
+	file_size_dependencies_title_label->add_theme_font_override(SceneStringName(font), title_label_font);
 }
 
 void EditorExportPlatformWeb::AsyncDialog::tree_add_callbacks() {
@@ -958,8 +1047,7 @@ void EditorExportPlatformWeb::AsyncDialog::tree_add_callbacks() {
 	}                                                                          \
 	(void)0
 
-	ADD_CALLBACK(tree_hierarchical, item_edited, callable_mp(this, &EditorExportPlatformWeb::AsyncDialog::on_tree_item_edited).bind(tree_hierarchical));
-	ADD_CALLBACK(tree_search, item_edited, callable_mp(this, &EditorExportPlatformWeb::AsyncDialog::on_tree_item_edited).bind(tree_search));
+	ADD_CALLBACK(tree, item_edited, callable_mp(this, &EditorExportPlatformWeb::AsyncDialog::on_tree_item_edited));
 	ADD_CALLBACK(tree_search_line_edit, text_changed, callable_mp(this, &EditorExportPlatformWeb::AsyncDialog::on_tree_search_line_edit_text_changed));
 	ADD_CALLBACK(tree_search_debounce_timer, timeout, callable_mp(this, &EditorExportPlatformWeb::AsyncDialog::on_tree_search_debounce_timer_timeout));
 
@@ -976,8 +1064,7 @@ void EditorExportPlatformWeb::AsyncDialog::tree_remove_callbacks() {
 	}                                                                         \
 	(void)0
 
-	REMOVE_CALLBACK(tree_hierarchical, item_edited, callable_mp(this, &EditorExportPlatformWeb::AsyncDialog::on_tree_item_edited).bind(tree_hierarchical));
-	REMOVE_CALLBACK(tree_search, item_edited, callable_mp(this, &EditorExportPlatformWeb::AsyncDialog::on_tree_item_edited).bind(tree_search));
+	REMOVE_CALLBACK(tree, item_edited, callable_mp(this, &EditorExportPlatformWeb::AsyncDialog::on_tree_item_edited));
 	REMOVE_CALLBACK(tree_search_line_edit, text_changed, callable_mp(this, &EditorExportPlatformWeb::AsyncDialog::on_tree_search_line_edit_text_changed));
 	REMOVE_CALLBACK(tree_search_debounce_timer, timeout, callable_mp(this, &EditorExportPlatformWeb::AsyncDialog::on_tree_search_debounce_timer_timeout));
 
@@ -986,6 +1073,10 @@ void EditorExportPlatformWeb::AsyncDialog::tree_remove_callbacks() {
 
 EditorExportPlatformWeb::AsyncDialog::AsyncDialog(EditorExportPlatformWeb *p_export_platform) :
 		export_platform(p_export_platform) {
+	const int DIALOG_MARGIN_TOP = 10 * EDSCALE;
+	const int DIALOG_MARGIN_SIDES = 10 * EDSCALE;
+	const int DIALOG_MARGIN_BOTTOM = 30 * EDSCALE;
+	const int FILE_SIZE_TITLE_MIN_WIDTH = 100 * EDSCALE;
 	const int TREE_FUZZY_SEARCH_MAX_MISSES = 5;
 	const double TREE_SEARCH_DEBOUNCE_TIME_MS = 350;
 
@@ -1016,46 +1107,81 @@ EditorExportPlatformWeb::AsyncDialog::AsyncDialog(EditorExportPlatformWeb *p_exp
 
 	MarginContainer *tree_margin_container = memnew(MarginContainer);
 	main_container->add_child(tree_margin_container);
-	tree_margin_container->add_theme_constant_override("margin_top", 10 * EDSCALE);
-	tree_margin_container->add_theme_constant_override("margin_left", 10 * EDSCALE);
-	tree_margin_container->add_theme_constant_override("margin_right", 10 * EDSCALE);
-	tree_margin_container->add_theme_constant_override("margin_bottom", 10 * EDSCALE);
+	tree_margin_container->add_theme_constant_override("margin_top", DIALOG_MARGIN_TOP);
+	tree_margin_container->add_theme_constant_override("margin_left", DIALOG_MARGIN_SIDES);
+	tree_margin_container->add_theme_constant_override("margin_right", DIALOG_MARGIN_SIDES);
+	tree_margin_container->add_theme_constant_override("margin_bottom", DIALOG_MARGIN_BOTTOM);
 	tree_margin_container->set_v_size_flags(Control::SIZE_EXPAND_FILL);
 
-	auto _l_setup_tree = [&tree_margin_container]() -> Tree * {
-		Tree *tree = memnew(Tree);
-		tree_margin_container->add_child(tree);
-		tree->set_auto_translate_mode(AUTO_TRANSLATE_MODE_DISABLED);
-		tree->set_hide_root(false);
-		tree->set_select_mode(Tree::SelectMode::SELECT_ROW);
-		tree->set_allow_reselect(true);
-		tree->set_custom_minimum_size(Size2(1, 75 * EDSCALE));
-		tree->set_v_size_flags(Control::SIZE_EXPAND_FILL);
-		tree->set_columns(4);
-		tree->set_column_titles_visible(true);
-		tree->set_column_title(TREE_COLUMN_PATH, TTRC("Path"));
-		tree->set_column_title(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY, TTRC("Loaded"));
-		tree->set_column_title(TREE_COLUMN_IS_FORCED, TTRC("Force"));
-		tree->set_column_title(TREE_COLUMN_IS_DEPENDENCY, TTRC("Dependency"));
-		tree->set_column_title_tooltip_text(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY, TTRC("Loaded resources are resources that depend on the main scene. These resources will be loaded initially automatically."));
-		tree->set_column_title_tooltip_text(TREE_COLUMN_IS_FORCED, TTRC("Forced resources are resources that will be available after the first load, no matter if they are or not a main scene dependency."));
-		tree->set_column_title_tooltip_text(TREE_COLUMN_IS_DEPENDENCY, TTRC("These resources are the ones currently initially loaded. This column includes the resources from the first column and the ones from the second (including their dependencies)."));
-		tree->set_column_custom_minimum_width(TREE_COLUMN_PATH, 50 * EDSCALE);
-		tree->set_column_expand(TREE_COLUMN_PATH, true);
-		tree->set_column_expand(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY, false);
-		tree->set_column_expand(TREE_COLUMN_IS_FORCED, false);
-		tree->set_column_expand(TREE_COLUMN_IS_DEPENDENCY, false);
-		return tree;
-	};
-
-	tree_hierarchical = _l_setup_tree();
-	tree_search = _l_setup_tree();
-
-	tree_search->hide();
+	tree = memnew(Tree);
+	tree_margin_container->add_child(tree);
+	tree->set_auto_translate_mode(AUTO_TRANSLATE_MODE_DISABLED);
+	tree->set_hide_root(false);
+	tree->set_select_mode(Tree::SelectMode::SELECT_ROW);
+	tree->set_allow_reselect(true);
+	tree->set_custom_minimum_size(Size2(1, 75 * EDSCALE));
+	tree->set_v_size_flags(Control::SIZE_EXPAND_FILL);
+	tree->set_columns(4);
+	tree->set_column_titles_visible(true);
+	tree->set_column_title(TREE_COLUMN_PATH, TTRC("Path"));
+	tree->set_column_title(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY, TTRC("Loaded"));
+	tree->set_column_title(TREE_COLUMN_IS_FORCED, TTRC("Force"));
+	tree->set_column_title(TREE_COLUMN_IS_DEPENDENCY, TTRC("Dependency"));
+	tree->set_column_title_tooltip_text(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY, TTRC("Loaded resources are resources that depend on the main scene. These resources will be loaded initially automatically."));
+	tree->set_column_title_tooltip_text(TREE_COLUMN_IS_FORCED, TTRC("Forced resources are resources that will be available after the first load, no matter if they are or not a main scene dependency."));
+	tree->set_column_title_tooltip_text(TREE_COLUMN_IS_DEPENDENCY, TTRC("These resources are the ones currently initially loaded. This column includes the resources from the first column and the ones from the second (including their dependencies)."));
+	tree->set_column_custom_minimum_width(TREE_COLUMN_PATH, 50 * EDSCALE);
+	tree->set_column_expand(TREE_COLUMN_PATH, true);
+	tree->set_column_expand(TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY, false);
+	tree->set_column_expand(TREE_COLUMN_IS_FORCED, false);
+	tree->set_column_expand(TREE_COLUMN_IS_DEPENDENCY, false);
 
 	tree_fuzzy_search.allow_subsequences = true;
-	tree_fuzzy_search.case_sensitive = false;
 	tree_fuzzy_search.max_misses = TREE_FUZZY_SEARCH_MAX_MISSES;
+
+	// File sizes.
+	VBoxContainer *file_sizes_container = memnew(VBoxContainer);
+	main_container->add_child(file_sizes_container);
+	file_sizes_container->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+
+	// => File size main.
+	HBoxContainer *file_size_main_container = memnew(HBoxContainer);
+	file_sizes_container->add_child(file_size_main_container);
+	file_size_main_container->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+
+	file_size_main_title_label = memnew(Label);
+	file_size_main_container->add_child(file_size_main_title_label);
+	file_size_main_title_label->set_text(TTRC("Main dependencies:"));
+	file_size_main_title_label->set_custom_minimum_size(Size2i(FILE_SIZE_TITLE_MIN_WIDTH, 0));
+
+	file_size_main_size_label = memnew(Label);
+	file_size_main_container->add_child(file_size_main_size_label);
+
+	// => File size forced.
+	HBoxContainer *file_size_forced_container = memnew(HBoxContainer);
+	file_sizes_container->add_child(file_size_forced_container);
+	file_size_forced_container->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+
+	file_size_forced_title_label = memnew(Label);
+	file_size_forced_container->add_child(file_size_forced_title_label);
+	file_size_forced_title_label->set_text(TTRC("Forced dependencies:"));
+	file_size_forced_title_label->set_custom_minimum_size(Size2i(FILE_SIZE_TITLE_MIN_WIDTH, 0));
+
+	file_size_forced_size_label = memnew(Label);
+	file_size_forced_container->add_child(file_size_forced_size_label);
+
+	// => File size dependencies.
+	HBoxContainer *file_size_dependencies_container = memnew(HBoxContainer);
+	file_sizes_container->add_child(file_size_dependencies_container);
+	file_size_dependencies_container->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+
+	file_size_dependencies_title_label = memnew(Label);
+	file_size_dependencies_container->add_child(file_size_dependencies_title_label);
+	file_size_dependencies_title_label->set_text(TTRC("Total dependencies:"));
+	file_size_dependencies_title_label->set_custom_minimum_size(Size2i(FILE_SIZE_TITLE_MIN_WIDTH, 0));
+
+	file_size_dependencies_size_label = memnew(Label);
+	file_size_dependencies_container->add_child(file_size_dependencies_size_label);
 
 	tree_add_callbacks();
 }
@@ -1723,23 +1849,23 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 								resource_path = export_data.global_to_res(path.path_join(next));
 
 								bool found = false;
-								for (const KeyValue<String, ExportData::ResourceData> &key_value : export_data.dependencies) {
+								for (const KeyValue<String, ExportData::ResourceData *> &key_value : export_data.dependencies_map) {
 									const String &dependency_path = key_value.key;
-									const ExportData::ResourceData &dependency_data = key_value.value;
+									const ExportData::ResourceData *dependency_data = key_value.value;
 
 									if (resource_path == dependency_path) {
 										found = true;
 										break;
 									}
-									if (dependency_data.native_file.exists && resource_path == dependency_data.native_file.path) {
+									if (dependency_data->native_file.exists && resource_path == dependency_data->native_file.path) {
 										found = true;
 										break;
 									}
-									if (dependency_data.remap_file.exists && resource_path == dependency_data.remap_file.path) {
+									if (dependency_data->remap_file.exists && resource_path == dependency_data->remap_file.path) {
 										found = true;
 										break;
 									}
-									if (dependency_data.remapped_file.exists && resource_path == dependency_data.remapped_file.path) {
+									if (dependency_data->remapped_file.exists && resource_path == dependency_data->remapped_file.path) {
 										found = true;
 										break;
 									}

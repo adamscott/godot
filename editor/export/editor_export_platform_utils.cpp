@@ -49,15 +49,21 @@
  * EditorExportPlatformUtils::AsyncPckFileDependenciesState
  */
 void EditorExportPlatformUtils::AsyncPckFileDependenciesState::add_to_file_dependencies(const String &p_file) {
-	if (file_dependencies.has(p_file)) {
+	String file = p_file.strip_edges().simplify_path();
+
+	if (file_dependencies.has(file)) {
 		return;
 	}
 
 	List<String> dependencies;
-	ResourceLoader::get_dependencies(p_file, &dependencies);
+	ResourceLoader::get_dependencies(file, &dependencies);
 	for (const String &dependency : dependencies) {
 		String dependency_path = EditorExportPlatformUtils::get_path_from_dependency(dependency);
-		file_dependencies[p_file].insert(dependency_path);
+		if (!file_dependencies.has(file)) {
+			HashSet<String> *dependency_list = &file_dependencies_lists.push_back({})->get();
+			file_dependencies[file] = dependency_list;
+		}
+		file_dependencies[file]->insert(dependency_path);
 		add_to_file_dependencies(dependency_path);
 	}
 }
@@ -93,8 +99,10 @@ void EditorExportPlatformUtils::AsyncPckFileDependenciesState::_get_file_depende
 		p_dependencies[p_file] = {};
 		return;
 	}
-	p_dependencies[p_file] = &file_dependencies[p_file];
-	for (const String &file_dependency : file_dependencies[p_file]) {
+	ERR_FAIL_NULL(file_dependencies[p_file]);
+
+	p_dependencies[p_file] = file_dependencies[p_file];
+	for (const String &file_dependency : *file_dependencies[p_file]) {
 		_get_file_dependencies_of(file_dependency, p_dependencies);
 	}
 }
