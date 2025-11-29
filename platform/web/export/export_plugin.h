@@ -39,6 +39,7 @@
 #include "core/variant/variant.h"
 #include "editor/export/editor_export_preset.h"
 #include "editor/file_system/editor_file_system.h"
+#include "editor/themes/editor_scale.h"
 #include "editor_http_server.h"
 
 #include "core/config/project_settings.h"
@@ -163,37 +164,34 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 				};
 
 			private:
-				mutable bool main_state_cached = false;
-				mutable bool forced_state_cached = false;
-				mutable bool dependency_state_cached = false;
-
-				mutable TreePathState main_state_cache;
-				mutable TreePathState forced_state_cache;
-				mutable TreePathState dependency_state_cache;
+				mutable HashMap<TreePathValue, TreePathState> state_cache;
+				mutable HashMap<TreePathValue, bool> state;
 
 				String path;
-
-			public:
 				uint64_t path_file_size = 0;
 
+			public:
 				TreePath *parent = nullptr;
 				LocalVector<TreePath *> children;
 				bool is_directory = false;
 
-				bool main = false;
-				bool forced = false;
-				bool dependency = false;
-
 				TreeItem *tree_item = nullptr;
 				bool tree_item_in_tree = false;
 
+			private:
+				void _invalidate_cache(TreePathValue p_value);
+				void invalidate_cache(TreePathValue p_value);
+
+			public:
 				void set_path(const String &p_path);
 				String get_path() const;
+				constexpr uint64_t get_path_file_size() const { return path_file_size; }
 
 				void set_state(TreePathValue p_value, TreePathState p_state);
 				TreePathState get_state(TreePathValue p_value) const;
 
-				void update_tree_item();
+				void tree_item_update();
+				void tree_item_remove_from_tree();
 
 				~TreePath();
 			};
@@ -215,7 +213,15 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		inline static const String PREFIX_RES = "res://";
 		inline static const int PREFIX_RES_LENGTH = PREFIX_RES.length();
 
+		inline static const int MAIN_CONTAINER_MARGIN_TOP = 10 * EDSCALE;
+		inline static const int MAIN_CONTAINER_MARGIN_SIDES = 10 * EDSCALE;
+		inline static const int MAIN_CONTAINER_MARGIN_BOTTOM = 100 * EDSCALE;
+		inline static const int TREE_SEARCH_FUZZY_SEARCH_MAX_MISSES = 5;
+		inline static const double TREE_SEARCH_DEBOUNCE_TIME_S = 0.1;
+		inline static const int FILE_SIZE_TITLE_MIN_WIDTH = 150 * EDSCALE;
+
 		EditorExportPlatformWeb *export_platform = nullptr;
+
 		EditorExportPlatformUtils::AsyncPckFileDependenciesState file_dependencies_state;
 		HashSet<String> exported_paths;
 		TreePaths tree_paths;
@@ -230,6 +236,7 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 
 		bool updating = false;
 
+		MarginContainer *main_container = nullptr;
 		LineEdit *tree_search_line_edit = nullptr;
 
 		Tree *tree = nullptr;
@@ -240,6 +247,8 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 
 		FuzzySearch tree_fuzzy_search;
 
+		Tree *tree_file_size = nullptr;
+		TreeItem *tree_file_size_item = nullptr;
 		Label *file_size_main_title_label = nullptr;
 		Label *file_size_main_size_label = nullptr;
 		Label *file_size_forced_title_label = nullptr;
@@ -247,16 +256,10 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		Label *file_size_dependencies_title_label = nullptr;
 		Label *file_size_dependencies_size_label = nullptr;
 
-		void update_theme();
-
 		void on_confirmed();
 		void on_tree_item_edited();
 		void on_tree_search_line_edit_text_changed(const String &p_new_text);
 		void on_tree_search_debounce_timer_timeout();
-
-		void add_selected_file(const String &p_path);
-		void remove_selected_file(const String &p_path);
-		void update_selected_file(const String &p_path, bool p_add);
 
 		void tree_add_callbacks();
 		void tree_remove_callbacks();
@@ -267,6 +270,9 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		void tree_update_search();
 		void tree_unset_tree_item_parents();
 		void tree_get_paths_and_dirs(const HashSet<String> &p_file_paths, HashMap<String, LocalVector<String>> &r_paths_map, LocalVector<String> &r_paths_list) const;
+
+		void update_files_size_forced_size_label_text(uint64_t p_size, uint64_t p_added_size);
+		void update_theme();
 
 	protected:
 		void _notification(int p_what);

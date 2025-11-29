@@ -73,7 +73,7 @@ TEST_CASE("[FuzzySearch] Test fuzzy search results") {
 		search.set_query(test_case.query);
 		search.search_all(targets, results);
 		CHECK_GT(results.size(), 0);
-		CHECK_EQ(results[0].target, test_case.expected);
+		CHECK_EQ(results[0].target.string, test_case.expected);
 	}
 }
 
