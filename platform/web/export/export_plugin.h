@@ -130,78 +130,85 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 	class AsyncDialog : public ConfirmationDialog {
 		GDCLASS(AsyncDialog, ConfirmationDialog);
 
-		enum TreeState {
+		enum TreeFilesState {
 			TREE_STATE_NONE,
 			TREE_STATE_HIERARCHICAL,
 			TREE_STATE_SEARCH,
 		};
 
-		enum TreeColumn {
-			TREE_COLUMN_PATH = 0,
-			TREE_COLUMN_IS_MAIN_SCENE_DEPENDENCY = 1,
-			TREE_COLUMN_IS_FORCED = 2,
-			TREE_COLUMN_IS_DEPENDENCY = 3,
+		enum TreeFilesColumn {
+			TREE_FILES_COLUMN_PATH = 0,
+			TREE_FILES_COLUMN_IS_MAIN_SCENE_DEPENDENCY = 1,
+			TREE_FILES_COLUMN_IS_FORCED = 2,
+			TREE_FILES_COLUMN_IS_DEPENDENCY = 3,
 		};
 
-		struct TreePaths {
-			struct TreePath {
+		enum TreeSizesColumn {
+			TREE_SIZES_COLUMN_MAIN = 0,
+			TREE_SIZES_COLUMN_FORCED = 1,
+			TREE_SIZES_COLUMN_FORCED_WITHOUT_MAIN = 2,
+			TREE_SIZES_COLUMN_TOTAL = 3,
+		};
+
+		struct TreeFilesPaths {
+			struct TreeFilePath {
 				struct Comparator {
-					bool operator()(const TreePath &p_a, const TreePath &p_b) const {
+					bool operator()(const TreeFilePath &p_a, const TreeFilePath &p_b) const {
 						return p_a.path.filenocasecmp_to(p_b.path) < 0;
 					}
 				};
 
-				enum TreePathValue {
+				enum TreeFilePathValue {
 					TREE_PATH_VALUE_MAIN,
 					TREE_PATH_VALUE_FORCED,
 					TREE_PATH_VALUE_DEPENDENCY,
 				};
 
-				enum TreePathState {
+				enum TreeFilePathState {
 					TREE_PATH_STATE_UNCHECKED,
 					TREE_PATH_STATE_INDETERMINATE,
 					TREE_PATH_STATE_CHECKED,
 				};
 
 			private:
-				mutable HashMap<TreePathValue, TreePathState> state_cache;
-				mutable HashMap<TreePathValue, bool> state;
+				mutable HashMap<TreeFilePathValue, TreeFilePathState> state_cache;
+				mutable HashMap<TreeFilePathValue, bool> state;
 
 				String path;
 				uint64_t path_file_size = 0;
 
 			public:
-				TreePath *parent = nullptr;
-				LocalVector<TreePath *> children;
+				TreeFilePath *parent = nullptr;
+				LocalVector<TreeFilePath *> children;
 				bool is_directory = false;
 
 				TreeItem *tree_item = nullptr;
 				bool tree_item_in_tree = false;
 
 			private:
-				void _invalidate_cache(TreePathValue p_value);
-				void invalidate_cache(TreePathValue p_value);
+				void _invalidate_cache(TreeFilePathValue p_value);
+				void invalidate_cache(TreeFilePathValue p_value);
 
 			public:
 				void set_path(const String &p_path);
 				String get_path() const;
 				constexpr uint64_t get_path_file_size() const { return path_file_size; }
 
-				void set_state(TreePathValue p_value, TreePathState p_state);
-				TreePathState get_state(TreePathValue p_value) const;
+				void set_state(TreeFilePathValue p_value, TreeFilePathState p_state);
+				TreeFilePathState get_state(TreeFilePathValue p_value) const;
 
 				void tree_item_update();
 				void tree_item_remove_from_tree();
 
-				~TreePath();
+				~TreeFilePath();
 			};
 
 		private:
 			bool _initialized = false;
 
 		public:
-			List<TreePath> paths;
-			HashMap<String, TreePath *> paths_map;
+			List<TreeFilePath> paths;
+			HashMap<String, TreeFilePath *> paths_map;
 			LocalVector<String> paths_ordered;
 
 			void initialize(const HashSet<String> &p_file_paths);
@@ -215,7 +222,7 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 
 		inline static const int MAIN_CONTAINER_MARGIN_TOP = 10 * EDSCALE;
 		inline static const int MAIN_CONTAINER_MARGIN_SIDES = 10 * EDSCALE;
-		inline static const int MAIN_CONTAINER_MARGIN_BOTTOM = 100 * EDSCALE;
+		inline static const int MAIN_CONTAINER_MARGIN_BOTTOM = 25 * EDSCALE;
 		inline static const int TREE_SEARCH_FUZZY_SEARCH_MAX_MISSES = 5;
 		inline static const double TREE_SEARCH_DEBOUNCE_TIME_S = 0.1;
 		inline static const int FILE_SIZE_TITLE_MIN_WIDTH = 150 * EDSCALE;
@@ -224,7 +231,7 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 
 		EditorExportPlatformUtils::AsyncPckFileDependenciesState file_dependencies_state;
 		HashSet<String> exported_paths;
-		TreePaths tree_paths;
+		TreeFilesPaths tree_paths;
 		String main_scene_path;
 		String default_bus_layout_path;
 		String icon_path;
@@ -237,18 +244,20 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		bool updating = false;
 
 		MarginContainer *main_container = nullptr;
-		LineEdit *tree_search_line_edit = nullptr;
+		LineEdit *tree_files_search_line_edit = nullptr;
 
-		Tree *tree = nullptr;
-		Timer *tree_search_debounce_timer = nullptr;
-		bool tree_had_first_update = false;
-		TreeState tree_state_current = TREE_STATE_HIERARCHICAL;
-		TreeState tree_state_new = TREE_STATE_NONE;
+		MarginContainer *tree_files_margin_container = nullptr;
+		Tree *tree_files = nullptr;
+		Timer *tree_files_search_debounce_timer = nullptr;
+		bool tree_files_had_first_update = false;
+		TreeFilesState tree_files_state_current = TREE_STATE_HIERARCHICAL;
+		TreeFilesState tree_files_state_new = TREE_STATE_NONE;
 
 		FuzzySearch tree_fuzzy_search;
 
-		Tree *tree_file_size = nullptr;
-		TreeItem *tree_file_size_item = nullptr;
+		MarginContainer *tree_sizes_margin_container = nullptr;
+		Tree *tree_sizes = nullptr;
+		TreeItem *tree_sizes_item = nullptr;
 		Label *file_size_main_title_label = nullptr;
 		Label *file_size_main_size_label = nullptr;
 		Label *file_size_forced_title_label = nullptr;
@@ -257,19 +266,19 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		Label *file_size_dependencies_size_label = nullptr;
 
 		void on_confirmed();
-		void on_tree_item_edited();
-		void on_tree_search_line_edit_text_changed(const String &p_new_text);
-		void on_tree_search_debounce_timer_timeout();
+		void on_tree_files_item_edited();
+		void on_tree_files_search_line_edit_text_changed(const String &p_new_text);
+		void on_tree_files_search_debounce_timer_timeout();
 
-		void tree_add_callbacks();
-		void tree_remove_callbacks();
-		void tree_init();
-		void tree_init_tree_items();
-		void tree_update();
-		void tree_update_hierarchical(bool p_add_tree_items_to_tree);
-		void tree_update_search();
-		void tree_unset_tree_item_parents();
-		void tree_get_paths_and_dirs(const HashSet<String> &p_file_paths, HashMap<String, LocalVector<String>> &r_paths_map, LocalVector<String> &r_paths_list) const;
+		void tree_files_add_callbacks();
+		void tree_files_remove_callbacks();
+		void tree_files_init();
+		void tree_files_init_tree_items();
+		void tree_files_update();
+		void tree_files_update_hierarchical(bool p_add_tree_items_to_tree);
+		void tree_files_update_search();
+		void tree_files_unset_tree_item_parents();
+		void tree_files_get_paths_and_dirs(const HashSet<String> &p_file_paths, HashMap<String, LocalVector<String>> &r_paths_map, LocalVector<String> &r_paths_list) const;
 
 		void update_files_size_forced_size_label_text(uint64_t p_size, uint64_t p_added_size);
 		void update_theme();
