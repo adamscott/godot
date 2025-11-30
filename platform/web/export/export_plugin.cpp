@@ -642,9 +642,7 @@ void EditorExportPlatformWeb::AsyncDialog::on_tree_files_item_edited() {
 }
 
 void EditorExportPlatformWeb::AsyncDialog::on_tree_files_search_line_edit_text_changed(const String &p_new_text) {
-	// tree_search_debounce_timer->start();
-
-	callable_mp(this, &EditorExportPlatformWeb::AsyncDialog::tree_files_update).call_deferred();
+	tree_files_search_debounce_timer->start();
 }
 
 void EditorExportPlatformWeb::AsyncDialog::on_tree_files_search_debounce_timer_timeout() {

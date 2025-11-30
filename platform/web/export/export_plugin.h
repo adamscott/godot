@@ -224,7 +224,7 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		inline static const int MAIN_CONTAINER_MARGIN_SIDES = 10 * EDSCALE;
 		inline static const int MAIN_CONTAINER_MARGIN_BOTTOM = 25 * EDSCALE;
 		inline static const int TREE_SEARCH_FUZZY_SEARCH_MAX_MISSES = 5;
-		inline static const double TREE_SEARCH_DEBOUNCE_TIME_S = 0.1;
+		inline static const double TREE_SEARCH_DEBOUNCE_TIME_S = 0.15;
 		inline static const int FILE_SIZE_TITLE_MIN_WIDTH = 150 * EDSCALE;
 
 		EditorExportPlatformWeb *export_platform = nullptr;
