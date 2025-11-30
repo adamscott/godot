@@ -2534,12 +2534,16 @@ HashSet<String> EditorExportPlatformWeb::_get_mandatory_initial_load_files(const
 			}
 		};
 
-		// Default bus layout path.
-		_l_add_project_setting_if_file_exists("audio/buses/default_bus_layout");
 		// Icon path.
 		_l_add_project_setting_if_file_exists("application/config/icon");
+		// Default bus layout path.
+		_l_add_project_setting_if_file_exists("audio/buses/default_bus_layout");
 		// Certificate bundle override.
 		_l_add_project_setting_if_file_exists("network/tls/certificate_bundle_override");
+		// Default environment.
+		_l_add_project_setting_if_file_exists("rendering/environment/defaults/default_environment");
+		// Default XR action map.
+		_l_add_project_setting_if_file_exists("xr/openxr/default_action_map");
 	}
 
 	return mandatory_initial_load_files;
