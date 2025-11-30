@@ -799,6 +799,8 @@ void EditorExportPlatformWeb::AsyncDialog::tree_files_update() {
 		tree_files_update_hierarchical(tree_item_parents_unset);
 	}
 
+	tree_files_update_files_size();
+
 	tree_files_add_callbacks();
 
 	// Finalize updating tree.
@@ -879,11 +881,6 @@ void EditorExportPlatformWeb::AsyncDialog::tree_files_update_hierarchical(bool p
 
 	tree_files->set_hide_root(false);
 
-	uint64_t main_size = 0;
-	uint64_t forced_size = 0;
-	uint64_t forced_size_added = 0;
-	uint64_t dependencies_size = 0;
-
 	uint64_t paths_ordered_size = tree_paths.paths_ordered.size();
 
 	for (uint64_t i = 0; i < paths_ordered_size; i++) {
@@ -912,28 +909,7 @@ void EditorExportPlatformWeb::AsyncDialog::tree_files_update_hierarchical(bool p
 		if (tree_path->is_directory) {
 			continue;
 		}
-
-		bool is_main = false;
-		if (tree_path->get_state(TreeFilePathValue::TREE_PATH_VALUE_MAIN) == TreeFilePathState::TREE_PATH_STATE_CHECKED) {
-			is_main = true;
-			main_size += tree_path->get_path_file_size();
-		}
-		if (tree_path->get_state(TreeFilePathValue::TREE_PATH_VALUE_FORCED) == TreeFilePathState::TREE_PATH_STATE_CHECKED) {
-			uint64_t forced_file_size = tree_path->get_path_file_size();
-			forced_size += forced_file_size;
-			if (!is_main) {
-				forced_size_added += forced_file_size;
-			}
-		}
-		if (tree_path->get_state(TreeFilePathValue::TREE_PATH_VALUE_DEPENDENCY) == TreeFilePathState::TREE_PATH_STATE_CHECKED) {
-			dependencies_size += tree_path->get_path_file_size();
-		}
 	}
-
-	tree_sizes_item->set_text(TREE_SIZES_COLUMN_MAIN, String::humanize_size(main_size));
-	tree_sizes_item->set_text(TREE_SIZES_COLUMN_FORCED, String::humanize_size(forced_size));
-	tree_sizes_item->set_text(TREE_SIZES_COLUMN_FORCED_WITHOUT_MAIN, String::humanize_size(forced_size_added));
-	tree_sizes_item->set_text(TREE_SIZES_COLUMN_TOTAL, String::humanize_size(dependencies_size));
 }
 
 void EditorExportPlatformWeb::AsyncDialog::tree_files_update_search(const String &p_query) {
@@ -958,11 +934,6 @@ void EditorExportPlatformWeb::AsyncDialog::tree_files_update_search(const String
 	TreeFilePath *tree_root_path = tree_paths.paths_map[PREFIX_RES];
 	TreeItem *tree_root_item = tree_root_path->tree_item;
 
-	uint64_t main_size = 0;
-	uint64_t forced_size = 0;
-	uint64_t forced_size_added = 0;
-	uint64_t dependencies_size = 0;
-
 	tree_root_path->tree_item_update();
 
 	for (const FuzzySearchResult &search_result : search_results) {
@@ -985,21 +956,35 @@ void EditorExportPlatformWeb::AsyncDialog::tree_files_update_search(const String
 		if (tree_path->is_directory) {
 			continue;
 		}
+	}
+}
+#undef SET_TREE_ITEM_STATE
 
+void EditorExportPlatformWeb::AsyncDialog::tree_files_update_files_size() {
+	using TreeFilePath = TreeFilesPaths::TreeFilePath;
+	using TreeFilePathState = TreeFilePath::TreeFilePathState;
+	using TreeFilePathValue = TreeFilePath::TreeFilePathValue;
+
+	uint64_t main_size = 0;
+	uint64_t forced_size = 0;
+	uint64_t forced_size_added = 0;
+	uint64_t dependencies_size = 0;
+
+	for (const TreeFilePath &tree_path : tree_paths.paths) {
 		bool is_main = false;
-		if (tree_path->get_state(TreeFilePathValue::TREE_PATH_VALUE_MAIN) == TreeFilePathState::TREE_PATH_STATE_CHECKED) {
+		if (tree_path.get_state(TreeFilePathValue::TREE_PATH_VALUE_MAIN) == TreeFilePathState::TREE_PATH_STATE_CHECKED) {
 			is_main = true;
-			main_size += tree_path->get_path_file_size();
+			main_size += tree_path.get_path_file_size();
 		}
-		if (tree_path->get_state(TreeFilePathValue::TREE_PATH_VALUE_FORCED) == TreeFilePathState::TREE_PATH_STATE_CHECKED) {
-			uint64_t forced_file_size = tree_path->get_path_file_size();
+		if (tree_path.get_state(TreeFilePathValue::TREE_PATH_VALUE_FORCED) == TreeFilePathState::TREE_PATH_STATE_CHECKED) {
+			uint64_t forced_file_size = tree_path.get_path_file_size();
 			forced_size += forced_file_size;
 			if (!is_main) {
 				forced_size_added += forced_file_size;
 			}
 		}
-		if (tree_path->get_state(TreeFilePathValue::TREE_PATH_VALUE_DEPENDENCY) == TreeFilePathState::TREE_PATH_STATE_CHECKED) {
-			dependencies_size += tree_path->get_path_file_size();
+		if (tree_path.get_state(TreeFilePathValue::TREE_PATH_VALUE_DEPENDENCY) == TreeFilePathState::TREE_PATH_STATE_CHECKED) {
+			dependencies_size += tree_path.get_path_file_size();
 		}
 	}
 
@@ -1008,7 +993,6 @@ void EditorExportPlatformWeb::AsyncDialog::tree_files_update_search(const String
 	tree_sizes_item->set_text(TREE_SIZES_COLUMN_FORCED_WITHOUT_MAIN, String::humanize_size(forced_size_added));
 	tree_sizes_item->set_text(TREE_SIZES_COLUMN_TOTAL, String::humanize_size(dependencies_size));
 }
-#undef SET_TREE_ITEM_STATE
 
 void EditorExportPlatformWeb::AsyncDialog::tree_files_add_callbacks() {
 #define ADD_CALLBACK(m_target, m_event, m_callable)                             \
