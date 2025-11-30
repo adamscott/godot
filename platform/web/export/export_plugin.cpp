@@ -683,8 +683,8 @@ void EditorExportPlatformWeb::AsyncDialog::tree_files_update() {
 	tree_files_remove_callbacks();
 
 	// Update search.
-	String tree_search_line_edit_text = tree_files_search_line_edit->get_text();
-	tree_files_state_new = tree_search_line_edit_text.length() > 3
+	String tree_search_line_edit_query = tree_files_search_line_edit->get_text();
+	tree_files_state_new = tree_search_line_edit_query.length() > 3
 			? TREE_STATE_SEARCH
 			: TREE_STATE_HIERARCHICAL;
 
@@ -769,7 +769,6 @@ void EditorExportPlatformWeb::AsyncDialog::tree_files_update() {
 				case TREE_STATE_SEARCH: {
 					// We always need to reset the tree with search.
 					unset_tree_item_parents = true;
-					tree_fuzzy_search.set_query(tree_search_line_edit_text);
 				} break;
 				case TREE_STATE_HIERARCHICAL: {
 					// Do nothing.
@@ -795,7 +794,7 @@ void EditorExportPlatformWeb::AsyncDialog::tree_files_update() {
 	}
 
 	if (tree_files_state_current == TREE_STATE_SEARCH) {
-		tree_files_update_search();
+		tree_files_update_search(tree_search_line_edit_query);
 	} else {
 		tree_files_update_hierarchical(tree_item_parents_unset);
 	}
@@ -937,7 +936,7 @@ void EditorExportPlatformWeb::AsyncDialog::tree_files_update_hierarchical(bool p
 	tree_sizes_item->set_text(TREE_SIZES_COLUMN_TOTAL, String::humanize_size(dependencies_size));
 }
 
-void EditorExportPlatformWeb::AsyncDialog::tree_files_update_search() {
+void EditorExportPlatformWeb::AsyncDialog::tree_files_update_search(const String &p_query) {
 	using TreeFilePath = TreeFilesPaths::TreeFilePath;
 	using TreeFilePathState = TreeFilePath::TreeFilePathState;
 	using TreeFilePathValue = TreeFilePath::TreeFilePathValue;
@@ -953,6 +952,7 @@ void EditorExportPlatformWeb::AsyncDialog::tree_files_update_search() {
 		}
 		search_targets.push_back({ path.substr(PREFIX_RES_LENGTH).get_file(), tree_paths.paths_map[path] });
 	}
+	tree_fuzzy_search.set_query(p_query);
 	tree_fuzzy_search.search_all(search_targets, search_results);
 
 	TreeFilePath *tree_root_path = tree_paths.paths_map[PREFIX_RES];

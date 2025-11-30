@@ -276,7 +276,7 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		void tree_files_init_tree_items();
 		void tree_files_update();
 		void tree_files_update_hierarchical(bool p_add_tree_items_to_tree);
-		void tree_files_update_search();
+		void tree_files_update_search(const String &p_query);
 		void tree_files_unset_tree_item_parents();
 		void tree_files_get_paths_and_dirs(const HashSet<String> &p_file_paths, HashMap<String, LocalVector<String>> &r_paths_map, LocalVector<String> &r_paths_list) const;
 
