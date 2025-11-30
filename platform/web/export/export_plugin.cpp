@@ -416,10 +416,7 @@ void EditorExportPlatformWeb::AsyncDialog::TreeFilesPaths::TreeFilePath::set_sta
 	ERR_FAIL_COND_MSG(p_state == TREE_PATH_STATE_INDETERMINATE, "Cannot manually set TreePath state to indeterminate.");
 	ERR_FAIL_COND(p_state != TREE_PATH_STATE_CHECKED && p_state != TREE_PATH_STATE_UNCHECKED);
 
-	state_cache.erase(p_value);
-	if (parent != nullptr) {
-		parent->state_cache.erase(p_value);
-	}
+	invalidate_cache(p_value);
 
 	if (is_directory) {
 		for (TreeFilePath *child : children) {
