@@ -897,7 +897,7 @@ void EditorExportPlatformWeb::AsyncDialog::tree_files_update_hierarchical(bool p
 		}
 
 		if (!tree_path->is_directory) {
-			tree_item->set_text(TREE_FILES_COLUMN_PATH, path.get_basename());
+			tree_item->set_text(TREE_FILES_COLUMN_PATH, path.get_file());
 		}
 
 		SET_TREE_ITEM_STATE(tree_path, tree_item, TREE_FILES_COLUMN_IS_MAIN_SCENE_DEPENDENCY, TREE_PATH_VALUE_MAIN);
@@ -922,11 +922,15 @@ void EditorExportPlatformWeb::AsyncDialog::tree_files_update_search(const String
 	Vector<FuzzySearchTarget> search_targets;
 	Vector<FuzzySearchResult> search_results;
 
+	bool search_complete_path = p_query.contains_char('/');
 	for (const String &path : tree_paths.paths_ordered) {
 		if (path == PREFIX_RES) {
 			continue;
 		}
-		search_targets.push_back({ path.substr(PREFIX_RES_LENGTH).get_file(), tree_paths.paths_map[path] });
+		String target_string = search_complete_path
+				? path
+				: path.substr(PREFIX_RES_LENGTH).get_file();
+		search_targets.push_back({ target_string, tree_paths.paths_map[path] });
 	}
 	tree_fuzzy_search.set_query(p_query);
 	tree_fuzzy_search.search_all(search_targets, search_results);
@@ -937,14 +941,13 @@ void EditorExportPlatformWeb::AsyncDialog::tree_files_update_search(const String
 	tree_root_path->tree_item_update();
 
 	for (const FuzzySearchResult &search_result : search_results) {
-		String path = PREFIX_RES + search_result.target.string;
 		TreeFilePath *tree_path = static_cast<TreeFilePath *>(search_result.target.userdata);
 		TreeItem *tree_item = tree_path->tree_item;
 		tree_root_item->add_child(tree_item);
 		tree_path->tree_item_in_tree = true;
 
 		if (!tree_path->is_directory) {
-			tree_item->set_text(TREE_FILES_COLUMN_PATH, path);
+			tree_item->set_text(TREE_FILES_COLUMN_PATH, tree_path->get_path());
 		}
 
 		SET_TREE_ITEM_STATE(tree_path, tree_item, TREE_FILES_COLUMN_IS_MAIN_SCENE_DEPENDENCY, TREE_PATH_VALUE_MAIN);
