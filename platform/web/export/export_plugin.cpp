@@ -2424,7 +2424,8 @@ HashSet<String> EditorExportPlatformWeb::_get_mandatory_initial_load_files(const
 	{
 		// Single files.
 		auto _l_add_project_setting_if_file_exists = [&p_preset, &mandatory_initial_load_files](const String &l_project_setting) -> void {
-			String path = EditorExportPlatformUtils::get_path_from_dependency(EditorExportPlatformUtils::get_project_setting(p_preset, l_project_setting));
+			const String project_setting_file = ResourceUID::ensure_path(EditorExportPlatformUtils::get_project_setting(p_preset, l_project_setting));
+			String path = EditorExportPlatformUtils::get_path_from_dependency(project_setting_file);
 			if (FileAccess::exists(path)) {
 				mandatory_initial_load_files.insert(path);
 			}
