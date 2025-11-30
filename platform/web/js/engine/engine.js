@@ -78,6 +78,11 @@ const Engine = (function () {
 				if (initPromise) {
 					return initPromise;
 				}
+
+				preloader.init({
+					fileSizes: this.config.fileSizes,
+				});
+
 				if (loadPromise == null) {
 					if (!basePath) {
 						const initPromiseError = new Error('A base path must be provided when calling `init` and the engine is not loaded.');
@@ -106,11 +111,6 @@ const Engine = (function () {
 				preloader.setProgressFunc(this.config.onProgress);
 				initPromise = doInit();
 				return initPromise;
-			},
-
-			calculateFileSizesTotal: function () {
-				const totalSize = Object.values(this.config.fileSizes).reduce((pAccumulator, pFileSize) => pAccumulator + pFileSize, 0);
-				preloader.setFileSizesTotal(totalSize);
 			},
 
 			/**
@@ -227,10 +227,6 @@ const Engine = (function () {
 						throw new Error('No Main Scene dependencies found.');
 					}
 
-					this.calculateFileSizesTotal();
-				}
-
-				if (pack.endsWith('.asyncpck')) {
 					const asyncPckData = this.config['asyncPckData'];
 					const asyncPckAssetsDir = asyncPckData['directories']['assets'];
 
