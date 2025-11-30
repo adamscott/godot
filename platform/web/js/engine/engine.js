@@ -333,7 +333,8 @@ const Engine = (function () {
 				scriptElement.type = 'importmap';
 				const scriptElementContent = {
 					imports: {
-						'@godotengine/utils/concurrencyQueueManager': `./${this.config.executable}.concurrency.js`,
+						'@godotengine/utils/concurrencyQueueManager': `./${this.config.executable}.utils.concurrency.js`,
+						'@godotengine/utils/wait': `./${this.config.executable}.utils.wait.js`,
 					},
 				};
 				scriptElement.textContent = JSON.stringify(scriptElementContent, null, 2);

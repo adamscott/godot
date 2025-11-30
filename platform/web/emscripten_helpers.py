@@ -84,7 +84,11 @@ def create_template_zip(env, js, wasm, side):
         "#platform/web/js/libs/audio.worklet.js",
         "#platform/web/js/libs/audio.position.worklet.js",
         env.PackageJSModule(
-            target="#bin/obj/platform/web/js/modules/concurrency.js", source="#platform/web/js/modules/concurrency.js"
+            target="#bin/obj/platform/web/js/modules/utils/concurrency.js",
+            source="#platform/web/js/modules/utils/concurrency.js",
+        ),
+        env.PackageJSModule(
+            target="#bin/obj/platform/web/js/modules/utils/wait.js", source="#platform/web/js/modules/utils/wait.js"
         ),
     ]
     out_files = [
@@ -92,7 +96,8 @@ def create_template_zip(env, js, wasm, side):
         zip_dir.File(binary_name + ".wasm"),
         zip_dir.File(binary_name + ".audio.worklet.js"),
         zip_dir.File(binary_name + ".audio.position.worklet.js"),
-        zip_dir.File(binary_name + ".concurrency.js"),
+        zip_dir.File(binary_name + ".utils.concurrency.js"),
+        zip_dir.File(binary_name + ".utils.wait.js"),
     ]
     # Dynamic linking (extensions) specific.
     if env["dlink_enabled"]:

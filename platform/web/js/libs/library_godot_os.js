@@ -306,6 +306,25 @@ class AsyncPckFile {
 
 	async _load() {
 		try {
+			const fileBuffer = await this._loadAttempt();
+
+			GodotFS.copy_to_fs(this.localPath, fileBuffer);
+			this._status = GodotOS.AsyncPckFile.Status.STATUS_INSTALLED;
+		} catch (err) {
+			this._status = GodotOS.AsyncPckFile.Status.STATUS_ERROR;
+
+			const newError = new Error(
+				`AsyncPckFile "${this.path}" (of AsyncPck "${this.asyncPck}"): error while loading "${this.localPath}"`
+			);
+			newError.cause = err;
+			throw newError;
+		} finally {
+			this._loadPromise = null;
+		}
+	}
+
+	async _loadAttempt(pRetryCount = 0) {
+		try {
 			const fileResponse = await GodotOS.asyncPckFetch(this.localPath);
 			if (!fileResponse.ok) {
 				this._status = GodotOS.AsyncPckFile.Status.STATUS_ERROR;
@@ -331,18 +350,24 @@ class AsyncPckFile {
 				filePosition += chunk.byteLength;
 			}
 
-			GodotFS.copy_to_fs(this.localPath, fileBuffer);
-			this._status = GodotOS.AsyncPckFile.Status.STATUS_INSTALLED;
+			return fileBuffer;
 		} catch (err) {
-			this._status = GodotOS.AsyncPckFile.Status.STATUS_ERROR;
-
 			const newError = new Error(
-				`AsyncPckFile "${this.path}" (of AsyncPck "${this.asyncPck}"): error while loading "${this.localPath}"`
+				`AsyncPckFile "${this.path}" (of AsyncPck "${this.asyncPck}"): error while attempting to load "${this.localPath}". (attempt ${pRetryCount}/${GodotOS._asyncPckFetchMaxRetry})`
 			);
 			newError.cause = err;
-			throw newError;
-		} finally {
-			this._loadPromise = null;
+
+			if (pRetryCount == GodotOS._asyncPckFetchMaxRetry) {
+				const maxRetryError = new Error(`Maximum retry count (${GodotOS._asyncPckFetchMaxRetry}) reached.`);
+				maxRetryError.cause = newError;
+				throw maxRetryError;
+			}
+
+			GodotRuntime.error(newError);
+
+			// Exponent wait.
+			await GodotOS._wait(GodotOS._asyncPckWaitTimeBaseMs * (2 ** pRetryCount), 'ms');
+			return this._loadAttempt(pRetryCount + 1);
 		}
 	}
 
@@ -553,9 +578,11 @@ const _GodotOS = {
 		AsyncPckFile: AsyncPckFile,
 		AsyncPckResource: AsyncPckResource,
 		_asyncPckInstallMap: null,
+		_asyncPckConcurrencyQueueManager: null,
+		_asyncPckFetchMaxRetry: 5,
+		_asyncPckWaitTimeBaseMs: 100,
 		_mainPack: '',
 		_prefixRes: 'res://',
-		_concurrencyQueueManager: null,
 
 		_trimLastSlash: function (pPath) {
 			if (pPath.endsWith('/')) {
@@ -579,11 +606,14 @@ const _GodotOS = {
 		},
 
 		init: async function () {
+			const { wait } = await import('@godotengine/utils/wait');
+			GodotOS._wait = wait;
+
 			GodotOS._mainPack = GodotConfig.mainPack ?? '';
 			if (GodotOS._mainPack.endsWith('.asyncpck')) {
 				const { ConcurrencyQueueManager } = await import('@godotengine/utils/concurrencyQueueManager');
 				// eslint-disable-next-line require-atomic-updates -- We set `GodotOS._concurrencyQueueManager` only once: at init time.
-				GodotOS._concurrencyQueueManager = new ConcurrencyQueueManager();
+				GodotOS._asyncPckConcurrencyQueueManager = new ConcurrencyQueueManager();
 				GodotOS.initAsyncPck();
 			}
 		},
@@ -651,8 +681,8 @@ const _GodotOS = {
 				});
 		},
 
-		asyncPckFetch: async function (...args) {
-			return await GodotOS?._concurrencyQueueManager?.queue(() => fetch(...args));
+		asyncPckFetch: async function (...pArgs) {
+			return await GodotOS?._asyncPckConcurrencyQueueManager?.queue(() => fetch(...pArgs));
 		},
 
 		asyncPckGetAsyncpckAssetsDir: function (pPckDir) {
