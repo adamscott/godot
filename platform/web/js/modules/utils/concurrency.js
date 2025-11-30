@@ -101,8 +101,8 @@ export class ConcurrencyQueueManager {
 		const symbol = Symbol('ConcurrencyQueueItemId');
 		/** @type {ConcurrencyQueueManagerItem} */
 		const queueItem = {
-			concurrencyPromise: pPromiseWrapper,
 			symbol,
+			promiseWrapper: pPromiseWrapper,
 		};
 
 		if (this.#active.length < this.#limit) {
