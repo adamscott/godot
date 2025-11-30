@@ -121,15 +121,19 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 	};
 
 	this.loadPromise = async function (file, fileSize, raw = false) {
-		try {
-			let manager;
+		if (concurrencyQueueManager == null) {
+			const manager = await import('@godotengine/utils/concurrencyQueueManager');
+			// Another `loadPromise()` could have ended while awaiting.
 			if (concurrencyQueueManager == null) {
-				// The fake manager will just run the promise directly.
-				manager = (pPromiseFunction) => pPromiseFunction();
-			} else {
-				manager = (pPromiseFunction) => concurrencyQueueManager.waitForCurrency(pPromiseFunction);
+				concurrencyQueueManager = manager;
 			}
-			return await manager(() => retry(loadFetch.bind(null, file, loadingFiles, fileSize, raw), DOWNLOAD_ATTEMPTS_MAX));
+		}
+
+		try {
+			return await concurrencyQueueManager.queue(() => retry(
+				loadFetch.bind(null, file, loadingFiles, fileSize, raw),
+				DOWNLOAD_ATTEMPTS_MAX
+			));
 		} catch (error) {
 			const newError = new Error(`An error occurred while running Preloader.loadPromise("${file}", ${fileSize}, raw = ${raw})`);
 			newError.cause = error;
@@ -166,15 +170,5 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 	this.setFileSizesTotal = (pFileSizesTotal) => {
 		fileSizes.total = pFileSizesTotal;
 		fileSizes.totalSet = true;
-	};
-
-	this.init = (pOptions = {}) => {
-		const {
-			concurrencyQueueManager: optionConcurrencyQueueManager,
-		} = pOptions;
-
-		if (optionConcurrencyQueueManager != null) {
-			concurrencyQueueManager = optionConcurrencyQueueManager;
-		}
 	};
 };

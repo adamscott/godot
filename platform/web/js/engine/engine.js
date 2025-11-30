@@ -222,20 +222,13 @@ const Engine = (function () {
 				const me = this;
 				const filesToPreload = [];
 
-				let concurrencyQueueManager = null;
-
 				if (pack.endsWith('.asyncpck')) {
 					if (this.config.asyncPckData == null) {
 						throw new Error('No Main Scene dependencies found.');
 					}
 
 					this.calculateFileSizesTotal();
-
-					const { ConcurrencyQueueManager } = await import('@godotengine/utils/concurrencyQueueManager');
-					concurrencyQueueManager = new ConcurrencyQueueManager();
 				}
-
-				preloader.init({ concurrencyQueueManager });
 
 				if (pack.endsWith('.asyncpck')) {
 					const asyncPckData = this.config['asyncPckData'];
