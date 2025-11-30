@@ -122,10 +122,10 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 
 	this.loadPromise = async function (file, fileSize, raw = false) {
 		if (concurrencyQueueManager == null) {
-			const manager = await import('@godotengine/utils/concurrencyQueueManager');
+			const { ConcurrencyQueueManager } = await import('@godotengine/utils/concurrencyQueueManager');
 			// Another `loadPromise()` could have ended while awaiting.
 			if (concurrencyQueueManager == null) {
-				concurrencyQueueManager = manager;
+				concurrencyQueueManager = new ConcurrencyQueueManager();
 			}
 		}
 
