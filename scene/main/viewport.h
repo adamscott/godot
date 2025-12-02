@@ -501,6 +501,8 @@ private:
 	void _window_start_drag(Window *p_window);
 	void _window_start_resize(SubWindowResize p_edge, Window *p_window);
 
+	void _push_text_input(const String &p_text, bool p_emit_text_changed);
+
 protected:
 	bool _set_size(const Size2i &p_size, const Size2 &p_size_2d_override, bool p_allocated);
 

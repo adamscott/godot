@@ -43,6 +43,8 @@
 #include "scene/main/window.h"
 #include "scene/theme/theme_db.h"
 
+#include <functional>
+
 ///////////////////////////////////////////////////////////////////////////////
 ///                            TEXT                                         ///
 ///////////////////////////////////////////////////////////////////////////////
@@ -3984,10 +3986,23 @@ void TextEdit::_clear() {
 
 void TextEdit::set_text(const String &p_text) {
 	setting_text = true;
-	if (!undo_enabled) {
-		_clear();
+
+	bool meta_text_changed = has_meta(SNAME("__set_text_emit_text_changed")) && (bool)get_meta(SNAME("__set_text_emit_text_changed"));
+	std::function<void()> _l_insert_text = [this, meta_text_changed, &p_text]() -> void {
+		if (!meta_text_changed) {
+			insert_text_at_caret(p_text);
+			return;
+		}
+
+		String previous_state = get_text();
 		insert_text_at_caret(p_text);
-	}
+		String current_state = get_text();
+
+		if (current_state != previous_state) {
+			_text_changed();
+			remove_meta(SNAME("__set_text_emit_text_changed"));
+		}
+	};
 
 	if (undo_enabled) {
 		remove_secondary_carets();
@@ -3997,8 +4012,11 @@ void TextEdit::set_text(const String &p_text) {
 		begin_complex_operation();
 		deselect();
 		_remove_text(0, 0, MAX(0, get_line_count() - 1), MAX(get_line(MAX(get_line_count() - 1, 0)).size() - 1, 0));
-		insert_text_at_caret(p_text);
+		_l_insert_text();
 		end_complex_operation();
+	} else {
+		_clear();
+		_l_insert_text();
 	}
 
 	set_caret_line(0);

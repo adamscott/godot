@@ -2111,8 +2111,20 @@ void LineEdit::delete_text(int p_from_column, int p_to_column) {
 
 void LineEdit::set_text(String p_text) {
 	clear_internal();
+
+	String previous_state = get_text();
 	insert_text_at_caret(p_text);
-	_create_undo_state();
+	String current_state = get_text();
+
+	if (current_state != previous_state) {
+		_create_undo_state();
+
+		bool meta_text_changed = has_meta(SNAME("__set_text_emit_text_changed")) && (bool)get_meta(SNAME("__set_text_emit_text_changed"));
+		if (meta_text_changed) {
+			_text_changed();
+			remove_meta(SNAME("__set_text_emit_text_changed"));
+		}
+	}
 
 	queue_redraw();
 	caret_column = 0;
@@ -2123,8 +2135,20 @@ void LineEdit::set_text_with_selection(const String &p_text) {
 	Selection selection_copy = selection;
 
 	clear_internal();
+
+	String previous_state = get_text();
 	insert_text_at_caret(p_text);
-	_create_undo_state();
+	String current_state = get_text();
+
+	if (current_state != previous_state) {
+		_create_undo_state();
+
+		bool meta_text_changed = has_meta(SNAME("__set_text_emit_text_changed")) && (bool)get_meta(SNAME("__set_text_emit_text_changed"));
+		if (meta_text_changed) {
+			_text_changed();
+			remove_meta(SNAME("__set_text_emit_text_changed"));
+		}
+	}
 
 	int tlen = text.length();
 	selection = selection_copy;

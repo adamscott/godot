@@ -2828,16 +2828,26 @@ void Viewport::_post_gui_grab_click_focus() {
 
 ///////////////////////////////
 
-void Viewport::push_text_input(const String &p_text) {
+void Viewport::_push_text_input(const String &p_text, bool p_emit_text_changed) {
 	ERR_MAIN_THREAD_GUARD;
 	if (gui.subwindow_focused) {
-		gui.subwindow_focused->push_text_input(p_text);
+		gui.subwindow_focused->_push_text_input(p_text, p_emit_text_changed);
 		return;
 	}
 
-	if (gui.key_focus) {
-		gui.key_focus->call("set_text", p_text);
+	if (!gui.key_focus || !gui.key_focus->has_method(SNAME("set_text"))) {
+		return;
 	}
+
+	if (p_emit_text_changed) {
+		gui.key_focus->set_meta(SNAME("__set_text_emit_text_changed"), true);
+	}
+
+	gui.key_focus->call(SNAME("set_text"), p_text);
+}
+
+void Viewport::push_text_input(const String &p_text) {
+	_push_text_input(p_text, false);
 }
 
 Viewport::SubWindowResize Viewport::_sub_window_get_resize_margin(Window *p_subwindow, const Point2 &p_point) {
