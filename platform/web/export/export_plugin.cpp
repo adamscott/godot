@@ -901,7 +901,7 @@ void EditorExportPlatformWeb::AsyncDialog::tree_files_update_hierarchical(bool p
 			tree_path->tree_item_in_tree = true;
 		}
 
-		if (!tree_path->is_directory) {
+		if (tree_path->get_path() != PREFIX_RES) {
 			tree_item->set_text(TREE_FILES_COLUMN_PATH, path.get_file());
 		}
 
@@ -951,7 +951,7 @@ void EditorExportPlatformWeb::AsyncDialog::tree_files_update_search(const String
 		tree_root_item->add_child(tree_item);
 		tree_path->tree_item_in_tree = true;
 
-		if (!tree_path->is_directory) {
+		if (tree_path->get_path() != PREFIX_RES) {
 			tree_item->set_text(TREE_FILES_COLUMN_PATH, tree_path->get_path());
 		}
 
