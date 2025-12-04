@@ -133,14 +133,15 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		enum TreeFilesState {
 			TREE_STATE_NONE,
 			TREE_STATE_HIERARCHICAL,
-			TREE_STATE_SEARCH,
+			TREE_STATE_FLAT,
 		};
 
 		enum TreeFilesColumn {
 			TREE_FILES_COLUMN_PATH = 0,
-			TREE_FILES_COLUMN_IS_MAIN_SCENE_DEPENDENCY = 1,
-			TREE_FILES_COLUMN_IS_FORCED = 2,
-			TREE_FILES_COLUMN_IS_DEPENDENCY = 3,
+			TREE_FILES_COLUMN_SIZE = 1,
+			TREE_FILES_COLUMN_IS_MAIN_SCENE_DEPENDENCY = 2,
+			TREE_FILES_COLUMN_IS_FORCED = 3,
+			TREE_FILES_COLUMN_IS_DEPENDENCY = 4,
 		};
 
 		enum TreeSizesColumn {
@@ -192,7 +193,7 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 			public:
 				void set_path(const String &p_path);
 				String get_path() const;
-				constexpr uint64_t get_path_file_size() const { return path_file_size; }
+				uint64_t get_path_file_size() const;
 
 				void set_state(TreeFilePathValue p_value, TreeFilePathState p_state);
 				TreeFilePathState get_state(TreeFilePathValue p_value) const;
@@ -209,6 +210,7 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		public:
 			List<TreeFilePath> paths;
 			HashMap<String, TreeFilePath *> paths_map;
+			HashMap<TreeItem *, TreeFilePath *> tree_items_map;
 			LocalVector<String> paths_ordered;
 
 			void initialize(const HashSet<String> &p_file_paths);
@@ -242,6 +244,7 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		Ref<EditorExportPreset> preset;
 
 		bool updating = false;
+		bool ascending = true;
 
 		MarginContainer *main_container = nullptr;
 		LineEdit *tree_files_search_line_edit = nullptr;
@@ -250,8 +253,8 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		Tree *tree_files = nullptr;
 		Timer *tree_files_search_debounce_timer = nullptr;
 		bool tree_files_had_first_update = false;
-		TreeFilesState tree_files_state_current = TREE_STATE_HIERARCHICAL;
-		TreeFilesState tree_files_state_new = TREE_STATE_NONE;
+		TreeFilesState tree_files_state = TREE_STATE_HIERARCHICAL;
+		TreeFilesColumn tree_files_column_selected = TREE_FILES_COLUMN_PATH;
 
 		FuzzySearch tree_fuzzy_search;
 
@@ -267,6 +270,7 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 
 		void on_confirmed();
 		void on_tree_files_item_edited();
+		void on_tree_files_column_title_clicked(int p_column, int p_mouse_button_index);
 		void on_tree_files_search_line_edit_text_changed(const String &p_new_text);
 		void on_tree_files_search_debounce_timer_timeout();
 
@@ -275,8 +279,8 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		void tree_files_init();
 		void tree_files_init_tree_items();
 		void tree_files_update();
-		void tree_files_update_hierarchical(bool p_add_tree_items_to_tree);
-		void tree_files_update_search(const String &p_query);
+		void tree_files_update_hierarchical(LocalVector<TreeFilesPaths::TreeFilePath *> &p_tree_paths);
+		void tree_files_update_flat(LocalVector<TreeFilesPaths::TreeFilePath *> &p_tree_paths);
 		void tree_files_update_files_size();
 		void tree_files_unset_tree_item_parents();
 		void tree_files_get_paths_and_dirs(const HashSet<String> &p_file_paths, HashMap<String, LocalVector<String>> &r_paths_map, LocalVector<String> &r_paths_list) const;
