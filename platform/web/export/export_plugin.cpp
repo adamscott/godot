@@ -826,7 +826,12 @@ void EditorExportPlatformWeb::AsyncDialog::tree_files_init_tree_items() {
 		}
 		tree_path.tree_item = tree_item;
 
-		tree_item->set_tooltip_text(TREE_FILES_COLUMN_PATH, path);
+		String tooltip_text = path;
+		if (!tree_path.is_directory) {
+			tooltip_text = vformat("%s (%s)", path, String::humanize_size(tree_path.get_path_file_size()));
+		}
+
+		tree_item->set_tooltip_text(TREE_FILES_COLUMN_PATH, tooltip_text);
 		tree_item->set_metadata(TREE_FILES_COLUMN_PATH, (uint64_t)&tree_path);
 		tree_item->set_cell_mode(TREE_FILES_COLUMN_IS_MAIN_SCENE_DEPENDENCY, TreeItem::CELL_MODE_CHECK);
 		tree_item->set_text_alignment(TREE_FILES_COLUMN_IS_MAIN_SCENE_DEPENDENCY, HORIZONTAL_ALIGNMENT_CENTER);
