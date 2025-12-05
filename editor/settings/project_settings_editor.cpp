@@ -38,6 +38,7 @@
 #include "editor/export/editor_export.h"
 #include "editor/gui/editor_variant_type_selectors.h"
 #include "editor/inspector/editor_inspector.h"
+#include "editor/settings/editor_resource_remap.h"
 #include "editor/settings/editor_settings.h"
 #include "editor/themes/editor_scale.h"
 #include "scene/gui/check_button.h"
@@ -855,6 +856,10 @@ ProjectSettingsEditor::ProjectSettingsEditor(EditorData *p_data) {
 	import_defaults_editor = memnew(ImportDefaultsEditor);
 	import_defaults_editor->set_name(TTRC("Import Defaults"));
 	tab_container->add_child(import_defaults_editor);
+
+	remap_settings = memnew(EditorResourceRemap);
+	remap_settings->set_name(TTRC("Resource Remaps"));
+	tab_container->add_child(remap_settings);
 
 	MovieWriter::set_extensions_hint(); // ensure extensions are properly displayed.
 }
