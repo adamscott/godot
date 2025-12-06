@@ -38,7 +38,6 @@
 #include "editor/scene/group_settings_editor.h"
 #include "editor/settings/action_map_editor.h"
 #include "editor/settings/editor_autoload_settings.h"
-#include "editor/settings/editor_resource_remap.h"
 #include "editor/shader/shader_globals_editor.h"
 #include "editor/translations/localization_editor.h"
 #include "scene/gui/panel_container.h"
@@ -71,7 +70,6 @@ class ProjectSettingsEditor : public AcceptDialog {
 	ShaderGlobalsEditor *shaders_global_shader_uniforms_editor = nullptr;
 	GroupSettingsEditor *group_settings = nullptr;
 	EditorPluginSettings *plugin_settings = nullptr;
-	EditorResourceRemap *remap_settings = nullptr;
 
 	LineEdit *search_box = nullptr;
 	CheckButton *advanced = nullptr;
