@@ -32,14 +32,10 @@
 
 #include "core/error/error_list.h"
 #include "core/error/error_macros.h"
-#include "core/io/file_access.h"
 #include "core/object/object.h"
-#include "core/string/fuzzy_search.h"
 #include "core/variant/dictionary.h"
 #include "core/variant/variant.h"
 #include "editor/export/editor_export_preset.h"
-#include "editor/file_system/editor_file_system.h"
-#include "editor/themes/editor_scale.h"
 #include "editor_http_server.h"
 
 #include "core/config/project_settings.h"
@@ -51,8 +47,6 @@
 #include "editor/editor_string_names.h"
 #include "editor/export/editor_export_platform.h"
 #include "main/splash.gen.h"
-#include "scene/gui/dialogs.h"
-#include "scene/gui/tree.h"
 
 class ImageTexture;
 
@@ -127,176 +121,6 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		Error write_deps_json_file(const String &p_resource_path, HashSet<String> &p_features_set);
 	};
 
-	class AsyncDialog : public ConfirmationDialog {
-		GDCLASS(AsyncDialog, ConfirmationDialog);
-
-		enum TreeFilesState {
-			TREE_STATE_NONE,
-			TREE_STATE_HIERARCHICAL,
-			TREE_STATE_FLAT,
-		};
-
-		enum TreeFilesColumn {
-			TREE_FILES_COLUMN_PATH = 0,
-			TREE_FILES_COLUMN_SIZE = 1,
-			TREE_FILES_COLUMN_IS_MAIN_SCENE_DEPENDENCY = 2,
-			TREE_FILES_COLUMN_IS_FORCED = 3,
-			TREE_FILES_COLUMN_IS_DEPENDENCY = 4,
-		};
-
-		enum TreeSizesColumn {
-			TREE_SIZES_COLUMN_MAIN = 0,
-			TREE_SIZES_COLUMN_FORCED = 1,
-			TREE_SIZES_COLUMN_FORCED_WITHOUT_MAIN = 2,
-			TREE_SIZES_COLUMN_TOTAL = 3,
-		};
-
-		struct TreeFilesPaths {
-			struct TreeFilePath {
-				struct Comparator {
-					bool operator()(const TreeFilePath &p_a, const TreeFilePath &p_b) const {
-						return p_a.path.filenocasecmp_to(p_b.path) < 0;
-					}
-				};
-
-				enum TreeFilePathValue {
-					TREE_PATH_VALUE_MAIN,
-					TREE_PATH_VALUE_FORCED,
-					TREE_PATH_VALUE_DEPENDENCY,
-				};
-
-				enum TreeFilePathState {
-					TREE_PATH_STATE_UNCHECKED,
-					TREE_PATH_STATE_INDETERMINATE,
-					TREE_PATH_STATE_CHECKED,
-				};
-
-			private:
-				mutable HashMap<TreeFilePathValue, TreeFilePathState> state_cache;
-				mutable HashMap<TreeFilePathValue, bool> state;
-
-				String path;
-				uint64_t path_file_size = 0;
-
-			public:
-				TreeFilePath *parent = nullptr;
-				LocalVector<TreeFilePath *> children;
-				bool is_directory = false;
-
-				TreeItem *tree_item = nullptr;
-				bool tree_item_in_tree = false;
-
-			private:
-				void _invalidate_cache(TreeFilePathValue p_value);
-				void invalidate_cache(TreeFilePathValue p_value);
-
-			public:
-				void set_path(const String &p_path);
-				String get_path() const;
-				uint64_t get_path_file_size() const;
-
-				void set_state(TreeFilePathValue p_value, TreeFilePathState p_state);
-				TreeFilePathState get_state(TreeFilePathValue p_value) const;
-
-				void tree_item_update();
-				void tree_item_remove_from_tree();
-
-				~TreeFilePath();
-			};
-
-		private:
-			bool _initialized = false;
-
-		public:
-			List<TreeFilePath> paths;
-			HashMap<String, TreeFilePath *> paths_map;
-			HashMap<TreeItem *, TreeFilePath *> tree_items_map;
-			LocalVector<String> paths_ordered;
-
-			void initialize(const HashSet<String> &p_file_paths);
-			bool is_initialized() const {
-				return _initialized;
-			}
-		};
-
-		inline static const String PREFIX_RES = "res://";
-		inline static const int PREFIX_RES_LENGTH = PREFIX_RES.length();
-
-		inline static const int MAIN_CONTAINER_MARGIN_TOP = 10 * EDSCALE;
-		inline static const int MAIN_CONTAINER_MARGIN_SIDES = 10 * EDSCALE;
-		inline static const int MAIN_CONTAINER_MARGIN_BOTTOM = 25 * EDSCALE;
-		inline static const int TREE_SEARCH_FUZZY_SEARCH_MAX_MISSES = 5;
-		inline static const double TREE_SEARCH_DEBOUNCE_TIME_S = 0.15;
-		inline static const int FILE_SIZE_TITLE_MIN_WIDTH = 150 * EDSCALE;
-
-		EditorExportPlatformWeb *export_platform = nullptr;
-
-		EditorExportPlatformUtils::AsyncPckFileDependenciesState file_dependencies_state;
-		HashSet<String> exported_paths;
-		TreeFilesPaths tree_paths;
-		String main_scene_path;
-		String default_bus_layout_path;
-		String icon_path;
-		HashSet<String> forced_files;
-		HashMap<String, const HashSet<String> *> main_scene_dependencies;
-		HashMap<String, const HashSet<String> *> forced_files_dependencies;
-
-		Ref<EditorExportPreset> preset;
-
-		bool updating = false;
-		bool ascending = true;
-
-		MarginContainer *main_container = nullptr;
-		LineEdit *tree_files_search_line_edit = nullptr;
-
-		MarginContainer *tree_files_margin_container = nullptr;
-		Tree *tree_files = nullptr;
-		Timer *tree_files_search_debounce_timer = nullptr;
-		bool tree_files_had_first_update = false;
-		TreeFilesState tree_files_state = TREE_STATE_HIERARCHICAL;
-		TreeFilesColumn tree_files_column_selected = TREE_FILES_COLUMN_PATH;
-
-		FuzzySearch tree_fuzzy_search;
-
-		MarginContainer *tree_sizes_margin_container = nullptr;
-		Tree *tree_sizes = nullptr;
-		TreeItem *tree_sizes_item = nullptr;
-		Label *file_size_main_title_label = nullptr;
-		Label *file_size_main_size_label = nullptr;
-		Label *file_size_forced_title_label = nullptr;
-		Label *file_size_forced_size_label = nullptr;
-		Label *file_size_dependencies_title_label = nullptr;
-		Label *file_size_dependencies_size_label = nullptr;
-
-		void on_confirmed();
-		void on_tree_files_item_edited();
-		void on_tree_files_column_title_clicked(int p_column, int p_mouse_button_index);
-		void on_tree_files_search_line_edit_text_changed(const String &p_new_text);
-		void on_tree_files_search_debounce_timer_timeout();
-
-		void tree_files_add_callbacks();
-		void tree_files_remove_callbacks();
-		void tree_files_init();
-		void tree_files_init_tree_items();
-		void tree_files_update();
-		void tree_files_update_hierarchical(LocalVector<TreeFilesPaths::TreeFilePath *> &p_tree_paths);
-		void tree_files_update_flat(LocalVector<TreeFilesPaths::TreeFilePath *> &p_tree_paths);
-		void tree_files_update_files_size();
-		void tree_files_unset_tree_item_parents();
-		void tree_files_get_paths_and_dirs(const HashSet<String> &p_file_paths, HashMap<String, LocalVector<String>> &r_paths_map, LocalVector<String> &r_paths_list) const;
-
-		void update_files_size_forced_size_label_text(uint64_t p_size, uint64_t p_added_size);
-		void update_theme();
-
-	protected:
-		void _notification(int p_what);
-
-	public:
-		AsyncDialog(EditorExportPlatformWeb *p_export_platform);
-	};
-
-	AsyncDialog *async_dialog = nullptr;
-
 	Ref<ImageTexture> logo;
 	Ref<ImageTexture> run_icon;
 	Ref<ImageTexture> stop_icon;
@@ -364,8 +188,6 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 
 	static HashSet<String> _get_mandatory_initial_load_files(const Ref<EditorExportPreset> &p_preset);
 	static Error _rename_and_store_file_in_async_pck(const Ref<EditorExportPreset> &p_preset, void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const PackedByteArray &p_key, uint64_t p_seed, bool p_delta);
-	void _open_async_dialog();
-	void _on_async_dialog_visibility_changed();
 
 public:
 	virtual void get_preset_features(const Ref<EditorExportPreset> &p_preset, List<String> *r_features) const override;
