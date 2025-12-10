@@ -32,17 +32,13 @@
 
 #include "core/error/error_list.h"
 #include "core/error/error_macros.h"
+#include "core/io/file_access.h"
 #include "core/object/object.h"
 #include "core/variant/dictionary.h"
 #include "core/variant/variant.h"
 #include "editor/export/editor_export_preset.h"
 #include "editor_http_server.h"
 
-#include "core/config/project_settings.h"
-#include "core/io/image_loader.h"
-#include "core/io/stream_peer_tls.h"
-#include "core/io/tcp_server.h"
-#include "core/io/zip_io.h"
 #include "editor/editor_node.h"
 #include "editor/editor_string_names.h"
 #include "editor/export/editor_export_platform.h"
@@ -53,6 +49,10 @@ class ImageTexture;
 class EditorExportPlatformWeb : public EditorExportPlatform {
 	GDCLASS(EditorExportPlatformWeb, EditorExportPlatform);
 
+	static inline const String PREFIX_RES = "res://";
+	static inline const String SUFFIX_IMPORT = ".import";
+	static inline const String SUFFIX_REMAP = ".remap";
+
 	enum RemoteDebugState {
 		REMOTE_DEBUG_STATE_UNAVAILABLE,
 		REMOTE_DEBUG_STATE_AVAILABLE,
@@ -61,13 +61,14 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 
 	enum AsyncLoadSetting {
 		ASYNC_LOAD_SETTING_LOAD_EVERYTHING = 0,
-		ASYNC_LOAD_SETTING_ONLY_LOAD_MAIN_SCENE_DEPENDENCIES_AND_SPECIFIED_RESOURCES = 1,
+		ASYNC_LOAD_SETTING_MINIMUM_INITIAL_LOAD = 1,
 	};
 
 	struct ExportData {
 		struct File {
 			bool exists = false;
-			String path;
+			String resource_path;
+			String absolute_path;
 			uint32_t size = 0;
 			String md5;
 			String sha256;
@@ -82,8 +83,6 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		};
 
 		struct ResourceData {
-			const ExportData *export_data;
-
 			String path;
 			File native_file;
 			File remap_file;
@@ -92,9 +91,8 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 
 			uint32_t get_size() const;
 			Dictionary get_as_resource_dictionary() const;
+			String get_resource_path() const;
 			void flatten_dependencies(LocalVector<const ResourceData *> *p_deps) const;
-
-			static ResourceData create(const ExportData *p_export_data, const String &p_path, const String &p_remap_file_path = "", const String &p_remapped_file_path = "", Error *r_error = nullptr);
 		};
 
 		List<ResourceData> dependencies;
@@ -106,10 +104,12 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		LocalVector<String> libraries;
 		Ref<EditorExportPreset> preset;
 
+		HashSet<String> exported_files;
+
 		HashSet<String> get_features_set() const;
 		String res_to_global(const String &p_res_path) const {
 			String res_path = simplify_path(p_res_path);
-			return assets_directory.path_join(res_path.trim_prefix("res://"));
+			return assets_directory.path_join(res_path.trim_prefix(PREFIX_RES));
 		}
 		String global_to_res(const String &p_global_path) const {
 			return "res://" + p_global_path.trim_prefix(assets_directory.trim_suffix("/") + "/");
@@ -118,7 +118,10 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 			return p_global_path.trim_prefix(assets_directory.get_base_dir());
 		}
 
-		Error write_deps_json_file(const String &p_resource_path, HashSet<String> &p_features_set);
+		ResourceData *add_dependency(const String &p_path, const HashSet<String> &p_features_set, Ref<FileAccess> p_uid_cache, Error *r_error = nullptr);
+		void update_file(File *p_file, const String &p_resource_path);
+		Dictionary get_deps_json_dictionary(const ResourceData *p_dependency);
+		Error save_deps_json(const ResourceData *p_dependency);
 	};
 
 	Ref<ImageTexture> logo;

@@ -30,6 +30,7 @@
 
 #include "export_plugin.h"
 
+#include "core/crypto/hashing_context.h"
 #include "core/error/error_list.h"
 #include "core/error/error_macros.h"
 #include "core/extension/gdextension.h"
@@ -53,22 +54,11 @@
 #include "editor/editor_string_names.h"
 #include "editor/export/editor_export.h"
 #include "editor/export/editor_export_platform_utils.h"
-#include "editor/export/project_export.h"
 #include "editor/file_system/editor_file_system.h"
 #include "editor/import/resource_importer_texture_settings.h"
 #include "editor/settings/editor_settings.h"
 #include "editor/themes/editor_scale.h"
-#include "scene/gui/box_container.h"
-#include "scene/gui/grid_container.h"
-#include "scene/gui/line_edit.h"
-#include "scene/gui/margin_container.h"
-#include "scene/gui/tab_container.h"
-#include "scene/gui/tree.h"
-#include "scene/main/node.h"
-#include "scene/main/timer.h"
-#include "scene/main/window.h"
 #include "scene/resources/image_texture.h"
-#include "scene/scene_string_names.h"
 
 #include "modules/modules_enabled.gen.h" // For mono.
 #include "modules/svg/image_loader_svg.h"
@@ -97,17 +87,24 @@ Dictionary EditorExportPlatformWeb::ExportData::ResourceData::get_as_resource_di
 	Dictionary resources;
 
 	if (native_file.exists) {
-		resources[native_file.path] = native_file.get_as_dictionary();
+		resources[native_file.resource_path] = native_file.get_as_dictionary();
 	}
 	if (remap_file.exists) {
-		resources[remap_file.path] = remap_file.get_as_dictionary();
+		resources[remap_file.resource_path] = remap_file.get_as_dictionary();
 	}
 	if (remapped_file.exists) {
-		resources[remapped_file.path] = remapped_file.get_as_dictionary();
+		resources[remapped_file.resource_path] = remapped_file.get_as_dictionary();
 	}
 	data["files"] = resources;
 	data["totalSize"] = get_size();
 	return data;
+}
+
+String EditorExportPlatformWeb::ExportData::ResourceData::get_resource_path() const {
+	if (remap_file.exists) {
+		return remap_file.resource_path;
+	}
+	return native_file.resource_path;
 }
 
 void EditorExportPlatformWeb::ExportData::ResourceData::flatten_dependencies(LocalVector<const ResourceData *> *p_deps) const {
@@ -120,236 +117,6 @@ void EditorExportPlatformWeb::ExportData::ResourceData::flatten_dependencies(Loc
 		p_deps->push_back(dependency);
 		dependency->flatten_dependencies(p_deps);
 	}
-}
-
-EditorExportPlatformWeb::ExportData::ResourceData EditorExportPlatformWeb::ExportData::ResourceData::create(const ExportData *p_export_data, const String &p_path, const String &p_remap_file_path, const String &p_remapped_file_path, Error *r_error) {
-	Error error = OK;
-#define HANDLE_ERR(m_cond, m_err) \
-	if (unlikely(m_cond)) {       \
-		error = (m_err);          \
-		goto return_error;        \
-	}                             \
-	(void)0
-
-	ResourceData data;
-	String real_native_file_path;
-	String real_remap_file_path;
-	String real_remapped_file_path;
-
-	HANDLE_ERR(p_export_data == nullptr, ERR_INVALID_PARAMETER);
-	HANDLE_ERR(p_path.is_empty(), ERR_INVALID_PARAMETER);
-	if (!p_remap_file_path.is_empty()) {
-		HANDLE_ERR(p_remapped_file_path.is_empty(), ERR_INVALID_PARAMETER);
-	}
-
-	data.path = p_path;
-	data.native_file.path = p_path;
-	data.remap_file.path = p_remap_file_path;
-	data.remapped_file.path = p_remapped_file_path;
-
-	real_native_file_path = p_export_data->res_to_global(p_path);
-	real_remap_file_path = !p_remap_file_path.is_empty()
-			? p_export_data->res_to_global(p_remap_file_path)
-			: "";
-	real_remapped_file_path = !p_remapped_file_path.is_empty()
-			? p_export_data->res_to_global(p_remapped_file_path)
-			: "";
-
-	data.native_file.exists = FileAccess::exists(real_native_file_path);
-	data.remap_file.exists = FileAccess::exists(real_remap_file_path);
-	data.remapped_file.exists = FileAccess::exists(real_remapped_file_path);
-	if (!data.remap_file.path.is_empty()) {
-		HANDLE_ERR(!data.remap_file.exists, ERR_FILE_NOT_FOUND);
-		HANDLE_ERR(!data.remapped_file.exists, ERR_FILE_NOT_FOUND);
-	}
-
-	if (data.native_file.exists) {
-		data.native_file.size = FileAccess::get_size(real_native_file_path);
-	}
-	if (data.remap_file.exists) {
-		data.remap_file.size = FileAccess::get_size(real_remap_file_path);
-		data.remapped_file.size = FileAccess::get_size(real_remapped_file_path);
-	}
-
-	if (data.native_file.exists) {
-		data.native_file.md5 = real_native_file_path.md5_text();
-		data.native_file.sha256 = real_native_file_path.sha256_text();
-	}
-	if (data.remap_file.exists) {
-		data.remap_file.md5 = real_remap_file_path.md5_text();
-		data.remap_file.sha256 = real_remap_file_path.sha256_text();
-		data.remapped_file.md5 = real_remapped_file_path.md5_text();
-		data.remapped_file.sha256 = real_remapped_file_path.sha256_text();
-	}
-
-return_error:
-	if (r_error != nullptr) {
-		*r_error = error;
-	}
-
-	if (error != OK) {
-		return ResourceData();
-	}
-	return data;
-#undef HANDLE_ERR
-}
-
-/**
- * EditorExportPlatformWeb::ExportData
- */
-
-Error EditorExportPlatformWeb::ExportData::write_deps_json_file(const String &p_resource_path, HashSet<String> &p_features_set) {
-	if (dependencies_map.has(p_resource_path)) {
-		return OK;
-	}
-
-	Error error;
-
-	String resource_path = EditorExportPlatformUtils::get_path_from_dependency(p_resource_path);
-	String remap_file_path;
-	String remapped_file_path;
-
-	const String SUFFIX_REMAP = ".remap";
-	const String SUFFIX_IMPORT = ".import";
-
-	bool exists_import = FileAccess::exists(res_to_global(resource_path + SUFFIX_IMPORT));
-	bool exists_remap = FileAccess::exists(res_to_global(resource_path + SUFFIX_REMAP));
-
-	if (exists_import || exists_remap) {
-		if (exists_import) {
-			remap_file_path = resource_path + SUFFIX_IMPORT;
-		} else {
-			remap_file_path = resource_path + SUFFIX_REMAP;
-		}
-		Ref<FileAccess> remap_file_access = FileAccess::open(res_to_global(remap_file_path), FileAccess::READ);
-		ERR_FAIL_COND_V(remap_file_access.is_null(), FileAccess::get_open_error());
-
-		Ref<ConfigFile> remap_file;
-		remap_file.instantiate();
-		// if (p_is_encrypted) {
-		// 	Ref<FileAccessEncrypted> remap_file_access_encrypted;
-		// 	remap_file_access_encrypted.instantiate();
-		// 	Error err = remap_file_access_encrypted->open_and_parse(remap_file_access, p_key, FileAccessEncrypted::MODE_READ, false);
-		// 	ERR_FAIL_COND_V(err != OK, err);
-		// 	remap_file_access = remap_file_access_encrypted;
-		// }
-		remap_file->parse(remap_file_access->get_as_text());
-
-		Vector<String> remap_section_keys = remap_file->get_section_keys("remap");
-		for (const String &remap_section_key : remap_section_keys) {
-			bool found = false;
-			const String PREFIX_PATH = "path.";
-			if (remap_section_key.begins_with(PREFIX_PATH)) {
-				String type = remap_section_key.trim_prefix(PREFIX_PATH);
-				if (p_features_set.has(type)) {
-					found = true;
-				}
-			}
-			if (remap_section_key == "path") {
-				found = true;
-			}
-			if (!found) {
-				continue;
-			}
-			remapped_file_path = ResourceUID::ensure_path(remap_file->get_value("remap", remap_section_key));
-			break;
-		}
-
-		// Let's try again for .uid instead.
-		if (remapped_file_path.is_empty()) {
-			remap_section_keys = remap_file->get_section_keys("remap");
-			for (const String &remap_section_key : remap_section_keys) {
-				bool found = false;
-				if (remap_section_key == "uid") {
-					found = true;
-				}
-				if (!found) {
-					continue;
-				}
-				remapped_file_path = ResourceUID::ensure_path(remap_file->get_value("remap", remap_section_key));
-				break;
-			}
-		}
-
-		ERR_FAIL_COND_V_MSG(remapped_file_path.is_empty(), ERR_FILE_NOT_FOUND, vformat(TTRC(R"*(Could not find a remap path in "%s".)*"), res_to_global(remap_file_path)));
-	}
-
-	ExportData::ResourceData resource = ExportData::ResourceData::create(this, resource_path, remap_file_path, remapped_file_path, &error);
-	if (error != OK) {
-		return error;
-	}
-
-	dependencies_map.insert(resource_path, &dependencies.push_back(resource)->get());
-
-	HashSet<String> resource_dependencies;
-	{
-		EditorExportPlatformUtils::AsyncPckFileDependenciesState file_dependencies_state;
-		file_dependencies_state.add_to_file_dependencies(resource_path);
-		HashMap<String, const HashSet<String> *> file_dependencies = file_dependencies_state.get_file_dependencies_of(resource_path);
-		for (const KeyValue<String, const HashSet<String> *> &key_value : file_dependencies) {
-			resource_dependencies.insert(key_value.key);
-		}
-	}
-	for (const String &resource_dependency : resource_dependencies) {
-		Error error = write_deps_json_file(resource_dependency, p_features_set);
-		if (error != OK) {
-			ERR_PRINT(vformat(TTRC(R"*(Could not add dependencies of "%s".)*"), resource_dependency));
-			return error;
-		}
-		dependencies_map.get(resource_path)->dependencies.push_back(dependencies_map.get(resource_dependency));
-	}
-	ExportData::ResourceData *dependency = dependencies_map.get(resource_path);
-
-	LocalVector<const ExportData::ResourceData *> found_dependencies;
-	dependency->flatten_dependencies(&found_dependencies);
-
-	Dictionary deps;
-
-	// Resources.
-	Dictionary deps_resources;
-	deps["resources"] = deps_resources;
-
-	for (const ExportData::ResourceData *dependency : found_dependencies) {
-		deps_resources[dependency->path] = dependency->get_as_resource_dictionary();
-	}
-
-	// Dependencies.
-	Dictionary deps_dependencies;
-	deps["dependencies"] = deps_dependencies;
-
-	std::function<void(const ExportData::ResourceData *)> _l_add_deps_dependencies;
-	_l_add_deps_dependencies = [&_l_add_deps_dependencies, &deps_dependencies](const ExportData::ResourceData *l_dependency) -> void {
-		LocalVector<const ExportData::ResourceData *> local_dependencies;
-		l_dependency->flatten_dependencies(&local_dependencies);
-
-		Array paths_array;
-		deps_dependencies[l_dependency->path] = paths_array;
-		for (const ExportData::ResourceData *local_dependency : local_dependencies) {
-			if (local_dependency->path != l_dependency->path) {
-				paths_array.push_back(local_dependency->path);
-			}
-			if (!deps_dependencies.has(local_dependency->path)) {
-				_l_add_deps_dependencies(local_dependency);
-			}
-		}
-		paths_array.sort();
-	};
-
-	for (const ExportData::ResourceData *found_dependency : found_dependencies) {
-		_l_add_deps_dependencies(found_dependency);
-	}
-
-	{
-		String deps_json_file_path = res_to_global(resource_path) + ".deps.json";
-		Ref<FileAccess> deps_json_file = FileAccess::open(deps_json_file_path, FileAccess::WRITE);
-		if (deps_json_file.is_null()) {
-			ERR_PRINT(vformat(R"*(Could not write to "%s".)*", deps_json_file_path));
-			return FileAccess::get_open_error();
-		}
-		deps_json_file->store_string(JSON::stringify(deps, String(" ").repeat(2)));
-	}
-
-	return OK;
 }
 
 HashSet<String> EditorExportPlatformWeb::ExportData::get_features_set() const {
@@ -372,6 +139,232 @@ HashSet<String> EditorExportPlatformWeb::ExportData::get_features_set() const {
 		features_set.insert(feature);
 	}
 	return features_set;
+}
+
+EditorExportPlatformWeb::ExportData::ResourceData *EditorExportPlatformWeb::ExportData::add_dependency(const String &p_path, const HashSet<String> &p_features_set, Ref<FileAccess> p_uid_cache, Error *r_error) {
+	ResourceData *data = nullptr;
+	List<ResourceData>::Element *data_iterator = nullptr;
+
+	String remap_path;
+
+#define SET_ERR(m_err)        \
+	if (r_error != nullptr) { \
+		*r_error = (m_err);   \
+	}                         \
+	((void)0)
+
+#define AS_STRING(x) #x
+
+#define HANDLE_ERR_COND(m_cond, m_err)                     \
+	if (unlikely((m_cond))) {                              \
+		SET_ERR(m_err);                                    \
+		if (data != nullptr && data_iterator != nullptr) { \
+			dependencies.erase(data_iterator);             \
+		}                                                  \
+		ERR_FAIL_V_MSG(nullptr, AS_STRING(m_cond));        \
+		return nullptr;                                    \
+	}                                                      \
+	((void)0)
+
+	HANDLE_ERR_COND(p_path.is_empty(), ERR_INVALID_PARAMETER);
+
+	if (dependencies_map.has(p_path)) {
+		SET_ERR(OK);
+		return dependencies_map[p_path];
+	}
+
+	data_iterator = dependencies.push_back({});
+	data = &data_iterator->get();
+	data->path = p_path;
+	update_file(&data->native_file, p_path);
+
+	if (FileAccess::exists(data->native_file.absolute_path + SUFFIX_IMPORT)) {
+		remap_path = data->native_file.resource_path + SUFFIX_IMPORT;
+	} else if (FileAccess::exists(data->native_file.absolute_path + SUFFIX_REMAP)) {
+		remap_path = data->native_file.resource_path + SUFFIX_REMAP;
+	}
+
+	HANDLE_ERR_COND(!data->native_file.exists && remap_path.is_empty(), ERR_FILE_NOT_FOUND);
+
+	if (!remap_path.is_empty()) {
+		update_file(&data->remap_file, remap_path);
+		HANDLE_ERR_COND(!data->remap_file.exists, ERR_FILE_NOT_FOUND);
+
+		Error err;
+		Ref<FileAccess> remap_file_access = FileAccess::open(data->remap_file.absolute_path, FileAccess::READ, &err);
+		HANDLE_ERR_COND(err != OK, err);
+
+		Ref<ConfigFile> remap_file;
+		remap_file.instantiate();
+		// if (p_is_encrypted) {
+		// 	Ref<FileAccessEncrypted> remap_file_access_encrypted;
+		// 	remap_file_access_encrypted.instantiate();
+		// 	Error err = remap_file_access_encrypted->open_and_parse(remap_file_access, p_key, FileAccessEncrypted::MODE_READ, false);
+		// 	ERR_FAIL_COND_V(err != OK, err);
+		// 	remap_file_access = remap_file_access_encrypted;
+		// }
+		remap_file->parse(remap_file_access->get_as_text());
+
+		const String PREFIX_PATH = "path.";
+		const String PATH_UID = "uid";
+
+		String remapped_path;
+		String uid_path;
+		Vector<String> remap_section_keys = remap_file->get_section_keys("remap");
+		for (const String &remap_section_key : remap_section_keys) {
+			bool found = false;
+			if (remap_section_key == PATH_UID) {
+				p_uid_cache->seek(0);
+				uid_path = ResourceUID::get_path_from_cache(p_uid_cache, remap_file->get_value("remap", remap_section_key));
+				continue;
+			}
+			if (remap_section_key.begins_with(PREFIX_PATH)) {
+				String type = remap_section_key.trim_prefix(PREFIX_PATH);
+				if (p_features_set.has(type)) {
+					found = true;
+				}
+			}
+			if (remap_section_key == "path") {
+				found = true;
+			}
+			if (!found) {
+				continue;
+			}
+			remapped_path = remap_file->get_value("remap", remap_section_key);
+			break;
+		}
+		if (remapped_path.is_empty() && !uid_path.is_empty()) {
+			remapped_path = uid_path;
+		}
+		if (remapped_path.is_empty()) {
+			print_line(vformat("path: %s, uid_path: %s", p_path, uid_path));
+		}
+		HANDLE_ERR_COND(remapped_path.is_empty(), ERR_PARSE_ERROR);
+
+		update_file(&data->remapped_file, remapped_path);
+	}
+
+	dependencies_map.insert(p_path, data);
+
+	File *resource_file = nullptr;
+	if (data->native_file.exists && !data->remap_file.exists) {
+		resource_file = &data->native_file;
+	} else if (data->remapped_file.exists) {
+		resource_file = &data->remapped_file;
+	}
+
+	if (resource_file != nullptr) {
+		List<String> remapped_dependencies;
+		ResourceLoader::get_dependencies(data->remapped_file.absolute_path, &remapped_dependencies);
+		for (const String &remapped_dependency : remapped_dependencies) {
+			Error error;
+			ResourceData *dependency = add_dependency(EditorExportPlatformUtils::get_path_from_dependency(remapped_dependency), p_features_set, p_uid_cache, &error);
+			HANDLE_ERR_COND(error != OK, error);
+			data->dependencies.push_back(dependency);
+		}
+	}
+
+	SET_ERR(OK);
+	return data;
+
+#undef HANDLE_ERR_COND
+#undef AS_STRING
+#undef SET_ERR
+}
+
+void EditorExportPlatformWeb::ExportData::update_file(File *p_file, const String &p_resource_path) {
+	ERR_FAIL_NULL(p_file);
+	ERR_FAIL_COND(p_resource_path.is_empty());
+
+	p_file->resource_path = p_resource_path;
+	p_file->absolute_path = res_to_global(p_resource_path);
+	p_file->exists = FileAccess::exists(p_file->absolute_path);
+	if (!p_file->exists) {
+		return;
+	}
+
+	p_file->size = FileAccess::get_size(p_file->absolute_path);
+	if (p_file->size == 0) {
+		return;
+	}
+
+	Ref<HashingContext> context_md5;
+	context_md5.instantiate();
+	context_md5->start(HashingContext::HASH_MD5);
+
+	Ref<HashingContext> context_sha256;
+	context_sha256.instantiate();
+	context_sha256->start(HashingContext::HASH_SHA256);
+
+	const uint64_t CHUNK_SIZE = 1024;
+	Error error;
+	Ref<FileAccess> file = FileAccess::open(p_file->absolute_path, FileAccess::READ, &error);
+	if (error != OK) {
+		ERR_FAIL_MSG(vformat(R"*(Error while opening "%s": %s)*", p_file->absolute_path, error_names[error]));
+	}
+
+	while (file->get_position() < file->get_length()) {
+		uint64_t remaining = file->get_length() - file->get_position();
+		PackedByteArray chunk = file->get_buffer(MIN(remaining, CHUNK_SIZE));
+		context_md5->update(chunk);
+		context_sha256->update(chunk);
+	}
+
+	PackedByteArray hash_md5 = context_md5->finish();
+	PackedByteArray hash_sha256 = context_sha256->finish();
+
+	p_file->md5 = String::hex_encode_buffer(hash_md5.ptr(), hash_md5.size());
+	p_file->sha256 = String::hex_encode_buffer(hash_sha256.ptr(), hash_sha256.size());
+}
+
+Dictionary EditorExportPlatformWeb::ExportData::get_deps_json_dictionary(const ResourceData *p_dependency) {
+	Dictionary deps;
+
+	// Resources.
+	deps["resources"] = p_dependency->get_as_resource_dictionary();
+
+	// Dependencies.
+	Dictionary deps_dependencies;
+	deps["dependencies"] = deps_dependencies;
+
+	std::function<void(const ExportData::ResourceData *)> _l_add_deps_dependencies;
+	_l_add_deps_dependencies = [&](const ExportData::ResourceData *l_dependency) -> void {
+		LocalVector<const ExportData::ResourceData *> local_dependencies;
+		l_dependency->flatten_dependencies(&local_dependencies);
+
+		Array paths_array;
+		deps_dependencies[l_dependency->path] = paths_array;
+		for (const ExportData::ResourceData *local_dependency : local_dependencies) {
+			if (local_dependency->path != l_dependency->path) {
+				paths_array.push_back(local_dependency->path);
+			}
+			if (!deps_dependencies.has(local_dependency->path)) {
+				_l_add_deps_dependencies(local_dependency);
+			}
+		}
+		paths_array.sort();
+	};
+
+	for (const ExportData::ResourceData *dependency : p_dependency->dependencies) {
+		_l_add_deps_dependencies(dependency);
+	}
+
+	return deps;
+}
+
+Error EditorExportPlatformWeb::ExportData::save_deps_json(const ResourceData *p_dependency) {
+	Dictionary deps = get_deps_json_dictionary(p_dependency);
+
+	String deps_json_file_path = res_to_global(p_dependency->get_resource_path()) + ".deps.json";
+	Error error;
+	Ref<FileAccess> deps_json_file = FileAccess::open(deps_json_file_path, FileAccess::WRITE, &error);
+	if (error != OK) {
+		ERR_PRINT(vformat(R"*(Could not write to "%s".)*", deps_json_file_path));
+		return error;
+	}
+	deps_json_file->store_string(JSON::stringify(deps, String(" ").repeat(2)));
+
+	return OK;
 }
 
 /**
@@ -491,7 +484,7 @@ void EditorExportPlatformWeb::_fix_html(Vector<uint8_t> &p_html, const Ref<Edito
 		case ASYNC_LOAD_SETTING_LOAD_EVERYTHING: {
 			config["mainPack"] = p_name + ".pck";
 		} break;
-		case ASYNC_LOAD_SETTING_ONLY_LOAD_MAIN_SCENE_DEPENDENCIES_AND_SPECIFIED_RESOURCES: {
+		case ASYNC_LOAD_SETTING_MINIMUM_INITIAL_LOAD: {
 			config["mainPack"] = p_name + ".asyncpck";
 			config["asyncPckData"] = p_async_pck_data;
 		} break;
@@ -610,7 +603,7 @@ Error EditorExportPlatformWeb::_build_pwa(const Ref<EditorExportPreset> &p_prese
 			opt_cache_files.push_back(name + ".pck");
 		} break;
 
-		case ASYNC_LOAD_SETTING_ONLY_LOAD_MAIN_SCENE_DEPENDENCIES_AND_SPECIFIED_RESOURCES: {
+		case ASYNC_LOAD_SETTING_MINIMUM_INITIAL_LOAD: {
 			// TODO: Add AsyncPCK contents to the cache.
 		} break;
 	}
@@ -723,7 +716,7 @@ void EditorExportPlatformWeb::get_export_options(List<ExportOption> *r_options) 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "custom_template/debug", PROPERTY_HINT_GLOBAL_FILE, "*.zip"), ""));
 	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "custom_template/release", PROPERTY_HINT_GLOBAL_FILE, "*.zip"), ""));
 
-	r_options->push_back(ExportOption(PropertyInfo(Variant::INT, "async/initial_load_mode", PROPERTY_HINT_ENUM, "Load Everything,Only Load Main Scene Dependencies And Specified Resources"), 0, true));
+	r_options->push_back(ExportOption(PropertyInfo(Variant::INT, "async/initial_load_mode", PROPERTY_HINT_ENUM, "Load Everything,Load Minimum Initial Load"), 0, true));
 	r_options->push_back(ExportOption(PropertyInfo(Variant::PACKED_STRING_ARRAY, "async/initial_load_forced_files", PROPERTY_HINT_ARRAY_TYPE, MAKE_FILE_ARRAY_TYPE_HINT("*")), PackedStringArray()));
 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "variant/extensions_support"), false)); // GDExtension support.
@@ -935,7 +928,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 
 		} break;
 
-		case ASYNC_LOAD_SETTING_ONLY_LOAD_MAIN_SCENE_DEPENDENCIES_AND_SPECIFIED_RESOURCES: {
+		case ASYNC_LOAD_SETTING_MINIMUM_INITIAL_LOAD: {
 			pck_path = base_path + ".asyncpck";
 
 			ExportData export_data;
@@ -981,213 +974,199 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 			}
 
 			{
-				enum Pass {
-					PASS_REMAP_IMPORT,
-					PASS_NON_REMAP_IMPORT
-				};
+				Dictionary async_pck_data_directories;
+				Dictionary async_pck_data_initial_load;
 
-				std::function<Error(String, Pass)> _l_loop_asset_dir;
-				_l_loop_asset_dir = [&_l_loop_asset_dir, &export_data, &features_set](const String &l_path, Pass l_pass) -> Error {
-					const String SUFFIX_DEPS_JSON = ".deps.json";
-					const String SUFFIX_REMAP = ".remap";
-					const String SUFFIX_IMPORT = ".import";
-					String path = l_path.simplify_path();
-					Ref<DirAccess> dir_access = DirAccess::open(path);
-					ERR_FAIL_COND_V(dir_access.is_null(), ERR_CANT_OPEN);
+				async_pck_data["directories"] = async_pck_data_directories;
+				async_pck_data["initialLoad"] = async_pck_data_initial_load;
 
-					dir_access->list_dir_begin();
-					String next = dir_access->get_next();
-					while (!next.is_empty()) {
-#define CONTINUE_TO_NEXT()         \
-	next = dir_access->get_next(); \
-	continue
-						if (next == "." || next == "..") {
-							CONTINUE_TO_NEXT();
-						}
-						if (DirAccess::exists(path.path_join(next))) {
-							Error err = _l_loop_asset_dir(path.path_join(next), l_pass);
-							if (err != OK) {
-								return err;
-							}
-							CONTINUE_TO_NEXT();
-						}
-						if (next.ends_with(SUFFIX_DEPS_JSON)) {
-							CONTINUE_TO_NEXT();
-						}
+				const String PREFIX_ASSETS_DIRECTORY = export_data.assets_directory + "/";
 
-						String suffix;
-						String resource_path;
+				const String SUFFIX_REMAP = ".remap";
+				const String SUFFIX_IMPORT = ".import";
 
-						switch (l_pass) {
-							case PASS_REMAP_IMPORT: {
-								if (next.ends_with(SUFFIX_REMAP)) {
-									suffix = SUFFIX_REMAP;
-								} else if (next.ends_with(SUFFIX_IMPORT)) {
-									suffix = SUFFIX_IMPORT;
-								} else {
-									CONTINUE_TO_NEXT();
-								}
-								resource_path = export_data.global_to_res(path.path_join(next.trim_suffix(suffix)));
-							} break;
-							case PASS_NON_REMAP_IMPORT: {
-								if (next.ends_with(SUFFIX_REMAP) || next.ends_with(SUFFIX_IMPORT)) {
-									CONTINUE_TO_NEXT();
-								}
-								resource_path = export_data.global_to_res(path.path_join(next));
+				const String SECTION_REMAP = "remap";
+				const String SECTION_KEY_PATH = "path";
+				const String SECTION_KEY_PATH_PREFIX = "path.";
 
-								bool found = false;
-								for (const KeyValue<String, ExportData::ResourceData *> &key_value : export_data.dependencies_map) {
-									const String &dependency_path = key_value.key;
-									const ExportData::ResourceData *dependency_data = key_value.value;
+				const String PATH_GODOT_DIR = ".godot/";
+				const String PATH_PROJECT_BINARY = "res://project.binary";
+				const String PATH_ASSETS_SPARSEPCK = "res://assets.sparsepck";
+				const String PATH_GODOT_UID_CACHE = "res://.godot/uid_cache.bin";
+				const String PATH_GODOT_GLOBAL_SCRIPT_CLASS_CACHE = "res://.godot/global_script_class_cache.cfg";
 
-									if (resource_path == dependency_path) {
-										found = true;
-										break;
-									}
-									if (dependency_data->native_file.exists && resource_path == dependency_data->native_file.path) {
-										found = true;
-										break;
-									}
-									if (dependency_data->remap_file.exists && resource_path == dependency_data->remap_file.path) {
-										found = true;
-										break;
-									}
-									if (dependency_data->remapped_file.exists && resource_path == dependency_data->remapped_file.path) {
-										found = true;
-										break;
-									}
-								}
-								if (found) {
-									CONTINUE_TO_NEXT();
-								}
-							} break;
-						}
-
-						Error err = export_data.write_deps_json_file(resource_path, features_set);
-						if (err != OK) {
-							return err;
-						}
-
-						CONTINUE_TO_NEXT();
-					}
-					dir_access->list_dir_end();
-
-					return OK;
-#undef CONTINUE_TO_NEXT
-				};
-				_l_loop_asset_dir(ProjectSettings::get_singleton()->globalize_path(export_data.assets_directory), PASS_REMAP_IMPORT);
-				_l_loop_asset_dir(ProjectSettings::get_singleton()->globalize_path(export_data.assets_directory), PASS_NON_REMAP_IMPORT);
-			}
-
-			{
-				HashSet<String> mandatory_files = EditorExportPlatformWeb::_get_mandatory_initial_load_files(p_preset);
 				HashSet<String> exported_files;
+				HashSet<String> internal_files;
+				HashSet<String> standalone_files;
+				HashSet<String> remap_files;
+				HashSet<String> import_files;
 
-				{
-					EditorExportPlatformUtils::AsyncPckFileDependenciesState file_dependencies_state;
-					file_dependencies_state.add_to_file_dependencies(mandatory_files);
+				Error error;
+				uint64_t total_size = 0;
 
-					HashSet<String> forced_files;
-					PackedStringArray forced_files_array = p_preset->get("async/initial_load_forced_files");
-					for (const String &forced_file : forced_files_array) {
-						forced_files.insert(forced_file);
-					}
-					file_dependencies_state.add_to_file_dependencies(forced_files);
-
-					HashMap<String, const HashSet<String> *> exported_files_dependencies;
-					{
-						HashMap<String, const HashSet<String> *> mandatory_dependencies = file_dependencies_state.get_file_dependencies_of(mandatory_files);
-						for (const KeyValue<String, const HashSet<String> *> &key_value : mandatory_dependencies) {
-							exported_files_dependencies[key_value.key] = key_value.value;
-							exported_files.insert(key_value.key);
-						}
-					}
-
-					for (const String &forced_file : forced_files) {
-						bool found = false;
-						for (const String &exported_file : exported_files) {
-							if (exported_files_dependencies[exported_file] == nullptr) {
-								continue;
-							}
-							if (exported_files_dependencies[exported_file]->has(forced_file)) {
-								found = true;
-								break;
-							}
-						}
-						if (found) {
-							continue;
-						}
-
-						file_dependencies_state.add_to_file_dependencies(forced_file);
-
-						HashMap<String, const HashSet<String> *> new_exported_dependencies = file_dependencies_state.get_file_dependencies_of(forced_file);
-						exported_files_dependencies[forced_file] = new_exported_dependencies[forced_file];
-						exported_files.insert(EditorExportPlatformUtils::get_path_from_dependency(forced_file));
-					}
+				Ref<FileAccess> uid_cache = FileAccess::open(export_data.res_to_global(PATH_GODOT_UID_CACHE), FileAccess::READ, &error);
+				if (error != OK) {
+					return error;
 				}
 
-				Dictionary deps;
-				for (const String &forced_file : exported_files) {
-					String deps_json_file_path = export_data.res_to_global(forced_file) + ".deps.json";
-					Ref<FileAccess> deps_json_file = FileAccess::open(deps_json_file_path, FileAccess::READ);
-					if (deps_json_file.is_null()) {
-						add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not open file: \"%s\"."), deps_json_file_path));
+				for (const String &exported_file : export_data.exported_files) {
+					String local_exported_file = PREFIX_RES + exported_file.trim_prefix(PREFIX_ASSETS_DIRECTORY).simplify_path();
+					exported_files.insert(local_exported_file);
+				}
+
+				for (const String &exported_file : exported_files) {
+					if (exported_file.begins_with(PATH_GODOT_DIR) || exported_file == PATH_PROJECT_BINARY || exported_file == PATH_ASSETS_SPARSEPCK) {
+						internal_files.insert(exported_file);
+						continue;
+					}
+
+					if (exported_file.ends_with(SUFFIX_REMAP)) {
+						remap_files.insert(exported_file);
+						continue;
+					} else if (exported_file.ends_with(SUFFIX_IMPORT)) {
+						import_files.insert(exported_file);
+						continue;
+					}
+
+					standalone_files.insert(exported_file);
+				}
+
+				for (const String &internal_file : internal_files) {
+					Error error;
+					export_data.add_dependency(internal_file, features_set, uid_cache, &error);
+					if (error != OK) {
 						return error;
 					}
-					deps[forced_file] = JSON::parse_string(deps_json_file->get_as_utf8_string());
+				}
 
-					Dictionary resources = Dictionary(deps[forced_file])["resources"];
-					Array resources_keys = resources.keys();
-					for (const String resources_key : resources_keys) {
-						Dictionary resource_data = resources[resources_key];
-						Dictionary resource_files = resource_data["files"];
-						Array resource_files_keys = resource_files.keys();
-						for (const String resource_files_key : resource_files_keys) {
-							Dictionary resource_file = resource_files[resource_files_key];
-							uint32_t resource_files_size = resource_file["size"];
-							String global_path = export_data.res_to_global(resource_files_key);
-							String local_path = vformat("%s/%s", pck_path.get_file(), export_data.global_to_local(global_path)).simplify_path();
-							file_sizes[local_path] = resource_files_size;
-						}
+				for (const String &remap_file : remap_files) {
+					export_data.add_dependency(remap_file.trim_suffix(SUFFIX_REMAP), features_set, uid_cache, &error);
+					if (error != OK) {
+						return error;
 					}
 				}
-				async_pck_data.set("initialLoad", deps);
+
+				for (const String &import_file : import_files) {
+					export_data.add_dependency(import_file.trim_suffix(SUFFIX_IMPORT), features_set, uid_cache, &error);
+					if (error != OK) {
+						return error;
+					}
+				}
+
+				for (const String &standalone_file : standalone_files) {
+					export_data.add_dependency(standalone_file, features_set, uid_cache, &error);
+					if (error != OK) {
+						return error;
+					}
+				}
+
+				{
+					export_data.add_dependency(PATH_PROJECT_BINARY, features_set, uid_cache, &error);
+					if (error != OK) {
+						return error;
+					}
+
+					export_data.add_dependency(PATH_ASSETS_SPARSEPCK, features_set, uid_cache, &error);
+					if (error != OK) {
+						return error;
+					}
+
+					export_data.add_dependency(PATH_GODOT_UID_CACHE, features_set, uid_cache, &error);
+					if (error != OK) {
+						return error;
+					}
+
+					export_data.add_dependency(PATH_GODOT_GLOBAL_SCRIPT_CLASS_CACHE, features_set, uid_cache, &error);
+					if (error != OK) {
+						return error;
+					}
+				}
+
+				for (ExportData::ResourceData &dependency : export_data.dependencies) {
+					Error error = export_data.save_deps_json(&dependency);
+					if (error != OK) {
+						return error;
+					}
+				}
+
+				HashSet<String> mandatory_initial_load_files = _get_mandatory_initial_load_files(p_preset);
+				mandatory_initial_load_files.insert(PATH_PROJECT_BINARY);
+				mandatory_initial_load_files.insert(PATH_ASSETS_SPARSEPCK);
+				mandatory_initial_load_files.insert(PATH_GODOT_UID_CACHE);
+				mandatory_initial_load_files.insert(PATH_GODOT_GLOBAL_SCRIPT_CLASS_CACHE);
+
+				LocalVector<const ExportData::ResourceData *> initial_load_dependencies;
+				for (const String &mandatory_initial_load_file : mandatory_initial_load_files) {
+					ERR_FAIL_COND_V(!export_data.dependencies_map.has(mandatory_initial_load_file), ERR_BUG);
+					ExportData::ResourceData *mandatory_resource_data = export_data.dependencies_map[mandatory_initial_load_file];
+					initial_load_dependencies.push_back(mandatory_resource_data);
+					mandatory_resource_data->flatten_dependencies(&initial_load_dependencies);
+				}
+
+				HashSet<const ExportData::ResourceData *> initial_load_assets;
+				for (const ExportData::ResourceData *dependency : initial_load_dependencies) {
+					if (dependency->remap_file.exists || dependency->native_file.exists) {
+						initial_load_assets.insert(dependency);
+					}
+					add_message(EditorExportPlatformData::EXPORT_MESSAGE_INFO, TTR("Initial load"), vformat("%s", dependency->path));
+				}
+
+				for (const ExportData::ResourceData *initial_load_asset : initial_load_assets) {
+					uint64_t asset_size = 0;
+					if (initial_load_asset->remap_file.exists) {
+						asset_size += initial_load_asset->remap_file.size;
+						add_message(EditorExportPlatformData::EXPORT_MESSAGE_INFO, TTR("Initial load asset"), vformat("%s (%s)", initial_load_asset->remap_file.resource_path, String::humanize_size(initial_load_asset->remap_file.size)));
+						asset_size += initial_load_asset->remapped_file.size;
+						add_message(EditorExportPlatformData::EXPORT_MESSAGE_INFO, TTR("Initial load asset"), vformat("%s (%s)", initial_load_asset->remapped_file.resource_path, String::humanize_size(initial_load_asset->remapped_file.size)));
+					} else if (initial_load_asset->native_file.exists) {
+						asset_size += initial_load_asset->native_file.size;
+						add_message(EditorExportPlatformData::EXPORT_MESSAGE_INFO, TTR("Initial load asset"), vformat("%s (%s)", initial_load_asset->native_file.resource_path, String::humanize_size(initial_load_asset->native_file.size)));
+					} else {
+						ERR_FAIL_V(ERR_BUG);
+					}
+					total_size += asset_size;
+				}
+
+				{
+					async_pck_data_directories["assets"] = export_data.assets_directory;
+					async_pck_data_directories["libraries"] = export_data.libraries_directory;
+				}
+
+				for (const ExportData::ResourceData *dependency : initial_load_dependencies) {
+					Dictionary dependency_dict;
+					// Dictionary dependency_dict = export_data.get_deps_json_dictionary(dependency);
+
+					Array dependency_dependencies;
+					Array dependency_files;
+
+					dependency_dict["files"] = dependency_files;
+
+					for (const ExportData::ResourceData *dependency_dependency : dependency->dependencies) {
+						dependency_dependencies.push_back(dependency_dependency->path);
+					}
+
+					if (dependency_dependencies.size() > 0) {
+						dependency_dict["dependencies"] = dependency_dependencies;
+					}
+
+					if (dependency->native_file.exists) {
+						dependency_files.push_back(dependency->native_file.resource_path);
+						file_sizes[dependency->native_file.absolute_path.trim_prefix(base_dir)];
+					}
+					if (dependency->remap_file.exists) {
+						dependency_files.push_back(dependency->remap_file.resource_path);
+						file_sizes[dependency->remap_file.absolute_path.trim_prefix(base_dir)];
+					}
+					if (dependency->remapped_file.exists) {
+						dependency_files.push_back(dependency->remapped_file.resource_path);
+						file_sizes[dependency->remapped_file.absolute_path.trim_prefix(base_dir)];
+					}
+
+					async_pck_data_initial_load[dependency->path] = dependency_dict;
+				}
+
+				add_message(EditorExportPlatformData::EXPORT_MESSAGE_INFO, TTR("Initial load asset (total size)"), vformat("%s", String::humanize_size(total_size)));
 			}
-
-			{
-				Dictionary static_files;
-				async_pck_data.set("staticFiles", static_files);
-
-				auto _l_update_file_sizes = [&export_data, &pck_path, &file_sizes, &static_files](const String &l_file_path) -> void {
-					String global_path = export_data.res_to_global(l_file_path);
-					String local_path = vformat("%s/%s", pck_path.get_file(), export_data.global_to_local(global_path)).simplify_path();
-					int32_t file_size = FileAccess::get_size(global_path);
-					file_sizes[local_path] = file_size;
-					Dictionary static_file_data;
-					static_files[l_file_path] = static_file_data;
-
-					Dictionary static_file_data_files;
-					static_file_data["files"] = static_file_data_files;
-					static_file_data["totalSize"] = file_size;
-
-					Dictionary static_file_data_files_file;
-					static_file_data_files[l_file_path] = static_file_data_files_file;
-
-					static_file_data_files_file["size"] = file_size;
-				};
-				_l_update_file_sizes("res://project.binary");
-				_l_update_file_sizes("res://assets.sparsepck");
-				_l_update_file_sizes("res://.godot/uid_cache.bin");
-				_l_update_file_sizes("res://.godot/global_script_class_cache.cfg");
-			}
-
-			{
-				Dictionary directories;
-				directories.set("assets", vformat("%s/%s", pck_path.get_file(), export_data.global_to_local(export_data.assets_directory)).simplify_path());
-				directories.set("libraries", vformat("%s/%s", pck_path.get_file(), export_data.global_to_local(export_data.libraries_directory)).simplify_path());
-				async_pck_data.set("directories", directories);
-			}
-
 		} break;
 
 		default: {
@@ -1568,7 +1547,6 @@ Error EditorExportPlatformWeb::_stop_server() {
 }
 
 Error EditorExportPlatformWeb::_rename_and_store_file_in_async_pck(const Ref<EditorExportPreset> &p_preset, void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const Vector<uint8_t> &p_key, uint64_t p_seed, bool p_delta) {
-	// EditorExportPlatformWeb *export_platform = static_cast<EditorExportPlatformWeb *>(p_userdata);
 	ExportData *export_data = static_cast<ExportData *>(p_userdata);
 	const String simplified_path = EditorExportPlatform::simplify_path(p_path);
 
@@ -1580,6 +1558,7 @@ Error EditorExportPlatformWeb::_rename_and_store_file_in_async_pck(const Ref<Edi
 	}
 
 	const String target_path = export_data->assets_directory.path_join(simplified_path.trim_prefix("res://"));
+	export_data->exported_files.insert(target_path);
 	err = EditorExportPlatformUtils::store_file_at_path(target_path, encoded_data);
 
 	export_data->pack_data.file_ofs.push_back(saved_data);
