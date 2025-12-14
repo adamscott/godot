@@ -61,7 +61,7 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 
 	enum AsyncLoadSetting {
 		ASYNC_LOAD_SETTING_LOAD_EVERYTHING = 0,
-		ASYNC_LOAD_SETTING_MINIMUM_INITIAL_LOAD = 1,
+		ASYNC_LOAD_SETTING_MINIMUM_INITIAL_RESOURCES = 1,
 	};
 
 	struct ExportData {

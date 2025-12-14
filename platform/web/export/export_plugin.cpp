@@ -484,7 +484,7 @@ void EditorExportPlatformWeb::_fix_html(Vector<uint8_t> &p_html, const Ref<Edito
 		case ASYNC_LOAD_SETTING_LOAD_EVERYTHING: {
 			config["mainPack"] = p_name + ".pck";
 		} break;
-		case ASYNC_LOAD_SETTING_MINIMUM_INITIAL_LOAD: {
+		case ASYNC_LOAD_SETTING_MINIMUM_INITIAL_RESOURCES: {
 			config["mainPack"] = p_name + ".asyncpck";
 			config["asyncPckData"] = p_async_pck_data;
 		} break;
@@ -603,7 +603,7 @@ Error EditorExportPlatformWeb::_build_pwa(const Ref<EditorExportPreset> &p_prese
 			opt_cache_files.push_back(name + ".pck");
 		} break;
 
-		case ASYNC_LOAD_SETTING_MINIMUM_INITIAL_LOAD: {
+		case ASYNC_LOAD_SETTING_MINIMUM_INITIAL_RESOURCES: {
 			// TODO: Add AsyncPCK contents to the cache.
 		} break;
 	}
@@ -716,7 +716,7 @@ void EditorExportPlatformWeb::get_export_options(List<ExportOption> *r_options) 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "custom_template/debug", PROPERTY_HINT_GLOBAL_FILE, "*.zip"), ""));
 	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "custom_template/release", PROPERTY_HINT_GLOBAL_FILE, "*.zip"), ""));
 
-	r_options->push_back(ExportOption(PropertyInfo(Variant::INT, "async/initial_load_mode", PROPERTY_HINT_ENUM, "Load Everything,Load Minimum Initial Load"), 0, true));
+	r_options->push_back(ExportOption(PropertyInfo(Variant::INT, "async/initial_load_mode", PROPERTY_HINT_ENUM, "Load Everything,Load Minimum Initial Resources"), 0, true));
 	r_options->push_back(ExportOption(PropertyInfo(Variant::PACKED_STRING_ARRAY, "async/initial_load_forced_files", PROPERTY_HINT_ARRAY_TYPE, MAKE_FILE_ARRAY_TYPE_HINT("*")), PackedStringArray()));
 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "variant/extensions_support"), false)); // GDExtension support.
@@ -928,7 +928,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 
 		} break;
 
-		case ASYNC_LOAD_SETTING_MINIMUM_INITIAL_LOAD: {
+		case ASYNC_LOAD_SETTING_MINIMUM_INITIAL_RESOURCES: {
 			pck_path = base_path + ".asyncpck";
 
 			ExportData export_data;
