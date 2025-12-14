@@ -1613,7 +1613,7 @@ void EditorExportPlatformWeb::get_export_options(List<ExportOption> *r_options) 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "custom_template/debug", PROPERTY_HINT_GLOBAL_FILE, "*.zip"), ""));
 	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "custom_template/release", PROPERTY_HINT_GLOBAL_FILE, "*.zip"), ""));
 
-	r_options->push_back(ExportOption(PropertyInfo(Variant::INT, "async/initial_load_mode", PROPERTY_HINT_ENUM, "Load Everything,Only Load Main Scene Dependencies And Specified Resources"), 0, true));
+	r_options->push_back(ExportOption(PropertyInfo(Variant::INT, "async/initial_load_mode", PROPERTY_HINT_ENUM, "Load Everything,Only Load Initial Resources"), 0, true));
 	r_options->push_back(ExportOption(PropertyInfo(Variant::CALLABLE, "async/initial_load_edit_button", PROPERTY_HINT_TOOL_BUTTON, vformat("%s,Edit", TTRC("Edit Initial Load Resources")), PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_NO_INSTANCE_STATE), callable_mp(const_cast<EditorExportPlatformWeb *>(this), &EditorExportPlatformWeb::_open_async_dialog)));
 	r_options->push_back(ExportOption(PropertyInfo(Variant::ARRAY, "async/initial_load_forced_files", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), Array()));
 
