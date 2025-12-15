@@ -427,16 +427,17 @@ void EditorExportPlatformUtils::export_find_dependencies(const String &p_path, H
 }
 
 void EditorExportPlatformUtils::export_find_preset_resources(const Ref<EditorExportPreset> &p_preset, HashSet<String> &p_paths) {
-	switch (p_preset->get_export_filter()) {
-		case EditorExportPreset::EXPORT_ALL_RESOURCES: {
+	EditorExportPreset::ExportFilter export_filter = p_preset->get_export_filter();
+	switch (export_filter) {
+		case EditorExportPreset::EXPORT_ALL_RESOURCES:
+		case EditorExportPreset::EXCLUDE_SELECTED_RESOURCES: {
 			EditorExportPlatformUtils::export_find_resources(EditorFileSystem::get_singleton()->get_filesystem(), p_paths);
-		} break;
 
-		case EditorExportPreset::EXPORT_SELECTED_RESOURCES: {
-			EditorExportPlatformUtils::export_find_resources(EditorFileSystem::get_singleton()->get_filesystem(), p_paths);
-			Vector<String> files = p_preset->get_files_to_export();
-			for (int i = 0; i < files.size(); i++) {
-				p_paths.erase(files[i]);
+			if (export_filter == EditorExportPreset::EXCLUDE_SELECTED_RESOURCES) {
+				Vector<String> excluded_resources = p_preset->get_files_to_export();
+				for (int i = 0; i < excluded_resources.size(); i++) {
+					p_paths.erase(excluded_resources[i]);
+				}
 			}
 		} break;
 
@@ -445,8 +446,8 @@ void EditorExportPlatformUtils::export_find_preset_resources(const Ref<EditorExp
 		} break;
 
 		case EditorExportPreset::EXPORT_SELECTED_SCENES:
-		case EditorExportPreset::EXCLUDE_SELECTED_RESOURCES: {
-			bool scenes_only = p_preset->get_export_filter() == EditorExportPreset::EXPORT_SELECTED_SCENES;
+		case EditorExportPreset::EXPORT_SELECTED_RESOURCES: {
+			bool scenes_only = export_filter == EditorExportPreset::EXPORT_SELECTED_SCENES;
 
 			Vector<String> files = p_preset->get_files_to_export();
 			for (int i = 0; i < files.size(); i++) {
