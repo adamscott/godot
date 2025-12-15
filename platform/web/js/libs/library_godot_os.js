@@ -622,27 +622,12 @@ const _GodotOS = {
 			const data = GodotConfig.asyncPckData;
 
 			const initialLoad = data['initialLoad'];
-			for (const value of Object.values(initialLoad)) {
-				const resources = value['resources'];
-				const dependencies = value['dependencies'];
-				for (const [resourceKey, resourceValue] of Object.entries(resources)) {
-					let asyncPckResource = GodotOS.asyncPckGetAsyncPckResource(GodotOS._mainPack, resourceKey);
-					if (asyncPckResource != null) {
-						continue;
-					}
-					asyncPckResource = new GodotOS.AsyncPckResource(GodotOS._mainPack, resourceKey, resourceValue, dependencies[resourceKey]);
-					asyncPckResource.insertInInstallMap();
-					asyncPckResource.flagAsInstalled();
-				}
-			}
-
-			const staticFiles = data['staticFiles'];
-			for (const [staticFilePath, staticFileData] of Object.entries(staticFiles)) {
-				let asyncPckResource = GodotOS.asyncPckGetAsyncPckResource(GodotOS._mainPack, staticFilePath);
+			for (const [resourceKey, resourceValue] of Object.entries(initialLoad)) {
+				let asyncPckResource = GodotOS.asyncPckGetAsyncPckResource(GodotOS._mainPack, resourceKey);
 				if (asyncPckResource != null) {
 					continue;
 				}
-				asyncPckResource = new GodotOS.AsyncPckResource(GodotOS._mainPack, staticFilePath, staticFileData, []);
+				asyncPckResource = new GodotOS.AsyncPckResource(GodotOS._mainPack, resourceKey, resourceValue, resourceValue['files']);
 				asyncPckResource.insertInInstallMap();
 				asyncPckResource.flagAsInstalled();
 			}
