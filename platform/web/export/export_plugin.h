@@ -53,6 +53,11 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 	static inline const String SUFFIX_IMPORT = ".import";
 	static inline const String SUFFIX_REMAP = ".remap";
 
+	static inline const String PATH_PROJECT_BINARY = "res://project.binary";
+	static inline const String PATH_ASSETS_SPARSEPCK = "res://assets.sparsepck";
+	static inline const String PATH_GODOT_UID_CACHE = "res://.godot/uid_cache.bin";
+	static inline const String PATH_GODOT_GLOBAL_SCRIPT_CLASS_CACHE = "res://.godot/global_script_class_cache.cfg";
+
 	enum RemoteDebugState {
 		REMOTE_DEBUG_STATE_UNAVAILABLE,
 		REMOTE_DEBUG_STATE_AVAILABLE,
@@ -118,7 +123,7 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 			return p_global_path.trim_prefix(assets_directory.get_base_dir());
 		}
 
-		ResourceData *add_dependency(const String &p_path, const HashSet<String> &p_features_set, Ref<FileAccess> p_uid_cache, Error *r_error = nullptr);
+		ResourceData *add_dependency(const String &p_path, const HashSet<String> &p_features_set, Ref<FileAccess> p_uid_cache, /* bool p_encrypt = false, */ Error *r_error = nullptr);
 		void update_file(File *p_file, const String &p_resource_path);
 		Dictionary get_deps_json_dictionary(const ResourceData *p_dependency);
 		Error save_deps_json(const ResourceData *p_dependency);

@@ -141,7 +141,7 @@ HashSet<String> EditorExportPlatformWeb::ExportData::get_features_set() const {
 	return features_set;
 }
 
-EditorExportPlatformWeb::ExportData::ResourceData *EditorExportPlatformWeb::ExportData::add_dependency(const String &p_path, const HashSet<String> &p_features_set, Ref<FileAccess> p_uid_cache, Error *r_error) {
+EditorExportPlatformWeb::ExportData::ResourceData *EditorExportPlatformWeb::ExportData::add_dependency(const String &p_path, const HashSet<String> &p_features_set, Ref<FileAccess> p_uid_cache, /* bool p_encrypt, */ Error *r_error) {
 	ResourceData *data = nullptr;
 	List<ResourceData>::Element *data_iterator = nullptr;
 
@@ -235,9 +235,6 @@ EditorExportPlatformWeb::ExportData::ResourceData *EditorExportPlatformWeb::Expo
 		}
 		if (remapped_path.is_empty() && !uid_path.is_empty()) {
 			remapped_path = uid_path;
-		}
-		if (remapped_path.is_empty()) {
-			print_line(vformat("path: %s, uid_path: %s", p_path, uid_path));
 		}
 		HANDLE_ERR_COND(remapped_path.is_empty(), ERR_PARSE_ERROR);
 
@@ -717,6 +714,8 @@ void EditorExportPlatformWeb::get_export_options(List<ExportOption> *r_options) 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "custom_template/release", PROPERTY_HINT_GLOBAL_FILE, "*.zip"), ""));
 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::INT, "async/initial_load_mode", PROPERTY_HINT_ENUM, "Load Everything,Load Minimum Initial Resources"), 0, true));
+	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "async/initial_load_forced_files_filters_to_include"), ""));
+	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "async/initial_load_forced_files_filters_to_exclude"), ""));
 	r_options->push_back(ExportOption(PropertyInfo(Variant::PACKED_STRING_ARRAY, "async/initial_load_forced_files", PROPERTY_HINT_ARRAY_TYPE, MAKE_FILE_ARRAY_TYPE_HINT("*")), PackedStringArray()));
 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "variant/extensions_support"), false)); // GDExtension support.
@@ -745,7 +744,7 @@ void EditorExportPlatformWeb::get_export_options(List<ExportOption> *r_options) 
 }
 
 bool EditorExportPlatformWeb::get_export_option_visibility(const EditorExportPreset *p_preset, const String &p_option) const {
-	if (p_option == "async/initial_load_forced_files") {
+	if (p_option == "async/initial_load_forced_files" || p_option == "async/initial_load_forced_files_filters_to_include" || p_option == "async/initial_load_forced_files_filters_to_exclude") {
 		return (int)p_preset->get("async/initial_load_mode") != ASYNC_LOAD_SETTING_LOAD_EVERYTHING;
 	}
 
@@ -863,7 +862,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 		path = ProjectSettings::get_singleton()->globalize_path(path);
 	}
 
-	const String base_dir = path.get_base_dir();
+	const String base_dir = path.get_base_dir() + "/";
 	const String base_path = path.get_basename();
 	const String base_name = path.get_file().get_basename();
 
@@ -931,6 +930,10 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 		case ASYNC_LOAD_SETTING_MINIMUM_INITIAL_RESOURCES: {
 			pck_path = base_path + ".asyncpck";
 
+			if (DirAccess::dir_exists_absolute(pck_path)) {
+				print_line(vformat("pck_path exists: %s", pck_path));
+			}
+
 			ExportData export_data;
 			export_data.assets_directory = pck_path.path_join("assets");
 			export_data.libraries_directory = pck_path.path_join("libraries");
@@ -990,10 +993,6 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 				const String SECTION_KEY_PATH_PREFIX = "path.";
 
 				const String PATH_GODOT_DIR = ".godot/";
-				const String PATH_PROJECT_BINARY = "res://project.binary";
-				const String PATH_ASSETS_SPARSEPCK = "res://assets.sparsepck";
-				const String PATH_GODOT_UID_CACHE = "res://.godot/uid_cache.bin";
-				const String PATH_GODOT_GLOBAL_SCRIPT_CLASS_CACHE = "res://.godot/global_script_class_cache.cfg";
 
 				HashSet<String> exported_files;
 				HashSet<String> internal_files;
@@ -1060,28 +1059,6 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 					}
 				}
 
-				{
-					export_data.add_dependency(PATH_PROJECT_BINARY, features_set, uid_cache, &error);
-					if (error != OK) {
-						return error;
-					}
-
-					export_data.add_dependency(PATH_ASSETS_SPARSEPCK, features_set, uid_cache, &error);
-					if (error != OK) {
-						return error;
-					}
-
-					export_data.add_dependency(PATH_GODOT_UID_CACHE, features_set, uid_cache, &error);
-					if (error != OK) {
-						return error;
-					}
-
-					export_data.add_dependency(PATH_GODOT_GLOBAL_SCRIPT_CLASS_CACHE, features_set, uid_cache, &error);
-					if (error != OK) {
-						return error;
-					}
-				}
-
 				for (ExportData::ResourceData &dependency : export_data.dependencies) {
 					Error error = export_data.save_deps_json(&dependency);
 					if (error != OK) {
@@ -1089,18 +1066,68 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 					}
 				}
 
-				HashSet<String> mandatory_initial_load_files = _get_mandatory_initial_load_files(p_preset);
-				mandatory_initial_load_files.insert(PATH_PROJECT_BINARY);
-				mandatory_initial_load_files.insert(PATH_ASSETS_SPARSEPCK);
-				mandatory_initial_load_files.insert(PATH_GODOT_UID_CACHE);
-				mandatory_initial_load_files.insert(PATH_GODOT_GLOBAL_SCRIPT_CLASS_CACHE);
+				HashSet<const ExportData::ResourceData *> initial_load_dependencies;
+				{
+					Vector<String> initial_load_in_filters;
+					Vector<String> initial_load_ex_filters;
 
-				LocalVector<const ExportData::ResourceData *> initial_load_dependencies;
+					Vector<String> initial_load_in_split = String(p_preset->get("async/initial_load_forced_files_filters_to_include")).split(",");
+					for (int i = 0; i < initial_load_in_split.size(); i++) {
+						String initial_load_in_filter = initial_load_in_split[i].strip_edges();
+						if (initial_load_in_filter.is_empty()) {
+							continue;
+						}
+						initial_load_in_filters.push_back(initial_load_in_filter);
+					}
+
+					Vector<String> initial_load_ex_split = String(p_preset->get("async/initial_load_forced_files_filters_to_exclude")).split(",");
+					for (int i = 0; i < initial_load_ex_split.size(); i++) {
+						String initial_load_ex_filter = initial_load_ex_split[i].strip_edges();
+						if (initial_load_ex_filter.is_empty()) {
+							continue;
+						}
+						initial_load_ex_filters.push_back(initial_load_ex_filter);
+					}
+
+					if (initial_load_in_filters.size() > 0) {
+						for (const ExportData::ResourceData &dependency : export_data.dependencies) {
+							const String &path = dependency.path;
+							bool add_as_initial_load = false;
+							for (const String &in_filter : initial_load_in_filters) {
+								// print_line(vformat("comparing in: \"%s\" to \"%s\"", path, in_filter));
+								if (path.matchn(in_filter) || path.trim_prefix(PREFIX_RES).matchn(in_filter)) {
+									add_as_initial_load = true;
+									break;
+								}
+							}
+
+							for (const String &ex_filter : initial_load_ex_filters) {
+								// print_line(vformat("comparing ex: \"%s\" to \"%s\"", path, ex_filter));
+								if (path.matchn(ex_filter) || path.trim_prefix(PREFIX_RES).matchn(ex_filter)) {
+									add_as_initial_load = false;
+									break;
+								}
+							}
+
+							if (add_as_initial_load) {
+								initial_load_dependencies.insert(&dependency);
+							}
+						}
+					}
+				}
+
+				HashSet<String> mandatory_initial_load_files = _get_mandatory_initial_load_files(p_preset);
 				for (const String &mandatory_initial_load_file : mandatory_initial_load_files) {
-					ERR_FAIL_COND_V(!export_data.dependencies_map.has(mandatory_initial_load_file), ERR_BUG);
+					export_data.add_dependency(mandatory_initial_load_file, features_set, uid_cache);
+				}
+				for (const String &mandatory_initial_load_file : mandatory_initial_load_files) {
 					ExportData::ResourceData *mandatory_resource_data = export_data.dependencies_map[mandatory_initial_load_file];
-					initial_load_dependencies.push_back(mandatory_resource_data);
-					mandatory_resource_data->flatten_dependencies(&initial_load_dependencies);
+					initial_load_dependencies.insert(mandatory_resource_data);
+					LocalVector<const ExportData::ResourceData *> mandatory_resource_data_dependencies;
+					mandatory_resource_data->flatten_dependencies(&mandatory_resource_data_dependencies);
+					for (const ExportData::ResourceData *mandatory_resource_data_dependency : mandatory_resource_data_dependencies) {
+						initial_load_dependencies.insert(mandatory_resource_data_dependency);
+					}
 				}
 
 				HashSet<const ExportData::ResourceData *> initial_load_assets;
@@ -1128,14 +1155,12 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 				}
 
 				{
-					async_pck_data_directories["assets"] = export_data.assets_directory;
-					async_pck_data_directories["libraries"] = export_data.libraries_directory;
+					async_pck_data_directories["assets"] = export_data.assets_directory.trim_prefix(base_dir);
+					async_pck_data_directories["libraries"] = export_data.libraries_directory.trim_prefix(base_dir);
 				}
 
 				for (const ExportData::ResourceData *dependency : initial_load_dependencies) {
 					Dictionary dependency_dict;
-					// Dictionary dependency_dict = export_data.get_deps_json_dictionary(dependency);
-
 					Array dependency_dependencies;
 					Array dependency_files;
 
@@ -1589,14 +1614,25 @@ HashSet<String> EditorExportPlatformWeb::_get_mandatory_initial_load_files(const
 		HashMap<StringName, ProjectSettings::AutoloadInfo> autoload_list = ProjectSettings::get_singleton()->get_autoload_list();
 		for (const KeyValue<StringName, ProjectSettings::AutoloadInfo> &key_value : autoload_list) {
 			mandatory_initial_load_files.insert(
-					EditorExportPlatformUtils::get_path_from_dependency(
-							key_value.value.path));
+					EditorExportPlatformUtils::get_path_from_dependency(key_value.value.path));
+		}
+	}
+
+	{
+		// Global class files.
+		LocalVector<StringName> global_classes;
+		ScriptServer::get_global_class_list(global_classes);
+
+		for (const StringName &global_class : global_classes) {
+			String global_class_path = ScriptServer::get_global_class_path(global_class);
+			mandatory_initial_load_files.insert(
+					EditorExportPlatformUtils::get_path_from_dependency(global_class_path));
 		}
 	}
 
 	{
 		// Single files.
-		auto _l_add_project_setting_if_file_exists = [&p_preset, &mandatory_initial_load_files](const String &l_project_setting) -> void {
+		auto _l_add_project_setting_if_file_exists = [&](const String &l_project_setting) -> void {
 			const String project_setting_file = ResourceUID::ensure_path(EditorExportPlatformUtils::get_project_setting(p_preset, l_project_setting));
 			String path = EditorExportPlatformUtils::get_path_from_dependency(project_setting_file);
 			if (FileAccess::exists(path)) {
@@ -1614,6 +1650,14 @@ HashSet<String> EditorExportPlatformWeb::_get_mandatory_initial_load_files(const
 		_l_add_project_setting_if_file_exists("rendering/environment/defaults/default_environment");
 		// Default XR action map.
 		_l_add_project_setting_if_file_exists("xr/openxr/default_action_map");
+	}
+
+	{
+		// Export-related files.
+		mandatory_initial_load_files.insert(PATH_PROJECT_BINARY);
+		mandatory_initial_load_files.insert(PATH_ASSETS_SPARSEPCK);
+		mandatory_initial_load_files.insert(PATH_GODOT_UID_CACHE);
+		mandatory_initial_load_files.insert(PATH_GODOT_GLOBAL_SCRIPT_CLASS_CACHE);
 	}
 
 	return mandatory_initial_load_files;
