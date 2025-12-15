@@ -252,7 +252,7 @@ EditorExportPlatformWeb::ExportData::ResourceData *EditorExportPlatformWeb::Expo
 
 	if (resource_file != nullptr) {
 		List<String> remapped_dependencies;
-		ResourceLoader::get_dependencies(data->remapped_file.absolute_path, &remapped_dependencies);
+		ResourceLoader::get_dependencies(resource_file->absolute_path, &remapped_dependencies);
 		for (const String &remapped_dependency : remapped_dependencies) {
 			Error error;
 			ResourceData *dependency = add_dependency(EditorExportPlatformUtils::get_path_from_dependency(remapped_dependency), p_features_set, p_uid_cache, &error);
@@ -1130,28 +1130,52 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 					}
 				}
 
-				HashSet<const ExportData::ResourceData *> initial_load_assets;
-				for (const ExportData::ResourceData *dependency : initial_load_dependencies) {
-					if (dependency->remap_file.exists || dependency->native_file.exists) {
-						initial_load_assets.insert(dependency);
+				{
+					PackedStringArray initial_load_paths;
+					HashSet<const ExportData::ResourceData *> initial_load_assets;
+					for (const ExportData::ResourceData *dependency : initial_load_dependencies) {
+						if (dependency->remap_file.exists || dependency->native_file.exists) {
+							initial_load_assets.insert(dependency);
+						}
+						initial_load_paths.push_back(dependency->path);
 					}
-					add_message(EditorExportPlatformData::EXPORT_MESSAGE_INFO, TTR("Initial load"), vformat("%s", dependency->path));
-				}
 
-				for (const ExportData::ResourceData *initial_load_asset : initial_load_assets) {
-					uint64_t asset_size = 0;
-					if (initial_load_asset->remap_file.exists) {
-						asset_size += initial_load_asset->remap_file.size;
-						add_message(EditorExportPlatformData::EXPORT_MESSAGE_INFO, TTR("Initial load asset"), vformat("%s (%s)", initial_load_asset->remap_file.resource_path, String::humanize_size(initial_load_asset->remap_file.size)));
-						asset_size += initial_load_asset->remapped_file.size;
-						add_message(EditorExportPlatformData::EXPORT_MESSAGE_INFO, TTR("Initial load asset"), vformat("%s (%s)", initial_load_asset->remapped_file.resource_path, String::humanize_size(initial_load_asset->remapped_file.size)));
-					} else if (initial_load_asset->native_file.exists) {
-						asset_size += initial_load_asset->native_file.size;
-						add_message(EditorExportPlatformData::EXPORT_MESSAGE_INFO, TTR("Initial load asset"), vformat("%s (%s)", initial_load_asset->native_file.resource_path, String::humanize_size(initial_load_asset->native_file.size)));
-					} else {
-						ERR_FAIL_V(ERR_BUG);
+					initial_load_paths.sort();
+					for (const String &initial_load_path : initial_load_paths) {
+						add_message(EditorExportPlatformData::EXPORT_MESSAGE_INFO, TTR("Initial load"), vformat("%s", initial_load_path));
 					}
-					total_size += asset_size;
+
+					struct InitialLoadAssetLogData {
+						String path;
+						uint64_t size;
+					};
+					LocalVector<InitialLoadAssetLogData> initial_load_assets_data;
+
+					for (const ExportData::ResourceData *initial_load_asset : initial_load_assets) {
+						uint64_t asset_size = 0;
+						if (initial_load_asset->remap_file.exists) {
+							asset_size += initial_load_asset->remap_file.size;
+							initial_load_assets_data.push_back({ initial_load_asset->remap_file.resource_path, initial_load_asset->remap_file.size });
+							asset_size += initial_load_asset->remapped_file.size;
+							initial_load_assets_data.push_back({ initial_load_asset->remapped_file.resource_path, initial_load_asset->remapped_file.size });
+						} else if (initial_load_asset->native_file.exists) {
+							asset_size += initial_load_asset->native_file.size;
+							initial_load_assets_data.push_back({ initial_load_asset->native_file.resource_path, initial_load_asset->native_file.size });
+						} else {
+							ERR_FAIL_V(ERR_BUG);
+						}
+						total_size += asset_size;
+					}
+
+					struct InitialLoadAssetLogDataComparator {
+						_ALWAYS_INLINE_ bool operator()(const InitialLoadAssetLogData &p_a, const InitialLoadAssetLogData &p_b) const {
+							return FileNoCaseComparator()(p_a.path, p_b.path);
+						}
+					};
+					initial_load_assets_data.sort_custom<InitialLoadAssetLogDataComparator>();
+					for (const InitialLoadAssetLogData &initial_load_asset_data : initial_load_assets_data) {
+						add_message(EditorExportPlatformData::EXPORT_MESSAGE_INFO, TTR("Initial load asset"), vformat("%s (%s)", initial_load_asset_data.path, String::humanize_size(initial_load_asset_data.size)));
+					}
 				}
 
 				{
