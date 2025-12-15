@@ -3090,15 +3090,32 @@ void ResourceFormatLoaderGDScript::get_dependencies(const String &p_path, List<S
 	Ref<FileAccess> file = FileAccess::open(p_path, FileAccess::READ);
 	ERR_FAIL_COND_MSG(file.is_null(), "Cannot open file '" + p_path + "'.");
 
-	String source = file->get_as_utf8_string();
-	if (source.is_empty()) {
-		return;
-	}
+	Error err;
 	GDScriptParser parser;
-	Error err = parser.parse(source, p_path, false);
+
+	if (p_path.ends_with(".gd")) {
+		String source = file->get_as_utf8_string();
+		if (source.is_empty()) {
+			return;
+		}
+		err = parser.parse(source, p_path, false);
+	} else {
+		// Path ends with ".gdc".
+		PackedByteArray source;
+		uint64_t source_size = FileAccess::get_size(p_path);
+		source.resize(source_size);
+		uint64_t actual_size = file->get_buffer(source.ptrw(), FileAccess::get_size(p_path));
+		if (source_size != actual_size) {
+			source.resize(actual_size);
+		}
+
+		err = parser.parse_binary(source, p_path);
+	}
+
 	if (err != OK) {
 		return;
 	}
+
 	GDScriptAnalyzer analyzer(&parser);
 	if (OK != analyzer.analyze()) {
 		return;
