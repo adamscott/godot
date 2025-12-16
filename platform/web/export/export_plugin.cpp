@@ -1061,6 +1061,9 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 				}
 
 				for (ExportData::ResourceData &dependency : export_data.dependencies) {
+					if (dependency.path.begins_with(PREFIX_RES + PATH_GODOT_DIR)) {
+						continue;
+					}
 					Error error = export_data.save_deps_json(&dependency);
 					if (error != OK) {
 						return error;
