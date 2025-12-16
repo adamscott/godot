@@ -744,15 +744,15 @@ void OS::remove_script_loggers(const ScriptLanguage *p_script) {
 }
 
 bool OS::asyncpck_is_supported() const {
-	return ::OS::get_singleton()->asyncpck_is_supported();
+	return ::OS::get_singleton()->async_pck_is_supported();
 }
 
 Error OS::asyncpck_load_file(const String &p_path) const {
-	return ::OS::get_singleton()->asyncpck_install_file(p_path);
+	return ::OS::get_singleton()->async_pck_install_file(p_path);
 }
 
 Dictionary OS::asyncpck_load_file_get_status(const String &p_path) const {
-	return ::OS::get_singleton()->asyncpck_install_file_get_status(p_path);
+	return ::OS::get_singleton()->async_pck_install_file_get_status(p_path);
 }
 
 void OS::_bind_methods() {

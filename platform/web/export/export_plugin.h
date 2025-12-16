@@ -96,6 +96,7 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 
 			uint32_t get_size() const;
 			Dictionary get_as_resource_dictionary() const;
+			void merge_resource_dictionary(Dictionary &p_resource_dictionary) const;
 			String get_resource_path() const;
 			void flatten_dependencies(LocalVector<const ResourceData *> *p_deps) const;
 		};

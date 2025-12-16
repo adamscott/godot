@@ -168,7 +168,7 @@ const Engine = (function () {
 
 				// Godot configuration.
 				me.rtenv['initConfig'](config);
-				me.rtenv['initOS']();
+				await me.rtenv['initOS']();
 
 				// Preload GDExtension libraries.
 				if (me.config.gdextensionLibs.length > 0 && !me.rtenv['loadDynamicLibrary']) {

@@ -35,22 +35,35 @@
 class AsyncPckInstaller : public Node {
 	GDCLASS(AsyncPckInstaller, Node);
 
+	const static inline String SIGNAL_FILE_ASYNC_PCK_INSTALLED = "file_async_pck_installed";
+	const static inline String SIGNAL_FILE_ASYNC_PCK_PROGRESS = "file_async_pck_progress";
+	const static inline String SIGNAL_FILE_ASYNC_PCK_ERROR = "file_async_pck_error";
+
+	const static inline String SIGNAL_FILES_ASYNC_PCK_INSTALLED = "files_async_pck_installed";
+	const static inline String SIGNAL_FILES_ASYNC_PCK_PROGRESS = "files_async_pck_progress";
+
 public:
-	enum AsyncPckInstallerState {
-		ASYNC_PCK_INSTALLER_STATE_IDLE,
-		ASYNC_PCK_INSTALLER_STATE_LOADING,
-		ASYNC_PCK_INSTALLER_STATE_INSTALLED,
-		ASYNC_PCK_INSTALLER_STATE_ERROR,
-		ASYNC_PCK_INSTALLER_STATE_MAX,
+	enum InstallerState {
+		INSTALLER_STATE_IDLE,
+		INSTALLER_STATE_LOADING,
+		INSTALLER_STATE_INSTALLED,
+		INSTALLER_STATE_ERROR,
+		INSTALLER_STATE_MAX,
 	};
 
 private:
 	PackedStringArray file_paths;
 	bool autostart = false;
 
+	HashMap<String, InstallerState> paths_state;
+
 protected:
 	void _notification(int p_what);
 	static void _bind_methods();
+
+	void update();
+
+	void set_path_state(const String &p_path, InstallerState p_state);
 
 public:
 	void start();
@@ -61,5 +74,7 @@ public:
 	void set_file_paths(const PackedStringArray &p_resources_paths);
 	PackedStringArray get_file_paths() const;
 
-	AsyncPckInstallerState get_state() const;
+	InstallerState get_state() const;
 };
+
+VARIANT_ENUM_CAST(AsyncPckInstaller::InstallerState);

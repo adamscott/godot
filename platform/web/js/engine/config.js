@@ -371,6 +371,7 @@ const InternalConfig = function (initConfig) { // eslint-disable-line no-unused-
 			'canvasResizePolicy': this.canvasResizePolicy,
 			'mainPack': this.mainPack,
 			'asyncPckData': this.asyncPckData,
+			'fileSizes': this.fileSizes,
 			'locale': locale,
 			'persistentDrops': this.persistentDrops,
 			'virtualKeyboard': this.experimentalVK,

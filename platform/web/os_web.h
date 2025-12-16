@@ -94,9 +94,9 @@ public:
 	String get_unique_id() const override;
 	int get_default_thread_pool_size() const override;
 
-	bool asyncpck_is_supported() const override { return true; }
-	Error asyncpck_install_file(const String &p_path) const override;
-	Dictionary asyncpck_install_file_get_status(const String &p_path) const override;
+	bool async_pck_is_supported() const override { return true; }
+	Error async_pck_install_file(const String &p_path) const override;
+	Dictionary async_pck_install_file_get_status(const String &p_path) const override;
 
 	String get_executable_path() const override;
 	Error shell_open(const String &p_uri) override;

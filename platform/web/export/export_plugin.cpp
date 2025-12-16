@@ -101,6 +101,19 @@ Dictionary EditorExportPlatformWeb::ExportData::ResourceData::get_as_resource_di
 	return data;
 }
 
+void EditorExportPlatformWeb::ExportData::ResourceData::merge_resource_dictionary(Dictionary &p_resource_dictionary) const {
+	if (native_file.exists) {
+		((Dictionary)p_resource_dictionary["files"])[native_file.resource_path] = native_file.get_as_dictionary();
+	}
+	if (remap_file.exists) {
+		((Dictionary)p_resource_dictionary["files"])[remap_file.resource_path] = remap_file.get_as_dictionary();
+	}
+	if (remapped_file.exists) {
+		((Dictionary)p_resource_dictionary["files"])[remapped_file.resource_path] = remapped_file.get_as_dictionary();
+	}
+	p_resource_dictionary["totalSize"] = (uint32_t)p_resource_dictionary["totalSize"] + get_size();
+}
+
 String EditorExportPlatformWeb::ExportData::ResourceData::get_resource_path() const {
 	if (remap_file.exists) {
 		return remap_file.resource_path;
@@ -327,6 +340,8 @@ Dictionary EditorExportPlatformWeb::ExportData::get_deps_json_dictionary(const R
 
 	std::function<void(const ExportData::ResourceData *)> _l_add_deps_dependencies;
 	_l_add_deps_dependencies = [&](const ExportData::ResourceData *l_dependency) -> void {
+		Dictionary resources = deps["resources"];
+		l_dependency->merge_resource_dictionary(resources);
 		LocalVector<const ExportData::ResourceData *> local_dependencies;
 		l_dependency->flatten_dependencies(&local_dependencies);
 
@@ -352,8 +367,16 @@ Dictionary EditorExportPlatformWeb::ExportData::get_deps_json_dictionary(const R
 
 Error EditorExportPlatformWeb::ExportData::save_deps_json(const ResourceData *p_dependency) {
 	Dictionary deps = get_deps_json_dictionary(p_dependency);
+	String resource_path = p_dependency->get_resource_path();
+	if (resource_path == p_dependency->remap_file.resource_path) {
+		if (resource_path.ends_with(SUFFIX_REMAP)) {
+			resource_path = resource_path.trim_suffix(SUFFIX_REMAP);
+		} else {
+			resource_path = resource_path.trim_suffix(SUFFIX_IMPORT);
+		}
+	}
 
-	String deps_json_file_path = res_to_global(p_dependency->get_resource_path()) + ".deps.json";
+	String deps_json_file_path = res_to_global(resource_path) + ".deps.json";
 	Error error;
 	Ref<FileAccess> deps_json_file = FileAccess::open(deps_json_file_path, FileAccess::WRITE, &error);
 	if (error != OK) {
@@ -1224,18 +1247,27 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 
 					if (dependency->native_file.exists) {
 						dependency_files.push_back(dependency->native_file.resource_path);
-						file_sizes[dependency->native_file.absolute_path.trim_prefix(base_dir)];
 					}
 					if (dependency->remap_file.exists) {
 						dependency_files.push_back(dependency->remap_file.resource_path);
-						file_sizes[dependency->remap_file.absolute_path.trim_prefix(base_dir)];
 					}
 					if (dependency->remapped_file.exists) {
 						dependency_files.push_back(dependency->remapped_file.resource_path);
-						file_sizes[dependency->remapped_file.absolute_path.trim_prefix(base_dir)];
 					}
 
 					async_pck_data_initial_load[dependency->path] = dependency_dict;
+				}
+
+				for (ExportData::ResourceData &dependency : export_data.dependencies) {
+					if (dependency.native_file.exists) {
+						file_sizes[dependency.native_file.absolute_path.trim_prefix(base_dir)] = dependency.native_file.size;
+					}
+					if (dependency.remap_file.exists) {
+						file_sizes[dependency.remap_file.absolute_path.trim_prefix(base_dir)] = dependency.remap_file.size;
+					}
+					if (dependency.remapped_file.exists) {
+						file_sizes[dependency.remapped_file.absolute_path.trim_prefix(base_dir)] = dependency.remapped_file.size;
+					}
 				}
 			}
 		} break;

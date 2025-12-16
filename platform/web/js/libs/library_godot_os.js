@@ -66,6 +66,7 @@ const GodotConfig = {
 		on_exit: null,
 		mainPack: '',
 		asyncPckData: null,
+		fileSizes: null,
 
 		init_config: function (p_opts) {
 			GodotConfig.canvas_resize_policy = p_opts['canvasResizePolicy'];
@@ -78,6 +79,7 @@ const GodotConfig = {
 			GodotConfig.on_exit = p_opts['onExit'];
 			GodotConfig.mainPack = p_opts['mainPack'];
 			GodotConfig.asyncPckData = p_opts['asyncPckData'] ?? null;
+			GodotConfig.fileSizes = p_opts['fileSizes'] ?? null;
 			if (p_opts['focusCanvas']) {
 				GodotConfig.canvas.focus();
 			}
@@ -96,6 +98,7 @@ const GodotConfig = {
 			GodotConfig.on_exit = null;
 			GodotConfig.mainPack = '';
 			GodotConfig.asyncPckData = null;
+			GodotConfig.fileSizes = null;
 		},
 	},
 
@@ -366,7 +369,7 @@ class AsyncPckFile {
 			GodotRuntime.error(newError);
 
 			// Exponent wait.
-			await GodotOS._wait(GodotOS._asyncPckWaitTimeBaseMs * (2 ** pRetryCount), 'ms');
+			await GodotOS._wait(GodotOS._asyncPckWaitTimeBaseMs * 2 ** pRetryCount, 'ms');
 			return this._loadAttempt(pRetryCount + 1);
 		}
 	}
@@ -386,14 +389,14 @@ class AsyncPckFile {
 }
 
 class AsyncPckResource {
-	constructor(pAsyncPck, pPath, pFileDefinition, pDependencies) {
+	constructor(pAsyncPck, pPath, pDependencies) {
 		this.asyncPck = pAsyncPck;
 		this.path = pPath;
 		this.dependencies = pDependencies;
 
 		this.files = [];
-		for (const [filePath, fileProperties] of Object.entries(pFileDefinition['files'])) {
-			const asyncPckFile = new GodotOS.AsyncPckFile(pAsyncPck, filePath, fileProperties['size']);
+		for (const [filePath, fileDefinition] of Object.entries(pDependencies)) {
+			const asyncPckFile = new GodotOS.AsyncPckFile(pAsyncPck, filePath, fileDefinition['size']);
 			this.files.push(asyncPckFile);
 		}
 
@@ -511,20 +514,34 @@ class AsyncPckResource {
 
 	getAsJsonObject(pOptions = {}) {
 		const { withDependencies = true } = pOptions;
-		const jsonData = {
-		};
+		const jsonData = {};
 		if (withDependencies) {
 			const dependenciesResources = this.allDependenciesResources;
 			jsonData['files'] = {};
 			jsonData['files'][this.path] = this.getAsJsonObject({ withDependencies: false });
 			for (const dependencyResource of dependenciesResources) {
-				jsonData['files'][dependencyResource.path] = dependencyResource.getAsJsonObject({ withDependencies: false });
+				jsonData['files'][dependencyResource.path] = dependencyResource.getAsJsonObject({
+					withDependencies: false,
+				});
 			}
-			jsonData['size'] = this.size + dependenciesResources.reduce((pAccumulator, pDependencyResource) => pAccumulator + pDependencyResource.size, 0);
-			jsonData['downloaded'] = this.downloaded + dependenciesResources.reduce((pAccumulator, pDependencyResource) => pAccumulator + pDependencyResource.downloaded, 0);
+			jsonData['size']
+				= this.size
+				+ dependenciesResources.reduce(
+					(pAccumulator, pDependencyResource) => pAccumulator + pDependencyResource.size,
+					0
+				);
+			jsonData['downloaded']
+				= this.downloaded
+				+ dependenciesResources.reduce(
+					(pAccumulator, pDependencyResource) => pAccumulator + pDependencyResource.downloaded,
+					0
+				);
 
 			let status = this.status;
-			if (status == GodotOS.AsyncPckFile.Status.STATUS_IDLE || this.status == GodotOS.AsyncPckFile.Status.STATUS_INSTALLED) {
+			if (
+				status == GodotOS.AsyncPckFile.Status.STATUS_IDLE
+				|| this.status == GodotOS.AsyncPckFile.Status.STATUS_INSTALLED
+			) {
 				if (dependenciesResources.find(GodotOS.AsyncPckResource.isStatusError) != null) {
 					status = GodotOS.AsyncPckFile.Status.STATUS_ERROR;
 				}
@@ -620,14 +637,27 @@ const _GodotOS = {
 
 		initAsyncPck: function () {
 			const data = GodotConfig.asyncPckData;
+			const fileSizes = GodotConfig.fileSizes;
 
 			const initialLoad = data['initialLoad'];
 			for (const [resourceKey, resourceValue] of Object.entries(initialLoad)) {
+				const dependencies = {};
+				for (const resourceDependency of resourceValue['files']) {
+					let assetsPath = data.directories.assets;
+					if (!assetsPath.endsWith('/')) {
+						assetsPath += '/';
+					}
+					const fileSizePath = assetsPath + resourceDependency.substring('res://'.length);
+					dependencies[resourceDependency] = {
+						size: fileSizes[fileSizePath],
+					};
+				}
 				let asyncPckResource = GodotOS.asyncPckGetAsyncPckResource(GodotOS._mainPack, resourceKey);
 				if (asyncPckResource != null) {
 					continue;
 				}
-				asyncPckResource = new GodotOS.AsyncPckResource(GodotOS._mainPack, resourceKey, resourceValue, resourceValue['files']);
+
+				asyncPckResource = new GodotOS.AsyncPckResource(GodotOS._mainPack, resourceKey, dependencies);
 				asyncPckResource.insertInInstallMap();
 				asyncPckResource.flagAsInstalled();
 			}
@@ -667,7 +697,10 @@ const _GodotOS = {
 		},
 
 		asyncPckFetch: async function (...pArgs) {
-			return await GodotOS?._asyncPckConcurrencyQueueManager?.queue(() => fetch(...pArgs));
+			if (GodotOS._asyncPckConcurrencyQueueManager == null) {
+				throw new ReferenceError('`GodotOS._asyncPckConcurrencyQueueManager` is null.');
+			}
+			return await GodotOS._asyncPckConcurrencyQueueManager.queue(() => fetch(...pArgs));
 		},
 
 		asyncPckGetAsyncpckAssetsDir: function (pPckDir) {
@@ -712,14 +745,18 @@ const _GodotOS = {
 
 			const remapResponseJson = await depsJsonResponse.json();
 			const resources = remapResponseJson['resources'];
-			const dependencies = remapResponseJson['dependencies'];
-			const resourceKeys = Object.keys(resources);
+			const resourceFiles = resources['files'];
 			const createdAsyncPckResources = [];
-			for (const resourceKey of resourceKeys) {
-				asyncPckResource = new GodotOS.AsyncPckResource(pPckDir, resourceKey, resources[resourceKey], dependencies[resourceKey]);
-				asyncPckResource.insertInInstallMap();
-				createdAsyncPckResources.push(asyncPckResource);
-			}
+			asyncPckResource = new GodotOS.AsyncPckResource(pPckDir, path, resourceFiles);
+			asyncPckResource.insertInInstallMap();
+			createdAsyncPckResources.push(asyncPckResource);
+
+			// for (const resourceKey of resourceKeys) {
+			//  // const fileDefinition = Object.assign({}, );
+			//  asyncPckResource = new GodotOS.AsyncPckResource(pPckDir, resourceKey, dependencies[resourceKey]);
+			//  asyncPckResource.insertInInstallMap();
+			//  createdAsyncPckResources.push(asyncPckResource);
+			// }
 
 			await Promise.allSettled(
 				createdAsyncPckResources.map(async (pAsyncPckResource) => {
