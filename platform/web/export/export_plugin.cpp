@@ -932,7 +932,11 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 			pck_path = base_path + ".asyncpck";
 
 			if (DirAccess::dir_exists_absolute(pck_path)) {
-				print_line(vformat("pck_path exists: %s", pck_path));
+				Ref<DirAccess> pck_path_access = DirAccess::create_for_path(pck_path);
+				pck_path_access->change_dir(pck_path);
+				pck_path_access->erase_contents_recursive();
+				pck_path_access->change_dir("..");
+				pck_path_access->remove_absolute(pck_path);
 			}
 
 			ExportData export_data;
