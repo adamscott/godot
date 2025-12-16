@@ -42,6 +42,7 @@
 #include "core/io/resource_uid.h"
 #include "core/os/memory.h"
 #include "core/string/fuzzy_search.h"
+#include "core/string/string_builder.h"
 #include "core/variant/dictionary.h"
 #include "editor/editor_node.h"
 #include "editor/export/editor_export_platform.h"
@@ -1094,7 +1095,6 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 							const String &path = dependency.path;
 							bool add_as_initial_load = false;
 							for (const String &in_filter : initial_load_in_filters) {
-								// print_line(vformat("comparing in: \"%s\" to \"%s\"", path, in_filter));
 								if (path.matchn(in_filter) || path.trim_prefix(PREFIX_RES).matchn(in_filter)) {
 									add_as_initial_load = true;
 									break;
@@ -1102,7 +1102,6 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 							}
 
 							for (const String &ex_filter : initial_load_ex_filters) {
-								// print_line(vformat("comparing ex: \"%s\" to \"%s\"", path, ex_filter));
 								if (path.matchn(ex_filter) || path.trim_prefix(PREFIX_RES).matchn(ex_filter)) {
 									add_as_initial_load = false;
 									break;
@@ -1137,45 +1136,63 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 						if (dependency->remap_file.exists || dependency->native_file.exists) {
 							initial_load_assets.insert(dependency);
 						}
-						initial_load_paths.push_back(dependency->path);
 					}
 
-					initial_load_paths.sort();
-					for (const String &initial_load_path : initial_load_paths) {
-						add_message(EditorExportPlatformData::EXPORT_MESSAGE_INFO, TTR("Initial load"), vformat("%s", initial_load_path));
-					}
-
-					struct InitialLoadAssetLogData {
-						String path;
-						uint64_t size;
-					};
-					LocalVector<InitialLoadAssetLogData> initial_load_assets_data;
-
+					LocalVector<const ExportData::ResourceData *> initial_load_assets_data;
 					for (const ExportData::ResourceData *initial_load_asset : initial_load_assets) {
+						initial_load_assets_data.push_back(initial_load_asset);
+					}
+
+					struct ResourceDataComparator {
+						_ALWAYS_INLINE_ bool operator()(const ExportData::ResourceData *p_a, const ExportData::ResourceData *p_b) const {
+							return FileNoCaseComparator()(p_a->path, p_b->path);
+						}
+					};
+					initial_load_assets_data.sort_custom<ResourceDataComparator>();
+
+					StringBuilder log_entry_builder;
+					log_entry_builder.append("Files that will be initially loaded:\n");
+					String new_line_char = "\n";
+
+					uint64_t initial_load_assets_size = initial_load_assets_data.size();
+					for (uint64_t i = 0; i < initial_load_assets_size; i++) {
+						const ExportData::ResourceData *initial_load_asset = initial_load_assets_data[i];
+
 						uint64_t asset_size = 0;
 						if (initial_load_asset->remap_file.exists) {
 							asset_size += initial_load_asset->remap_file.size;
-							initial_load_assets_data.push_back({ initial_load_asset->remap_file.resource_path, initial_load_asset->remap_file.size });
 							asset_size += initial_load_asset->remapped_file.size;
-							initial_load_assets_data.push_back({ initial_load_asset->remapped_file.resource_path, initial_load_asset->remapped_file.size });
 						} else if (initial_load_asset->native_file.exists) {
 							asset_size += initial_load_asset->native_file.size;
-							initial_load_assets_data.push_back({ initial_load_asset->native_file.resource_path, initial_load_asset->native_file.size });
 						} else {
 							ERR_FAIL_V(ERR_BUG);
 						}
+
+						String fork_char = i < initial_load_assets_size - 1
+								? "├"
+								: "└";
+						String parent_tree_line = i < initial_load_assets_size - 1
+								? "|"
+								: " ";
+
+						log_entry_builder.append(vformat(UR"*(%s── 📥 "%s" [%s]%s)*", fork_char, initial_load_asset->path, String::humanize_size(asset_size), new_line_char));
+
+						if (initial_load_asset->remap_file.exists) {
+							log_entry_builder.append(vformat(UR"*(%s    ├ 📤 "%s" [%s]%s)*", parent_tree_line, initial_load_asset->remap_file.resource_path, String::humanize_size(initial_load_asset->remap_file.size), new_line_char));
+							log_entry_builder.append(vformat(UR"*(%s    └ 📤 "%s" [%s]%s)*", parent_tree_line, initial_load_asset->remapped_file.resource_path, String::humanize_size(initial_load_asset->remapped_file.size), new_line_char));
+						} else if (initial_load_asset->native_file.exists) {
+							log_entry_builder.append(vformat(UR"*(%s    └ 📤 "%s" [%s]%s)*", parent_tree_line, initial_load_asset->native_file.resource_path, String::humanize_size(initial_load_asset->native_file.size), new_line_char));
+						}
+
 						total_size += asset_size;
 					}
 
-					struct InitialLoadAssetLogDataComparator {
-						_ALWAYS_INLINE_ bool operator()(const InitialLoadAssetLogData &p_a, const InitialLoadAssetLogData &p_b) const {
-							return FileNoCaseComparator()(p_a.path, p_b.path);
-						}
-					};
-					initial_load_assets_data.sort_custom<InitialLoadAssetLogDataComparator>();
-					for (const InitialLoadAssetLogData &initial_load_asset_data : initial_load_assets_data) {
-						add_message(EditorExportPlatformData::EXPORT_MESSAGE_INFO, TTR("Initial load asset"), vformat("%s (%s)", initial_load_asset_data.path, String::humanize_size(initial_load_asset_data.size)));
-					}
+					log_entry_builder.append("If some files seem to be missing from this list, be sure to edit \"async/initial_load_forced_files*\" in the preset settings.\n");
+					log_entry_builder.append("For files not in this list, you will need to call `OS.asyncpck_install_file()` beforehand.\n");
+					log_entry_builder.append("\n");
+					log_entry_builder.append(vformat("Total initial load size: %s", String::humanize_size(total_size)));
+
+					add_message(EditorExportPlatformData::EXPORT_MESSAGE_INFO, TTR("Initial load asset"), log_entry_builder.as_string());
 				}
 
 				{
@@ -1213,8 +1230,6 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 
 					async_pck_data_initial_load[dependency->path] = dependency_dict;
 				}
-
-				add_message(EditorExportPlatformData::EXPORT_MESSAGE_INFO, TTR("Initial load asset (total size)"), vformat("%s", String::humanize_size(total_size)));
 			}
 		} break;
 
