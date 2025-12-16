@@ -1176,11 +1176,11 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 						}
 
 						String fork_char = i < initial_load_assets_size - 1
-								? "├"
-								: "└";
+								? U"├"
+								: U"└";
 						String parent_tree_line = i < initial_load_assets_size - 1
-								? "|"
-								: " ";
+								? U"|"
+								: U" ";
 
 						log_entry_builder.append(vformat(UR"*(%s── 📥 "%s" [%s]%s)*", fork_char, initial_load_asset->path, String::humanize_size(asset_size), new_line_char));
 
