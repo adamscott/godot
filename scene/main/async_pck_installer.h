@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  async_installer.h                                                     */
+/*  async_pck_installer.h                                                 */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -32,15 +32,19 @@
 
 #include "scene/main/node.h"
 
-class AsyncInstaller : public Node {
-	GDCLASS(AsyncInstaller, Node);
+class AsyncPckInstaller : public Node {
+	GDCLASS(AsyncPckInstaller, Node);
 
-	enum AsyncInstallerState {
-		ASYNC_INSTALLER_STATE_IDLE,
-		ASYNC_INSTALLER_STATE_LOADING,
-		ASYNC_INSTALLER_STATE_INSTALLED,
+public:
+	enum AsyncPckInstallerState {
+		ASYNC_PCK_INSTALLER_STATE_IDLE,
+		ASYNC_PCK_INSTALLER_STATE_LOADING,
+		ASYNC_PCK_INSTALLER_STATE_INSTALLED,
+		ASYNC_PCK_INSTALLER_STATE_ERROR,
+		ASYNC_PCK_INSTALLER_STATE_MAX,
 	};
 
+private:
 	PackedStringArray file_paths;
 	bool autostart = false;
 
@@ -56,4 +60,6 @@ public:
 
 	void set_file_paths(const PackedStringArray &p_resources_paths);
 	PackedStringArray get_file_paths() const;
+
+	AsyncPckInstallerState get_state() const;
 };
