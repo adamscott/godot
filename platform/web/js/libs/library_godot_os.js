@@ -575,7 +575,7 @@ class AsyncPCKResource {
 				);
 			let jsonDataProgressRatio = 0;
 			if (jsonDataSize > 0) {
-				jsonDataProgressRatio = jsonDataSize / jsonDataProgress;
+				jsonDataProgressRatio = jsonDataProgress / jsonDataSize;
 			}
 
 			const jsonDataErrors = this.errors.concat(dependenciesResources.map((pDependencyResource) => pDependencyResource.errors));

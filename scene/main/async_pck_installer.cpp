@@ -124,7 +124,7 @@ void AsyncPCKInstaller::update() {
 	files_progress[KEY_SIZE] = size_total;
 	files_progress[KEY_PROGRESS] = progress_total;
 	if (size_total > 0) {
-		progress_ratio = (double)size_total / (double)progress_total;
+		progress_ratio = (double)progress_total / (double)size_total;
 	}
 	files_progress[KEY_PROGRESS_RATIO] = progress_ratio;
 
