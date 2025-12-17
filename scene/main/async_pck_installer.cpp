@@ -128,7 +128,7 @@ void AsyncPCKInstaller::update() {
 	}
 	files_progress[KEY_PROGRESS_RATIO] = progress_ratio;
 
-	emit_signal(SIGNAL_FILE_ASYNC_PCK_PROGRESS, files_progress);
+	emit_signal(SIGNAL_FILES_ASYNC_PCK_PROGRESS, file_paths, files_progress);
 }
 
 void AsyncPCKInstaller::start() {
