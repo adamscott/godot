@@ -67,8 +67,36 @@ void AsyncPCKInstaller::update() {
 		return;
 	}
 
+	const static String KEY_FILES = "files";
+	const static String KEY_STATUS = "status";
+
+	const static String STATUS_IDLE = "STATUS_IDLE";
+	const static String STATUS_LOADING = "STATUS_LOADING";
+	const static String STATUS_ERROR = "STATUS_ERROR";
+	const static String STATUS_INSTALLED = "STATUS_INSTALLED";
+
+	HashMap<String, Dictionary> paths_status;
+
 	for (const KeyValue<String, InstallerState> &key_value : paths_state) {
-		Dictionary value = OS::get_singleton()->async_pck_install_file_get_status(key_value.key);
+		Dictionary status = OS::get_singleton()->async_pck_install_file_get_status(key_value.key);
+		Dictionary files = status[KEY_FILES];
+		for (const KeyValue<Variant, Variant> &key_value : files) {
+			if (paths_status.has(key_value.key)) {
+				continue;
+			}
+			paths_status.insert(key_value.key, key_value.value);
+		}
+
+		String status_status = status[KEY_STATUS];
+		if (status_status == STATUS_IDLE) {
+			set_path_state(key_value.key, INSTALLER_STATE_IDLE);
+		} else if (status_status == STATUS_LOADING) {
+			set_path_state(key_value.key, INSTALLER_STATE_LOADING);
+		} else if (status_status == STATUS_ERROR) {
+			set_path_state(key_value.key, INSTALLER_STATE_ERROR);
+		} else if (status_status == STATUS_INSTALLED) {
+			set_path_state(key_value.key, INSTALLER_STATE_INSTALLED);
+		}
 	}
 }
 
