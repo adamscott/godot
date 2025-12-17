@@ -147,13 +147,13 @@ void AsyncPCKInstaller::start() {
 			}
 		}
 		if (!has_error) {
-			emit_signal(SIGNAL_FILES_ASYNC_PCK_INSTALLED);
+			emit_signal(SIGNAL_FILES_ASYNC_PCK_INSTALLED, file_paths);
 		}
 		return;
 	}
 
 	if (file_paths.is_empty()) {
-		emit_signal(SIGNAL_FILES_ASYNC_PCK_INSTALLED);
+		emit_signal(SIGNAL_FILES_ASYNC_PCK_INSTALLED, file_paths);
 		return;
 	}
 
