@@ -260,6 +260,7 @@ class AsyncPCKFile {
 		this._progress = 0;
 		this._progressRatio = 0;
 		this._loadPromise = null;
+		this._error = null;
 	}
 
 	get status() {
@@ -276,6 +277,10 @@ class AsyncPCKFile {
 
 	get progressRatio() {
 		return this._progressRatio;
+	}
+
+	get error() {
+		return this._error;
 	}
 
 	_addToProgress(pAddedBytes) {
@@ -332,6 +337,7 @@ class AsyncPCKFile {
 				`AsyncPCKFile "${this.path}" (of AsyncPck "${this.asyncPCK}"): error while loading "${this.localPath}"`
 			);
 			newError.cause = err;
+			this._error = newError;
 			throw newError;
 		} finally {
 			this._loadPromise = null;
@@ -379,6 +385,7 @@ class AsyncPCKFile {
 			}
 
 			GodotRuntime.error(newError);
+			this._error = newError;
 
 			// Exponent wait.
 			await GodotOS._wait(GodotOS._asyncPCKWaitTimeBaseMs * 2 ** pRetryCount, 'ms');
@@ -391,12 +398,18 @@ class AsyncPCKFile {
 	}
 
 	getAsJsonObject() {
+		let error = '';
+		if (this._error != null) {
+			error = this._error.message;
+		}
+
 		return {
 			local_path: this.localPath,
 			status: this._status,
 			size: this._size,
 			progress: this._progress,
 			progress_ratio: this._progressRatio,
+			error,
 		};
 	}
 }
@@ -443,6 +456,12 @@ class AsyncPCKResource {
 			return GodotOS.AsyncPCKFile.Status.STATUS_LOADING;
 		}
 		return GodotOS.AsyncPCKFile.Status.STATUS_IDLE;
+	}
+
+	get errors() {
+		return this.files.filter(GodotOS.AsyncPCKResource.isStatusError)
+			.map((pFile) => pFile.error)
+			.filter((pFileError) => pFileError !== '');
 	}
 
 	get allDependencies() {
@@ -559,9 +578,12 @@ class AsyncPCKResource {
 				jsonDataProgressRatio = jsonDataSize / jsonDataProgress;
 			}
 
+			const jsonDataErrors = this.errors.concat(dependenciesResources.map((pDependencyResource) => pDependencyResource.errors));
+
 			jsonData['size'] = jsonDataSize;
 			jsonData['progress'] = jsonDataProgress;
 			jsonData['progress_ratio'] = jsonDataProgressRatio;
+			jsonData['errors'] = jsonDataErrors;
 
 			let status = this.status;
 			if (
@@ -584,6 +606,7 @@ class AsyncPCKResource {
 			jsonData['progress'] = this.progress;
 			jsonData['progress_ratio'] = this.progressRatio;
 			jsonData['status'] = this.status;
+			jsonData['errors'] = this.errors;
 		}
 
 		return jsonData;
@@ -797,6 +820,7 @@ const _GodotOS = {
 				return null;
 			}
 			const jsonObject = asyncPCKResource.getAsJsonObject();
+			window['console'].log(jsonObject);
 			return jsonObject;
 		},
 	},
