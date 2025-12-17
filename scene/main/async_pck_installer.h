@@ -43,19 +43,19 @@ class AsyncPCKInstaller : public Node {
 	const static inline String SIGNAL_FILES_ASYNC_PCK_PROGRESS = "files_async_pck_progress";
 
 public:
-	enum InstallerState {
-		INSTALLER_STATE_IDLE,
-		INSTALLER_STATE_LOADING,
-		INSTALLER_STATE_INSTALLED,
-		INSTALLER_STATE_ERROR,
-		INSTALLER_STATE_MAX,
+	enum InstallerStatus {
+		INSTALLER_STATUS_IDLE,
+		INSTALLER_STATUS_LOADING,
+		INSTALLER_STATUS_INSTALLED,
+		INSTALLER_STATUS_ERROR,
+		INSTALLER_STATUS_MAX,
 	};
 
 private:
 	PackedStringArray file_paths;
 	bool autostart = false;
 
-	HashMap<String, InstallerState> paths_state;
+	HashMap<String, InstallerStatus> paths_state;
 
 protected:
 	void _notification(int p_what);
@@ -63,7 +63,7 @@ protected:
 
 	void update();
 
-	void set_path_state(const String &p_path, InstallerState p_state);
+	void set_path_status(const String &p_path, InstallerStatus p_status);
 
 public:
 	void start();
@@ -74,7 +74,7 @@ public:
 	void set_file_paths(const PackedStringArray &p_resources_paths);
 	PackedStringArray get_file_paths() const;
 
-	InstallerState get_state() const;
+	InstallerStatus get_status() const;
 };
 
-VARIANT_ENUM_CAST(AsyncPCKInstaller::InstallerState);
+VARIANT_ENUM_CAST(AsyncPCKInstaller::InstallerStatus);

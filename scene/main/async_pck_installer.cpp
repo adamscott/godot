@@ -60,44 +60,75 @@ void AsyncPCKInstaller::_notification(int p_what) {
 }
 
 void AsyncPCKInstaller::update() {
-	InstallerState current_state = get_state();
+	InstallerStatus current_state = get_status();
 
-	if (current_state != INSTALLER_STATE_LOADING) {
+	if (current_state != INSTALLER_STATUS_LOADING) {
 		set_process(false);
 		return;
 	}
 
 	const static String KEY_FILES = "files";
 	const static String KEY_STATUS = "status";
+	const static String KEY_SIZE = "size";
+	const static String KEY_PROGRESS = "progress";
+	const static String KEY_PROGRESS_RATIO = "progress_ratio";
 
 	const static String STATUS_IDLE = "STATUS_IDLE";
 	const static String STATUS_LOADING = "STATUS_LOADING";
 	const static String STATUS_ERROR = "STATUS_ERROR";
 	const static String STATUS_INSTALLED = "STATUS_INSTALLED";
 
-	HashMap<String, Dictionary> paths_status;
+	HashMap<String, Dictionary> files_status;
 
-	for (const KeyValue<String, InstallerState> &key_value : paths_state) {
+	for (const KeyValue<String, InstallerStatus> &key_value : paths_state) {
 		Dictionary status = OS::get_singleton()->async_pck_install_file_get_status(key_value.key);
 		Dictionary files = status[KEY_FILES];
-		for (const KeyValue<Variant, Variant> &key_value : files) {
-			if (paths_status.has(key_value.key)) {
+		for (const KeyValue<Variant, Variant> &file_key_value : files) {
+			if (files_status.has(file_key_value.key)) {
 				continue;
 			}
-			paths_status.insert(key_value.key, key_value.value);
+			files_status.insert(file_key_value.key, file_key_value.value);
 		}
 
 		String status_status = status[KEY_STATUS];
 		if (status_status == STATUS_IDLE) {
-			set_path_state(key_value.key, INSTALLER_STATE_IDLE);
+			set_path_status(key_value.key, INSTALLER_STATUS_IDLE);
 		} else if (status_status == STATUS_LOADING) {
-			set_path_state(key_value.key, INSTALLER_STATE_LOADING);
+			set_path_status(key_value.key, INSTALLER_STATUS_LOADING);
 		} else if (status_status == STATUS_ERROR) {
-			set_path_state(key_value.key, INSTALLER_STATE_ERROR);
+			set_path_status(key_value.key, INSTALLER_STATUS_ERROR);
 		} else if (status_status == STATUS_INSTALLED) {
-			set_path_state(key_value.key, INSTALLER_STATE_INSTALLED);
+			set_path_status(key_value.key, INSTALLER_STATUS_INSTALLED);
 		}
+
+		Dictionary file_progress;
+		file_progress[KEY_STATUS] = status_status;
+		file_progress[KEY_SIZE] = status[KEY_SIZE];
+		file_progress[KEY_PROGRESS] = status[KEY_PROGRESS];
+		file_progress[KEY_PROGRESS_RATIO] = status[KEY_PROGRESS_RATIO];
+
+		emit_signal(SIGNAL_FILE_ASYNC_PCK_PROGRESS, key_value.key, file_progress);
 	}
+
+	uint64_t progress_total = 0;
+	uint64_t size_total = 0;
+	double progress_ratio = 0;
+
+	for (const KeyValue<String, Dictionary> &key_value : files_status) {
+		size_total += (uint64_t)key_value.value[KEY_SIZE];
+		progress_total += (uint64_t)key_value.value[KEY_PROGRESS];
+	}
+
+	Dictionary files_progress;
+	files_progress[KEY_STATUS] = get_status();
+	files_progress[KEY_SIZE] = size_total;
+	files_progress[KEY_PROGRESS] = progress_total;
+	if (size_total > 0) {
+		progress_ratio = (double)size_total / (double)progress_total;
+	}
+	files_progress[KEY_PROGRESS_RATIO] = progress_ratio;
+
+	emit_signal(SIGNAL_FILE_ASYNC_PCK_PROGRESS, files_progress);
 }
 
 void AsyncPCKInstaller::start() {
@@ -109,10 +140,10 @@ void AsyncPCKInstaller::start() {
 		bool has_error = false;
 		for (const String &file_path : file_paths) {
 			if (FileAccess::exists(file_path)) {
-				set_path_state(file_path, INSTALLER_STATE_INSTALLED);
+				set_path_status(file_path, INSTALLER_STATUS_INSTALLED);
 			} else {
 				has_error = true;
-				set_path_state(file_path, INSTALLER_STATE_ERROR);
+				set_path_status(file_path, INSTALLER_STATUS_ERROR);
 			}
 		}
 		if (!has_error) {
@@ -129,9 +160,9 @@ void AsyncPCKInstaller::start() {
 	for (const String &file_path : file_paths) {
 		Error err = OS::get_singleton()->async_pck_install_file(file_path);
 		if (err == OK) {
-			set_path_state(file_path, INSTALLER_STATE_LOADING);
+			set_path_status(file_path, INSTALLER_STATUS_LOADING);
 		} else {
-			set_path_state(file_path, INSTALLER_STATE_ERROR);
+			set_path_status(file_path, INSTALLER_STATUS_ERROR);
 			return;
 		}
 	}
@@ -139,7 +170,7 @@ void AsyncPCKInstaller::start() {
 	set_process(true);
 }
 
-void AsyncPCKInstaller::set_path_state(const String &p_path, InstallerState p_state) {
+void AsyncPCKInstaller::set_path_status(const String &p_path, InstallerStatus p_state) {
 	ERR_FAIL_COND_MSG(!file_paths.has(p_path), vformat(R"*("%s" is not in `file_paths`.)*", p_path));
 	bool value_updated = false;
 
@@ -155,18 +186,18 @@ void AsyncPCKInstaller::set_path_state(const String &p_path, InstallerState p_st
 	}
 
 	switch (p_state) {
-		case INSTALLER_STATE_INSTALLED: {
+		case INSTALLER_STATUS_INSTALLED: {
 			emit_signal(SIGNAL_FILE_ASYNC_PCK_INSTALLED, p_path);
 		} break;
-		case INSTALLER_STATE_ERROR: {
+		case INSTALLER_STATUS_ERROR: {
 			emit_signal(SIGNAL_FILE_ASYNC_PCK_ERROR, p_path);
 		} break;
-		case INSTALLER_STATE_LOADING:
-		case INSTALLER_STATE_IDLE: {
+		case INSTALLER_STATUS_LOADING:
+		case INSTALLER_STATUS_IDLE: {
 			// Do nothing.
 			// No signal for starting loading, only on "progress".
 		} break;
-		case INSTALLER_STATE_MAX: {
+		case INSTALLER_STATUS_MAX: {
 			ERR_FAIL_MSG("Cannot set to path state to `AsyncPckInstaller::InstallerState::INSTALLER_STATE_MAX`");
 		} break;
 	}
@@ -188,7 +219,7 @@ void AsyncPCKInstaller::set_file_paths(const PackedStringArray &p_file_paths) {
 	file_paths = p_file_paths;
 
 	LocalVector<String> paths_to_remove;
-	for (const KeyValue<String, InstallerState> &key_value : paths_state) {
+	for (const KeyValue<String, InstallerStatus> &key_value : paths_state) {
 		if (file_paths.has(key_value.key)) {
 			continue;
 		}
@@ -204,98 +235,98 @@ PackedStringArray AsyncPCKInstaller::get_file_paths() const {
 	return file_paths;
 }
 
-AsyncPCKInstaller::InstallerState AsyncPCKInstaller::get_state() const {
-	InstallerState state = INSTALLER_STATE_IDLE;
+AsyncPCKInstaller::InstallerStatus AsyncPCKInstaller::get_status() const {
+	InstallerStatus status = INSTALLER_STATUS_IDLE;
 
 	if (paths_state.is_empty()) {
-		return INSTALLER_STATE_INSTALLED;
+		return INSTALLER_STATUS_INSTALLED;
 	}
 
-	for (const KeyValue<String, InstallerState> &key_value : paths_state) {
-#define CASE_INSTALLER_STATE_MAX           \
-	case INSTALLER_STATE_MAX: {            \
-		ERR_FAIL_V(INSTALLER_STATE_ERROR); \
+	for (const KeyValue<String, InstallerStatus> &key_value : paths_state) {
+#define CASE_INSTALLER_STATUS_MAX           \
+	case INSTALLER_STATUS_MAX: {            \
+		ERR_FAIL_V(INSTALLER_STATUS_ERROR); \
 	} break
 
-		switch (state) {
-			case INSTALLER_STATE_IDLE: {
+		switch (status) {
+			case INSTALLER_STATUS_IDLE: {
 				switch (key_value.value) {
-					case INSTALLER_STATE_IDLE: {
+					case INSTALLER_STATUS_IDLE: {
 						// Do nothing, the state is the same.
 					} break;
 
-					case INSTALLER_STATE_LOADING:
-					case INSTALLER_STATE_INSTALLED: {
-						state = key_value.value;
+					case INSTALLER_STATUS_LOADING:
+					case INSTALLER_STATUS_INSTALLED: {
+						status = key_value.value;
 					} break;
 
-					case INSTALLER_STATE_ERROR: {
-						return INSTALLER_STATE_ERROR;
+					case INSTALLER_STATUS_ERROR: {
+						return INSTALLER_STATUS_ERROR;
 					} break;
 
-						CASE_INSTALLER_STATE_MAX;
+						CASE_INSTALLER_STATUS_MAX;
 				}
 			} break;
 
-			case INSTALLER_STATE_LOADING: {
+			case INSTALLER_STATUS_LOADING: {
 				switch (key_value.value) {
-					case INSTALLER_STATE_LOADING: {
+					case INSTALLER_STATUS_LOADING: {
 						// Do nothing, the state is the same.
 					} break;
 
-					case INSTALLER_STATE_IDLE: {
+					case INSTALLER_STATUS_IDLE: {
 						// Huh? It reverted back to idle for some reason.
-						state = INSTALLER_STATE_IDLE;
+						status = INSTALLER_STATUS_IDLE;
 						print_error(vformat(R"*(Installer state for "%s" reverted from `INSTALLER_STATE_INSTALLED` to `INSTALLER_STATE_IDLE`)*", key_value.key));
 					} break;
 
-					case INSTALLER_STATE_INSTALLED: {
-						state = INSTALLER_STATE_INSTALLED;
+					case INSTALLER_STATUS_INSTALLED: {
+						status = INSTALLER_STATUS_INSTALLED;
 					} break;
 
-					case INSTALLER_STATE_ERROR: {
-						return INSTALLER_STATE_ERROR;
+					case INSTALLER_STATUS_ERROR: {
+						return INSTALLER_STATUS_ERROR;
 					} break;
 
-						CASE_INSTALLER_STATE_MAX;
+						CASE_INSTALLER_STATUS_MAX;
 				}
 			} break;
 
-			case INSTALLER_STATE_INSTALLED: {
+			case INSTALLER_STATUS_INSTALLED: {
 				switch (key_value.value) {
-					case INSTALLER_STATE_INSTALLED: {
+					case INSTALLER_STATUS_INSTALLED: {
 						// Do nothing, the state is the same.
 					} break;
 
-					case INSTALLER_STATE_IDLE:
-					case INSTALLER_STATE_LOADING: {
+					case INSTALLER_STATUS_IDLE:
+					case INSTALLER_STATUS_LOADING: {
 						// Huh? It reverted back to idle for some reason.
-						state = key_value.value;
-						String state_name = key_value.value == INSTALLER_STATE_IDLE
+						status = key_value.value;
+						String state_name = key_value.value == INSTALLER_STATUS_IDLE
 								? "IDLE"
 								: "LOADING";
 						print_error(vformat(R"*(Installer state for "%s" reverted from `INSTALLER_STATE_INSTALLED` to `INSTALLER_STATE_%s`)*", key_value.key, state_name));
 					} break;
 
-					case INSTALLER_STATE_ERROR: {
-						return INSTALLER_STATE_ERROR;
+					case INSTALLER_STATUS_ERROR: {
+						return INSTALLER_STATUS_ERROR;
 					} break;
 
-						CASE_INSTALLER_STATE_MAX;
+						CASE_INSTALLER_STATUS_MAX;
 				}
 			} break;
 
-			case INSTALLER_STATE_ERROR: {
-				return INSTALLER_STATE_ERROR;
+			case INSTALLER_STATUS_ERROR: {
+				return INSTALLER_STATUS_ERROR;
 			} break;
 
-				CASE_INSTALLER_STATE_MAX;
+				CASE_INSTALLER_STATUS_MAX;
 		}
 
-#undef CASE_INSTALLER_STATE_MAX
+#undef CASE_INSTALLER_STATUS_MAX
 	}
 
-	return state;
+	return status;
 }
 
 void AsyncPCKInstaller::_bind_methods() {
@@ -304,20 +335,20 @@ void AsyncPCKInstaller::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_resources_paths", "resources_paths"), &AsyncPCKInstaller::set_file_paths);
 	ClassDB::bind_method(D_METHOD("get_resources_paths"), &AsyncPCKInstaller::get_file_paths);
 
-	ClassDB::bind_method(D_METHOD("get_state"), &AsyncPCKInstaller::get_state);
+	ClassDB::bind_method(D_METHOD("get_status"), &AsyncPCKInstaller::get_status);
 
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "autostart"), "set_autostart", "get_autostart");
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_STRING_ARRAY, "resources_paths", PROPERTY_HINT_ARRAY_TYPE, MAKE_FILE_ARRAY_TYPE_HINT("*")), "set_resources_paths", "get_resources_paths");
 
-	ADD_SIGNAL(MethodInfo(SIGNAL_FILES_ASYNC_PCK_INSTALLED));
-	ADD_SIGNAL(MethodInfo(SIGNAL_FILE_ASYNC_PCK_INSTALLED, PropertyInfo(Variant::STRING, "file", PROPERTY_HINT_FILE_PATH, "*")));
-	ADD_SIGNAL(MethodInfo(SIGNAL_FILES_ASYNC_PCK_PROGRESS));
+	ADD_SIGNAL(MethodInfo(SIGNAL_FILES_ASYNC_PCK_INSTALLED, PropertyInfo(Variant::PACKED_STRING_ARRAY, "files", PROPERTY_HINT_ARRAY_TYPE, MAKE_FILE_ARRAY_TYPE_HINT("*"))));
+	ADD_SIGNAL(MethodInfo(SIGNAL_FILE_ASYNC_PCK_INSTALLED, PropertyInfo(Variant::STRING, "file", PROPERTY_HINT_FILE_PATH, "*"), PropertyInfo(Variant::DICTIONARY, "progress_status")));
+	ADD_SIGNAL(MethodInfo(SIGNAL_FILES_ASYNC_PCK_PROGRESS, PropertyInfo(Variant::PACKED_STRING_ARRAY, "files", PROPERTY_HINT_ARRAY_TYPE, MAKE_FILE_ARRAY_TYPE_HINT("*")), PropertyInfo(Variant::DICTIONARY, "progress_status")));
 	ADD_SIGNAL(MethodInfo(SIGNAL_FILE_ASYNC_PCK_PROGRESS, PropertyInfo(Variant::STRING, "file", PROPERTY_HINT_FILE_PATH, "*")));
 	ADD_SIGNAL(MethodInfo(SIGNAL_FILE_ASYNC_PCK_ERROR, PropertyInfo(Variant::STRING, "file", PROPERTY_HINT_FILE_PATH, "*")));
 
-	BIND_ENUM_CONSTANT(INSTALLER_STATE_IDLE);
-	BIND_ENUM_CONSTANT(INSTALLER_STATE_LOADING);
-	BIND_ENUM_CONSTANT(INSTALLER_STATE_INSTALLED);
-	BIND_ENUM_CONSTANT(INSTALLER_STATE_ERROR);
-	BIND_ENUM_CONSTANT(INSTALLER_STATE_MAX);
+	BIND_ENUM_CONSTANT(INSTALLER_STATUS_IDLE);
+	BIND_ENUM_CONSTANT(INSTALLER_STATUS_LOADING);
+	BIND_ENUM_CONSTANT(INSTALLER_STATUS_INSTALLED);
+	BIND_ENUM_CONSTANT(INSTALLER_STATUS_ERROR);
+	BIND_ENUM_CONSTANT(INSTALLER_STATUS_MAX);
 }
