@@ -392,11 +392,11 @@ class AsyncPCKFile {
 
 	getAsJsonObject() {
 		return {
-			localPath: this.localPath,
+			local_path: this.localPath,
 			status: this._status,
 			size: this._size,
 			progress: this._progress,
-			progressRatio: this._progressRatio,
+			progress_ratio: this._progressRatio,
 		};
 	}
 }
@@ -561,7 +561,7 @@ class AsyncPCKResource {
 
 			jsonData['size'] = jsonDataSize;
 			jsonData['progress'] = jsonDataProgress;
-			jsonData['progressRatio'] = jsonDataProgressRatio;
+			jsonData['progress_ratio'] = jsonDataProgressRatio;
 
 			let status = this.status;
 			if (
@@ -582,7 +582,7 @@ class AsyncPCKResource {
 		} else {
 			jsonData['size'] = this.size;
 			jsonData['progress'] = this.progress;
-			jsonData['progressRatio'] = this.progressRatio;
+			jsonData['progress_ratio'] = this.progressRatio;
 			jsonData['status'] = this.status;
 		}
 
