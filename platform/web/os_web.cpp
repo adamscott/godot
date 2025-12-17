@@ -171,7 +171,7 @@ Error OS_Web::async_pck_install_file(const String &p_path) const {
 	ERR_FAIL_COND_V_MSG(!path.begins_with("res://"), ERR_FILE_BAD_PATH, vformat(TTRC(R"*(Not able to install "%s" from an ".asyncpck".)*"), path));
 
 	Error err;
-	String pck_path = async_pck_get_asyncpck_path(path, &err);
+	String pck_path = async_pck_get_async_pck_path(path, &err);
 	if (err != OK) {
 		return err;
 	}
@@ -183,7 +183,7 @@ Dictionary OS_Web::async_pck_install_file_get_status(const String &p_path) const
 	String path = ResourceUID::ensure_path(p_path);
 
 	Error err;
-	String pck_path = async_pck_get_asyncpck_path(path, &err);
+	String pck_path = async_pck_get_async_pck_path(path, &err);
 	if (err != OK) {
 		return Dictionary();
 	}

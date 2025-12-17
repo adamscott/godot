@@ -127,7 +127,7 @@ protected:
 
 	virtual bool _check_internal_feature_support(const String &p_feature) = 0;
 
-	virtual String async_pck_get_asyncpck_path(const String &p_path, Error *r_error) const;
+	virtual String async_pck_get_async_pck_path(const String &p_path, Error *r_error) const;
 
 public:
 	typedef int64_t ProcessID;
