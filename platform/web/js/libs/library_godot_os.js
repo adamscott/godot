@@ -566,7 +566,7 @@ class AsyncPCKResource {
 			let status = this.status;
 			if (
 				status == GodotOS.AsyncPCKFile.Status.STATUS_IDLE
-				|| this.status == GodotOS.AsyncPCKFile.Status.STATUS_INSTALLED
+				|| status == GodotOS.AsyncPCKFile.Status.STATUS_INSTALLED
 			) {
 				if (dependenciesResources.find(GodotOS.AsyncPCKResource.isStatusError) != null) {
 					status = GodotOS.AsyncPCKFile.Status.STATUS_ERROR;
