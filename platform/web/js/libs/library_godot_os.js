@@ -257,7 +257,8 @@ class AsyncPCKFile {
 		this._status = GodotOS.AsyncPCKFile.Status.STATUS_IDLE;
 		this._installed = false;
 		this._size = pSize;
-		this._downloaded = 0;
+		this._progress = 0;
+		this._progressRatio = 0;
 		this._loadPromise = null;
 	}
 
@@ -269,18 +270,29 @@ class AsyncPCKFile {
 		return this._size;
 	}
 
-	get downloaded() {
-		return this._downloaded;
+	get progress() {
+		return this._progress;
 	}
 
-	_add_to_downloaded(pAddedBytes) {
-		this._set_downloaded(this._downloaded + pAddedBytes);
+	get progressRatio() {
+		return this._progressRatio;
 	}
 
-	_set_downloaded(pDownloaded) {
-		this._downloaded = pDownloaded;
-		if (this._downloaded > this.size) {
-			this.size = this._downloaded;
+	_addToProgress(pAddedBytes) {
+		this._setProgress(this._progress + pAddedBytes);
+	}
+
+	_setProgress(pProgress) {
+		let progress = pProgress;
+		if (progress <= 0) {
+			progress = 0;
+		}
+		this._progress = progress;
+		if (this._progress > this._size) {
+			this._size = progress;
+		}
+		if (this._size > 0) {
+			this._progressRatio = this._size / progress;
 		}
 	}
 
@@ -342,11 +354,11 @@ class AsyncPCKFile {
 				if (done) {
 					break;
 				}
-				this._add_to_downloaded(chunk.byteLength);
+				this._addToProgress(chunk.byteLength);
 				chunks.push(chunk);
 			}
 
-			const fileBuffer = new Uint8Array(this._downloaded);
+			const fileBuffer = new Uint8Array(this._progress);
 			let filePosition = 0;
 			for (const chunk of chunks) {
 				fileBuffer.set(chunk, filePosition);
@@ -383,7 +395,8 @@ class AsyncPCKFile {
 			localPath: this.localPath,
 			status: this._status,
 			size: this._size,
-			downloaded: this._downloaded,
+			progress: this._progress,
+			progressRatio: this._progressRatio,
 		};
 	}
 }
@@ -407,8 +420,16 @@ class AsyncPCKResource {
 		return this.files.reduce((pAccumulatorValue, pFile) => pAccumulatorValue + pFile.size, 0);
 	}
 
-	get downloaded() {
-		return this.files.reduce((pAccumulatorValue, pFile) => pAccumulatorValue + pFile.downloaded, 0);
+	get progress() {
+		return this.files.reduce((pAccumulatorValue, pFile) => pAccumulatorValue + pFile.progress, 0);
+	}
+
+	get progressRatio() {
+		const currentSize = this.size;
+		if (currentSize <= 0) {
+			return 0;
+		}
+		return this.progress / currentSize;
 	}
 
 	get status() {
@@ -433,11 +454,7 @@ class AsyncPCKResource {
 			}
 			asyncPckResource._getAllDependencies(dependenciesMap);
 		}
-		const dependencies = {};
-		for (const key of dependenciesMap.keys()) {
-			dependencies[key] = dependenciesMap.get(key);
-		}
-		return dependencies;
+		return Object.fromEntries(dependenciesMap);
 	}
 
 	_getAllDependencies(pDependenciesMap) {
@@ -524,18 +541,27 @@ class AsyncPCKResource {
 					withDependencies: false,
 				});
 			}
-			jsonData['size']
+
+			const jsonDataSize
 				= this.size
 				+ dependenciesResources.reduce(
 					(pAccumulator, pDependencyResource) => pAccumulator + pDependencyResource.size,
 					0
 				);
-			jsonData['downloaded']
-				= this.downloaded
+			const jsonDataProgress
+				= this.progress
 				+ dependenciesResources.reduce(
-					(pAccumulator, pDependencyResource) => pAccumulator + pDependencyResource.downloaded,
+					(pAccumulator, pDependencyResource) => pAccumulator + pDependencyResource.progress,
 					0
 				);
+			let jsonDataProgressRatio = 0;
+			if (jsonDataSize > 0) {
+				jsonDataProgressRatio = jsonDataSize / jsonDataProgress;
+			}
+
+			jsonData['size'] = jsonDataSize;
+			jsonData['progress'] = jsonDataProgress;
+			jsonData['progressRatio'] = jsonDataProgressRatio;
 
 			let status = this.status;
 			if (
@@ -555,7 +581,8 @@ class AsyncPCKResource {
 			jsonData['status'] = status;
 		} else {
 			jsonData['size'] = this.size;
-			jsonData['downloaded'] = this.downloaded;
+			jsonData['progress'] = this.progress;
+			jsonData['progressRatio'] = this.progressRatio;
 			jsonData['status'] = this.status;
 		}
 
@@ -729,7 +756,7 @@ const _GodotOS = {
 					asyncPCKResource.status != GodotOS.AsyncPCKFile.Status.STATUS_LOADING
 					&& asyncPCKResource.status != GodotOS.AsyncPCKFile.Status.STATUS_INSTALLED
 				) {
-					// GodotOS.AsyncPCKResource.load() returns it's loading promise if it exists.
+					// `GodotOS.AsyncPCKResource.load()` returns it's loading promise if it exists.
 					await asyncPCKResource.load();
 				}
 				return;
