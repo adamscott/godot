@@ -352,6 +352,9 @@ Dictionary EditorExportPlatformWeb::ExportData::get_deps_json_dictionary(const R
 		_l_add_deps_dependencies(dependency);
 	}
 
+	// Register the asked dependency itself.
+	_l_add_deps_dependencies(p_dependency);
+
 	return deps;
 }
 
