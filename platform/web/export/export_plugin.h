@@ -81,8 +81,8 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 			Dictionary get_as_dictionary() const {
 				Dictionary data;
 				data["size"] = size;
-				data["md5"] = md5;
-				data["sha256"] = sha256;
+				// data["md5"] = md5;
+				// data["sha256"] = sha256;
 				return data;
 			}
 		};
@@ -96,7 +96,6 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 
 			uint32_t get_size() const;
 			Dictionary get_as_resource_dictionary() const;
-			void merge_resource_dictionary(Dictionary &p_resource_dictionary) const;
 			String get_resource_path() const;
 			void flatten_dependencies(LocalVector<const ResourceData *> *p_deps) const;
 		};

@@ -97,7 +97,6 @@ void AsyncPckInstaller::start() {
 	}
 
 	for (const String &file_path : file_paths) {
-		print_line(vformat("asyncpck_install_file %s", file_path));
 		Error err = OS::get_singleton()->async_pck_install_file(file_path);
 		if (err == OK) {
 			set_path_state(file_path, INSTALLER_STATE_LOADING);

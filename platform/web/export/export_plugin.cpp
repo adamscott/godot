@@ -101,19 +101,6 @@ Dictionary EditorExportPlatformWeb::ExportData::ResourceData::get_as_resource_di
 	return data;
 }
 
-void EditorExportPlatformWeb::ExportData::ResourceData::merge_resource_dictionary(Dictionary &p_resource_dictionary) const {
-	if (native_file.exists) {
-		((Dictionary)p_resource_dictionary["files"])[native_file.resource_path] = native_file.get_as_dictionary();
-	}
-	if (remap_file.exists) {
-		((Dictionary)p_resource_dictionary["files"])[remap_file.resource_path] = remap_file.get_as_dictionary();
-	}
-	if (remapped_file.exists) {
-		((Dictionary)p_resource_dictionary["files"])[remapped_file.resource_path] = remapped_file.get_as_dictionary();
-	}
-	p_resource_dictionary["totalSize"] = (uint32_t)p_resource_dictionary["totalSize"] + get_size();
-}
-
 String EditorExportPlatformWeb::ExportData::ResourceData::get_resource_path() const {
 	if (remap_file.exists) {
 		return remap_file.resource_path;
@@ -330,9 +317,11 @@ void EditorExportPlatformWeb::ExportData::update_file(File *p_file, const String
 
 Dictionary EditorExportPlatformWeb::ExportData::get_deps_json_dictionary(const ResourceData *p_dependency) {
 	Dictionary deps;
+	Dictionary resources;
 
 	// Resources.
-	deps["resources"] = p_dependency->get_as_resource_dictionary();
+	deps["resources"] = resources;
+	resources[p_dependency->path] = p_dependency->get_as_resource_dictionary();
 
 	// Dependencies.
 	Dictionary deps_dependencies;
@@ -340,12 +329,11 @@ Dictionary EditorExportPlatformWeb::ExportData::get_deps_json_dictionary(const R
 
 	std::function<void(const ExportData::ResourceData *)> _l_add_deps_dependencies;
 	_l_add_deps_dependencies = [&](const ExportData::ResourceData *l_dependency) -> void {
-		Dictionary resources = deps["resources"];
-		l_dependency->merge_resource_dictionary(resources);
+		resources[l_dependency->path] = l_dependency->get_as_resource_dictionary();
 		LocalVector<const ExportData::ResourceData *> local_dependencies;
 		l_dependency->flatten_dependencies(&local_dependencies);
 
-		Array paths_array;
+		PackedStringArray paths_array;
 		deps_dependencies[l_dependency->path] = paths_array;
 		for (const ExportData::ResourceData *local_dependency : local_dependencies) {
 			if (local_dependency->path != l_dependency->path) {
@@ -355,7 +343,7 @@ Dictionary EditorExportPlatformWeb::ExportData::get_deps_json_dictionary(const R
 				_l_add_deps_dependencies(local_dependency);
 			}
 		}
-		paths_array.sort();
+		paths_array.sort_custom<FileNoCaseComparator>();
 	};
 
 	for (const ExportData::ResourceData *dependency : p_dependency->dependencies) {
@@ -1205,7 +1193,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 								? U"|"
 								: U" ";
 
-						log_entry_builder.append(vformat(UR"*(%s── 📥 "%s" [%s]%s)*", fork_char, initial_load_asset->path, String::humanize_size(asset_size), new_line_char));
+						log_entry_builder.append(vformat(UR"*(%s── 📦 "%s" [%s]%s)*", fork_char, initial_load_asset->path, String::humanize_size(asset_size), new_line_char));
 
 						if (initial_load_asset->remap_file.exists) {
 							log_entry_builder.append(vformat(UR"*(%s    ├ 📤 "%s" [%s]%s)*", parent_tree_line, initial_load_asset->remap_file.resource_path, String::humanize_size(initial_load_asset->remap_file.size), new_line_char));

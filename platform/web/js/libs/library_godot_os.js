@@ -745,18 +745,13 @@ const _GodotOS = {
 
 			const remapResponseJson = await depsJsonResponse.json();
 			const resources = remapResponseJson['resources'];
-			const resourceFiles = resources['files'];
-			const createdAsyncPckResources = [];
-			asyncPckResource = new GodotOS.AsyncPckResource(pPckDir, path, resourceFiles);
-			asyncPckResource.insertInInstallMap();
-			createdAsyncPckResources.push(asyncPckResource);
 
-			// for (const resourceKey of resourceKeys) {
-			//  // const fileDefinition = Object.assign({}, );
-			//  asyncPckResource = new GodotOS.AsyncPckResource(pPckDir, resourceKey, dependencies[resourceKey]);
-			//  asyncPckResource.insertInInstallMap();
-			//  createdAsyncPckResources.push(asyncPckResource);
-			// }
+			const createdAsyncPckResources = Object.entries(resources).map(([pResourcePath, pResourceDefinition]) => {
+				const resourceFiles = pResourceDefinition['files'];
+				asyncPckResource = new GodotOS.AsyncPckResource(pPckDir, pResourcePath, resourceFiles);
+				asyncPckResource.insertInInstallMap();
+				return asyncPckResource;
+			});
 
 			await Promise.allSettled(
 				createdAsyncPckResources.map(async (pAsyncPckResource) => {
