@@ -820,7 +820,6 @@ const _GodotOS = {
 				return null;
 			}
 			const jsonObject = asyncPCKResource.getAsJsonObject();
-			window['console'].log(jsonObject);
 			return jsonObject;
 		},
 	},
