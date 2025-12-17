@@ -32,8 +32,8 @@
 
 #include "scene/main/node.h"
 
-class AsyncPckInstaller : public Node {
-	GDCLASS(AsyncPckInstaller, Node);
+class AsyncPCKInstaller : public Node {
+	GDCLASS(AsyncPCKInstaller, Node);
 
 	const static inline String SIGNAL_FILE_ASYNC_PCK_INSTALLED = "file_async_pck_installed";
 	const static inline String SIGNAL_FILE_ASYNC_PCK_PROGRESS = "file_async_pck_progress";
@@ -77,4 +77,4 @@ public:
 	InstallerState get_state() const;
 };
 
-VARIANT_ENUM_CAST(AsyncPckInstaller::InstallerState);
+VARIANT_ENUM_CAST(AsyncPCKInstaller::InstallerState);

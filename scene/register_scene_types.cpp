@@ -456,7 +456,7 @@ void register_scene_types() {
 	GDREGISTER_CLASS(CanvasLayer);
 	GDREGISTER_CLASS(ResourcePreloader);
 	GDREGISTER_CLASS(Window);
-	GDREGISTER_CLASS(AsyncPckInstaller);
+	GDREGISTER_CLASS(AsyncPCKInstaller);
 
 	GDREGISTER_CLASS(StatusIndicator);
 

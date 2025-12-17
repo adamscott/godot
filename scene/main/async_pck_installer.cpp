@@ -38,7 +38,7 @@
 #include "core/variant/variant.h"
 #include "scene/main/node.h"
 
-void AsyncPckInstaller::_notification(int p_what) {
+void AsyncPCKInstaller::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_ENTER_TREE: {
 		} break;
@@ -58,7 +58,7 @@ void AsyncPckInstaller::_notification(int p_what) {
 	}
 }
 
-void AsyncPckInstaller::update() {
+void AsyncPCKInstaller::update() {
 	if (get_state() != INSTALLER_STATE_LOADING) {
 		set_process(false);
 		return;
@@ -66,11 +66,11 @@ void AsyncPckInstaller::update() {
 
 	for (const KeyValue<String, InstallerState> &key_value : paths_state) {
 		Dictionary value = OS::get_singleton()->async_pck_install_file_get_status(key_value.key);
-		print_line(vformat("AsyncPckInstaller::update() %s: %s", key_value.key, value));
+		print_line(vformat("AsyncPCKInstaller::update() %s: %s", key_value.key, value));
 	}
 }
 
-void AsyncPckInstaller::start() {
+void AsyncPCKInstaller::start() {
 	if (Engine::get_singleton()->is_editor_hint()) {
 		return;
 	}
@@ -109,7 +109,7 @@ void AsyncPckInstaller::start() {
 	set_process(true);
 }
 
-void AsyncPckInstaller::set_path_state(const String &p_path, InstallerState p_state) {
+void AsyncPCKInstaller::set_path_state(const String &p_path, InstallerState p_state) {
 	ERR_FAIL_COND_MSG(!file_paths.has(p_path), vformat(R"*("%s" is not in `file_paths`.)*", p_path));
 	bool value_updated = false;
 
@@ -142,15 +142,15 @@ void AsyncPckInstaller::set_path_state(const String &p_path, InstallerState p_st
 	}
 }
 
-void AsyncPckInstaller::set_autostart(bool p_autostart) {
+void AsyncPCKInstaller::set_autostart(bool p_autostart) {
 	autostart = p_autostart;
 }
 
-bool AsyncPckInstaller::get_autostart() const {
+bool AsyncPCKInstaller::get_autostart() const {
 	return autostart;
 }
 
-void AsyncPckInstaller::set_file_paths(const PackedStringArray &p_file_paths) {
+void AsyncPCKInstaller::set_file_paths(const PackedStringArray &p_file_paths) {
 	ERR_MAIN_THREAD_GUARD;
 	if (file_paths == p_file_paths) {
 		return;
@@ -170,11 +170,11 @@ void AsyncPckInstaller::set_file_paths(const PackedStringArray &p_file_paths) {
 	}
 }
 
-PackedStringArray AsyncPckInstaller::get_file_paths() const {
+PackedStringArray AsyncPCKInstaller::get_file_paths() const {
 	return file_paths;
 }
 
-AsyncPckInstaller::InstallerState AsyncPckInstaller::get_state() const {
+AsyncPCKInstaller::InstallerState AsyncPCKInstaller::get_state() const {
 	InstallerState state = INSTALLER_STATE_IDLE;
 
 	if (paths_state.is_empty()) {
@@ -233,13 +233,13 @@ AsyncPckInstaller::InstallerState AsyncPckInstaller::get_state() const {
 	return state;
 }
 
-void AsyncPckInstaller::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("set_autostart", "autostart"), &AsyncPckInstaller::set_autostart);
-	ClassDB::bind_method(D_METHOD("get_autostart"), &AsyncPckInstaller::get_autostart);
-	ClassDB::bind_method(D_METHOD("set_resources_paths", "resources_paths"), &AsyncPckInstaller::set_file_paths);
-	ClassDB::bind_method(D_METHOD("get_resources_paths"), &AsyncPckInstaller::get_file_paths);
+void AsyncPCKInstaller::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("set_autostart", "autostart"), &AsyncPCKInstaller::set_autostart);
+	ClassDB::bind_method(D_METHOD("get_autostart"), &AsyncPCKInstaller::get_autostart);
+	ClassDB::bind_method(D_METHOD("set_resources_paths", "resources_paths"), &AsyncPCKInstaller::set_file_paths);
+	ClassDB::bind_method(D_METHOD("get_resources_paths"), &AsyncPCKInstaller::get_file_paths);
 
-	ClassDB::bind_method(D_METHOD("get_state"), &AsyncPckInstaller::get_state);
+	ClassDB::bind_method(D_METHOD("get_state"), &AsyncPCKInstaller::get_state);
 
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "autostart"), "set_autostart", "get_autostart");
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_STRING_ARRAY, "resources_paths", PROPERTY_HINT_ARRAY_TYPE, MAKE_FILE_ARRAY_TYPE_HINT("*")), "set_resources_paths", "get_resources_paths");
