@@ -54,19 +54,21 @@ void AsyncPCKInstaller::_notification(int p_what) {
 		} break;
 
 		case NOTIFICATION_EXIT_TREE: {
+			set_process(false);
 		} break;
 	}
 }
 
 void AsyncPCKInstaller::update() {
-	if (get_state() != INSTALLER_STATE_LOADING) {
+	InstallerState current_state = get_state();
+
+	if (current_state != INSTALLER_STATE_LOADING) {
 		set_process(false);
 		return;
 	}
 
 	for (const KeyValue<String, InstallerState> &key_value : paths_state) {
 		Dictionary value = OS::get_singleton()->async_pck_install_file_get_status(key_value.key);
-		print_line(vformat("AsyncPCKInstaller::update() %s: %s", key_value.key, value));
 	}
 }
 
@@ -182,41 +184,76 @@ AsyncPCKInstaller::InstallerState AsyncPCKInstaller::get_state() const {
 	}
 
 	for (const KeyValue<String, InstallerState> &key_value : paths_state) {
+#define CASE_INSTALLER_STATE_MAX           \
+	case INSTALLER_STATE_MAX: {            \
+		ERR_FAIL_V(INSTALLER_STATE_ERROR); \
+	} break
+
 		switch (state) {
 			case INSTALLER_STATE_IDLE: {
-				state = INSTALLER_STATE_IDLE;
-			} break;
-
-			case INSTALLER_STATE_LOADING: {
 				switch (key_value.value) {
+					case INSTALLER_STATE_IDLE: {
+						// Do nothing, the state is the same.
+					} break;
+
 					case INSTALLER_STATE_LOADING:
-					case INSTALLER_STATE_IDLE:
-					case INSTALLER_STATE_INSTALLED:
-					case INSTALLER_STATE_MAX: {
-						// Do nothing.
+					case INSTALLER_STATE_INSTALLED: {
+						state = key_value.value;
 					} break;
 
 					case INSTALLER_STATE_ERROR: {
 						return INSTALLER_STATE_ERROR;
 					} break;
+
+						CASE_INSTALLER_STATE_MAX;
+				}
+			} break;
+
+			case INSTALLER_STATE_LOADING: {
+				switch (key_value.value) {
+					case INSTALLER_STATE_LOADING: {
+						// Do nothing, the state is the same.
+					} break;
+
+					case INSTALLER_STATE_IDLE: {
+						// Huh? It reverted back to idle for some reason.
+						state = INSTALLER_STATE_IDLE;
+						print_error(vformat(R"*(Installer state for "%s" reverted from `INSTALLER_STATE_INSTALLED` to `INSTALLER_STATE_IDLE`)*", key_value.key));
+					} break;
+
+					case INSTALLER_STATE_INSTALLED: {
+						state = INSTALLER_STATE_INSTALLED;
+					} break;
+
+					case INSTALLER_STATE_ERROR: {
+						return INSTALLER_STATE_ERROR;
+					} break;
+
+						CASE_INSTALLER_STATE_MAX;
 				}
 			} break;
 
 			case INSTALLER_STATE_INSTALLED: {
 				switch (key_value.value) {
-					case INSTALLER_STATE_IDLE: {
-						state = INSTALLER_STATE_IDLE;
+					case INSTALLER_STATE_INSTALLED: {
+						// Do nothing, the state is the same.
 					} break;
+
+					case INSTALLER_STATE_IDLE:
 					case INSTALLER_STATE_LOADING: {
-						state = INSTALLER_STATE_LOADING;
+						// Huh? It reverted back to idle for some reason.
+						state = key_value.value;
+						String state_name = key_value.value == INSTALLER_STATE_IDLE
+								? "IDLE"
+								: "LOADING";
+						print_error(vformat(R"*(Installer state for "%s" reverted from `INSTALLER_STATE_INSTALLED` to `INSTALLER_STATE_%s`)*", key_value.key, state_name));
 					} break;
+
 					case INSTALLER_STATE_ERROR: {
 						return INSTALLER_STATE_ERROR;
 					} break;
-					case INSTALLER_STATE_INSTALLED:
-					case INSTALLER_STATE_MAX: {
-						// Do nothing.
-					} break;
+
+						CASE_INSTALLER_STATE_MAX;
 				}
 			} break;
 
@@ -224,10 +261,10 @@ AsyncPCKInstaller::InstallerState AsyncPCKInstaller::get_state() const {
 				return INSTALLER_STATE_ERROR;
 			} break;
 
-			case INSTALLER_STATE_MAX: {
-				ERR_FAIL_V(INSTALLER_STATE_ERROR);
-			} break;
+				CASE_INSTALLER_STATE_MAX;
 		}
+
+#undef CASE_INSTALLER_STATE_MAX
 	}
 
 	return state;

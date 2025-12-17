@@ -389,13 +389,13 @@ class AsyncPCKFile {
 }
 
 class AsyncPCKResource {
-	constructor(pAsyncPck, pPath, pDependencies) {
+	constructor(pAsyncPck, pPath, pFiles, pDependencies = []) {
 		this.asyncPck = pAsyncPck;
 		this.path = pPath;
+		this.files = [];
 		this.dependencies = pDependencies;
 
-		this.files = [];
-		for (const [filePath, fileDefinition] of Object.entries(pDependencies)) {
+		for (const [filePath, fileDefinition] of Object.entries(pFiles)) {
 			const asyncPckFile = new GodotOS.AsyncPCKFile(pAsyncPck, filePath, fileDefinition['size']);
 			this.files.push(asyncPckFile);
 		}
@@ -657,7 +657,7 @@ const _GodotOS = {
 					continue;
 				}
 
-				asyncPckResource = new GodotOS.AsyncPCKResource(GodotOS._mainPack, resourceKey, dependencies);
+				asyncPckResource = new GodotOS.AsyncPCKResource(GodotOS._mainPack, resourceKey, dependencies, resourceValue?.dependencies ?? []);
 				asyncPckResource.insertInInstallMap();
 				asyncPckResource.flagAsInstalled();
 			}
@@ -729,6 +729,7 @@ const _GodotOS = {
 					asyncPCKResource.status != GodotOS.AsyncPCKFile.Status.STATUS_LOADING
 					&& asyncPCKResource.status != GodotOS.AsyncPCKFile.Status.STATUS_INSTALLED
 				) {
+					// GodotOS.AsyncPCKResource.load() returns it's loading promise if it exists.
 					await asyncPCKResource.load();
 				}
 				return;
@@ -744,11 +745,13 @@ const _GodotOS = {
 			}
 
 			const remapResponseJson = await depsJsonResponse.json();
+			const dependencies = remapResponseJson['dependencies'];
 			const resources = remapResponseJson['resources'];
 
 			const createdAsyncPCKResources = Object.entries(resources).map(([pResourcePath, pResourceDefinition]) => {
 				const resourceFiles = pResourceDefinition['files'];
-				asyncPCKResource = new GodotOS.AsyncPCKResource(pPckDir, pResourcePath, resourceFiles);
+				const resourceDependencies = dependencies?.[pResourcePath] ?? [];
+				asyncPCKResource = new GodotOS.AsyncPCKResource(pPckDir, pResourcePath, resourceFiles, resourceDependencies);
 				asyncPCKResource.insertInInstallMap();
 				return asyncPCKResource;
 			});

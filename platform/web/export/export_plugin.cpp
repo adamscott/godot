@@ -327,6 +327,7 @@ Dictionary EditorExportPlatformWeb::ExportData::get_deps_json_dictionary(const R
 	Dictionary deps_dependencies;
 	deps["dependencies"] = deps_dependencies;
 
+	// Recursive dependency lambda.
 	std::function<void(const ExportData::ResourceData *)> _l_add_deps_dependencies;
 	_l_add_deps_dependencies = [&](const ExportData::ResourceData *l_dependency) -> void {
 		resources[l_dependency->path] = l_dependency->get_as_resource_dictionary();
@@ -334,7 +335,6 @@ Dictionary EditorExportPlatformWeb::ExportData::get_deps_json_dictionary(const R
 		l_dependency->flatten_dependencies(&local_dependencies);
 
 		PackedStringArray paths_array;
-		deps_dependencies[l_dependency->path] = paths_array;
 		for (const ExportData::ResourceData *local_dependency : local_dependencies) {
 			if (local_dependency->path != l_dependency->path) {
 				paths_array.push_back(local_dependency->path);
@@ -344,8 +344,10 @@ Dictionary EditorExportPlatformWeb::ExportData::get_deps_json_dictionary(const R
 			}
 		}
 		paths_array.sort_custom<FileNoCaseComparator>();
+		deps_dependencies[l_dependency->path] = paths_array;
 	};
 
+	// Loop through each dependencies to find their dependencies.
 	for (const ExportData::ResourceData *dependency : p_dependency->dependencies) {
 		_l_add_deps_dependencies(dependency);
 	}
