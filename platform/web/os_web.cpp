@@ -170,6 +170,10 @@ Error OS_Web::async_pck_install_file(const String &p_path) const {
 	String path = ResourceUID::ensure_path(p_path);
 	ERR_FAIL_COND_V_MSG(!path.begins_with("res://"), ERR_FILE_BAD_PATH, vformat(TTRC(R"*(Not able to install "%s" from an ".asyncpck".)*"), path));
 
+	if (FileAccess::exists(path)) {
+		return OK;
+	}
+
 	Error err;
 	String pck_path = async_pck_get_async_pck_path(path, &err);
 	if (err != OK) {
@@ -182,15 +186,40 @@ Error OS_Web::async_pck_install_file(const String &p_path) const {
 Dictionary OS_Web::async_pck_install_file_get_status(const String &p_path) const {
 	String path = ResourceUID::ensure_path(p_path);
 
+	if (FileAccess::exists(path)) {
+		Dictionary status;
+		status["files"] = Dictionary();
+		status["size"] = 0;
+		status["progress"] = 0;
+		status["progress_ratio"] = 1;
+		status["status"] = "STATUS_INSTALLED";
+		return status;
+		return Dictionary();
+	}
+
 	Error err;
 	String pck_path = async_pck_get_async_pck_path(path, &err);
 	if (err != OK) {
-		return Dictionary();
+		Dictionary status;
+		status["files"] = Dictionary();
+		status["size"] = 0;
+		status["progress"] = 0;
+		status["progress_ratio"] = 1;
+		status["status"] = "STATUS_ERROR";
+		status["errors"] = Dictionary();
+		return status;
 	}
 	int32_t status_text_length = 0;
 	char *status_text_ptr = godot_js_os_asyncpck_install_file_get_status(pck_path.utf8().get_data(), path.utf8().get_data(), &status_text_length);
 	if (status_text_ptr == nullptr || status_text_length <= 0) {
-		return Dictionary();
+		Dictionary status;
+		status["files"] = Dictionary();
+		status["size"] = 0;
+		status["progress"] = 0;
+		status["progress_ratio"] = 1;
+		status["status"] = "STATUS_ERROR";
+		status["errors"] = Dictionary();
+		return status;
 	}
 	Dictionary status = JSON::parse_string(String::utf8(status_text_ptr, status_text_length));
 	return status;

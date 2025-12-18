@@ -57,7 +57,7 @@ private:
 	bool started = false;
 
 	PackedStringArray file_paths;
-	HashMap<String, InstallerStatus> file_paths_state;
+	HashMap<String, InstallerStatus> file_paths_status;
 
 	PackedStringArray _get_processed_file_paths() const;
 

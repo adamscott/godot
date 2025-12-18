@@ -230,13 +230,15 @@ const Engine = (function () {
 					const asyncPckData = this.config['asyncPckData'];
 					const asyncPckAssetsDir = asyncPckData['directories']['assets'];
 
-					const asyncPckInitialLoadFiles = [];
+					const asyncPckInitialLoadFilesSet = new Set();
 					const asyncPckDataInitialLoad = asyncPckData['initialLoad'];
 					for (const value of Object.values(asyncPckDataInitialLoad)) {
 						for (const resourcePath of Object.values(value['files'])) {
-							asyncPckInitialLoadFiles.push(resourcePath);
+							asyncPckInitialLoadFilesSet.add(resourcePath);
 						}
 					}
+
+					const asyncPckInitialLoadFiles = Array.from(asyncPckInitialLoadFilesSet);
 
 					const resToLocal = (pPath) => {
 						const PREFIX_RES = 'res://';
