@@ -377,7 +377,15 @@ public:
 	virtual Error async_pck_install_file(const String &p_path) const {
 		return FAILED;
 	}
-	virtual Dictionary async_pck_install_file_get_status(const String &p_path) const { return Dictionary(); }
+	virtual Dictionary async_pck_install_file_get_status(const String &p_path) const {
+		Dictionary status;
+		status["files"] = Dictionary();
+		status["size"] = 0;
+		status["progress"] = 0;
+		status["progress_ratio"] = 0;
+		status["status"] = "STATUS_IDLE";
+		return status;
+	}
 
 	// Load GDExtensions specific to this platform.
 	// This is invoked by the GDExtensionManager after loading GDExtensions specified by the project.

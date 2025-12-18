@@ -41,6 +41,7 @@ class AsyncPCKInstaller : public Node {
 
 	const static inline String SIGNAL_FILES_ASYNC_PCK_INSTALLED = "files_async_pck_installed";
 	const static inline String SIGNAL_FILES_ASYNC_PCK_PROGRESS = "files_async_pck_progress";
+	const static inline String SIGNAL_FILES_ASYNC_PCK_ERROR = "files_async_pck_error";
 
 public:
 	enum InstallerStatus {

@@ -246,11 +246,11 @@ class AsyncPCKFile {
 		});
 	}
 
-	constructor(pAsyncPCK, pPath, pSize) {
-		this.asyncPCK = pAsyncPCK;
+	constructor(pAsyncPCKPath, pPath, pSize) {
+		this.asyncPCKPath = pAsyncPCKPath;
 		this.path = pPath;
 		{
-			const assetsDir = GodotOS.asyncPCKGetAsyncPCKAssetsDir(this.asyncPCK);
+			const assetsDir = GodotOS.asyncPCKGetAsyncPCKAssetsDir(this.asyncPCKPath);
 			this.localPath = `${assetsDir}/${GodotOS._removeResPrefix(this.path)}`;
 		}
 
@@ -308,13 +308,13 @@ class AsyncPCKFile {
 
 		if (this._installed) {
 			GodotRuntime.print(
-				`AsyncPCKFile "${this.path}" (of AsyncPck "${this.asyncPCK}") is already installed, skipping loading.`
+				`AsyncPCKFile "${this.path}" (of AsyncPck "${this.asyncPCKPath}") is already installed, skipping loading.`
 			);
 			return Promise.resolve();
 		}
 		if (this._status == GodotOS.AsyncPCKFile.Status.STATUS_LOADING) {
 			GodotRuntime.print(
-				`AsyncPCKFile "${this.path}" (of AsyncPck "${this.asyncPCK}") is currently loading, skipping loading.`
+				`AsyncPCKFile "${this.path}" (of AsyncPck "${this.asyncPCKPath}") is currently loading, skipping loading.`
 			);
 			return Promise.resolve();
 		}
@@ -334,7 +334,7 @@ class AsyncPCKFile {
 			this._status = GodotOS.AsyncPCKFile.Status.STATUS_ERROR;
 
 			const newError = new Error(
-				`AsyncPCKFile "${this.path}" (of AsyncPck "${this.asyncPCK}"): error while loading "${this.localPath}"`
+				`AsyncPCKFile "${this.path}" (of AsyncPck "${this.asyncPCKPath}"): error while loading "${this.localPath}"`
 			);
 			newError.cause = err;
 			this._error = newError;
@@ -374,7 +374,7 @@ class AsyncPCKFile {
 			return fileBuffer;
 		} catch (err) {
 			const newError = new Error(
-				`AsyncPCKFile "${this.path}" (of AsyncPck "${this.asyncPCK}"): error while attempting to load "${this.localPath}". (attempt ${pRetryCount}/${GodotOS._asyncPCKFetchMaxRetry})`
+				`AsyncPCKFile "${this.path}" (of AsyncPck "${this.asyncPCKPath}"): error while attempting to load "${this.localPath}". (attempt ${pRetryCount + 1}/${GodotOS._asyncPCKFetchMaxRetry})`
 			);
 			newError.cause = err;
 
@@ -415,18 +415,47 @@ class AsyncPCKFile {
 }
 
 class AsyncPCKResource {
-	constructor(pAsyncPck, pPath, pFiles, pDependencies = []) {
-		this.asyncPck = pAsyncPck;
+	static createAndInitialize(pAsyncPCK, pPath, pFiles, pDependencies = []) {
+		const asyncPCKResource = new GodotOS.AsyncPCKResource(pAsyncPCK, pPath);
+		asyncPCKResource.initialize(pFiles, pDependencies);
+		asyncPCKResource.insertInInstallMap();
+		return asyncPCKResource;
+	}
+
+	static create(pAsyncPCK, pPath) {
+		const asyncPCKResource = new GodotOS.AsyncPCKResource(pAsyncPCK, pPath);
+		asyncPCKResource.insertInInstallMap();
+		return asyncPCKResource;
+	}
+
+	constructor(pAsyncPCKPath, pPath) {
+		this.asyncPCKPath = pAsyncPCKPath;
 		this.path = pPath;
 		this.files = [];
+		this.dependencies = [];
+
+		this._initialized = false;
+		this._loadPromise = null;
+	}
+
+	initialize(pFiles, pDependencies = []) {
+		window['console'].log(`AsyncPCKResource.initialize() "${this.path}" of "${this.asyncPCKPath}"`);
+		if (this._initialized) {
+			throw new Error(`Cannot initialize AsyncPCKResource more than once. ("${this.path}" of "${this.asyncPCKPath}")`);
+		}
+		this._initialized = true;
+
 		this.dependencies = pDependencies;
 
 		for (const [filePath, fileDefinition] of Object.entries(pFiles)) {
-			const asyncPckFile = new GodotOS.AsyncPCKFile(pAsyncPck, filePath, fileDefinition['size']);
-			this.files.push(asyncPckFile);
+			window['console'].log(`AsyncPCKResource.initialize() "${this.path}" of "${this.asyncPCKPath}" (creating file ${filePath})`);
+			const asyncPCKFile = new GodotOS.AsyncPCKFile(this.asyncPCKPath, filePath, fileDefinition['size']);
+			this.files.push(asyncPCKFile);
 		}
+	}
 
-		this._loadPromise = null;
+	get initialized() {
+		return this._initialized;
 	}
 
 	get size() {
@@ -449,7 +478,7 @@ class AsyncPCKResource {
 		if (this.files.find(GodotOS.AsyncPCKResource.isStatusError) != null) {
 			return GodotOS.AsyncPCKFile.Status.STATUS_ERROR;
 		}
-		if (this.files.every(GodotOS.AsyncPCKResource.isStatusInstalled)) {
+		if (this.files.length > 0 && this.files.every(GodotOS.AsyncPCKResource.isStatusInstalled)) {
 			return GodotOS.AsyncPCKFile.Status.STATUS_INSTALLED;
 		}
 		if (this.files.find(GodotOS.AsyncPCKResource.isStatusLoading) != null) {
@@ -459,7 +488,8 @@ class AsyncPCKResource {
 	}
 
 	get errors() {
-		return this.files.filter(GodotOS.AsyncPCKResource.isStatusError)
+		return this.files
+			.filter(GodotOS.AsyncPCKResource.isStatusError)
 			.map((pFile) => pFile.error)
 			.filter((pFileError) => pFileError !== '');
 	}
@@ -467,11 +497,13 @@ class AsyncPCKResource {
 	get allDependencies() {
 		const dependenciesMap = new Map();
 		for (const dependency of this.dependencies) {
-			const asyncPckResource = GodotOS.asyncPCKGetAsyncPCKResource(this.asyncPck, dependency);
-			if (asyncPckResource == null) {
-				throw new Error(`Cannot get dependencies of a non-resource ("${dependency}" of "${this.asyncPck}")`);
+			const asyncPCKResource = GodotOS.asyncPCKGetAsyncPCKResource(this.asyncPCKPath, dependency);
+			if (asyncPCKResource == null) {
+				throw new Error(
+					`Cannot get dependencies of a non-resource ("${dependency}" of "${this.asyncPCKPath}")`
+				);
 			}
-			asyncPckResource._getAllDependencies(dependenciesMap);
+			asyncPCKResource._getAllDependencies(dependenciesMap);
 		}
 		return Object.fromEntries(dependenciesMap);
 	}
@@ -482,11 +514,13 @@ class AsyncPCKResource {
 		}
 		pDependenciesMap.set(this.path, this.getAsJsonObject({ withDependencies: false }));
 		for (const dependency of this.dependencies) {
-			const asyncPckResource = GodotOS.asyncPCKGetAsyncPCKResource(this.asyncPck, dependency);
-			if (asyncPckResource == null) {
-				throw new Error(`Cannot get dependencies of a non-resource ("${dependency}" of "${this.asyncPck}")`);
+			const asyncPCKResource = GodotOS.asyncPCKGetAsyncPCKResource(this.asyncPCKPath, dependency);
+			if (asyncPCKResource == null) {
+				throw new Error(
+					`Cannot get dependencies of a non-resource ("${dependency}" of "${this.asyncPCKPath}")`
+				);
 			}
-			asyncPckResource._getAllDependencies(pDependenciesMap);
+			asyncPCKResource._getAllDependencies(pDependenciesMap);
 		}
 	}
 
@@ -494,11 +528,13 @@ class AsyncPCKResource {
 		const dependenciesResources = [];
 		const allDependencies = this.allDependencies;
 		for (const dependency of Object.keys(allDependencies)) {
-			const asyncPckResource = GodotOS.asyncPCKGetAsyncPCKResource(this.asyncPck, dependency);
-			if (asyncPckResource == null) {
-				throw new Error(`Cannot get dependencies of a non-resource ("${dependency}" of "${this.asyncPck}")`);
+			const asyncPCKResource = GodotOS.asyncPCKGetAsyncPCKResource(this.asyncPCKPath, dependency);
+			if (asyncPCKResource == null) {
+				throw new Error(
+					`Cannot get dependencies of a non-resource ("${dependency}" of "${this.asyncPCKPath}")`
+				);
 			}
-			dependenciesResources.push(asyncPckResource);
+			dependenciesResources.push(asyncPCKResource);
 		}
 		return dependenciesResources;
 	}
@@ -526,7 +562,7 @@ class AsyncPCKResource {
 			);
 		} catch (err) {
 			const newError = new Error(
-				`AsyncPCKResource "${this.path}" (of AsyncPck "${this.asyncPck}"): error while loading"`
+				`AsyncPCKResource "${this.path}" (of AsyncPCK "${this.asyncPCKPath}"): error while loading"`
 			);
 			newError.cause = err;
 			throw newError;
@@ -542,10 +578,25 @@ class AsyncPCKResource {
 	}
 
 	insertInInstallMap() {
-		if (!GodotOS._asyncPCKInstallMap.has(this.asyncPck)) {
-			GodotOS._asyncPCKInstallMap.set(this.asyncPck, new Map());
+		if (!GodotOS._asyncPCKInstallMap.has(this.asyncPCKPath)) {
+			GodotOS._asyncPCKInstallMap.set(this.asyncPCKPath, new Map());
 		}
-		GodotOS._asyncPCKInstallMap.get(this.asyncPck).set(this.path, this);
+		if (GodotOS._asyncPCKInstallMap.get(this.asyncPCKPath).has(this.path)) {
+			const asyncPCKResource = GodotOS._asyncPCKInstallMap.get(this.asyncPCKPath).get(this.path);
+			if (!asyncPCKResource.isTemporary) {
+				throw new Error(
+					`AsyncPCKResource "${this.path}" (of AsyncPCK "${this.asyncPCKPath}"): cannot install over a non-temporary AsyncPCKResource"`
+				);
+			}
+		}
+		GodotOS._asyncPCKInstallMap.get(this.asyncPCKPath).set(this.path, this);
+	}
+
+	removeFromInstallMap() {
+		if (!GodotOS._asyncPCKInstallMap.has(this.asyncPCKPath)) {
+			return;
+		}
+		GodotOS._asyncPCKInstallMap.get(this.asyncPCKPath).delete(this.path);
 	}
 
 	getAsJsonObject(pOptions = {}) {
@@ -578,10 +629,25 @@ class AsyncPCKResource {
 				jsonDataProgressRatio = jsonDataProgress / jsonDataSize;
 			}
 
-			const jsonDataErrors = this.errors
-				.concat(dependenciesResources.map((pDependencyResource) => pDependencyResource.errors))
-				.filter((pResourceErrors) => pResourceErrors.length > 0)
-				.flat();
+			const jsonDataErrors = Object.assign(
+				{},
+				(() => {
+					const thisInstanceErrors = this.errors;
+					if (thisInstanceErrors.length === 0) {
+						return {};
+					}
+					return { [this.path]: thisInstanceErrors };
+				})(),
+				...dependenciesResources.map((pDependencyResource) => {
+					const errors = pDependencyResource.errors;
+					if (errors.length === 0) {
+						return {};
+					}
+					return {
+						[pDependencyResource.path]: pDependencyResource.errors,
+					};
+				})
+			);
 
 			jsonData['size'] = jsonDataSize;
 			jsonData['progress'] = jsonDataProgress;
@@ -596,7 +662,7 @@ class AsyncPCKResource {
 				if (dependenciesResources.find(GodotOS.AsyncPCKResource.isStatusError) != null) {
 					status = GodotOS.AsyncPCKFile.Status.STATUS_ERROR;
 				}
-				if (dependenciesResources.every(GodotOS.AsyncPCKResource.isStatusInstalled)) {
+				if (dependenciesResources.length > 0 && dependenciesResources.every(GodotOS.AsyncPCKResource.isStatusInstalled)) {
 					status = GodotOS.AsyncPCKFile.Status.STATUS_INSTALLED;
 				}
 				if (dependenciesResources.find(GodotOS.AsyncPCKResource.isStatusLoading) != null) {
@@ -710,8 +776,12 @@ const _GodotOS = {
 					continue;
 				}
 
-				asyncPckResource = new GodotOS.AsyncPCKResource(GodotOS._mainPack, resourceKey, dependencies, resourceValue?.dependencies ?? []);
-				asyncPckResource.insertInInstallMap();
+				asyncPckResource = GodotOS.AsyncPCKResource.createAndInitialize(
+					GodotOS._mainPack,
+					resourceKey,
+					dependencies,
+					resourceValue?.dependencies ?? []
+				);
 				asyncPckResource.flagAsInstalled();
 			}
 		},
@@ -787,6 +857,7 @@ const _GodotOS = {
 				}
 				return;
 			}
+			asyncPCKResource = GodotOS.AsyncPCKResource.create(pPckDir, pPath);
 
 			const assetsDir = GodotOS.asyncPCKGetAsyncPCKAssetsDir(pPckDir);
 			const path = GodotOS._removeResPrefix(pPath);
@@ -794,6 +865,7 @@ const _GodotOS = {
 			const depsJsonResponse = await GodotOS.asyncPCKFetch(depsJsonPath);
 			if (!depsJsonResponse.ok) {
 				GodotRuntime.error(`Couldn't load dependencies file "${depsJsonPath}".`);
+				asyncPCKResource.removeFromInstallMap();
 				return;
 			}
 
@@ -801,16 +873,30 @@ const _GodotOS = {
 			const dependencies = remapResponseJson['dependencies'];
 			const resources = remapResponseJson['resources'];
 
-			const createdAsyncPCKResources = Object.entries(resources).map(([pResourcePath, pResourceDefinition]) => {
+			// Initialize the desired resource ASAP.
+			asyncPCKResource.initialize(resources[pPath].files, Object.keys(dependencies));
+
+			const localAsyncPCKResources = Object.entries(resources).map(([pResourcePath, pResourceDefinition]) => {
+				let localAsyncPCKResource = GodotOS.asyncPCKGetAsyncPCKResource(pPckDir, pResourcePath);
 				const resourceFiles = pResourceDefinition['files'];
 				const resourceDependencies = dependencies?.[pResourcePath] ?? [];
-				asyncPCKResource = new GodotOS.AsyncPCKResource(pPckDir, pResourcePath, resourceFiles, resourceDependencies);
-				asyncPCKResource.insertInInstallMap();
-				return asyncPCKResource;
+
+				if (localAsyncPCKResource == null) {
+					localAsyncPCKResource = GodotOS.AsyncPCKResource.createAndInitialize(
+						pPckDir,
+						pResourcePath,
+						resourceFiles,
+						resourceDependencies
+					);
+				} else if (!localAsyncPCKResource.initialized) {
+					localAsyncPCKResource.initialize(resourceFiles, resourceDependencies);
+				}
+
+				return localAsyncPCKResource;
 			});
 
 			await Promise.allSettled(
-				createdAsyncPCKResources.map(async (pAsyncPCKResource) => {
+				localAsyncPCKResources.map(async (pAsyncPCKResource) => {
 					await pAsyncPCKResource.load();
 				})
 			);
