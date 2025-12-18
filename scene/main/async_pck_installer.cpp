@@ -409,7 +409,8 @@ AsyncPCKInstaller::InstallerStatus AsyncPCKInstaller::get_status() const {
 					} break;
 
 					case INSTALLER_STATUS_INSTALLED: {
-						status = INSTALLER_STATUS_INSTALLED;
+						// Do nothing, as the state is still loading even if there's
+						// some files that are done.
 					} break;
 
 					case INSTALLER_STATUS_ERROR: {
