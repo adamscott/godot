@@ -395,6 +395,8 @@ class AsyncPCKFile {
 
 	flagAsInstalled() {
 		this._status = GodotOS.AsyncPCKFile.Status.STATUS_INSTALLED;
+		this._progress = this._size;
+		this._progressRatio = 1.0;
 	}
 
 	getAsJsonObject() {
