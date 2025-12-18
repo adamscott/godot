@@ -152,7 +152,7 @@ void AsyncPCKInstaller::update() {
 	Dictionary files_progress_files;
 	files_progress[KEY_FILES] = files_progress_files;
 	for (const KeyValue<String, Dictionary> &key_value : files_status) {
-		files_progress_files[key_value.key] = key_value.value;
+		files_progress_files[key_value.key] = _l_get_file_progress_dictionary(key_value.value);
 	}
 
 	emit_signal(SIGNAL_FILES_ASYNC_PCK_PROGRESS, file_paths, files_progress);
