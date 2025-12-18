@@ -53,10 +53,13 @@ public:
 	};
 
 private:
-	PackedStringArray file_paths;
 	bool autostart = false;
+	bool started = false;
 
-	HashMap<String, InstallerStatus> paths_state;
+	PackedStringArray file_paths;
+	HashMap<String, InstallerStatus> file_paths_state;
+
+	PackedStringArray _get_processed_file_paths() const;
 
 protected:
 	void _notification(int p_what);
