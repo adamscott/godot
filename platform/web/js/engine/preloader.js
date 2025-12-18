@@ -36,11 +36,14 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 	}
 
 	async function loadFetch(file, fileSize, raw) {
-		if (!(file in loadingFiles)) {
+		if (file in loadingFiles) {
+			loadingFiles[file].requested = true;
+		} else {
 			loadingFiles[file] = {
 				file,
 				total: fileSize || 0,
 				loaded: 0,
+				requested: true,
 				done: false,
 			};
 		}
@@ -78,44 +81,42 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 		return func().catch(onerror);
 	}
 
-	const animateProgress = function () {
+	this.animateProgress = () => {
 		let loaded = 0;
 		let total = 0;
-		let totalIsValid = true;
-		let progressIsFinal = true;
+		const requestedFiles = Object.values(loadingFiles)
+			.filter((pLoadingFile) => pLoadingFile.requested);
+		let progressIsFinal = false;
+		if (requestedFiles.length > 0 && requestedFiles.every((pRequestedFile) => pRequestedFile.done)) {
+			progressIsFinal = true;
+		}
 
 		// eslint-disable-next-line no-unused-vars
 		for (const [_file, status] of Object.entries(loadingFiles)) {
+			if (!status.requested) {
+				continue;
+			}
+
 			if (!status.done) {
 				progressIsFinal = false;
 			}
-			if (filesSizeTotal > 0) {
-				total = filesSizeTotal;
-			} else if (!totalIsValid || status.total === 0) {
-				totalIsValid = false;
-				total = 0;
-			} else {
-				total += status.total;
-			}
+
+			total += status.total;
 			loaded += status.loaded;
 		}
+
 		if (loaded !== lastProgress.loaded || (!filesSizeTotal && total !== lastProgress.total)) {
 			lastProgress.loaded = loaded;
-			if (filesSizeTotal > 0) {
-				lastProgress.total = filesSizeTotal;
-			} else {
-				lastProgress.total = total;
-			}
+			lastProgress.total = total;
+
 			if (typeof progressFunc === 'function') {
 				progressFunc(loaded, total);
 			}
 		}
 		if (!progressIsFinal) {
-			window.requestAnimationFrame(animateProgress);
+			window.requestAnimationFrame(() => this.animateProgress());
 		}
 	};
-
-	this.animateProgress = animateProgress;
 
 	this.setProgressFunc = function (callback) {
 		progressFunc = callback;
@@ -142,7 +143,7 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 		}
 	};
 
-	this.preload = async function (pathOrBuffer, destPath, fileSize) {
+	this.preload = async (pathOrBuffer, destPath, fileSize) => {
 		let buffer = null;
 		if (typeof pathOrBuffer === 'string') {
 			const me = this;
@@ -150,6 +151,7 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 			me.preloadedFiles.push({
 				path: destPath || pathOrBuffer,
 				buffer: buf,
+				fileSize,
 			});
 			return;
 		} else if (pathOrBuffer instanceof ArrayBuffer) {
@@ -161,6 +163,7 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 			this.preloadedFiles.push({
 				path: destPath,
 				buffer: pathOrBuffer,
+				fileSize,
 			});
 			return;
 		}
@@ -177,6 +180,7 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 				file,
 				total: fileSize || 0,
 				loaded: 0,
+				requested: false,
 				done: false,
 			};
 			filesSizeTotal += fileSize;
