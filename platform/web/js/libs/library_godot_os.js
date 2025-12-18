@@ -441,7 +441,6 @@ class AsyncPCKResource {
 	}
 
 	initialize(pFiles, pDependencies = []) {
-		window['console'].log(`AsyncPCKResource.initialize() "${this.path}" of "${this.asyncPCKPath}"`);
 		if (this._initialized) {
 			throw new Error(`Cannot initialize AsyncPCKResource more than once. ("${this.path}" of "${this.asyncPCKPath}")`);
 		}
@@ -450,7 +449,6 @@ class AsyncPCKResource {
 		this.dependencies = pDependencies;
 
 		for (const [filePath, fileDefinition] of Object.entries(pFiles)) {
-			window['console'].log(`AsyncPCKResource.initialize() "${this.path}" of "${this.asyncPCKPath}" (creating file ${filePath})`);
 			const asyncPCKFile = new GodotOS.AsyncPCKFile(this.asyncPCKPath, filePath, fileDefinition['size']);
 			this.files.push(asyncPCKFile);
 		}
