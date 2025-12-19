@@ -99,7 +99,7 @@ void PackedData::add_path(const String &p_pkg_path, const String &p_path, uint64
 	if (p_properties.has_flag(PackedFile::PackedFileProperty::PACKED_FILE_PROPERTY_ASYNC)) {
 		Ref<FileAccess> file = FileAccess::create_for_path(p_path);
 		if (!file->file_exists(p_path)) {
-			async_files[simplified_path].push_back(pf);
+			async_files[pmd5] = pf;
 		}
 	}
 }
@@ -182,18 +182,12 @@ String PackedData::get_file_pack_path(const String &p_path) {
 
 String PackedData::get_file_async_pack_path(const String &p_path) {
 	String simplified_path = p_path.simplify_path().trim_prefix("res://");
-	String path;
-	if (async_files.has(simplified_path)) {
-		path = simplified_path;
-	} else if (async_files.has(simplified_path + ".remap")) {
-		path = simplified_path + ".remap";
-	} else if (async_files.has(simplified_path + ".import")) {
-		path = simplified_path + ".import";
-	} else {
+	PathMD5 pmd5(simplified_path.md5_buffer());
+	HashMap<PathMD5, PackedFile, PathMD5>::Iterator file_iterator = async_files.find(pmd5);
+	if (!file_iterator) {
 		return "";
 	}
-	String pack = async_files[path][async_files[path].size() - 1].pack;
-	return pack.path_join("..").path_join("..").simplify_path();
+	return file_iterator->value.pack;
 }
 
 HashSet<String> PackedData::get_file_paths() const {

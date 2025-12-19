@@ -114,7 +114,7 @@ private:
 
 	HashMap<PathMD5, PackedFile, PathMD5> files;
 	HashMap<PathMD5, Vector<PackedFile>, PathMD5> delta_patches;
-	HashMap<String, LocalVector<PackedFile>> async_files;
+	HashMap<PathMD5, PackedFile, PathMD5> async_files;
 
 	Vector<PackSource *> sources;
 
@@ -148,6 +148,7 @@ public:
 	_FORCE_INLINE_ Ref<FileAccess> try_open_path(const String &p_path);
 	_FORCE_INLINE_ bool has_path(const String &p_path);
 	_FORCE_INLINE_ bool has_async_path(const String &p_path);
+	_FORCE_INLINE_ String get_async_path(const String &p_path);
 
 	_FORCE_INLINE_ int64_t get_size(const String &p_path);
 
@@ -270,10 +271,31 @@ bool PackedData::has_path(const String &p_path) {
 }
 
 bool PackedData::has_async_path(const String &p_path) {
-	String md5_path = p_path.simplify_path().trim_prefix("res://");
+	return !PackedData::get_async_path(p_path).is_empty();
+}
+
+String PackedData::get_async_path(const String &p_path) {
+	const String PREFIX_RES = "res://";
+
+	const String md5_path = p_path.simplify_path().trim_prefix(PREFIX_RES);
 	PathMD5 md5_data(md5_path.md5_buffer());
-	String md5_text = md5_path.md5_text();
-	return async_files.has(md5_path) || async_files.has(md5_path + ".remap") || async_files.has(md5_path + ".import");
+	if (async_files.has(md5_data)) {
+		return PREFIX_RES + md5_path;
+	}
+
+	String md5_remap_path = md5_path + ".remap";
+	PathMD5 md5_remap_data(md5_remap_path.md5_buffer());
+	if (async_files.has(md5_remap_data)) {
+		return PREFIX_RES + md5_remap_path;
+	}
+
+	String md5_import_path = md5_path + ".import";
+	PathMD5 md5_import_data(md5_import_path.md5_buffer());
+	if (async_files.has(md5_import_data)) {
+		return PREFIX_RES + md5_import_path;
+	}
+
+	return String();
 }
 
 bool PackedData::has_directory(const String &p_path) {

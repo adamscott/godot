@@ -35,13 +35,13 @@
 class AsyncPCKInstaller : public Node {
 	GDCLASS(AsyncPCKInstaller, Node);
 
-	const static inline String SIGNAL_FILE_ASYNC_PCK_INSTALLED = "file_async_pck_installed";
-	const static inline String SIGNAL_FILE_ASYNC_PCK_PROGRESS = "file_async_pck_progress";
-	const static inline String SIGNAL_FILE_ASYNC_PCK_ERROR = "file_async_pck_error";
-
-	const static inline String SIGNAL_FILES_ASYNC_PCK_INSTALLED = "files_async_pck_installed";
-	const static inline String SIGNAL_FILES_ASYNC_PCK_PROGRESS = "files_async_pck_progress";
-	const static inline String SIGNAL_FILES_ASYNC_PCK_ERROR = "files_async_pck_error";
+	const static inline String SIGNAL_FILE_ADDED = "file_added";
+	const static inline String SIGNAL_FILE_REMOVED = "file_removed";
+	const static inline String SIGNAL_FILE_PROGRESS = "file_progress";
+	const static inline String SIGNAL_FILE_INSTALLED = "file_installed";
+	const static inline String SIGNAL_FILE_ERROR = "file_error";
+	const static inline String SIGNAL_PROGRESS = "progress";
+	const static inline String SIGNAL_STATUS_CHANGED = "status_changed";
 
 public:
 	enum InstallerStatus {
@@ -56,9 +56,13 @@ private:
 	bool autostart = false;
 	bool started = false;
 
+	mutable bool status_dirty = true;
+	mutable InstallerStatus status_cached;
+
 	PackedStringArray file_paths;
 	HashMap<String, InstallerStatus> file_paths_status;
 
+	String _process_file_path(const String &p_path) const;
 	PackedStringArray _get_processed_file_paths() const;
 
 protected:
@@ -67,7 +71,7 @@ protected:
 
 	void update();
 
-	void set_path_status(const String &p_path, InstallerStatus p_status);
+	bool set_file_path_status(const String &p_path, InstallerStatus p_status);
 
 public:
 	void start();
