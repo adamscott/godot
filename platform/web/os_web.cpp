@@ -168,7 +168,6 @@ int OS_Web::get_default_thread_pool_size() const {
 }
 
 Error OS_Web::async_pck_install_file(const String &p_path) const {
-	print_line(vformat("OS_Web::async_pck_install_file() %s", p_path));
 	String path = ResourceUID::ensure_path(p_path);
 	ERR_FAIL_COND_V_MSG(!path.begins_with("res://"), ERR_FILE_BAD_PATH, vformat(TTRC(R"*(Not able to install "%s" from an ".asyncpck".)*"), path));
 
@@ -189,7 +188,6 @@ Error OS_Web::async_pck_install_file(const String &p_path) const {
 
 Dictionary OS_Web::async_pck_install_file_get_status(const String &p_path) const {
 	String path = ResourceUID::ensure_path(p_path);
-	print_line(vformat("OS_Web::async_pck_install_file_get_status(%s)", p_path));
 
 	if (FileAccess::exists(path)) {
 		Dictionary status;
@@ -204,7 +202,6 @@ Dictionary OS_Web::async_pck_install_file_get_status(const String &p_path) const
 
 	Error err;
 	String pck_path = async_pck_get_async_pck_path(path, &err);
-	print_line(vformat("OS_Web::async_pck_install_file_get_status(%s) async_pck_path %s err: %s", p_path, path, error_names[err]));
 	if (err != OK) {
 		Dictionary status;
 		status["files"] = Dictionary();

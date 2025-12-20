@@ -49,7 +49,6 @@ Error PackedData::add_pack(const String &p_path, bool p_replace_files, uint64_t 
 
 void PackedData::add_path(const String &p_pkg_path, const String &p_path, uint64_t p_ofs, uint64_t p_size, const uint8_t *p_md5, PackSource *p_src, bool p_replace_files, BitField<PackedFile::PackedFileProperty> p_properties) {
 	String simplified_path = p_path.simplify_path().trim_prefix("res://");
-	// print_line(vformat("PackedData::add_path() p_pkg_path: %s, p_path: %s, simplified_path: %s", p_pkg_path, p_path, simplified_path));
 	PathMD5 pmd5(simplified_path.md5_buffer());
 
 	bool exists = files.has(pmd5);
