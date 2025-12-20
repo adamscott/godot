@@ -31,6 +31,7 @@
 #include "async_pck_installer.h"
 
 #include "core/config/engine.h"
+#include "core/error/error_list.h"
 #include "core/io/file_access.h"
 #include "core/io/file_access_pack.h"
 #include "core/io/resource_loader.h"
@@ -63,6 +64,8 @@ void AsyncPCKInstaller::_notification(int p_what) {
 }
 
 void AsyncPCKInstaller::update() {
+	print_line(vformat("AsyncPCKInstaller::update() [START]"));
+
 	PackedStringArray processed_file_paths = _get_processed_file_paths();
 
 	InstallerStatus new_status = get_status();
@@ -98,6 +101,7 @@ void AsyncPCKInstaller::update() {
 
 	HashMap<String, Dictionary> files_status;
 
+	// Utility lambdas.
 	auto _l_get_status_enum_value = [](const String &l_status_value) -> InstallerStatus {
 		if (l_status_value == STATUS_IDLE) {
 			return INSTALLER_STATUS_IDLE;
@@ -132,6 +136,7 @@ void AsyncPCKInstaller::update() {
 		String file_path = key_value.key;
 
 		Dictionary status = OS::get_singleton()->async_pck_install_file_get_status(file_path);
+		print_line(vformat("AsyncPCKInstaller::update() get status of %s: %s", file_path, status));
 		Dictionary files = status[KEY_FILES];
 		for (const KeyValue<Variant, Variant> &file_key_value : files) {
 			if (files_status.has(file_key_value.key)) {
@@ -195,13 +200,15 @@ void AsyncPCKInstaller::update() {
 			}
 			files_progress[KEY_PROGRESS_RATIO] = progress_ratio;
 
-			emit_signal(SIGNAL_PROGRESS, processed_file_paths, files_progress);
+			emit_signal(SIGNAL_PROGRESS, files_progress);
 		} break;
 
 		case INSTALLER_STATUS_MAX: {
 			ERR_FAIL();
 		} break;
 	}
+
+	print_line(vformat("AsyncPCKInstaller::update() [END]"));
 }
 
 void AsyncPCKInstaller::start() {
@@ -213,7 +220,6 @@ void AsyncPCKInstaller::start() {
 	}
 	started = true;
 
-	HashMap<String, PackedStringArray> file_paths_errors;
 	PackedStringArray processed_file_paths = _get_processed_file_paths();
 
 	// Check if the resources are already installed.
@@ -228,18 +234,9 @@ void AsyncPCKInstaller::start() {
 				set_file_path_status(file_path, INSTALLER_STATUS_INSTALLED);
 			} else {
 				set_file_path_status(file_path, INSTALLER_STATUS_ERROR);
-				file_paths_errors[file_path].push_back(vformat(R"*(File "%s" doesn't exist.)*", file_path));
+				emit_signal(SIGNAL_FILE_ERROR, file_path, Array({ vformat(R"*(File "%s" doesn't exist.)*", file_path) }));
 			}
 		}
-	}
-
-	if (!file_paths_errors.is_empty()) {
-		Dictionary errors;
-		for (const KeyValue<String, PackedStringArray> &key_value : file_paths_errors) {
-			errors[key_value.key] = key_value.value;
-		}
-		emit_signal(SIGNAL_FILE_ERROR, errors);
-		return;
 	}
 
 	for (const String &file_path : processed_file_paths) {
@@ -250,10 +247,11 @@ void AsyncPCKInstaller::start() {
 		print_line(vformat("AsyncPCKInstaller::start() Installing %s", file_path));
 		Error err = OS::get_singleton()->async_pck_install_file(file_path);
 		if (err == OK) {
+			print_line(vformat("AsyncPCKInstaller::start() %s is loading...", file_path));
 			set_file_path_status(file_path, INSTALLER_STATUS_LOADING);
 		} else {
+			print_line(vformat("AsyncPCKInstaller::start() %s has an error! %s", file_path, error_names[err]));
 			set_file_path_status(file_path, INSTALLER_STATUS_ERROR);
-			return;
 		}
 	}
 
@@ -263,16 +261,15 @@ void AsyncPCKInstaller::start() {
 bool AsyncPCKInstaller::set_file_path_status(const String &p_path, InstallerStatus p_status) {
 	ERR_FAIL_COND_V_MSG(!_get_processed_file_paths().has(ResourceUID::ensure_path(p_path)), false, vformat(R"*("%s" is not in `file_paths`.)*", p_path));
 
-	InstallerStatus old_installer_status = get_status();
+	InstallerStatus old_status = get_status();
 
-	if (file_paths_status.has(p_path)) {
-		if (file_paths_status.get(p_path) == p_status) {
-			// Nothing changed.
-			return false;
-		}
-		file_paths_status[p_path] = p_status;
+	if (file_paths_status.has(p_path) && file_paths_status.get(p_path) == p_status) {
+		// Nothing changed.
+		print_line(vformat("AsyncPCKInstaller::set_file_path_status(%s) nothing changed for the path", p_path));
+		return false;
 	} else {
 		file_paths_status.insert(p_path, p_status);
+		print_line(vformat("AsyncPCKInstaller::set_file_path_status(%s) setting %s", p_path, p_status));
 	}
 
 	// Set the installer status as dirty.
@@ -280,9 +277,10 @@ bool AsyncPCKInstaller::set_file_path_status(const String &p_path, InstallerStat
 
 	// Check for changed installer status.
 	InstallerStatus new_status = get_status();
-	if (old_installer_status == new_status) {
+	if (old_status == new_status) {
 		// The installer status didn't change.
 		// We still return `true` here because the path status did change.
+		print_line(vformat("AsyncPCKInstaller::set_file_path_status(%s) old_status == new_status", p_path));
 		return true;
 	}
 
@@ -373,19 +371,19 @@ void AsyncPCKInstaller::set_file_paths(const PackedStringArray &p_file_paths) {
 	}
 
 	// Emit `file_removed` signal.
-	for (const String &before_processed_file_path : before_processed_file_paths) {
-		if (current_processed_file_paths.has(before_processed_file_path)) {
+	for (const String &file_path : before_processed_file_paths) {
+		if (current_processed_file_paths.has(file_path)) {
 			continue;
 		}
-		emit_signal(SIGNAL_FILE_REMOVED, before_processed_file_path);
+		emit_signal(SIGNAL_FILE_REMOVED, file_path);
 	}
 
 	// Emit `file_added` signal.
-	for (const String &current_processed_file_path : current_processed_file_paths) {
-		if (before_processed_file_paths.has(current_processed_file_path)) {
+	for (const String &file_path : current_processed_file_paths) {
+		if (before_processed_file_paths.has(file_path)) {
 			continue;
 		}
-		emit_signal(SIGNAL_FILE_ADDED, current_processed_file_path);
+		emit_signal(SIGNAL_FILE_ADDED, file_path);
 	}
 
 	if (!started) {
@@ -393,21 +391,34 @@ void AsyncPCKInstaller::set_file_paths(const PackedStringArray &p_file_paths) {
 	}
 
 	// Start new installing files.
-	for (const String &current_processed_file_path : current_processed_file_paths) {
-		if (before_processed_file_paths.has(current_processed_file_path)) {
+	for (const String &file_path : current_processed_file_paths) {
+		if (before_processed_file_paths.has(file_path)) {
 			continue;
 		}
-		if (file_paths_status.has(current_processed_file_path)) {
+		if (file_paths_status.has(file_path) && file_paths_status[file_path] != INSTALLER_STATUS_IDLE) {
 			continue;
 		}
 
-		Error err = OS::get_singleton()->async_pck_install_file(current_processed_file_path);
-		if (err == OK) {
-			set_file_path_status(current_processed_file_path, INSTALLER_STATUS_LOADING);
+		if (OS::get_singleton()->async_pck_is_supported()) {
+			if (PackedData::get_singleton() && !PackedData::get_singleton()->is_disabled() && !PackedData::get_singleton()->has_async_path(file_path)) {
+				set_file_path_status(file_path, INSTALLER_STATUS_INSTALLED);
+			} else {
+				Error err = OS::get_singleton()->async_pck_install_file(file_path);
+				if (err == OK) {
+					set_file_path_status(file_path, INSTALLER_STATUS_LOADING);
+				} else {
+					set_file_path_status(file_path, INSTALLER_STATUS_ERROR);
+				}
+			}
 		} else {
-			set_file_path_status(current_processed_file_path, INSTALLER_STATUS_ERROR);
-			return;
+			if (ResourceLoader::exists(file_path)) {
+				set_file_path_status(file_path, INSTALLER_STATUS_INSTALLED);
+			} else {
+				set_file_path_status(file_path, INSTALLER_STATUS_ERROR);
+			}
 		}
+
+		// HERE
 	}
 }
 
@@ -448,7 +459,7 @@ AsyncPCKInstaller::InstallerStatus AsyncPCKInstaller::get_status() const {
 	InstallerStatus status = INSTALLER_STATUS_IDLE;
 
 	if (file_paths_status.is_empty()) {
-		return INSTALLER_STATUS_INSTALLED;
+		return INSTALLER_STATUS_IDLE;
 	}
 
 	for (const KeyValue<String, InstallerStatus> &key_value : file_paths_status) {

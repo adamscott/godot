@@ -57,7 +57,7 @@ private:
 	bool started = false;
 
 	mutable bool status_dirty = true;
-	mutable InstallerStatus status_cached;
+	mutable InstallerStatus status_cached = INSTALLER_STATUS_IDLE;
 
 	PackedStringArray file_paths;
 	HashMap<String, InstallerStatus> file_paths_status;
