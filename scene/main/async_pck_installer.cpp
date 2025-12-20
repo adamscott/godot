@@ -220,7 +220,7 @@ void AsyncPCKInstaller::start() {
 	// Check if the resources are already installed.
 	for (const String &file_path : processed_file_paths) {
 		if (OS::get_singleton()->async_pck_is_supported()) {
-			if (PackedData::get_singleton() && !PackedData::get_singleton()->is_disabled() && !PackedData::get_singleton()->has_async_path(file_path)) {
+			if (!OS::get_singleton()->async_pck_is_file_installable(file_path)) {
 				set_file_path_status(file_path, INSTALLER_STATUS_INSTALLED);
 			}
 		} else {
@@ -387,15 +387,15 @@ void AsyncPCKInstaller::set_file_paths(const PackedStringArray &p_file_paths) {
 		}
 
 		if (OS::get_singleton()->async_pck_is_supported()) {
-			if (PackedData::get_singleton() && !PackedData::get_singleton()->is_disabled() && !PackedData::get_singleton()->has_async_path(file_path)) {
-				set_file_path_status(file_path, INSTALLER_STATUS_INSTALLED);
-			} else {
+			if (OS::get_singleton()->async_pck_is_file_installable(file_path)) {
 				Error err = OS::get_singleton()->async_pck_install_file(file_path);
 				if (err == OK) {
 					set_file_path_status(file_path, INSTALLER_STATUS_LOADING);
 				} else {
 					set_file_path_status(file_path, INSTALLER_STATUS_ERROR);
 				}
+			} else {
+				set_file_path_status(file_path, INSTALLER_STATUS_INSTALLED);
 			}
 		} else {
 			if (ResourceLoader::exists(file_path)) {

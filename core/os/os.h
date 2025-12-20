@@ -376,7 +376,7 @@ public:
 
 	virtual bool async_pck_is_supported() const { return false; }
 	virtual bool async_pck_is_file_installable(const String &p_path) const {
-		return PackedData::get_singleton()->has_async_path(p_path);
+		return PackedData::get_singleton() && !PackedData::get_singleton()->is_disabled() && PackedData::get_singleton()->has_async_path(p_path);
 	}
 	virtual Error async_pck_install_file(const String &p_path) const {
 		return FAILED;
