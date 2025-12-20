@@ -59,6 +59,9 @@ private:
 	mutable bool status_dirty = true;
 	mutable InstallerStatus status_cached = INSTALLER_STATUS_IDLE;
 
+	mutable bool install_needed_dirty = true;
+	mutable bool install_needed_cached = false;
+
 	PackedStringArray file_paths;
 	HashMap<String, InstallerStatus> file_paths_status;
 
@@ -83,6 +86,7 @@ public:
 	PackedStringArray get_file_paths() const;
 
 	InstallerStatus get_status() const;
+	bool is_install_needed() const;
 };
 
 VARIANT_ENUM_CAST(AsyncPCKInstaller::InstallerStatus);

@@ -261,8 +261,9 @@ bool AsyncPCKInstaller::set_file_path_status(const String &p_path, InstallerStat
 		file_paths_status.insert(p_path, p_status);
 	}
 
-	// Set the installer status as dirty.
+	// Set the flags as dirty.
 	status_dirty = true;
+	install_needed_dirty = true;
 
 	// Check for changed installer status.
 	InstallerStatus new_status = get_status();
@@ -533,6 +534,26 @@ AsyncPCKInstaller::InstallerStatus AsyncPCKInstaller::get_status() const {
 	return status;
 }
 
+bool AsyncPCKInstaller::is_install_needed() const {
+	if (!install_needed_dirty) {
+		return install_needed_cached;
+	}
+
+	bool install_needed = false;
+
+	PackedStringArray processed_file_paths = _get_processed_file_paths();
+	for (const String &file_path : processed_file_paths) {
+		if (OS::get_singleton()->async_pck_is_file_installable(file_path)) {
+			install_needed = true;
+			break;
+		}
+	}
+
+	install_needed_cached = install_needed;
+	install_needed_dirty = false;
+	return install_needed;
+}
+
 void AsyncPCKInstaller::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_autostart", "autostart"), &AsyncPCKInstaller::set_autostart);
 	ClassDB::bind_method(D_METHOD("get_autostart"), &AsyncPCKInstaller::get_autostart);
@@ -540,6 +561,7 @@ void AsyncPCKInstaller::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_file_paths"), &AsyncPCKInstaller::get_file_paths);
 
 	ClassDB::bind_method(D_METHOD("get_status"), &AsyncPCKInstaller::get_status);
+	ClassDB::bind_method(D_METHOD("is_install_needed"), &AsyncPCKInstaller::is_install_needed);
 
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "autostart"), "set_autostart", "get_autostart");
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_STRING_ARRAY, "file_paths", PROPERTY_HINT_ARRAY_TYPE, MAKE_FILE_ARRAY_TYPE_HINT("*")), "set_file_paths", "get_file_paths");
