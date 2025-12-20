@@ -113,6 +113,7 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 
 		HashSet<String> get_features_set() const;
 		String res_to_global(const String &p_res_path) const {
+			ERR_FAIL_COND_V_MSG(!p_res_path.begins_with(PREFIX_RES), String(), vformat(R"*(Cannot convert non-resource path ("%s") to global.)*", p_res_path));
 			String res_path = simplify_path(p_res_path);
 			return assets_directory.path_join(res_path.trim_prefix(PREFIX_RES));
 		}
