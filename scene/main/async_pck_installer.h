@@ -86,7 +86,7 @@ public:
 	PackedStringArray get_file_paths() const;
 
 	InstallerStatus get_status() const;
-	bool is_install_needed() const;
+	bool are_files_installable() const;
 };
 
 VARIANT_ENUM_CAST(AsyncPCKInstaller::InstallerStatus);

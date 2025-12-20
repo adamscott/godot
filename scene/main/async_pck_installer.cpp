@@ -534,7 +534,7 @@ AsyncPCKInstaller::InstallerStatus AsyncPCKInstaller::get_status() const {
 	return status;
 }
 
-bool AsyncPCKInstaller::is_install_needed() const {
+bool AsyncPCKInstaller::are_files_installable() const {
 	if (!install_needed_dirty) {
 		return install_needed_cached;
 	}
@@ -561,7 +561,7 @@ void AsyncPCKInstaller::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_file_paths"), &AsyncPCKInstaller::get_file_paths);
 
 	ClassDB::bind_method(D_METHOD("get_status"), &AsyncPCKInstaller::get_status);
-	ClassDB::bind_method(D_METHOD("is_install_needed"), &AsyncPCKInstaller::is_install_needed);
+	ClassDB::bind_method(D_METHOD("are_files_installable"), &AsyncPCKInstaller::are_files_installable);
 
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "autostart"), "set_autostart", "get_autostart");
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_STRING_ARRAY, "file_paths", PROPERTY_HINT_ARRAY_TYPE, MAKE_FILE_ARRAY_TYPE_HINT("*")), "set_file_paths", "get_file_paths");
