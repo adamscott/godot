@@ -340,6 +340,8 @@ Dictionary EditorExportPlatformWeb::ExportData::get_deps_json_dictionary(const R
 				paths_array.push_back(local_dependency->path);
 			}
 			if (!deps_dependencies.has(local_dependency->path)) {
+				// Prevent infinite recursion.
+				deps_dependencies[local_dependency->path] = {};
 				_l_add_deps_dependencies(local_dependency);
 			}
 		}
