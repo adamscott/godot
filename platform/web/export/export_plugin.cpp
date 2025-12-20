@@ -147,6 +147,7 @@ EditorExportPlatformWeb::ExportData::ResourceData *EditorExportPlatformWeb::Expo
 	List<ResourceData>::Element *data_iterator = nullptr;
 
 	String remap_path;
+	bool has_suffix_import = false;
 
 #define SET_ERR(m_err)        \
 	if (r_error != nullptr) { \
@@ -154,20 +155,18 @@ EditorExportPlatformWeb::ExportData::ResourceData *EditorExportPlatformWeb::Expo
 	}                         \
 	((void)0)
 
-#define AS_STRING(x) #x
-
-#define HANDLE_ERR_COND(m_cond, m_err)                     \
+#define _HANDLE_ERR_COND_V_MSG(m_cond, m_err, m_msg)       \
 	if (unlikely((m_cond))) {                              \
 		SET_ERR(m_err);                                    \
 		if (data != nullptr && data_iterator != nullptr) { \
 			dependencies.erase(data_iterator);             \
 		}                                                  \
-		ERR_FAIL_V_MSG(nullptr, AS_STRING(m_cond));        \
+		ERR_FAIL_V_MSG(nullptr, (m_msg));                  \
 		return nullptr;                                    \
 	}                                                      \
 	((void)0)
 
-	HANDLE_ERR_COND(p_path.is_empty(), ERR_INVALID_PARAMETER);
+	_HANDLE_ERR_COND_V_MSG(p_path.is_empty(), ERR_INVALID_PARAMETER, "p_path.is_empty()");
 
 	if (dependencies_map.has(p_path)) {
 		SET_ERR(OK);
@@ -180,20 +179,21 @@ EditorExportPlatformWeb::ExportData::ResourceData *EditorExportPlatformWeb::Expo
 	update_file(&data->native_file, p_path);
 
 	if (FileAccess::exists(data->native_file.absolute_path + SUFFIX_IMPORT)) {
+		has_suffix_import = true;
 		remap_path = data->native_file.resource_path + SUFFIX_IMPORT;
 	} else if (FileAccess::exists(data->native_file.absolute_path + SUFFIX_REMAP)) {
 		remap_path = data->native_file.resource_path + SUFFIX_REMAP;
 	}
 
-	HANDLE_ERR_COND(!data->native_file.exists && remap_path.is_empty(), ERR_FILE_NOT_FOUND);
+	_HANDLE_ERR_COND_V_MSG(!data->native_file.exists && remap_path.is_empty(), ERR_FILE_NOT_FOUND, vformat(R"*("%s" doesn't exist, and there is no remap/import file.)*", data->native_file.absolute_path));
 
 	if (!remap_path.is_empty()) {
 		update_file(&data->remap_file, remap_path);
-		HANDLE_ERR_COND(!data->remap_file.exists, ERR_FILE_NOT_FOUND);
+		_HANDLE_ERR_COND_V_MSG(!data->remap_file.exists, ERR_FILE_NOT_FOUND, vformat(R"*("%s" doesn't exist)*", data->remap_file.absolute_path));
 
 		Error err;
 		Ref<FileAccess> remap_file_access = FileAccess::open(data->remap_file.absolute_path, FileAccess::READ, &err);
-		HANDLE_ERR_COND(err != OK, err);
+		_HANDLE_ERR_COND_V_MSG(err != OK, err, vformat(R"*(Error while opening "%s": %s)*", data->remap_file.absolute_path, error_names[err]));
 
 		Ref<ConfigFile> remap_file;
 		remap_file.instantiate();
@@ -237,7 +237,7 @@ EditorExportPlatformWeb::ExportData::ResourceData *EditorExportPlatformWeb::Expo
 		if (remapped_path.is_empty() && !uid_path.is_empty()) {
 			remapped_path = uid_path;
 		}
-		HANDLE_ERR_COND(remapped_path.is_empty(), ERR_PARSE_ERROR);
+		_HANDLE_ERR_COND_V_MSG(remapped_path.is_empty(), ERR_PARSE_ERROR, vformat(R"*(Could not find any remap path in %s file "%s")*", has_suffix_import ? "import" : "remap", data->remap_file.absolute_path));
 
 		update_file(&data->remapped_file, remapped_path);
 	}
@@ -256,8 +256,9 @@ EditorExportPlatformWeb::ExportData::ResourceData *EditorExportPlatformWeb::Expo
 		ResourceLoader::get_dependencies(resource_file->absolute_path, &remapped_dependencies);
 		for (const String &remapped_dependency : remapped_dependencies) {
 			Error error;
-			ResourceData *dependency = add_dependency(EditorExportPlatformUtils::get_path_from_dependency(remapped_dependency), p_features_set, p_uid_cache, &error);
-			HANDLE_ERR_COND(error != OK, error);
+			String remapped_dependency_path = EditorExportPlatformUtils::get_path_from_dependency(remapped_dependency);
+			ResourceData *dependency = add_dependency(remapped_dependency_path, p_features_set, p_uid_cache, &error);
+			_HANDLE_ERR_COND_V_MSG(error != OK, error, vformat(R"*(Error while processing remapped dependencies of "%s": couldn't add dependency of "%s")*", resource_file->absolute_path, remapped_dependency_path));
 			data->dependencies.push_back(dependency);
 		}
 	}
@@ -265,8 +266,7 @@ EditorExportPlatformWeb::ExportData::ResourceData *EditorExportPlatformWeb::Expo
 	SET_ERR(OK);
 	return data;
 
-#undef HANDLE_ERR_COND
-#undef AS_STRING
+#undef _HANDLE_ERR_COND_V_MSG
 #undef SET_ERR
 }
 
