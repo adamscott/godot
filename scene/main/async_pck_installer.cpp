@@ -404,8 +404,6 @@ void AsyncPCKInstaller::set_file_paths(const PackedStringArray &p_file_paths) {
 				set_file_path_status(file_path, INSTALLER_STATUS_ERROR);
 			}
 		}
-
-		// HERE
 	}
 }
 
