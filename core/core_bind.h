@@ -313,9 +313,10 @@ public:
 	void remove_logger(const Ref<Logger> &p_logger);
 	void remove_script_loggers(const ScriptLanguage *p_script);
 
-	bool asyncpck_is_supported() const;
-	Error asyncpck_load_file(const String &p_path) const;
-	Dictionary asyncpck_load_file_get_status(const String &p_path) const;
+	bool async_pck_is_supported() const;
+	bool async_pck_is_file_installable(const String &p_path) const;
+	Error async_pck_install_file(const String &p_path) const;
+	Dictionary async_pck_install_file_get_status(const String &p_path) const;
 
 	static OS *get_singleton() { return singleton; }
 

@@ -31,6 +31,7 @@
 #pragma once
 
 #include "core/config/engine.h"
+#include "core/io/file_access_pack.h"
 #include "core/io/logger.h"
 #include "core/io/remote_filesystem_client.h"
 #include "core/os/time_enums.h"
@@ -374,6 +375,9 @@ public:
 	virtual PreferredTextureFormat get_preferred_texture_format() const;
 
 	virtual bool async_pck_is_supported() const { return false; }
+	virtual bool async_pck_is_file_installable(const String &p_path) const {
+		return PackedData::get_singleton()->has_async_path(p_path);
+	}
 	virtual Error async_pck_install_file(const String &p_path) const {
 		return FAILED;
 	}
