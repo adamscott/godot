@@ -1211,7 +1211,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 					}
 
 					log_entry_builder.append("If some files seem to be missing from this list, be sure to edit \"async/initial_load_forced_files*\" in the preset settings.\n");
-					log_entry_builder.append("For files not in this list, you will need to call `OS.asyncpck_install_file()` beforehand.\n");
+					log_entry_builder.append("For files not in this list, you will need to call `OS.async_pck_install_file()` beforehand.\n");
 					log_entry_builder.append("\n");
 					log_entry_builder.append(vformat("Total initial load size: %s", String::humanize_size(total_size)));
 
