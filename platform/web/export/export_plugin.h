@@ -201,13 +201,12 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 	Error _build_pwa(const Ref<EditorExportPreset> &p_preset, const String p_path, const Vector<SharedObject> &p_shared_objects);
 	Error _write_or_error(const uint8_t *p_content, int p_len, String p_path);
 
-	Error _export_project(const Ref<EditorExportPreset> &p_preset, int p_debug_flags);
+	Error _run_export_project(const Ref<EditorExportPreset> &p_preset, int p_debug_flags);
 	Error _launch_browser(const String &p_bind_host, uint16_t p_bind_port, bool p_use_tls);
 	Error _start_server(const String &p_bind_host, uint16_t p_bind_port, bool p_use_tls);
 	Error _stop_server();
 
-	template <typename ResourceDataComparator>
-	void _add_resource_data_tree_message(const LocalVector<ExportData::ResourceData *> &p_resource_data_entries, const String &p_context);
+	void _add_resource_data_tree_message(LocalVector<const ExportData::ResourceData *> &p_resource_data_entries, const String &p_context, bool p_sort_with_file_no_case_comparator = false, bool p_sort_with_size_comparator = false);
 
 	static HashSet<String> _get_mandatory_initial_load_files(const Ref<EditorExportPreset> &p_preset);
 	static Error _rename_and_store_file_in_async_pck(const Ref<EditorExportPreset> &p_preset, void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const PackedByteArray &p_key, uint64_t p_seed, bool p_delta);

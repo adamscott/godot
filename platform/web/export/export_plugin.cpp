@@ -1163,8 +1163,8 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 						initial_load_assets_data.push_back(initial_load_asset);
 					}
 
-					_add_resource_data_tree_message<ExportData::ResourceData::FileNoCaseComparator>(initial_load_assets_data, "Files that will be initially loaded (sorted in alphabetical order):");
-					_add_resource_data_tree_message<ExportData::ResourceData::SizeComparator>(initial_load_assets_data, "Files that will be initially loaded (sorted by size):");
+					_add_resource_data_tree_message(initial_load_assets_data, "Files that will be initially loaded (sorted in alphabetical order):", true, false);
+					_add_resource_data_tree_message(initial_load_assets_data, "Files that will be initially loaded (sorted by size):", false, true);
 
 					uint64_t initial_load_assets_size = initial_load_assets_data.size();
 					for (uint64_t i = 0; i < initial_load_assets_size; i++) {
@@ -1315,19 +1315,21 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 	return OK;
 }
 
-template <typename ResourceDataComparator>
-void EditorExportPlatformWeb::_add_resource_data_tree_message(const LocalVector<ExportData::ResourceData *> &p_resource_data_entries, const String &p_context) {
-	LocalVector<ExportData::ResourceData *> resource_data_entries(p_resource_data_entries);
-
-	resource_data_entries.sort_custom<ResourceDataComparator>();
+void EditorExportPlatformWeb::_add_resource_data_tree_message(LocalVector<const ExportData::ResourceData *> &p_resource_data_entries, const String &p_context, bool p_sort_with_file_no_case_comparator, bool p_sort_with_size_comparator) {
+	if (p_sort_with_file_no_case_comparator) {
+		p_resource_data_entries.sort_custom<ExportData::ResourceData::FileNoCaseComparator>();
+	}
+	if (p_sort_with_size_comparator) {
+		p_resource_data_entries.sort_custom<ExportData::ResourceData::SizeComparator>();
+	}
 
 	StringBuilder log_entry_builder;
 	const String new_line_char = "\n";
 	log_entry_builder.append(vformat("%s\n", p_context));
 
-	uint64_t initial_load_assets_size = resource_data_entries.size();
+	uint64_t initial_load_assets_size = p_resource_data_entries.size();
 	for (uint64_t i = 0; i < initial_load_assets_size; i++) {
-		const ExportData::ResourceData *initial_load_asset = resource_data_entries[i];
+		const ExportData::ResourceData *initial_load_asset = p_resource_data_entries[i];
 
 		uint64_t asset_size = 0;
 		if (initial_load_asset->remap_file.exists) {
@@ -1355,6 +1357,8 @@ void EditorExportPlatformWeb::_add_resource_data_tree_message(const LocalVector<
 			log_entry_builder.append(vformat(UR"*(%s    └ 📤 "%s" [%s]%s)*", parent_tree_line, initial_load_asset->native_file.resource_path, String::humanize_size(initial_load_asset->native_file.size), new_line_char));
 		}
 	}
+
+	log_entry_builder.append("\n====================\n");
 
 	add_message(EditorExportPlatformData::EXPORT_MESSAGE_INFO, TTR("Initial load"), log_entry_builder.as_string());
 }
@@ -1539,7 +1543,7 @@ Error EditorExportPlatformWeb::run(const Ref<EditorExportPreset> &p_preset, int 
 			switch (p_option) {
 				// Run in Browser.
 				case 0: {
-					Error err = _export_project(p_preset, p_debug_flags);
+					Error err = _run_export_project(p_preset, p_debug_flags);
 					if (err != OK) {
 						return err;
 					}
@@ -1552,7 +1556,7 @@ Error EditorExportPlatformWeb::run(const Ref<EditorExportPreset> &p_preset, int 
 
 				// Start HTTP Server.
 				case 1: {
-					Error err = _export_project(p_preset, p_debug_flags);
+					Error err = _run_export_project(p_preset, p_debug_flags);
 					if (err != OK) {
 						return err;
 					}
@@ -1569,7 +1573,7 @@ Error EditorExportPlatformWeb::run(const Ref<EditorExportPreset> &p_preset, int 
 			switch (p_option) {
 				// Run in Browser.
 				case 0: {
-					Error err = _export_project(p_preset, p_debug_flags);
+					Error err = _run_export_project(p_preset, p_debug_flags);
 					if (err != OK) {
 						return err;
 					}
@@ -1578,7 +1582,7 @@ Error EditorExportPlatformWeb::run(const Ref<EditorExportPreset> &p_preset, int 
 
 				// Re-export Project.
 				case 1: {
-					return _export_project(p_preset, p_debug_flags);
+					return _run_export_project(p_preset, p_debug_flags);
 				} break;
 
 				// Stop HTTP Server.
@@ -1596,7 +1600,7 @@ Error EditorExportPlatformWeb::run(const Ref<EditorExportPreset> &p_preset, int 
 	return FAILED;
 }
 
-Error EditorExportPlatformWeb::_export_project(const Ref<EditorExportPreset> &p_preset, int p_debug_flags) {
+Error EditorExportPlatformWeb::_run_export_project(const Ref<EditorExportPreset> &p_preset, int p_debug_flags) {
 	const String dest = EditorPaths::get_singleton()->get_temp_dir().path_join("web");
 	Ref<DirAccess> da = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
 	if (!da->dir_exists(dest)) {
