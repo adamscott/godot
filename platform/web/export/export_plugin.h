@@ -88,6 +88,17 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		};
 
 		struct ResourceData {
+			struct SizeComparator {
+				_ALWAYS_INLINE_ bool operator()(const ExportData::ResourceData *p_a, const ExportData::ResourceData *p_b) const {
+					return p_a->get_size() < p_b->get_size();
+				}
+			};
+			struct FileNoCaseComparator {
+				_ALWAYS_INLINE_ bool operator()(const ExportData::ResourceData *p_a, const ExportData::ResourceData *p_b) const {
+					return ::FileNoCaseComparator()(p_a->path, p_b->path);
+				}
+			};
+
 			String path;
 			File native_file;
 			File remap_file;
@@ -194,6 +205,9 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 	Error _launch_browser(const String &p_bind_host, uint16_t p_bind_port, bool p_use_tls);
 	Error _start_server(const String &p_bind_host, uint16_t p_bind_port, bool p_use_tls);
 	Error _stop_server();
+
+	template <typename ResourceDataComparator>
+	void _add_resource_data_tree_message(const LocalVector<ExportData::ResourceData *> &p_resource_data_entries, const String &p_context);
 
 	static HashSet<String> _get_mandatory_initial_load_files(const Ref<EditorExportPreset> &p_preset);
 	static Error _rename_and_store_file_in_async_pck(const Ref<EditorExportPreset> &p_preset, void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const PackedByteArray &p_key, uint64_t p_seed, bool p_delta);

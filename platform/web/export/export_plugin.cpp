@@ -1163,16 +1163,8 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 						initial_load_assets_data.push_back(initial_load_asset);
 					}
 
-					struct ResourceDataComparator {
-						_ALWAYS_INLINE_ bool operator()(const ExportData::ResourceData *p_a, const ExportData::ResourceData *p_b) const {
-							return FileNoCaseComparator()(p_a->path, p_b->path);
-						}
-					};
-					initial_load_assets_data.sort_custom<ResourceDataComparator>();
-
-					StringBuilder log_entry_builder;
-					log_entry_builder.append("Files that will be initially loaded:\n");
-					String new_line_char = "\n";
+					_add_resource_data_tree_message<ExportData::ResourceData::FileNoCaseComparator>(initial_load_assets_data, "Files that will be initially loaded (sorted in alphabetical order):");
+					_add_resource_data_tree_message<ExportData::ResourceData::SizeComparator>(initial_load_assets_data, "Files that will be initially loaded (sorted by size):");
 
 					uint64_t initial_load_assets_size = initial_load_assets_data.size();
 					for (uint64_t i = 0; i < initial_load_assets_size; i++) {
@@ -1188,31 +1180,16 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 							ERR_FAIL_V(ERR_BUG);
 						}
 
-						String fork_char = i < initial_load_assets_size - 1
-								? U"├"
-								: U"└";
-						String parent_tree_line = i < initial_load_assets_size - 1
-								? U"|"
-								: U" ";
-
-						log_entry_builder.append(vformat(UR"*(%s── 📦 "%s" [%s]%s)*", fork_char, initial_load_asset->path, String::humanize_size(asset_size), new_line_char));
-
-						if (initial_load_asset->remap_file.exists) {
-							log_entry_builder.append(vformat(UR"*(%s    ├ 📤 "%s" [%s]%s)*", parent_tree_line, initial_load_asset->remap_file.resource_path, String::humanize_size(initial_load_asset->remap_file.size), new_line_char));
-							log_entry_builder.append(vformat(UR"*(%s    └ 📤 "%s" [%s]%s)*", parent_tree_line, initial_load_asset->remapped_file.resource_path, String::humanize_size(initial_load_asset->remapped_file.size), new_line_char));
-						} else if (initial_load_asset->native_file.exists) {
-							log_entry_builder.append(vformat(UR"*(%s    └ 📤 "%s" [%s]%s)*", parent_tree_line, initial_load_asset->native_file.resource_path, String::humanize_size(initial_load_asset->native_file.size), new_line_char));
-						}
-
 						total_size += asset_size;
 					}
 
+					StringBuilder log_entry_builder;
 					log_entry_builder.append("If some files seem to be missing from this list, be sure to edit \"async/initial_load_forced_files*\" in the preset settings.\n");
 					log_entry_builder.append("For files not in this list, you will need to call `OS.async_pck_install_file()` beforehand.\n");
 					log_entry_builder.append("\n");
 					log_entry_builder.append(vformat("Total initial load size: %s", String::humanize_size(total_size)));
 
-					add_message(EditorExportPlatformData::EXPORT_MESSAGE_INFO, TTR("Initial load asset"), log_entry_builder.as_string());
+					add_message(EditorExportPlatformData::EXPORT_MESSAGE_INFO, TTR("Initial load"), log_entry_builder.as_string());
 				}
 
 				{
@@ -1336,6 +1313,50 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 	}
 
 	return OK;
+}
+
+template <typename ResourceDataComparator>
+void EditorExportPlatformWeb::_add_resource_data_tree_message(const LocalVector<ExportData::ResourceData *> &p_resource_data_entries, const String &p_context) {
+	LocalVector<ExportData::ResourceData *> resource_data_entries(p_resource_data_entries);
+
+	resource_data_entries.sort_custom<ResourceDataComparator>();
+
+	StringBuilder log_entry_builder;
+	const String new_line_char = "\n";
+	log_entry_builder.append(vformat("%s\n", p_context));
+
+	uint64_t initial_load_assets_size = resource_data_entries.size();
+	for (uint64_t i = 0; i < initial_load_assets_size; i++) {
+		const ExportData::ResourceData *initial_load_asset = resource_data_entries[i];
+
+		uint64_t asset_size = 0;
+		if (initial_load_asset->remap_file.exists) {
+			asset_size += initial_load_asset->remap_file.size;
+			asset_size += initial_load_asset->remapped_file.size;
+		} else if (initial_load_asset->native_file.exists) {
+			asset_size += initial_load_asset->native_file.size;
+		} else {
+			ERR_FAIL();
+		}
+
+		String fork_char = i < initial_load_assets_size - 1
+				? U"├"
+				: U"└";
+		String parent_tree_line = i < initial_load_assets_size - 1
+				? U"|"
+				: U" ";
+
+		log_entry_builder.append(vformat(UR"*(%s── 📦 "%s" [%s]%s)*", fork_char, initial_load_asset->path, String::humanize_size(asset_size), new_line_char));
+
+		if (initial_load_asset->remap_file.exists) {
+			log_entry_builder.append(vformat(UR"*(%s    ├ 📤 "%s" [%s]%s)*", parent_tree_line, initial_load_asset->remap_file.resource_path, String::humanize_size(initial_load_asset->remap_file.size), new_line_char));
+			log_entry_builder.append(vformat(UR"*(%s    └ 📤 "%s" [%s]%s)*", parent_tree_line, initial_load_asset->remapped_file.resource_path, String::humanize_size(initial_load_asset->remapped_file.size), new_line_char));
+		} else if (initial_load_asset->native_file.exists) {
+			log_entry_builder.append(vformat(UR"*(%s    └ 📤 "%s" [%s]%s)*", parent_tree_line, initial_load_asset->native_file.resource_path, String::humanize_size(initial_load_asset->native_file.size), new_line_char));
+		}
+	}
+
+	add_message(EditorExportPlatformData::EXPORT_MESSAGE_INFO, TTR("Initial load"), log_entry_builder.as_string());
 }
 
 bool EditorExportPlatformWeb::poll_export() {
