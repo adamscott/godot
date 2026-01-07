@@ -112,6 +112,7 @@ private:
 	BitField<ValidationFlags> invalid_flags;
 
 	void _set_message(const String &p_msg, MessageType p_type, InputType input_type = PROJECT_PATH);
+	void _update_ok_button();
 	void _validate_path();
 
 	// Project path for MODE_NEW and MODE_INSTALL. Install path for MODE_IMPORT.
