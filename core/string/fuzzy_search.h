@@ -62,11 +62,6 @@ public:
 	Vector<Vector2i> substrings; // x is start index, y is length.
 };
 
-struct FuzzySearchTarget {
-	String string;
-	void *userdata;
-};
-
 class FuzzySearchResult {
 	friend class FuzzySearch;
 
@@ -79,7 +74,7 @@ class FuzzySearchResult {
 	void maybe_apply_score_bonus();
 
 public:
-	FuzzySearchTarget target;
+	String target;
 	int score = 0;
 	int original_index = -1;
 	int dir_index = -1;
@@ -101,7 +96,5 @@ public:
 	void set_query(const String &p_query);
 	void set_query(const String &p_query, bool p_case_sensitive);
 	bool search(const String &p_target, FuzzySearchResult &p_result) const;
-	bool search(const FuzzySearchTarget &p_target, FuzzySearchResult &p_result) const;
 	void search_all(const PackedStringArray &p_targets, Vector<FuzzySearchResult> &p_results) const;
-	void search_all(const Vector<FuzzySearchTarget> &p_targets, Vector<FuzzySearchResult> &p_results) const;
 };
