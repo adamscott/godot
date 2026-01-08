@@ -141,7 +141,7 @@ void EditorResourcePicker::_update_resource() {
 		}
 
 		bool is_internal = EditorNode::get_singleton()->is_resource_internal_to_scene(edited_resource);
-		Ref<Script> edited_resource_script = Object::cast_to<Script>(edited_resource.ptr());
+		Ref<Script> edited_resource_script = edited_resource;
 		if (is_internal) {
 			Ref<Resource> parent_res = _get_parent_resource();
 			bool unique_enable = _is_uniqueness_enabled();
