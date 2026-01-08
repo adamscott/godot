@@ -30,12 +30,7 @@
 
 #pragma once
 
-#include "core/error/error_list.h"
-#include "core/error/error_macros.h"
 #include "core/io/file_access.h"
-#include "core/object/object.h"
-#include "core/variant/dictionary.h"
-#include "core/variant/variant.h"
 #include "editor/export/editor_export_preset.h"
 #include "editor_http_server.h"
 

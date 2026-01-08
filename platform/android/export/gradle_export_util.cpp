@@ -31,7 +31,6 @@
 #include "gradle_export_util.h"
 
 #include "core/string/translation_server.h"
-#include "editor/export/editor_export_platform_utils.h"
 #include "modules/regex/regex.h"
 
 int _get_android_orientation_value(DisplayServer::ScreenOrientation screen_orientation) {

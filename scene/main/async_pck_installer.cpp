@@ -31,16 +31,8 @@
 #include "async_pck_installer.h"
 
 #include "core/config/engine.h"
-#include "core/error/error_list.h"
-#include "core/io/file_access.h"
-#include "core/io/file_access_pack.h"
 #include "core/io/resource_loader.h"
-#include "core/io/resource_uid.h"
-#include "core/object/class_db.h"
-#include "core/object/object.h"
 #include "core/os/os.h"
-#include "core/variant/variant.h"
-#include "scene/main/node.h"
 
 void AsyncPCKInstaller::_notification(int p_what) {
 	switch (p_what) {

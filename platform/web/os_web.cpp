@@ -31,20 +31,12 @@
 #include "os_web.h"
 
 #include "api/javascript_bridge_singleton.h"
-#include "core/error/error_list.h"
-#include "core/error/error_macros.h"
-#include "core/io/config_file.h"
-#include "core/io/json.h"
-#include "core/variant/variant.h"
-#include "display_server_web.h"
-#include "godot_js.h"
-#include "ip_web.h"
-#include "net_socket_web.h"
-
 #include "core/config/project_settings.h"
 #include "core/debugger/engine_debugger.h"
+#include "core/io/config_file.h"
 #include "core/io/file_access.h"
 #include "core/io/file_access_pack.h"
+#include "core/io/json.h"
 #include "core/os/main_loop.h"
 #include "core/profiling/profiling.h"
 #include "drivers/unix/dir_access_unix.h"
@@ -52,6 +44,11 @@
 #include "main/main.h"
 
 #include "modules/modules_enabled.gen.h" // For websocket.
+
+#include "display_server_web.h"
+#include "godot_js.h"
+#include "ip_web.h"
+#include "net_socket_web.h"
 
 #include <dlfcn.h>
 #include <emscripten.h>
@@ -169,7 +166,7 @@ int OS_Web::get_default_thread_pool_size() const {
 
 Error OS_Web::async_pck_install_file(const String &p_path) const {
 	String path = ResourceUID::ensure_path(p_path);
-	ERR_FAIL_COND_V_MSG(!path.begins_with("res://"), ERR_FILE_BAD_PATH, vformat(TTRC(R"*(Not able to install "%s" from an ".asyncpck".)*"), path));
+	ERR_FAIL_COND_V_MSG(!path.begins_with("res://"), ERR_FILE_BAD_PATH, vformat(R"*(Not able to install "%s" from a ".asyncpck".)*", path));
 
 	if (FileAccess::exists(path)) {
 		return OK;

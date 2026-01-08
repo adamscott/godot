@@ -32,7 +32,6 @@
 
 #include "core/io/zip_io.h"
 #include "core/os/os.h"
-#include "editor/export/editor_export_platform_data.h"
 #include "editor/export/editor_export_platform_utils.h"
 #include "editor/export/editor_export_preset.h"
 

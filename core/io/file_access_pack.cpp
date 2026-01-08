@@ -30,7 +30,6 @@
 
 #include "file_access_pack.h"
 
-#include "core/io/file_access.h"
 #include "core/io/file_access_encrypted.h"
 #include "core/io/file_access_patched.h"
 #include "core/object/script_language.h"

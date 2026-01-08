@@ -2033,8 +2033,8 @@ ProjectExportDialog::ProjectExportDialog() {
 	result_dialog_log->set_selection_enabled(true);
 	result_dialog->add_child(result_dialog_log);
 
-	result_dialog->add_button(TTRC("Copy to clipboard"), false, SNAME("copy_to_clipboard"));
-	result_dialog->connect(SNAME("custom_action"), callable_mp(this, &ProjectExportDialog::_on_result_dialog_custom_action));
+	result_dialog->add_button(TTRC("Copy to clipboard"), false, "copy_to_clipboard");
+	result_dialog->connect("custom_action", callable_mp(this, &ProjectExportDialog::_on_result_dialog_custom_action));
 
 	main_vb->add_child(result_dialog);
 	result_dialog->hide();

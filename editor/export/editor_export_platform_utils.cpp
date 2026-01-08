@@ -32,16 +32,12 @@
 
 #include "core/config/project_settings.h"
 #include "core/crypto/crypto_core.h"
-#include "core/error/error_macros.h"
 #include "core/extension/gdextension.h"
-#include "core/io/dir_access.h"
 #include "core/io/file_access_encrypted.h"
 #include "core/io/file_access_pack.h"
 #include "core/math/random_pcg.h"
 #include "core/version.h"
 #include "editor/export/editor_export_platform.h"
-#include "editor/export/editor_export_platform_data.h"
-#include "editor/export/editor_export_preset.h"
 #include "editor/file_system/editor_file_system.h"
 #include "editor/file_system/editor_paths.h"
 
@@ -215,15 +211,15 @@ bool EditorExportPlatformUtils::encrypt_and_store_directory(Ref<FileAccess> p_fd
 
 Error EditorExportPlatformUtils::encrypt_and_store_data(Ref<FileAccess> p_fd, const String &p_path, const Vector<uint8_t> &p_data, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const Vector<uint8_t> &p_key, uint64_t p_seed, bool &r_encrypt) {
 	r_encrypt = false;
-	for (int i = 0; i < p_enc_in_filters.size(); ++i) {
-		if (p_path.matchn(p_enc_in_filters[i]) || p_path.trim_prefix("res://").matchn(p_enc_in_filters[i])) {
+	for (const String &enc_in_filter : p_enc_in_filters) {
+		if (p_path.matchn(enc_in_filter) || p_path.trim_prefix("res://").matchn(enc_in_filter)) {
 			r_encrypt = true;
 			break;
 		}
 	}
 
-	for (int i = 0; i < p_enc_ex_filters.size(); ++i) {
-		if (p_path.matchn(p_enc_ex_filters[i]) || p_path.trim_prefix("res://").matchn(p_enc_ex_filters[i])) {
+	for (const String &enc_ex_filter : p_enc_ex_filters) {
+		if (p_path.matchn(enc_ex_filter) || p_path.trim_prefix("res://").matchn(enc_ex_filter)) {
 			r_encrypt = false;
 			break;
 		}
@@ -419,10 +415,10 @@ void EditorExportPlatformUtils::export_find_dependencies(const String &p_path, H
 		return;
 	}
 
-	Vector<String> deps = dir->get_file_deps(file_idx);
+	PackedStringArray deps = dir->get_file_deps(file_idx);
 
-	for (int i = 0; i < deps.size(); i++) {
-		EditorExportPlatformUtils::export_find_dependencies(deps[i], p_paths);
+	for (const String &dep : deps) {
+		EditorExportPlatformUtils::export_find_dependencies(dep, p_paths);
 	}
 }
 
@@ -434,9 +430,9 @@ void EditorExportPlatformUtils::export_find_preset_resources(const Ref<EditorExp
 			EditorExportPlatformUtils::export_find_resources(EditorFileSystem::get_singleton()->get_filesystem(), p_paths);
 
 			if (export_filter == EditorExportPreset::EXCLUDE_SELECTED_RESOURCES) {
-				Vector<String> excluded_resources = p_preset->get_files_to_export();
-				for (int i = 0; i < excluded_resources.size(); i++) {
-					p_paths.erase(excluded_resources[i]);
+				PackedStringArray excluded_resources = p_preset->get_files_to_export();
+				for (const String &excluded_resource : excluded_resources) {
+					p_paths.erase(excluded_resource);
 				}
 			}
 		} break;
@@ -449,13 +445,13 @@ void EditorExportPlatformUtils::export_find_preset_resources(const Ref<EditorExp
 		case EditorExportPreset::EXPORT_SELECTED_RESOURCES: {
 			bool scenes_only = export_filter == EditorExportPreset::EXPORT_SELECTED_SCENES;
 
-			Vector<String> files = p_preset->get_files_to_export();
-			for (int i = 0; i < files.size(); i++) {
-				if (scenes_only && ResourceLoader::get_resource_type(files[i]) != "PackedScene") {
+			PackedStringArray files = p_preset->get_files_to_export();
+			for (const String &file : files) {
+				if (scenes_only && ResourceLoader::get_resource_type(file) != "PackedScene") {
 					continue;
 				}
 
-				EditorExportPlatformUtils::export_find_dependencies(files[i], p_paths);
+				EditorExportPlatformUtils::export_find_dependencies(file, p_paths);
 			}
 
 			// Add autoload resources and their dependencies
@@ -506,8 +502,8 @@ void EditorExportPlatformUtils::edit_files_with_filter(Ref<DirAccess> &da, const
 			String fullpath = cur_dir + f;
 			// Test also against path without res:// so that filters like `file.txt` can work.
 			String fullpath_no_prefix = cur_dir_no_prefix + f;
-			for (int i = 0; i < p_filters.size(); ++i) {
-				if (fullpath.matchn(p_filters[i]) || fullpath_no_prefix.matchn(p_filters[i])) {
+			for (const String &filter : p_filters) {
+				if (fullpath.matchn(filter) || fullpath_no_prefix.matchn(filter)) {
 					if (!exclude) {
 						r_list.insert(fullpath);
 					} else {
@@ -521,8 +517,7 @@ void EditorExportPlatformUtils::edit_files_with_filter(Ref<DirAccess> &da, const
 
 	da->list_dir_end();
 
-	for (int i = 0; i < dirs.size(); ++i) {
-		const String &dir = dirs[i];
+	for (const String &dir : dirs) {
 		if (dir.begins_with(".")) {
 			continue;
 		}

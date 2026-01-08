@@ -33,7 +33,6 @@
 #include "core/config/project_settings.h"
 #include "core/io/dir_access.h"
 #include "core/io/file_access.h"
-#include "core/io/file_access_pack.h"
 #include "core/io/json.h"
 #include "core/os/midi_driver.h"
 #include "core/version_generated.gen.h"

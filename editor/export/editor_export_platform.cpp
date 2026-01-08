@@ -47,8 +47,6 @@
 #include "editor/editor_node.h"
 #include "editor/editor_string_names.h"
 #include "editor/export/editor_export.h"
-#include "editor/export/editor_export_platform_data.h"
-#include "editor/export/editor_export_platform_utils.h"
 #include "editor/file_system/editor_file_system.h"
 #include "editor/file_system/editor_paths.h"
 #include "editor/script/script_editor_plugin.h"
