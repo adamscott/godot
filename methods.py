@@ -968,6 +968,7 @@ def prepare_purge(env):
 
 
 def prepare_timer():
+    import datetime
     import time
 
     def print_elapsed_time(time_at_start: float):
@@ -976,7 +977,43 @@ def prepare_timer():
         time_centiseconds = (time_elapsed % 1) * 100
         print_info(f"Time elapsed: {time_formatted}.{time_centiseconds:02.0f}")
 
+    def print_ended_at():
+        time_now_utc = datetime.datetime.now(datetime.timezone.utc)
+        time_now_local = time_now_utc.astimezone(datetime.datetime.now().astimezone().tzinfo)
+
+        timestamp_local = time_now_local.isoformat()
+        timestamp_utc = time_now_utc.isoformat()
+
+        info_string = "\n".join(
+            [
+                "Time at end: ",
+                f"{timestamp_utc} ({time_now_utc.tzname()})",
+                f"{timestamp_local} ({time_now_local.tzname()})",
+            ]
+        )
+        print_info(info_string)
+
+    atexit.register(print_ended_at)
     atexit.register(print_elapsed_time, time.time())
+
+
+def print_started_at():
+    import datetime
+
+    time_now_utc = datetime.datetime.now(datetime.timezone.utc)
+    time_now_local = time_now_utc.astimezone(datetime.datetime.now().astimezone().tzinfo)
+
+    timestamp_local = time_now_local.isoformat()
+    timestamp_utc = time_now_utc.isoformat()
+
+    info_string = "\n".join(
+        [
+            "Time at start: ",
+            f"{timestamp_utc} ({time_now_utc.tzname()})",
+            f"{timestamp_local} ({time_now_local.tzname()})",
+        ]
+    )
+    print_info(info_string)
 
 
 def dump(env):

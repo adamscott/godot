@@ -361,6 +361,9 @@ opts.Add("cpp_compiler_launcher", "C++ compiler launcher (e.g. `ccache`)")
 # in following code (especially platform and custom_modules).
 opts.Update(env)
 
+if not env.GetOption("clean") and not env.GetOption("help"):
+    methods.print_started_at()
+
 # Setup caching logic early to catch everything.
 methods.prepare_cache(env)
 
