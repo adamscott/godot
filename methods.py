@@ -967,53 +967,55 @@ def prepare_purge(env):
     atexit.register(purge_flaky_files)
 
 
-def prepare_timer():
+def prepare_timer(env):
     import datetime
-    import time
 
-    def print_elapsed_time(time_at_start: float):
-        time_elapsed = time.time() - time_at_start
-        time_formatted = time.strftime("%H:%M:%S", time.gmtime(time_elapsed))
-        time_centiseconds = (time_elapsed % 1) * 100
-        print_info(f"Time elapsed: {time_formatted}.{time_centiseconds:02.0f}")
+    build_timestamp_timezone = env["build_timestamp_timezone"]  # type: str
+    timezone = datetime.timezone.utc
+    if build_timestamp_timezone == "system":
+        system_tzinfo = datetime.datetime.now().astimezone().tzinfo
+        if system_tzinfo is not None and isinstance(system_tzinfo, datetime.timezone):
+            timezone = system_tzinfo
 
-    def print_ended_at():
-        time_now_utc = datetime.datetime.now(datetime.timezone.utc)
-        time_now_local = time_now_utc.astimezone(datetime.datetime.now().astimezone().tzinfo)
+    # cs: centisecond 0.01
+    # us: microsecond 0.000001
+    us_to_cs_shift_left = 4
+    cs_in_ms = 1 * (10 ^ (us_to_cs_shift_left))
 
-        timestamp_local = time_now_local.isoformat()
-        timestamp_utc = time_now_utc.isoformat()
+    def now() -> datetime.datetime:
+        return datetime.datetime.now(timezone)
 
-        info_string = "\n".join(
-            [
-                "Time at end: ",
-                f"{timestamp_utc} ({time_now_utc.tzname()})",
-                f"{timestamp_local} ({time_now_local.tzname()})",
-            ]
+    def print_elapsed_time(time_at_start: datetime.datetime):
+        time_at_end = now()
+        time_elapsed = time_at_end - time_at_start
+        time_elapsed_rounded = datetime.timedelta(
+            days=time_elapsed.days,
+            seconds=time_elapsed.seconds,
+            microseconds=round(time_elapsed.microseconds / cs_in_ms) * cs_in_ms,
         )
-        print_info(info_string)
+        time_elapsed_str = str(time_elapsed_rounded)
+        if time_elapsed_rounded.microseconds > 0:
+            time_elapsed_str = time_elapsed_str[:-us_to_cs_shift_left]
 
-    atexit.register(print_ended_at)
-    atexit.register(print_elapsed_time, time.time())
+        print_info(
+            f"Time elapsed: {time_elapsed_str} (build ended at {time_at_end.strftime('%Y-%m-%d %H:%M:%S')} {timezone.tzname(time_at_end)})"
+        )
+
+    atexit.register(print_elapsed_time, now())
 
 
-def print_started_at():
+def print_started_at(env):
     import datetime
 
-    time_now_utc = datetime.datetime.now(datetime.timezone.utc)
-    time_now_local = time_now_utc.astimezone(datetime.datetime.now().astimezone().tzinfo)
+    build_timestamp_timezone = env["build_timestamp_timezone"]  # type: str
+    timezone = datetime.timezone.utc  # type: datetime.timezone
+    if build_timestamp_timezone == "system":
+        system_tzinfo = datetime.datetime.now().astimezone().tzinfo
+        if system_tzinfo is not None and isinstance(system_tzinfo, datetime.timezone):
+            timezone = system_tzinfo
 
-    timestamp_local = time_now_local.isoformat()
-    timestamp_utc = time_now_utc.isoformat()
-
-    info_string = "\n".join(
-        [
-            "Time at start: ",
-            f"{timestamp_utc} ({time_now_utc.tzname()})",
-            f"{timestamp_local} ({time_now_local.tzname()})",
-        ]
-    )
-    print_info(info_string)
+    time_at_start = datetime.datetime.now(timezone)
+    print_info(f"(build started at {time_at_start.strftime('%Y-%m-%d %H:%M:%S')} {timezone.tzname(time_at_start)})")
 
 
 def dump(env):
