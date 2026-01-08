@@ -372,7 +372,7 @@ opts.Add(
 opts.Update(env)
 
 if not env.GetOption("clean") and not env.GetOption("help"):
-    methods.print_started_at(env)
+    methods.print_started_at(methods.get_build_timezone(env))
 
 # Setup caching logic early to catch everything.
 methods.prepare_cache(env)
@@ -1245,4 +1245,4 @@ if not env.GetOption("clean") and not env.GetOption("help"):
     methods.dump(env)
     methods.show_progress(env)
     methods.prepare_purge(env)
-    methods.prepare_timer(env)
+    methods.prepare_timer(methods.get_build_timezone(env))

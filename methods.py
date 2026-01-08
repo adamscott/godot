@@ -967,7 +967,7 @@ def prepare_purge(env):
     atexit.register(purge_flaky_files)
 
 
-def prepare_timer(env):
+def get_build_timezone(env):
     import datetime
 
     build_timestamp_timezone = env["build_timestamp_timezone"]  # type: str
@@ -976,6 +976,12 @@ def prepare_timer(env):
         system_tzinfo = datetime.datetime.now().astimezone().tzinfo
         if system_tzinfo is not None and isinstance(system_tzinfo, datetime.timezone):
             timezone = system_tzinfo
+
+    return timezone
+
+
+def prepare_timer(timezone):
+    import datetime
 
     # cs: centisecond 0.01
     # us: microsecond 0.000001
@@ -1004,15 +1010,8 @@ def prepare_timer(env):
     atexit.register(print_elapsed_time, now())
 
 
-def print_started_at(env):
+def print_started_at(timezone):
     import datetime
-
-    build_timestamp_timezone = env["build_timestamp_timezone"]  # type: str
-    timezone = datetime.timezone.utc  # type: datetime.timezone
-    if build_timestamp_timezone == "system":
-        system_tzinfo = datetime.datetime.now().astimezone().tzinfo
-        if system_tzinfo is not None and isinstance(system_tzinfo, datetime.timezone):
-            timezone = system_tzinfo
 
     time_at_start = datetime.datetime.now(timezone)
     print_info(f"(build started at {time_at_start.strftime('%Y-%m-%d %H:%M:%S')} {timezone.tzname(time_at_start)})")
