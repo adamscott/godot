@@ -1434,7 +1434,7 @@ bool EditorResourcePicker::_is_uniqueness_enabled(bool p_check_recursive) {
 
 	if (!internal_to_scene) {
 		if (parent_resource.is_valid() && (!editor_node->is_resource_internal_to_scene(parent_resource) || editor_node->get_resource_count(parent_resource) > 1)) {
-			return true;
+			return false;
 		} else if (!p_check_recursive) {
 			return true;
 		}
