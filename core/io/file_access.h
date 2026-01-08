@@ -251,9 +251,6 @@ public:
 
 	static CreateFunc get_create_func(AccessType p_access);
 	static bool exists(const String &p_name); ///< return true if a file exists
-	static bool is_packed_data(const String &p_name);
-	static bool is_async_packed_data(const String &p_name);
-	static bool get_async_packed_data_path(const String &p_name);
 	static uint64_t get_modified_time(const String &p_file);
 	static uint64_t get_access_time(const String &p_file);
 	static int64_t get_size(const String &p_file);

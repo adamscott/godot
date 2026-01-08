@@ -592,7 +592,6 @@ FileAccessPack::FileAccessPack(const String &p_path, const PackedData::PackedFil
 		Vector<uint8_t> key;
 		key.resize(32);
 		memcpy(key.ptrw(), script_encryption_key, 32);
-		print_line(vformat("script_encryption_key: %s", String::hex_encode_buffer(key.ptr(), 32)));
 
 		Error err = fae->open_and_parse(f, key, FileAccessEncrypted::MODE_READ, false);
 		ERR_FAIL_COND_MSG(err, vformat(R"(Can't open encrypted pack-referenced file "%s" from pack "%s".)", p_path, pf.pack));
