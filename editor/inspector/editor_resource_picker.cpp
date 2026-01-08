@@ -144,11 +144,11 @@ void EditorResourcePicker::_update_resource() {
 		Ref<Script> edited_resource_script = edited_resource;
 		if (is_internal) {
 			Ref<Resource> parent_res = _get_parent_resource();
-			bool unique_enable = _is_uniqueness_enabled();
-			bool unique_recursive_enabled = _is_uniqueness_enabled(true);
+			bool make_unique_enabled = _is_make_unique_enabled();
+			bool make_unique_recursive_enabled = _is_make_unique_enabled(true);
 			int num_of_copies = EditorNode::get_singleton()->get_resource_count(edited_resource);
 			make_unique_button->set_visible(num_of_copies > 1 && edited_resource_script.is_null());
-			make_unique_button->set_disabled((!unique_enable && !unique_recursive_enabled) || !editable);
+			make_unique_button->set_disabled((!make_unique_enabled && !make_unique_recursive_enabled) || !editable);
 
 			if (num_of_copies > 1) {
 				tooltip = vformat(TTRN("This %s is used in %d place.", "This %s is used in %d places.", num_of_copies), resource_name, num_of_copies);
@@ -157,16 +157,15 @@ void EditorResourcePicker::_update_resource() {
 			if (!editable) {
 				tooltip += "\n" + vformat(TTR("The %s cannot be edited in the inspector and can't be made unique directly."), resource_name) + "\n";
 			} else {
-				if (unique_enable) {
+				if (make_unique_enabled) {
 					tooltip += "\n" + TTR("Left-click to make it unique.") + "\n";
 				}
 
-				if (unique_recursive_enabled) {
+				if (make_unique_recursive_enabled) {
 					tooltip += TTR("It is possible to make its subresources unique.") + "\n" + TTR("Right-click to make them unique.");
 				}
 
-				if (!unique_enable && EditorNode::get_singleton()->get_editor_selection()->get_full_selected_node_list().size() == 1) {
-					tooltip += TTR("In order to duplicate it, make its parent Resource unique.") + "\n";
+				if (!make_unique_enabled && EditorNode::get_singleton()->get_editor_selection()->get_full_selected_node_list().size() == 1) {
 					tooltip += "\n" + TTR("In order to duplicate it, make its parent Resource unique.") + "\n";
 				}
 			}
@@ -333,9 +332,9 @@ void EditorResourcePicker::_update_menu_items() {
 			if (!_is_custom_type_script()) {
 				edit_menu->add_icon_item(get_editor_theme_icon(SNAME("Clear")), TTR("Clear"), OBJ_MENU_CLEAR);
 			}
-			bool unique_enabled = _is_uniqueness_enabled();
+			bool make_unique_enabled = _is_make_unique_enabled();
 			edit_menu->add_icon_item(get_editor_theme_icon(SNAME("Duplicate")), TTR("Make Unique"), OBJ_MENU_MAKE_UNIQUE);
-			edit_menu->set_item_disabled(-1, !unique_enabled);
+			edit_menu->set_item_disabled(-1, !make_unique_enabled);
 
 			String modifier = "Ctrl";
 			if (OS::get_singleton()->has_feature("macos") || OS::get_singleton()->has_feature("web_macos") || OS::get_singleton()->has_feature("web_ios")) {
@@ -343,7 +342,7 @@ void EditorResourcePicker::_update_menu_items() {
 			}
 			const String drag_and_drop_text = vformat(TTR("Hold %s while drag-and-dropping from the FileSystem dock or another resource picker to automatically make a dropped resource unique."), modifier);
 
-			if (!unique_enabled) {
+			if (!make_unique_enabled) {
 				if (EditorNode::get_singleton()->is_resource_internal_to_scene(edited_resource) && EditorNode::get_singleton()->get_resource_count(edited_resource) == 1) {
 					edit_menu->set_item_tooltip(-1, String(TTRC("This Resource is already unique.")) + "\n" + drag_and_drop_text);
 				} else if (_get_parent_resource().is_valid()) {
@@ -354,10 +353,10 @@ void EditorResourcePicker::_update_menu_items() {
 			}
 
 			if (_has_sub_resources(edited_resource)) {
-				unique_enabled = _is_uniqueness_enabled(true);
+				make_unique_enabled = _is_make_unique_enabled(true);
 				edit_menu->add_icon_item(get_editor_theme_icon(SNAME("Duplicate")), TTR("Make Unique (Recursive)"), OBJ_MENU_MAKE_UNIQUE_RECURSIVE);
-				edit_menu->set_item_disabled(-1, !unique_enabled);
-				if (!unique_enabled) {
+				edit_menu->set_item_disabled(-1, !make_unique_enabled);
+				if (!make_unique_enabled) {
 					Ref<Resource> parent_res = _get_parent_resource();
 					if (EditorNode::get_singleton()->get_editor_selection()->get_full_selected_node_list().size() == 1) {
 						edit_menu->set_item_tooltip(-1, (parent_res.is_valid() && EditorNode::get_singleton()->get_resource_count(parent_res) > 1) ? TTRC("In order to duplicate recursively, make its parent Resource unique.") : TTRC("Subresources have already been made unique."));
@@ -726,10 +725,10 @@ void EditorResourcePicker::_button_input(const Ref<InputEvent> &p_event) {
 	}
 }
 
-void EditorResourcePicker::_on_unique_button_pressed() {
+void EditorResourcePicker::_on_make_unique_button_pressed() {
 	if (Input::get_singleton()->is_mouse_button_pressed(MouseButton::LEFT)) {
 		_edit_menu_cbk(OBJ_MENU_MAKE_UNIQUE);
-	} else if (Input::get_singleton()->is_mouse_button_pressed(MouseButton::RIGHT) && _is_uniqueness_enabled(true)) {
+	} else if (Input::get_singleton()->is_mouse_button_pressed(MouseButton::RIGHT) && _is_make_unique_enabled(true)) {
 		_edit_menu_cbk(OBJ_MENU_MAKE_UNIQUE_RECURSIVE);
 	}
 }
@@ -1412,7 +1411,7 @@ void EditorResourcePicker::_duplicate_selected_resources() {
 	_resource_changed();
 }
 
-bool EditorResourcePicker::_is_uniqueness_enabled(bool p_check_recursive) {
+bool EditorResourcePicker::_is_make_unique_enabled(bool p_check_recursive) {
 	if (edited_resource.is_null()) {
 		return false;
 	}
@@ -1492,7 +1491,7 @@ EditorResourcePicker::EditorResourcePicker(bool p_hide_assign_button_controls) {
 	make_unique_button->set_action_mode(BaseButton::ACTION_MODE_BUTTON_PRESS);
 	make_unique_button->set_theme_type_variation(SNAME("EditorInspectorButton"));
 	add_child(make_unique_button);
-	make_unique_button->connect(SceneStringName(pressed), callable_mp(this, &EditorResourcePicker::_on_unique_button_pressed));
+	make_unique_button->connect(SceneStringName(pressed), callable_mp(this, &EditorResourcePicker::_on_make_unique_button_pressed));
 
 	assign_button = memnew(Button);
 	assign_button->set_flat(true);
