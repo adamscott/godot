@@ -167,6 +167,7 @@ void EditorResourcePicker::_update_resource() {
 
 				if (!unique_enable && EditorNode::get_singleton()->get_editor_selection()->get_full_selected_node_list().size() == 1) {
 					tooltip += TTR("In order to duplicate it, make its parent Resource unique.") + "\n";
+					tooltip += "\n" + TTR("In order to duplicate it, make its parent Resource unique.") + "\n";
 				}
 			}
 		} else {
