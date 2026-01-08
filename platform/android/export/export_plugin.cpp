@@ -44,7 +44,6 @@
 #include "editor/editor_log.h"
 #include "editor/editor_node.h"
 #include "editor/editor_string_names.h"
-#include "editor/export/editor_export_platform_data.h"
 #include "editor/export/editor_export_platform_utils.h"
 #include "editor/export/export_template_manager.h"
 #include "editor/file_system/editor_paths.h"
