@@ -5,6 +5,11 @@ from methods import print_error
 
 Import("env")
 
+if len(env["run_npm"]) > 0:
+    env.Exit(env.RunNPM(env["run_npm"]))
+elif len(env["run_biome"]) > 0:
+    env.Exit(env.RunBiome(env["run_biome"]))
+
 # The HTTP server "targets". Run with "scons p=web serve", or "scons p=web run"
 if "serve" in COMMAND_LINE_TARGETS or "run" in COMMAND_LINE_TARGETS:
     import os

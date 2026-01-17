@@ -11,7 +11,9 @@ from emscripten_helpers import (
     create_engine_file,
     create_template_zip,
     get_template_zip_path,
+    run_biome,
     run_closure_compiler,
+    run_npm,
 )
 from SCons.Util import WhereIs
 
@@ -60,6 +62,8 @@ def get_opts():
             False,
         ),
         BoolVariable("wasm_simd", "Use WebAssembly SIMD to improve CPU performance", True),
+        ("run_npm", "Run NPM command (from Emscripten Node binary in `#platform/web/`)", ""),
+        ("run_biome", "Run Biome command", ""),
     ]
 
 
@@ -218,6 +222,10 @@ def configure(env: "SConsEnvironment"):
     env.AddMethod(add_js_pre, "AddJSPre")
     env.AddMethod(add_js_post, "AddJSPost")
     env.AddMethod(add_js_externs, "AddJSExterns")
+
+    # NPM and Biome methods.
+    env.AddMethod(run_npm, "RunNPM")
+    env.AddMethod(run_biome, "RunBiome")
 
     # Add method that joins/compiles our Engine files.
     env.AddMethod(create_engine_file, "CreateEngineFile")

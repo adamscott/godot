@@ -1,0 +1,11 @@
+{
+	"compilerOptions": {
+		"composite": true,
+		"rootDir": ".",
+		"module": "node16",
+		"moduleResolution": "node16",
+		"types": ["@types/node"]
+	},
+	"include": ["src/typescript/scripts/**/*.ts"],
+	"references": []
+}

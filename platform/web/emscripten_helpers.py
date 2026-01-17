@@ -1,5 +1,6 @@
 import json
 import os
+from pathlib import Path
 
 from SCons.Util import WhereIs
 
@@ -131,3 +132,54 @@ def add_js_post(env, js_post):
 
 def add_js_externs(env, externs):
     env.Append(JS_EXTERNS=env.File(externs))
+
+
+def get_npm_path(env):
+    npm_path = "npm"
+    if "EMSDK_NODE" in env["ENV"]:
+        emsdk_node_path = Path(env["ENV"]["EMSDK_NODE"])
+        npm_path = emsdk_node_path.parent.joinpath("npm").as_posix()
+    return npm_path
+
+
+def get_biome_path(env):
+    platform_web_path = env.Dir("#platform/web").abspath
+    biome_path = Path(platform_web_path).joinpath("node_modules", ".bin", "biome").as_posix()
+    return biome_path
+
+
+def get_biome_config_path(env):
+    platform_web_path = env.Dir("#platform/web").abspath
+    biome_config_path = Path(platform_web_path).joinpath("biome.config").as_posix()
+    return biome_config_path
+
+
+def run_npm(env, command, execute=True):
+    if "EMSDK_NODE" in env["ENV"]:
+        env["ENV"]["NODE"] = env["ENV"]["EMSDK_NODE"]
+
+    npm_path = get_npm_path(env)
+
+    platform_web_path = env.Dir("#platform/web").abspath
+    npm_action = env.Action("cd {} && {} {}".format(platform_web_path, npm_path, command))
+    if execute:
+        return env.Execute(action=npm_action)
+    return env.Action(action=npm_action)
+
+
+def run_biome(env, command, execute=True):
+    if "EMSDK_NODE" in env["ENV"]:
+        env["ENV"]["NODE"] = env["ENV"]["EMSDK_NODE"]
+
+    biome_path = get_biome_path(env)
+    if not os.path.isfile(biome_path):
+        npm_install_result = run_npm(env, "install")
+        if npm_install_result > 0:
+            env.Exit(npm_install_result)
+
+    biome_config_path = get_biome_config_path(env)
+
+    biome_action = env.Action('{} {} --config-path="{}"'.format(biome_path, command, biome_config_path))
+    if execute:
+        return env.Execute(action=biome_action)
+    return env.Command(action=biome_action)
