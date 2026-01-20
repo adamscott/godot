@@ -16,5 +16,21 @@
 		"actions": {
 			"recommended": true
 		}
+	},
+	"javascript": {
+		"formatter": {
+			"enabled": true
+		},
+		"linter": {
+			"enabled": true
+		},
+		"assist": {
+			"enabled": true
+		}
+	},
+	"html": {
+		"formatter": {
+			"enabled": true
+		}
 	}
 }
