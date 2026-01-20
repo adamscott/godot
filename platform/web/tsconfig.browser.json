@@ -1,0 +1,14 @@
+{
+	"extends": "./tsconfig.base.json",
+	"compilerOptions": {
+		"composite": true,
+		"rootDir": ".",
+		"module": "node20",
+		"moduleResolution": "nodenext",
+		"types": [""],
+		"lib": ["DOM", "DOM.AsyncIterable", "DOM.Iterable", "ES2022"]
+	},
+	"include": ["src/typescript/**/*.ts"],
+	"exclude": ["src/typescript/platform/node/**/*.ts"],
+	"references": []
+}

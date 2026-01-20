@@ -1,0 +1,12 @@
+{
+	"compilerOptions": {
+		"composite": true,
+		"baseUrl": ".",
+		"emitDeclarationOnly": true,
+		"paths": {
+			"@typescript/*": ["./src/typescript/*"]
+		},
+		"allowImportingTsExtensions": true,
+		"typeRoots": ["./node_modules/@types", "./src/typescript/@types"]
+	}
+}

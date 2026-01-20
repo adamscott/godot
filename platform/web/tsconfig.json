@@ -1,6 +1,11 @@
 {
 	"compilerOptions": {
-		"composite": true
+		"composite": true,
+		"baseUrl": ".",
+		"emitDeclarationOnly": true,
+		"paths": {
+			"@/*": ["src/typescript/*"]
+		}
 	},
 	"references": [{ "path": "./tsconfig.node.json" }]
 }

@@ -1,9 +1,15 @@
 {
 	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+	"vcs": {
+		"enabled": false,
+		"clientKind": "git",
+		"useIgnoreFile": false
+	},
 	"formatter": {
 		"enabled": true,
 		"lineWidth": 120,
-		"useEditorconfig": true
+		"useEditorconfig": true,
+		"bracketSpacing": true
 	},
 	"linter": {
 		"enabled": true,
@@ -15,6 +21,17 @@
 		"enabled": true,
 		"actions": {
 			"recommended": true
+		}
+	},
+	"css": {
+		"formatter": {
+			"enabled": true
+		},
+		"linter": {
+			"enabled": true
+		},
+		"assist": {
+			"enabled": true
 		}
 	},
 	"javascript": {
@@ -30,7 +47,10 @@
 	},
 	"html": {
 		"formatter": {
-			"enabled": true
+			"enabled": true,
+			"indentScriptAndStyle": true,
+			"whitespaceSensitivity": "css",
+			"attributePosition": "multiline"
 		}
 	}
 }

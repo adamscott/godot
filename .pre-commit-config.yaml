@@ -107,7 +107,7 @@ repos:
         name: biomejs
         language: node
         entry: "node misc/scripts/run_biomejs.js --"
-        files: ^(platform/web/js/|platform/web/src/typescript/|modules/|misc/dist/html/).*\.(js|ts|html)$
+        files: ^(platform/web/js/|platform/web/src/typescript/|platform/web/src/css/|modules/|misc/dist/html/).*\.(js|ts|html|css)$
         args:
           - check
           - --fix
@@ -145,7 +145,7 @@ repos:
         name: copyright-headers
         language: python
         entry: python misc/scripts/copyright_headers.py
-        files: \.(c|h|cpp|hpp|cc|hh|cxx|hxx|m|mm|inc|java|ts)$
+        files: \.(c|h|cpp|hpp|cc|hh|cxx|hxx|m|mm|inc|java|ts|css)$
         exclude: |
           (?x)^(
             core/math/bvh_.*\.inc|

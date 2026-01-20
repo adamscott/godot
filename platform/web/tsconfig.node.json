@@ -1,11 +1,14 @@
 {
+	"extends": "./tsconfig.base.json",
 	"compilerOptions": {
 		"composite": true,
 		"rootDir": ".",
-		"module": "node16",
-		"moduleResolution": "node16",
-		"types": ["@types/node"]
+		"module": "es2022",
+		"moduleResolution": "bundler",
+		"types": ["node"],
+		"lib": ["ES2022"]
 	},
-	"include": ["src/typescript/scripts/**/*.ts"],
+	"include": ["src/typescript/**/*.ts", "vite.shell.config.ts"],
+	"exclude": ["src/typescript/platform/browser/**/*.ts"],
 	"references": []
 }
