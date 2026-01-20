@@ -103,26 +103,17 @@ repos:
         files: ^(doc/classes|.*/doc_classes)/.*\.xml$
         additional_dependencies: [xmlschema]
 
-      - id: eslint
-        name: eslint
+      - id: biomejs
+        name: biomejs
         language: node
-        entry: eslint
-        files: ^(platform/web/js/|modules/|misc/dist/html/).*\.(js|html)$
+        entry: "node misc/scripts/run_biomejs.js --"
+        files: ^(platform/web/js/|platform/web/src/typescript/|modules/|misc/dist/html/).*\.(js|ts|html)$
         args:
+          - check
           - --fix
-          - --no-warn-ignored
-          - --no-config-lookup
-          - --config
-          - platform/web/eslint.config.cjs
+          - --
         additional_dependencies:
-          - "@eslint/js@^9.3.0"
-          - "@html-eslint/eslint-plugin@^0.24.1"
-          - "@html-eslint/parser@^0.24.1"
-          - "@stylistic/eslint-plugin@^2.1.0"
-          - eslint@^9.3.0
-          - eslint-plugin-html@^8.1.1
-          - globals@^15.3.0
-          - espree@^10.0.1
+          - "@biomejs/biome@^2.3.11"
 
       - id: jsdoc
         name: jsdoc
