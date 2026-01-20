@@ -145,7 +145,7 @@ repos:
         name: copyright-headers
         language: python
         entry: python misc/scripts/copyright_headers.py
-        files: \.(c|h|cpp|hpp|cc|hh|cxx|hxx|m|mm|inc|java)$
+        files: \.(c|h|cpp|hpp|cc|hh|cxx|hxx|m|mm|inc|java|ts)$
         exclude: |
           (?x)^(
             core/math/bvh_.*\.inc|
