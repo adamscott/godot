@@ -29,12 +29,9 @@
 /**************************************************************************/
 
 import { execFileSync } from "node:child_process";
-import * as fs from "node:fs/promises";
 import { dirname, resolve as pathResolve } from "node:path";
 import * as process from "node:process";
 import { fileURLToPath } from "node:url";
-import * as biome from "@biomejs/biome";
-import { errorAndExit } from "@typescript/platform/node/os";
 import * as cheerio from "cheerio";
 import { defineConfig, type HtmlTagDescriptor, type IndexHtmlTransformResult, loadEnv, type Plugin } from "vite";
 
@@ -50,7 +47,7 @@ export default defineConfig(async (pConfigEnv) => {
 	const env = loadEnv(mode, pathResolve(__dirname, "../.."), "");
 
 	return {
-		plugins: [injectExternalCSSFilesAsStyleTags()],
+		plugins: [injectExternalCSSFilesAsStyleTags(env)],
 		root: __root,
 		publicDir: __publicDir,
 		build: {
@@ -66,7 +63,7 @@ export default defineConfig(async (pConfigEnv) => {
 	};
 });
 
-function injectExternalCSSFilesAsStyleTags(): Plugin {
+function injectExternalCSSFilesAsStyleTags(env: Record<string, string>): Plugin {
 	return {
 		name: "inject-external-css-files-as-style-tags",
 		apply: "build",
@@ -74,8 +71,9 @@ function injectExternalCSSFilesAsStyleTags(): Plugin {
 			order: "post",
 			handler: async (pHtml, pContext): Promise<IndexHtmlTransformResult> => {
 				const $ = cheerio.load(pHtml);
-				const tags: HtmlTagDescriptor[] = [];
 				const bundle = pContext.bundle;
+
+				let tags: HtmlTagDescriptor[] = [];
 
 				if (Object.keys(bundle).length === 0) {
 					return [];
@@ -83,6 +81,9 @@ function injectExternalCSSFilesAsStyleTags(): Plugin {
 
 				$("link").each((_pIndex, pElement) => {
 					let href = pElement.attribs.href;
+					if (href == null) {
+						return;
+					}
 					if (href.startsWith("/")) {
 						href = href.substring(1);
 					}
@@ -98,36 +99,74 @@ function injectExternalCSSFilesAsStyleTags(): Plugin {
 							const textDecoder = new TextDecoder();
 							source = textDecoder.decode(cssBundle.source);
 						}
-						source = source.trim();
-						tags.push({
-							tag: "style",
-							children: source,
-							injectTo: "head",
-						});
+						source = `\n${source.trim()}\n`;
+
+						const styleTag = $('<style type="text/css"></style>').html(source);
+						$(pElement).after(styleTag);
 						$(pElement).remove();
 					}
 				});
 
-				const biomeArgs = [
-					"check",
-					"--fix",
-					`--stdin-file-path=${__indexHtml}`,
-					`--config-path=${pathResolve(__dirname, "biome.json")}`,
-				];
-				return new Promise((pResolve, pReject) => {
+				$("script").each((_pIndex, pElement) => {
+					let src = pElement.attribs.src;
+					if (src == null) {
+						return;
+					}
+					if (src.startsWith("/")) {
+						src = src.substring(1);
+					}
+					if (src in bundle) {
+						const scriptBundle = bundle[src];
+						if (scriptBundle.type !== "chunk") {
+							throw new Error(`Unexpected bundle of type \`${scriptBundle.type}\` for \`${src}\``);
+						}
+						const source = `\n${scriptBundle.code.trim()}\n`;
+
+						const scriptTag = $('<script type="module"></script>').html(source);
+						$(pElement).after(scriptTag);
+						$(pElement).remove();
+					}
+				});
+
+				let html = $.html();
+
+				// The "check" command seems to have an issue.
+				// See https://github.com/biomejs/biome/issues/8252.
+				const runBiome = (pCommand: string, pHtml: string, pTags: HtmlTagDescriptor[]) => {
+					const biomeArgs = [
+						pCommand,
+						"--fix",
+						`--stdin-file-path=${__indexHtml}`,
+						`--config-path=${pathResolve(__dirname, "biome.json")}`,
+					];
+
 					try {
 						const checkedHtml = execFileSync("biome", biomeArgs, {
 							encoding: "utf-8",
-							input: $.html(),
+							input: pHtml,
+							env,
 						});
-						pResolve({
+						return {
 							html: checkedHtml,
-							tags,
-						});
+							tags: pTags,
+						};
 					} catch (eError) {
 						const newError = new Error(`Error while running \`biome ${biomeArgs.join(" ")}\``);
 						newError.cause = eError;
-						pReject(newError);
+						throw newError;
+					}
+				};
+
+				return new Promise((pResolve, pReject) => {
+					try {
+						({ html, tags } = runBiome("format", html, tags));
+						({ html, tags } = runBiome("lint", html, tags));
+						pResolve({
+							html,
+							tags,
+						});
+					} catch (eError) {
+						pReject(eError);
 					}
 				});
 			},

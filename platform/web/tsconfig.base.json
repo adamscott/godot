@@ -6,7 +6,8 @@
 		"paths": {
 			"@typescript/*": ["./src/typescript/*"]
 		},
+		"typeRoots": ["./node_modules/@types", "./src/typescript/@types"],
 		"allowImportingTsExtensions": true,
-		"typeRoots": ["./node_modules/@types", "./src/typescript/@types"]
+		"esModuleInterop": true
 	}
 }
