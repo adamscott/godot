@@ -1,0 +1,9 @@
+{
+	"extends": "@godotengine/config-tsconfig-node",
+	"compilerOptions": {
+		"rootDir": "./src/typescript",
+		"emitDeclarationOnly": true
+	},
+	"include": ["./src/typescript/**/*.ts"],
+	"exclude": ["./src/typescript/platform/browser/**/*.ts", "./packages", "node_modules", "**/node_modules"]
+}

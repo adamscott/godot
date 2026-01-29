@@ -5,6 +5,11 @@ from methods import print_error
 
 Import("env")
 
+if len(env["pnpm_run"]) > 0:
+    pnpm_run_status = env.RunPnpm(command=env["pnpm_run"], cwd=env["pnpm_cwd"])
+    if pnpm_run_status != 0:
+        env.Exit(pnpm_run_status)
+
 # The HTTP server "targets". Run with "scons p=web serve", or "scons p=web run"
 if "serve" in COMMAND_LINE_TARGETS or "run" in COMMAND_LINE_TARGETS:
     import os
@@ -102,16 +107,18 @@ if env["dlink_enabled"]:
 
     # The side library, containing all Godot code.
     wasm = env.add_program("#bin/godot.side${PROGSUFFIX}.wasm", web_files)
-    build = sys + [wasm[0]]
+    build = sys + wasm
 else:
     # We use IDBFS. Since Emscripten 1.39.1 it needs to be linked explicitly.
     sys_env.Append(LIBS=["idbfs.js"])
     build = sys_env.add_program(build_targets, web_files + ["web_runtime.cpp"])
 
-sys_env.Depends(build[0], sys_env["JS_LIBS"])
-sys_env.Depends(build[0], sys_env["JS_PRE"])
-sys_env.Depends(build[0], sys_env["JS_POST"])
-sys_env.Depends(build[0], sys_env["JS_EXTERNS"])
+sys_env.Depends(build, sys_env["JS_LIBS"])
+sys_env.Depends(build, sys_env["JS_PRE"])
+sys_env.Depends(build, sys_env["JS_POST"])
+sys_env.Depends(build, sys_env["JS_EXTERNS"])
+
+sys_env.Depends(build, env.RunPnpm(command="install", cwd=sys_env.Dir("#").abspath))
 
 engine = [
     "js/engine/features.js",

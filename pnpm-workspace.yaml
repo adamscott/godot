@@ -1,0 +1,10 @@
+packages:
+  - ./platform/web/
+  - ./platform/web/packages/*
+  - ./modules/webxr/native/packages/*
+
+onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - esbuild
+
+linkWorkspacePackages: true

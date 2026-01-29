@@ -1,0 +1,9 @@
+{
+	"extends": "@godotengine/config-tsconfig-node",
+	"compilerOptions": {
+		"module": "nodenext",
+		"moduleResolution": "nodenext",
+		"types": ["node"],
+		"emitDeclarationOnly": true
+	}
+}

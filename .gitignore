@@ -100,7 +100,11 @@ platform/android/java/*/libs/
 
 # Web platform
 *.bc
-platform/web/node_modules/
+*.tsbuildinfo
+node_modules/
+.eslintcache
+.prettiercache
+.stylelintcache
 
 # Misc
 *.debug

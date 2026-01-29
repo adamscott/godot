@@ -1,0 +1,13 @@
+{
+	"name": "@godotengine/config-tsconfig-node",
+	"type": "module",
+	"files": [
+		"./tsconfig.json"
+	],
+	"peerDependencies": {
+		"@types/node": "^25.1.0"
+	},
+	"devDependencies": {
+		"@godotengine/config-tsconfig-base": "workspace:^"
+	}
+}

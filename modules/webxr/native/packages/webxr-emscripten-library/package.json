@@ -1,0 +1,20 @@
+{
+	"name": "@godotengine/webxr-emscripten-library",
+	"type": "module",
+	"scripts": {
+		"build": "pnpm run build:browser",
+		"build:browser": "tsc --project tsconfig.browser.json"
+	},
+	"devDependencies": {
+		"@godotengine/config-eslint": "workspace:^",
+		"@godotengine/config-prettier": "workspace:^",
+		"@godotengine/config-stylelint": "workspace:^",
+		"@godotengine/config-tsconfig-browser": "workspace:^",
+		"@godotengine/config-tsconfig-tools": "workspace:^",
+		"@godotengine/emscripten-utils": "workspace:^",
+		"@types/node": "^25.1.0",
+		"eslint": "^9.39.2",
+		"prettier": "3.8.1",
+		"typescript": "^5.9.3"
+	}
+}

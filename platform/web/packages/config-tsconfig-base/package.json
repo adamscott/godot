@@ -1,0 +1,10 @@
+{
+	"name": "@godotengine/config-tsconfig-base",
+	"type": "module",
+	"files": [
+		"./tsconfig.json"
+	],
+	"devDependencies": {
+		"@tsconfig/recommended": "^1.0.13"
+	}
+}
