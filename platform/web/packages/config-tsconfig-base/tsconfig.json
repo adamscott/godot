@@ -1,0 +1,20 @@
+{
+	"extends": "@tsconfig/recommended",
+	"compilerOptions": {
+		"composite": true,
+		"allowJs": true,
+		"allowImportingTsExtensions": false,
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"incremental": true,
+		"strictNullChecks": true,
+		"strictFunctionTypes": true,
+		"strict": true,
+		"sourceMap": false,
+		"skipLibCheck": true,
+		"target": "ES2024",
+		"module": "es2022",
+		"moduleDetection": "auto",
+		"moduleResolution": "node16"
+	}
+}

@@ -12,6 +12,7 @@ from emscripten_helpers import (
     create_template_zip,
     get_template_zip_path,
     run_closure_compiler,
+    run_pnpm,
 )
 from SCons.Util import WhereIs
 
@@ -60,6 +61,8 @@ def get_opts():
             False,
         ),
         BoolVariable("wasm_simd", "Use WebAssembly SIMD to improve CPU performance", True),
+        ("pnpm_run", "Run PNPM command. See the `pnpm_cwd` variable to set the current working directory.", ""),
+        ("pnpm_cwd", "Sets the working directory for the `pnpm_run` variable. Defaults to project root directory.", ""),
     ]
 
 
@@ -219,6 +222,9 @@ def configure(env: "SConsEnvironment"):
     env.AddMethod(add_js_post, "AddJSPost")
     env.AddMethod(add_js_externs, "AddJSExterns")
 
+    # Run commands.
+    env.AddMethod(run_pnpm, "RunPnpm")
+
     # Add method that joins/compiles our Engine files.
     env.AddMethod(create_engine_file, "CreateEngineFile")
 
@@ -345,3 +351,13 @@ def configure(env: "SConsEnvironment"):
 
     # Disable GDScript LSP (as the Web platform is not compatible with TCP).
     env.Append(CPPDEFINES=["GDSCRIPT_NO_LSP"])
+
+    # pnpm related.
+    if len(env["pnpm_run"]) > 0:
+        project_root_dir_path = Path(env.Dir("#").abspath)
+        if len(env["pnpm_cwd"]) == 0:
+            env["pnpm_cwd"] = project_root_dir_path.as_posix()
+        else:
+            pnpm_cwd_path = Path(env["pnpm_cwd"])
+            if not pnpm_cwd_path.is_absolute():
+                env["pnpm_cwd"] = project_root_dir_path.joinpath(pnpm_cwd_path).as_posix()

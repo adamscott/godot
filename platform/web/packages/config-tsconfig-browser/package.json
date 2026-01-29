@@ -1,0 +1,10 @@
+{
+	"name": "@godotengine/config-tsconfig-browser",
+	"type": "module",
+	"files": [
+		"./tsconfig.json"
+	],
+	"devDependencies": {
+		"@godotengine/config-tsconfig-base": "workspace:^"
+	}
+}

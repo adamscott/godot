@@ -1,8 +1,10 @@
 import json
 import os
+from pathlib import Path
 
 from SCons.Util import WhereIs
 
+from methods import print_error
 from platform_methods import get_build_version
 
 
@@ -137,3 +139,31 @@ def add_js_post(env, js_post):
 
 def add_js_externs(env, externs):
     env.Append(JS_EXTERNS=env.File(externs))
+
+
+def get_npx_path(env):
+    npx_path = "npx"
+    if "EMSDK_NODE" in env["ENV"]:
+        emsdk_node_path = Path(env["ENV"]["EMSDK_NODE"])
+        npx_path = emsdk_node_path.parent.joinpath("npx").as_posix()
+    return npx_path
+
+
+def run_pnpm(env, command, cwd=""):
+    if "EMSDK_NODE" in env["ENV"]:
+        env["ENV"]["NODE"] = env["ENV"]["EMSDK_NODE"]
+
+    npx_path = get_npx_path(env)
+
+    package_manager = "pnpm@10.28.2"
+
+    try:
+        root_package_json_path = Path(env.File("#package.json").abspath)
+        with open(root_package_json_path, "r") as root_package_json_file:
+            root_package_json = json.load(root_package_json_file)
+            package_manager = root_package_json["packageManager"]
+    except Exception as err:
+        print_error("Error while reading <project_root>/package.json", err)
+
+    pnpm_action = env.Action("{} --yes {} {}".format(npx_path, package_manager, command), cwd=cwd)
+    return env.Execute(action=pnpm_action)

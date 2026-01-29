@@ -1,0 +1,24 @@
+{
+	"name": "@godotengine/config-stylelint",
+	"type": "module",
+	"scripts": {
+		"build": "tsc",
+		"postinstall": "pnpm run build"
+	},
+	"exports": {
+		"import": "./dist/index.js"
+	},
+	"types": "./dist/index.d.ts",
+	"devDependencies": {
+		"@godotengine/config-eslint": "workspace:^",
+		"@godotengine/config-prettier": "workspace:^",
+		"@godotengine/config-tsconfig-node": "workspace:^",
+		"@godotengine/config-tsconfig-tools": "workspace:^",
+		"@types/node": "^25.1.0",
+		"eslint": "^9.39.2",
+		"prettier": "3.8.1",
+		"stylelint": "^17.1.0",
+		"stylelint-config-standard-scss": "^17.0.0",
+		"typescript": "^5.9.3"
+	}
+}
