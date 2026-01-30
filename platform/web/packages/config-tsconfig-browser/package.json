@@ -5,6 +5,7 @@
 		"./tsconfig.json"
 	],
 	"devDependencies": {
-		"@godotengine/config-tsconfig-base": "workspace:^"
+		"@godotengine/config-tsconfig-base": "workspace:^",
+		"turbo": "^2.8.1"
 	}
 }

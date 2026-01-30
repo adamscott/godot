@@ -1,0 +1,17 @@
+{
+	"$schema": "./node_modules/turbo/schema.json",
+	"globalEnv": [
+		"GITHUB_TOKEN",
+		"PACKAGE_VERSION",
+		"NODE_ENV"
+	],
+	"ui": "stream",
+	"noUpdateNotifier": true,
+	"tasks": {
+		"build": {
+			"dependsOn": [
+				"^build"
+			]
+		}
+	}
+}

@@ -1,0 +1,33 @@
+{
+	"name": "@godotengine/emscripten-libraries",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "pnpm run build:typescript && pnpm run build:bundle",
+		"build:typescript": "tsc && tsc-alias",
+		"build:bundle": "ts-node esbuild/bundle.ts"
+	},
+	"exports": {
+		"import": "./dist/index.js"
+	},
+	"types": "./dist/index.d.ts",
+	"devDependencies": {
+		"@godotengine/config-tsconfig-browser": "workspace:^",
+		"@godotengine/config-tsconfig-tools": "workspace:^",
+		"@godotengine/utils": "workspace:^",
+		"browserslist": "^4.28.1",
+		"esbuild": "^0.27.2",
+		"esbuild-plugin-browserslist": "^2.0.0",
+		"eslint": "^9.39.2",
+		"prettier": "3.8.1",
+		"stylelint": "^17.1.0",
+		"ts-node": "^10.9.2",
+		"tsc-alias": "^1.8.16",
+		"turbo": "^2.8.1",
+		"typescript": "^5.9.3",
+		"use-macro": "^1.1.0"
+	},
+	"dependencies": {
+		"@godotengine/emscripten-utils": "workspace:^"
+	}
+}

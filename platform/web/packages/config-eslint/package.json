@@ -2,8 +2,7 @@
 	"name": "@godotengine/config-eslint",
 	"type": "module",
 	"scripts": {
-		"build": "tsc",
-		"postinstall": "pnpm run build"
+		"build": "tsc"
 	},
 	"exports": {
 		"import": "./dist/index.js"
@@ -17,6 +16,7 @@
 		"eslint": "^9.39.2",
 		"eslint-config-love": "^147.0.0",
 		"prettier": "3.8.1",
+		"turbo": "^2.8.1",
 		"typescript": "^5.9.3"
 	}
 }

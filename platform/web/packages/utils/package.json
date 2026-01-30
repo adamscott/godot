@@ -1,14 +1,15 @@
 {
-	"name": "@godotengine/emscripten-library",
+	"name": "@godotengine/utils",
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "pnpm run build:typescript && pnpm run build:export",
-		"build:typescript": "tsc",
-		"build:export": "esbuild ./dist/index.js --bundle --outfile=./dist/index.bundle.js"
+		"build": "tsc && tsc-alias"
 	},
 	"exports": {
-		"import": "./dist/index.js"
+		".": "./dist/index.js",
+		"./constants": "./dist/constants/index.js",
+		"./error": "./dist/error/index.js",
+		"./types": "./dist/types/index.js"
 	},
 	"types": "./dist/index.d.ts",
 	"devDependencies": {
@@ -16,7 +17,8 @@
 		"@godotengine/config-tsconfig-tools": "workspace:^",
 		"eslint": "^9.39.2",
 		"prettier": "3.8.1",
-		"stylelint": "^17.1.0",
+		"tsc-alias": "^1.8.16",
+		"turbo": "^2.8.1",
 		"typescript": "^5.9.3"
 	}
 }

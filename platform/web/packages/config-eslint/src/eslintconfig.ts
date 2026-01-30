@@ -35,6 +35,7 @@ import html from "@html-eslint/eslint-plugin";
 export default defineConfig([
 	{
 		files: ["**/*.js", "**/*.ts", "**/*.mjs", "**/*.mts"],
+		ignores: ["**/*.nocheck.*"],
 		extends: [
 			// @ts-expect-error: love and eslint don't use exactly the same types.
 			love,
@@ -43,6 +44,31 @@ export default defineConfig([
 			parserOptions: {
 				projectService: true,
 			},
+		},
+		rules: {
+			"@typescript-eslint/prefer-destructuring": "off",
+			"@typescript-eslint/max-params": "off",
+			"@typescript-eslint/no-magic-numbers": "off",
+			"@typescript-eslint/no-unsafe-member-access": "off",
+			"arrow-body-style": "off",
+			complexity: ["error", 20],
+			eqeqeq: ["error", "smart"],
+			"max-lines": ["error", 3000],
+			"no-plusplus": [
+				"error",
+				{
+					allowForLoopAfterthoughts: true,
+				},
+			],
+			"prefer-destructuring": "off",
+			"promise/avoid-new": "off",
+			"promise/param-names": [
+				"error",
+				{
+					resolvePattern: "^_?pResolve$",
+					rejectPattern: "^_?pReject$",
+				},
+			],
 		},
 	},
 	{

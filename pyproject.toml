@@ -90,6 +90,8 @@ ignore-words-list = [
 	"outin",
 	"parm",
 	"pEvent",
+	"pReject",
+	"pResolve",
 	"requestor",
 	"streamin",
 	"te",

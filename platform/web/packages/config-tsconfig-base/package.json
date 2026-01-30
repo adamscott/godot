@@ -5,6 +5,7 @@
 		"./tsconfig.json"
 	],
 	"devDependencies": {
-		"@tsconfig/recommended": "^1.0.13"
+		"@tsconfig/recommended": "^1.0.13",
+		"turbo": "^2.8.1"
 	}
 }

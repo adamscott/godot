@@ -99,12 +99,13 @@ platform/android/java/*/libs/
 *.dSYM
 
 # Web platform
+node_modules/
 *.bc
 *.tsbuildinfo
-node_modules/
 .eslintcache
 .prettiercache
 .stylelintcache
+.turbo
 
 # Misc
 *.debug

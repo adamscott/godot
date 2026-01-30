@@ -5,10 +5,14 @@ from methods import print_error
 
 Import("env")
 
+env.UpdateNodeInENV()
+
+if len(env["npx_run"]) > 0:
+    npx_run_status = env.Execute(env.RunNpx(command=env["npx_run"], cwd=env["npx_cwd"]))
+    env.Exit(npx_run_status)
 if len(env["pnpm_run"]) > 0:
-    pnpm_run_status = env.RunPnpm(command=env["pnpm_run"], cwd=env["pnpm_cwd"])
-    if pnpm_run_status != 0:
-        env.Exit(pnpm_run_status)
+    pnpm_run_status = env.Execute(env.RunPnpm(command=env["pnpm_run"], cwd=env["pnpm_cwd"]))
+    env.Exit(pnpm_run_status)
 
 # The HTTP server "targets". Run with "scons p=web serve", or "scons p=web run"
 if "serve" in COMMAND_LINE_TARGETS or "run" in COMMAND_LINE_TARGETS:
@@ -118,7 +122,16 @@ sys_env.Depends(build, sys_env["JS_PRE"])
 sys_env.Depends(build, sys_env["JS_POST"])
 sys_env.Depends(build, sys_env["JS_EXTERNS"])
 
-sys_env.Depends(build, env.RunPnpm(command="install", cwd=sys_env.Dir("#").abspath))
+pnpm_install = sys_env.Alias("pnpm_install", [], sys_env.RunPnpm(command="install", cwd=sys_env.Dir("#").abspath))
+turbo_build = sys_env.Alias(
+    "turbo_build", [], sys_env.RunPnpm(command="exec turbo run build", cwd=sys_env.Dir("#").abspath)
+)
+sys_env.Depends(build, turbo_build)
+# sys_env.Depends(turbo_build, pnpm_install)
+sys_env.AlwaysBuild(
+    # pnpm_install,
+    turbo_build
+)
 
 engine = [
     "js/engine/features.js",

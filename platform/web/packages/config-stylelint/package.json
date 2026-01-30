@@ -2,8 +2,7 @@
 	"name": "@godotengine/config-stylelint",
 	"type": "module",
 	"scripts": {
-		"build": "tsc",
-		"postinstall": "pnpm run build"
+		"build": "tsc"
 	},
 	"exports": {
 		"import": "./dist/index.js"
@@ -19,6 +18,7 @@
 		"prettier": "3.8.1",
 		"stylelint": "^17.1.0",
 		"stylelint-config-standard-scss": "^17.0.0",
+		"turbo": "^2.8.1",
 		"typescript": "^5.9.3"
 	}
 }

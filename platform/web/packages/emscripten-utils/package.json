@@ -3,19 +3,22 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "tsc",
-		"postinstall": "pnpm run build"
+		"build": "tsc && tsc-alias"
 	},
 	"exports": {
 		".": "./dist/index.js",
-		"./types": "./dist/types/index.js"
+		"./types": "./dist/types/index.js",
+		"./types/browser": "./dist/types/browser/index.js"
 	},
 	"types": "./dist/index.d.ts",
 	"devDependencies": {
 		"@godotengine/config-tsconfig-browser": "workspace:^",
 		"@godotengine/config-tsconfig-tools": "workspace:^",
+		"@godotengine/utils": "workspace:^",
 		"eslint": "^9.39.2",
 		"prettier": "3.8.1",
+		"tsc-alias": "^1.8.16",
+		"turbo": "^2.8.1",
 		"typescript": "^5.9.3"
 	}
 }

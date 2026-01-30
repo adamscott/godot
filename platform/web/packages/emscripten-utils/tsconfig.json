@@ -2,8 +2,11 @@
 	"extends": "@godotengine/config-tsconfig-browser",
 	"compilerOptions": {
 		"rootDir": "./src",
-		"outDir": "./dist"
+		"outDir": "./dist",
+		"paths": {
+			"#/*": ["./src/*"]
+		}
 	},
 	"references": [{ "path": "./tsconfig.tools.json" }],
-	"include": ["src/**/*.ts"]
+	"include": ["./src/**/*.ts"]
 }

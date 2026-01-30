@@ -8,6 +8,7 @@
 		"@types/node": "^25.1.0"
 	},
 	"devDependencies": {
-		"@godotengine/config-tsconfig-node": "workspace:^"
+		"@godotengine/config-tsconfig-node": "workspace:^",
+		"turbo": "^2.8.1"
 	}
 }

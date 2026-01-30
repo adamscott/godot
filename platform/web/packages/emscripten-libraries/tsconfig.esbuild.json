@@ -1,0 +1,8 @@
+{
+	"extends": "@godotengine/config-tsconfig-tools",
+	"compilerOptions": {
+		"rootDir": "./",
+		"outDir": "./esbuild-dist"
+	},
+	"include": ["./esbuild/**/*.ts"]
+}
