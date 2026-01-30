@@ -99,12 +99,21 @@ platform/android/java/*/libs/
 *.dSYM
 
 # Web platform
+node_modules/
 *.bc
 *.tsbuildinfo
-node_modules/
+eslint.config.d.ts
+eslint.config.js
+prettier.config.d.ts
+prettier.config.js
+stylelint.config.d.ts
+stylelint.config.js
 .eslintcache
 .prettiercache
 .stylelintcache
+.turbo
+**/src/types/external_global.d.ts
+**/web/packages/*/dist/
 
 # Misc
 *.debug

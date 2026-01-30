@@ -1,35 +1,24 @@
 {
-	"name": "@godotengine/platform-web",
+	"name": "godot",
 	"private": true,
-	"type": "module",
 	"version": "1.0.0",
 	"description": "Development and linting setup for Godot's Web platform code",
 	"author": "Godot Engine contributors",
 	"license": "MIT",
 	"scripts": {
-		"docs": "jsdoc --template js/jsdoc2rst/ js/engine/engine.js js/engine/config.js js/engine/features.js --destination ''"
-	},
-	"exports": {
-		"import": "./src/typescript/package/import.ts"
+		"docs": "jsdoc --template js/jsdoc2rst/ js/engine/engine.js js/engine/config.js js/engine/features.js --destination ''",
+		"lint": "cd ../.. && eslint --no-config-lookup --config ./platform/web/eslint.config.cjs ./platform/web/js ./modules ./misc/dist/html",
+		"format": "npm run lint -- --fix"
 	},
 	"devDependencies": {
-		"@godotengine/config-eslint": "workspace:^",
-		"@godotengine/config-prettier": "workspace:^",
-		"@godotengine/config-stylelint": "workspace:^",
-		"@godotengine/config-tsconfig-browser": "workspace:^",
-		"@godotengine/config-tsconfig-node": "workspace:^",
-		"@html-eslint/eslint-plugin": "^0.54.0",
-		"@html-eslint/parser": "^0.54.0",
-		"@types/node": "^25.1.0",
-		"cheerio": "^1.2.0",
-		"esbuild": "^0.27.2",
-		"eslint": "^9.39.2",
-		"jsdoc": "^4.0.5",
-		"prettier": "3.8.1",
-		"sass": "^1.97.3",
-		"sass-embedded": "^1.97.3",
-		"stylelint": "^17.1.0",
-		"typescript": "^5.9.3",
-		"vite": "^7.3.1"
+		"@eslint/js": "^9.12.0",
+		"@html-eslint/eslint-plugin": "^0.27.0",
+		"@html-eslint/parser": "^0.27.0",
+		"@stylistic/eslint-plugin": "^2.9.0",
+		"eslint": "^9.15.0",
+		"eslint-plugin-html": "^8.1.1",
+		"espree": "^10.0.1",
+		"globals": "^15.9.0",
+		"jsdoc": "^4.0.3"
 	}
 }

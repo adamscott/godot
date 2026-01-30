@@ -3,5 +3,5 @@
 	"compilerOptions": {
 		"rootDir": "./"
 	},
-	"include": ["./eslint.config.ts"]
+	"include": ["./eslint.config.ts", "./tsdown.config.ts"]
 }

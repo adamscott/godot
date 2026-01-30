@@ -5,10 +5,11 @@ from methods import print_error
 
 Import("env")
 
+env.UpdateNodeInENV()
+
 if len(env["pnpm_run"]) > 0:
-    pnpm_run_status = env.RunPnpm(command=env["pnpm_run"], cwd=env["pnpm_cwd"])
-    if pnpm_run_status != 0:
-        env.Exit(pnpm_run_status)
+    pnpm_run_status = env.Execute(env.RunPnpm(command=env["pnpm_run"], cwd=env["pnpm_cwd"]))
+    env.Exit(pnpm_run_status)
 
 # The HTTP server "targets". Run with "scons p=web serve", or "scons p=web run"
 if "serve" in COMMAND_LINE_TARGETS or "run" in COMMAND_LINE_TARGETS:
@@ -39,27 +40,10 @@ if env["target"] == "editor":
     env.add_source_files(web_files, "editor/*.cpp")
 
 sys_env = env.Clone()
-sys_env.AddJSLibraries([
-    "js/libs/library_godot_audio.js",
-    "js/libs/library_godot_display.js",
-    "js/libs/library_godot_emscripten.js",
-    "js/libs/library_godot_fetch.js",
-    "js/libs/library_godot_webmidi.js",
-    "js/libs/library_godot_os.js",
-    "js/libs/library_godot_runtime.js",
-    "js/libs/library_godot_input.js",
-    "js/libs/library_godot_webgl2.js",
-])
-sys_env.AddJSExterns([
-    "js/libs/library_godot_webgl2.externs.js",
-])
-
-sys_env.AddJSPost([
-    "js/patches/patch_em_gl.js",
-])
-
-if env["javascript_eval"]:
-    sys_env.AddJSLibraries(["js/libs/library_godot_javascript_singleton.js"])
+sys_env.AddJSLibraries(["packages/emscripten-library-base/dist/emscripten-library-base.js"])
+sys_env.AddJSPost(["packages/emscripten-patch-base/dist/emscripten-patch-base.js"])
+if sys_env["javascript_eval"]:
+    sys_env.AddJSLibraries(["packages/emscripten-library-jswrapper/dist/emscripten-library-jswrapper.js"])
 
 for lib in sys_env["JS_LIBS"]:
     sys_env.Append(LINKFLAGS=["--js-library", lib.abspath])
@@ -67,12 +51,6 @@ for js in sys_env["JS_PRE"]:
     sys_env.Append(LINKFLAGS=["--pre-js", js.abspath])
 for js in sys_env["JS_POST"]:
     sys_env.Append(LINKFLAGS=["--post-js", js.abspath])
-
-# Add JS externs to Closure.
-sys_env["ENV"]["EMCC_CLOSURE_ARGS"] = sys_env["ENV"].get("EMCC_CLOSURE_ARGS", "")
-for ext in sys_env["JS_EXTERNS"]:
-    sys_env["ENV"]["EMCC_CLOSURE_ARGS"] += " --externs " + ext.abspath
-sys_env["ENV"]["EMCC_CLOSURE_ARGS"] = sys_env["ENV"]["EMCC_CLOSURE_ARGS"].strip()
 
 if len(env["EXPORTED_FUNCTIONS"]):
     sys_env.Append(LINKFLAGS=["-sEXPORTED_FUNCTIONS=" + repr(sorted(list(set(env["EXPORTED_FUNCTIONS"]))))])
@@ -110,9 +88,11 @@ else:
 sys_env.Depends(build, sys_env["JS_LIBS"])
 sys_env.Depends(build, sys_env["JS_PRE"])
 sys_env.Depends(build, sys_env["JS_POST"])
-sys_env.Depends(build, sys_env["JS_EXTERNS"])
 
-sys_env.Depends(build, env.RunPnpm(command="install", cwd=sys_env.Dir("#").abspath))
+# TypeScript projects.
+sys_env.Depends(build, env["TURBO_BUILD"])
+sys_env.Depends(env["TURBO_BUILD"], env["PNPM_INSTALL"])
+sys_env.AlwaysBuild(env["PNPM_INSTALL"], env["TURBO_BUILD"])
 
 engine = [
     "js/engine/features.js",
@@ -136,3 +116,6 @@ js_wrapped = env.NoCache(
 # 1 - wasm file
 # 2 - wasm side (when dlink is enabled).
 env.CreateTemplateZip(js_wrapped, build[1], build[2] if len(build) > 2 else None)
+
+if env.GetOption("clean"):
+    env.Execute(env.RunPnpm(command="exec turbo run clean", cwd=env.Dir("#").abspath))

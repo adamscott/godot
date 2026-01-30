@@ -29,12 +29,13 @@
 /**************************************************************************/
 
 import { defineConfig } from "eslint/config";
-import love from "eslint-config-love";
 import html from "@html-eslint/eslint-plugin";
+import love from "eslint-config-love";
 
 export default defineConfig([
 	{
-		files: ["**/*.js", "**/*.ts", "**/*.mjs", "**/*.mts"],
+		files: ["**/*.js", "**/*.ts", "**/*.mjs", "**/*.mts", "**/*.d.ts"],
+		ignores: ["**/*.nocheck.*"],
 		extends: [
 			// @ts-expect-error: love and eslint don't use exactly the same types.
 			love,
@@ -43,6 +44,46 @@ export default defineConfig([
 			parserOptions: {
 				projectService: true,
 			},
+		},
+		rules: {
+			"@typescript-eslint/prefer-destructuring": "off",
+			"@typescript-eslint/max-params": "off",
+			"@typescript-eslint/no-magic-numbers": "off",
+			"@typescript-eslint/no-unsafe-member-access": "off",
+			"@typescript-eslint/no-unused-vars": [
+				"error",
+				{
+					args: "all",
+					argsIgnorePattern: "^_",
+					caughtErrors: "all",
+					caughtErrorsIgnorePattern: "^_",
+					destructuredArrayIgnorePattern: "^_",
+					varsIgnorePattern: "^_",
+					ignoreRestSiblings: true,
+				},
+			],
+			"@typescript-eslint/require-await": "off",
+			"arrow-body-style": "off",
+			complexity: ["error", 20],
+			eqeqeq: ["error", "smart"],
+			"max-lines": ["error", 3000],
+			"no-param-reassign": ["error", { props: false }],
+			"no-plusplus": [
+				"error",
+				{
+					allowForLoopAfterthoughts: true,
+				},
+			],
+			"prefer-destructuring": "off",
+			"promise/avoid-new": "off",
+			"promise/param-names": [
+				"error",
+				{
+					resolvePattern: "^_?pResolve$",
+					rejectPattern: "^_?pReject$",
+				},
+			],
+			"sort-imports": ["error", {}],
 		},
 	},
 	{

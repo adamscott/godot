@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+from shlex import quote as shellQuote
 
 from SCons.Util import WhereIs
 
@@ -126,35 +127,42 @@ def get_template_zip_path(env):
 
 
 def add_js_libraries(env, libraries):
-    env.Append(JS_LIBS=env.File(libraries))
+    js_libs = env.Append(JS_LIBS=env.File(libraries))
+    env.Depends(js_libs, env["TURBO_BUILD"])
 
 
 def add_js_pre(env, js_pre):
-    env.Append(JS_PRE=env.File(js_pre))
+    js_libs = env.Append(JS_PRE=env.File(js_pre))
+    env.Depends(js_libs, env["TURBO_BUILD"])
 
 
 def add_js_post(env, js_post):
-    env.Append(JS_POST=env.File(js_post))
+    js_libs = env.Append(JS_POST=env.File(js_post))
+    env.Depends(js_libs, env["TURBO_BUILD"])
 
 
-def add_js_externs(env, externs):
-    env.Append(JS_EXTERNS=env.File(externs))
-
-
-def get_npx_path(env):
-    npx_path = "npx"
+def get_node_command_path(env, command):
+    command_path = command
     if "EMSDK_NODE" in env["ENV"]:
         emsdk_node_path = Path(env["ENV"]["EMSDK_NODE"])
-        npx_path = emsdk_node_path.parent.joinpath("npx").as_posix()
-    return npx_path
+        command_path = emsdk_node_path.parent.joinpath(command).as_posix()
+    return command_path
 
 
-def run_pnpm(env, command, cwd=""):
+def update_node_in_env(env):
     if "EMSDK_NODE" in env["ENV"]:
         env["ENV"]["NODE"] = env["ENV"]["EMSDK_NODE"]
 
-    npx_path = get_npx_path(env)
 
+def run_corepack(env, command, cwd=""):
+    corepack_path = get_node_command_path(env, command="corepack")
+
+    return env.Action(
+        "cd {} && {} {}".format(shellQuote(cwd), shellQuote(corepack_path), command),
+    )
+
+
+def run_pnpm(env, command, cwd=""):
     package_manager = "pnpm@10.28.2"
 
     try:
@@ -162,8 +170,11 @@ def run_pnpm(env, command, cwd=""):
         with open(root_package_json_path, "r") as root_package_json_file:
             root_package_json = json.load(root_package_json_file)
             package_manager = root_package_json["packageManager"]
+            hash_start_index = package_manager.index("+")
+            if hash_start_index > -1:
+                package_manager = package_manager[0:hash_start_index]
+
     except Exception as err:
         print_error("Error while reading <project_root>/package.json", err)
 
-    pnpm_action = env.Action("{} --yes {} {}".format(npx_path, package_manager, command), cwd=cwd)
-    return env.Execute(action=pnpm_action)
+    return run_corepack(env, "{} {}".format(package_manager, command), cwd=cwd)

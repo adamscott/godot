@@ -1,0 +1,54 @@
+{
+	"name": "@godotengine/emscripten-library-base",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "corepack pnpm run build:external-global && corepack pnpm run build:ts && corepack pnpm run build:library",
+		"build:external-global": "emscripten-builder-externalglobaldts \"#/external/index.ts\" && corepack pnpm run lint:external-global",
+		"build:ts": "tsdown",
+		"build:library": "emscripten-builder-library \"#/libraries/index.js\"",
+		"lint": "eslint . && prettier .",
+		"lint:fix": "eslint --fix . && prettier --write .",
+		"lint:external-global": "eslint --fix ./src/types/external_global.d.ts && prettier --write ./src/types/external_global.d.ts",
+		"clean": "shx rm -rf ./dist && shx rm -f tsconfig.tsbuildinfo"
+	},
+	"exports": {
+		".": "./dist/index.js",
+		"./external": "./dist/external/index.js",
+		"./libraries": "./dist/libraries/index.js",
+		"./package.json": "./package.json"
+	},
+	"types": "./dist/index.d.ts",
+	"files": [
+		"./dist/types/global.d.ts"
+	],
+	"dependencies": {
+		"@godotengine/emscripten-utils": "workspace:^"
+	},
+	"devDependencies": {
+		"@godotengine/config-eslint": "workspace:^",
+		"@godotengine/config-prettier": "workspace:^",
+		"@godotengine/config-tsconfig-browser": "workspace:^",
+		"@godotengine/config-tsconfig-tools": "workspace:^",
+		"@godotengine/config-tsdown": "workspace:^",
+		"@godotengine/emscripten-builder-library": "workspace:^",
+		"@godotengine/emscripten-builder-externalglobaldts": "workspace:^",
+		"@godotengine/utils": "workspace:^",
+		"@godotengine/utils-browser": "workspace:^",
+		"@types/webxr": "^0.5.24",
+		"browserslist": "^4.28.1",
+		"dedent": "^1.7.1",
+		"esbuild": "^0.27.2",
+		"esbuild-plugin-browserslist": "^2.0.0",
+		"eslint": "^9.39.2",
+		"prettier": "3.8.1",
+		"shx": "^0.4.0",
+		"stylelint": "^17.1.0",
+		"ts-node": "^10.9.2",
+		"tsc-alias": "^1.8.16",
+		"tsdown": "^0.20.1",
+		"turbo": "^2.8.1",
+		"typescript": "^5.9.3",
+		"unplugin-macros": "^0.18.7"
+	}
+}

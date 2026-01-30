@@ -1,7 +1,0 @@
-{
-	"extends": "@godotengine/config-tsconfig-node",
-	"compilerOptions": {
-		"rootDir": "./"
-	},
-	"include": ["./eslint.config.ts", "./prettier.config.mts", "./stylelint.config.ts"]
-}

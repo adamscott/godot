@@ -1,9 +1,0 @@
-{
-	"references": [
-		{ "path": "./tsconfig.browser.json" },
-		{ "path": "./tsconfig.node.json" },
-		{ "path": "./tsconfig.tools.json" }
-	],
-	"include": [],
-	"exclude": []
-}

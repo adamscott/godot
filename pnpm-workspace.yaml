@@ -1,10 +1,16 @@
 packages:
-  - ./platform/web/
   - ./platform/web/packages/*
-  - ./modules/webxr/native/packages/*
+  - ./modules/**/web/packages/*
+  - ./platform/web/  # legacy
 
 onlyBuiltDependencies:
-  - '@parcel/watcher'
+  - "@parcel/watcher"
   - esbuild
 
+publicHoistPattern:
+  - "@types/*"
+
 linkWorkspacePackages: true
+autoInstallPeers: true
+preferFrozenLockfile: true
+recursiveInstall: true

@@ -1,0 +1,41 @@
+{
+	"name": "@godotengine/emscripten-builder-library",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"#####1": "# Cannot use for the moment ts-down because it relies on esbuild.",
+		"build": "tsc && tsc-alias",
+		"clean": "shx rm -rf ./dist && shx rm -f tsconfig.tsbuildinfo"
+	},
+	"exports": {
+		"import": "./dist/index.js"
+	},
+	"types": "./dist/index.d.ts",
+	"bin": {
+		"emscripten-builder-library": "./dist/command/index.js"
+	},
+	"dependencies": {
+		"@godotengine/emscripten-utils": "workspace:^",
+		"@godotengine/utils-node": "workspace:^",
+		"browserslist": "^4.28.1",
+		"commander": "^14.0.3",
+		"dedent": "^1.7.1",
+		"esbuild": "^0.27.2",
+		"esbuild-plugin-browserslist": "^2.0.0"
+	},
+	"devDependencies": {
+		"@commander-js/extra-typings": "^14.0.0",
+		"@godotengine/config-eslint": "workspace:^",
+		"@godotengine/config-prettier": "workspace:^",
+		"@godotengine/config-tsconfig-node": "workspace:^",
+		"@godotengine/config-tsconfig-tools": "workspace:^",
+		"eslint": "^9.39.2",
+		"prettier": "3.8.1",
+		"shx": "^0.4.0",
+		"stylelint": "^17.1.0",
+		"ts-node": "^10.9.2",
+		"tsc-alias": "^1.8.16",
+		"turbo": "^2.8.1",
+		"typescript": "^5.9.3"
+	}
+}

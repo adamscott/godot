@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from emscripten_helpers import (
-    add_js_externs,
     add_js_libraries,
     add_js_post,
     add_js_pre,
@@ -13,6 +12,7 @@ from emscripten_helpers import (
     get_template_zip_path,
     run_closure_compiler,
     run_pnpm,
+    update_node_in_env,
 )
 from SCons.Util import WhereIs
 
@@ -216,13 +216,12 @@ def configure(env: "SConsEnvironment"):
     env["JS_LIBS"] = []
     env["JS_PRE"] = []
     env["JS_POST"] = []
-    env["JS_EXTERNS"] = []
     env.AddMethod(add_js_libraries, "AddJSLibraries")
     env.AddMethod(add_js_pre, "AddJSPre")
     env.AddMethod(add_js_post, "AddJSPost")
-    env.AddMethod(add_js_externs, "AddJSExterns")
 
     # Run commands.
+    env.AddMethod(update_node_in_env, "UpdateNodeInENV")
     env.AddMethod(run_pnpm, "RunPnpm")
 
     # Add method that joins/compiles our Engine files.
@@ -352,12 +351,35 @@ def configure(env: "SConsEnvironment"):
     # Disable GDScript LSP (as the Web platform is not compatible with TCP).
     env.Append(CPPDEFINES=["GDSCRIPT_NO_LSP"])
 
-    # pnpm related.
-    if len(env["pnpm_run"]) > 0:
-        project_root_dir_path = Path(env.Dir("#").abspath)
-        if len(env["pnpm_cwd"]) == 0:
-            env["pnpm_cwd"] = project_root_dir_path.as_posix()
-        else:
-            pnpm_cwd_path = Path(env["pnpm_cwd"])
-            if not pnpm_cwd_path.is_absolute():
-                env["pnpm_cwd"] = project_root_dir_path.joinpath(pnpm_cwd_path).as_posix()
+    # `pnpm` related.
+    def set_default_run_path(prefix):
+        prefix_run = prefix + "_run"
+        prefix_cwd = prefix + "_cwd"
+        if prefix_run not in env:
+            return
+
+        if len(env[prefix_run]) > 0:
+            project_root_dir_path = Path(env.Dir("#").abspath)
+            if len(env[prefix_cwd]) == 0:
+                env[prefix_cwd] = project_root_dir_path.as_posix()
+                print("prefix_cwd ({}): {}".format(prefix_cwd, env[prefix_cwd]))
+            else:
+                prefix_cwd_path = Path(env[prefix_cwd])
+                if not prefix_cwd_path.is_absolute():
+                    env[prefix_cwd] = project_root_dir_path.joinpath(prefix_cwd_path).as_posix()
+
+    set_default_run_path("pnpm")
+    set_default_run_path("npx")
+
+    # Disable `turbo` tracking.
+    env.Append(ENV={"TURBO_TELEMETRY_DISABLED": "1"})
+
+    # `pnpm` and `turbo` aliases for modules and others to access.
+    env.Append(
+        PNPM_INSTALL=env.Alias("pnpm_install", [], env.RunPnpm(command="install", cwd=env.Dir("#").abspath)),
+        TURBO_BUILD=env.Alias(
+            "turbo_build",
+            [],
+            env.RunPnpm(command="exec turbo run build", cwd=env.Dir("#").abspath),
+        ),
+    )

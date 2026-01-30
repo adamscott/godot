@@ -1,0 +1,13 @@
+{
+	"extends": "@godotengine/config-tsconfig-node",
+	"compilerOptions": {
+		"baseUrl": ".",
+		"rootDir": "./src",
+		"outDir": "./dist",
+		"paths": {
+			"#/*": ["./src/*"]
+		}
+	},
+	"include": ["src/**/*"],
+	"references": [{ "path": "./tsconfig.tools.json" }]
+}

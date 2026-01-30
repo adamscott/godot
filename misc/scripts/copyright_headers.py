@@ -72,6 +72,13 @@ for f in sys.argv[1:]:
         line = fileread.readline()
         header_done = False
 
+        if line.startswith("#!"):  # This is a script. We need to insert the header afterwards.
+            text_so_far = text
+            text = line
+            text += "\n"  # Add an empty line for safe measures.
+            text += text_so_far
+            line = fileread.readline()
+
         while line.strip() == "" and line != "":  # Skip empty lines at the top
             line = fileread.readline()
 

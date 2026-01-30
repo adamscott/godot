@@ -5,6 +5,15 @@
 		"./tsconfig.json"
 	],
 	"devDependencies": {
-		"@godotengine/config-tsconfig-base": "workspace:^"
+		"@godotengine/config-tsconfig-base": "workspace:^",
+		"turbo": "^2.8.1"
+	},
+	"peerDependencies": {
+		"@types/webxr": "^0.5.24"
+	},
+	"peerDependenciesMeta": {
+		"@types/webxr": {
+			"optional": false
+		}
 	}
 }

@@ -1,7 +1,0 @@
-{
-	"extends": "@godotengine/config-tsconfig-browser",
-	"compilerOptions": {
-		"rootDir": "./"
-	},
-	"include": ["./eslint.config.ts", "./prettier.config.mts"]
-}

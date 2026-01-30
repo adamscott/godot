@@ -4,10 +4,16 @@
 	"files": [
 		"./tsconfig.json"
 	],
+	"devDependencies": {
+		"@godotengine/config-tsconfig-base": "workspace:^",
+		"turbo": "^2.8.1"
+	},
 	"peerDependencies": {
 		"@types/node": "^25.1.0"
 	},
-	"devDependencies": {
-		"@godotengine/config-tsconfig-base": "workspace:^"
+	"peerDependenciesMeta": {
+		"@types/node": {
+			"optional": false
+		}
 	}
 }
