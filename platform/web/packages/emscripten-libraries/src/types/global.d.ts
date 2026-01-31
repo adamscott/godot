@@ -28,14 +28,17 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import type { CPointer, CPointerType, ErrnoError } from "@godotengine/emscripten-utils/types";
+import type { CPointers, CPointer, CPointerType, ErrnoError } from "@godotengine/emscripten-utils/types";
 
 import type { TypedArray, GLContext, GLContextHandle, GLTexture } from "@godotengine/emscripten-utils/types/browser";
 
-import type { _GodotAudio, _GodotAudioScript, _GodotAudioWorklet } from "../libraries/audio";
-import type { _GodotFetch } from "../libraries/fetch";
-import type { _IDHandler, _GodotConfig, _GodotFS, _GodotOS, _GodotEventListeners, _GodotPWA } from "../libraries/os";
-import type { _GodotRuntime } from "../libraries/runtime";
+import type { _GodotAudio, _GodotAudioScript, _GodotAudioWorklet } from "#/libraries/audio";
+import type { _GodotFetch } from "#/libraries/fetch";
+import type { _GodotIME, _GodotInputGamepads, _GodotInputDragDrop, _GodotInput } from "#/libraries/input";
+import type { _IDHandler, _GodotConfig, _GodotFS, _GodotOS, _GodotEventListeners, _GodotPWA } from "#/libraries/os";
+import type { _GodotRuntime } from "#/libraries/runtime";
+import type { _GodotWebGL2 } from "#/libraries/webgl2";
+import type { _GodotWebMidi } from "#/libraries/webmidi";
 
 export {};
 
@@ -49,8 +52,8 @@ declare global {
 	const _malloc: (pSize: number) => CPointer;
 	const _free: (pPtr: CPointer) => void;
 
-	const getValue: (pPtr: CPointer, pType: CPointerType) => number;
-	const setValue: (pPtr: CPointer, pValue: number, pType: CPointerType) => void;
+	const getValue: (pPtr: CPointers, pType: CPointerType) => number | bigint;
+	const setValue: (pPtr: CPointers, pValue: number | bigint, pType: CPointerType) => void;
 	const UTF8ToString: (pPtr: CPointer) => string;
 	const lengthBytesUTF8: (pString: string) => number;
 	const stringToUTF8: (pString: string, pStringPtr: CPointer, pLength: number) => number;
@@ -109,7 +112,7 @@ declare global {
 	const runtimeKeepalivePop: () => void;
 
 	const GL: {
-		getContext: (pContextHandle: GLContextHandle) => GLContext;
+		getContext: (pContextHandle: GLContextHandle) => GLContext | null;
 		getNewId: (pTable: unknown[]) => number;
 		resizeOffscreenFramebuffer: (pGLContext: GLContext) => void;
 		currentContext: GLContext;

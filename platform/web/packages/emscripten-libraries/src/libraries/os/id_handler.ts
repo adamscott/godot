@@ -28,7 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- No way around this rule. */
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- Need to cast to emscripten types. */
 
 import type { CIDHandlerId, CIDHandlerIdExtract } from "@godotengine/emscripten-utils/types";
 

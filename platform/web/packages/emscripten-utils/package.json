@@ -7,6 +7,7 @@
 	},
 	"exports": {
 		".": "./dist/index.js",
+		"./constants": "./dist/constants/index.js",
 		"./types": "./dist/types/index.js",
 		"./types/browser": "./dist/types/browser/index.js"
 	},

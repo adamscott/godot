@@ -47,7 +47,6 @@ export type CInt64Pointer = BrandSuper<number, "CPointer", "CInt64Pointer">;
 export type CUintPointer = BrandSuper<number, "CPointer", "CUintPointer">;
 export type CFloatPointer = BrandSuper<number, "CPointer", "CFloatPointer">;
 export type CDoublePointer = BrandSuper<number, "CPointer", "CDoublePointer">;
-
 export type CIDHandlerId<T> = BrandSuperSuper<number, "CInt", "CIDHandlerId", T>;
 export type CIDHandlerIdExtract<TKey> = TKey extends CIDHandlerId<infer T> ? T : never;
 
@@ -68,7 +67,23 @@ export type CFloatArrayPointer = BrandSuperSuper<number, "CPointer", "CFloatPoin
 export type CDoubleArrayPointer = BrandSuperSuper<number, "CPointer", "CDoublePointer", "CDoubleArrayPointer">;
 
 export type CPointerSize = 8 | 16 | 32 | 64;
-export type SignedIntegerCPointerType = `i${CPointerSize}`;
-export type UnsignedIntegerCPointerType = `u${CPointerSize}`;
-export type FloatCPointerType = "f32" | "float" | "f64" | "double";
-export type CPointerType = SignedIntegerCPointerType | UnsignedIntegerCPointerType | FloatCPointerType | "*";
+export type CSignedIntegerPointerType = `i${CPointerSize}`;
+export type CUnsignedIntegerPointerType = `u${CPointerSize}`;
+export type CFloatPointerType = "f32" | "float" | "f64" | "double";
+export type CPointerType = CSignedIntegerPointerType | CUnsignedIntegerPointerType | CFloatPointerType | "*";
+
+export type CPointers =
+	| CPointer
+	| CVoidPointer
+	| CCharPointer
+	| CIntPointer
+	| CInt64Pointer
+	| CUintPointer
+	| CFloatPointer
+	| CDoublePointer
+	| CVoidArrayPointer
+	| CCharArrayPointer
+	| CIntArrayPointer
+	| CUintArrayPointer
+	| CFloatArrayPointer
+	| CDoubleArrayPointer;

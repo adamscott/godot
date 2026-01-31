@@ -28,8 +28,9 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- No way around this rule. */
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- Need to cast to emscripten types. */
 
+import { asCIntBoolean, asCType } from "@godotengine/emscripten-utils/types";
 import type {
 	CCharPointer,
 	CDouble,
@@ -365,7 +366,7 @@ export const _GodotAudio = {
 	godot_audio_has_script_processor__proxy: "sync",
 	godot_audio_has_script_processor__sig: "i",
 	godot_audio_has_script_processor: (): CInt => {
-		return GodotRuntime.boolean(GodotAudio.context?.createScriptProcessor != null);
+		return asCIntBoolean(GodotAudio.context?.createScriptProcessor != null);
 	},
 
 	godot_audio_init__proxy: "sync",
@@ -393,7 +394,7 @@ export const _GodotAudio = {
 		if (context == null) {
 			GodotRuntime.error(new Error("`GodotAudio.context()` is `null` even after initialization."));
 		} else {
-			GodotRuntime.setHeapValue(pMixRatePtr, context.sampleRate, "i32");
+			GodotRuntime.setHeapValue(pMixRatePtr, asCType<CInt>(context.sampleRate), "i32");
 		}
 		return channels as CInt;
 	},

@@ -28,8 +28,9 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- No way around this rule. */
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- Need to cast to emscripten types. */
 
+import { ErrorList } from "@godotengine/emscripten-utils/constants";
 import type {
 	CFloatPointer,
 	CFunctionPointer,
@@ -289,9 +290,9 @@ export const _GodotAudioWorklet = {
 			GodotAudioWorklet.create(pChannels);
 		} catch (pError) {
 			GodotRuntime.error("Error starting AudioDriverWorklet", pError);
-			return GodotRuntime.status.FAILED;
+			return ErrorList.FAILED;
 		}
-		return GodotRuntime.status.OK;
+		return ErrorList.OK;
 	},
 
 	godot_audio_worklet_start__proxy: "sync",

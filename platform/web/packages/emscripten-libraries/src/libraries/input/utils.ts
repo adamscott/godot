@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  bundle.ts                                                             */
+/*  utils.ts                                                              */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,9 +28,11 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import "./libraries/runtime";
-import "./libraries/os";
-
-import "./libraries/audio";
-import "./libraries/webgl2";
-import "./libraries/webmidi";
+export function getModifiers(pEvent: KeyboardEvent | MouseEvent): number {
+	return (
+		(Number(pEvent.shiftKey) << 0) +
+		(Number(pEvent.altKey) << 1) +
+		(Number(pEvent.ctrlKey) << 2) +
+		(Number(pEvent.metaKey) << 3)
+	);
+}

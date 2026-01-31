@@ -31,3 +31,5 @@
 export type * from "./aliases.js";
 export type * from "./brand.js";
 export type * from "./error.js";
+
+export { asCType, asCFunctionPointer, asCIDHandlerId, asCIntBoolean } from "./cast.js";

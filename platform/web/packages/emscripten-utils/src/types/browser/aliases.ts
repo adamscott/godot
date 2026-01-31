@@ -28,7 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-export type GLContextHandle = unknown;
+export type GLContextHandle = number;
 export type GLTexture = WebGLTexture & {
 	name?: number;
 };

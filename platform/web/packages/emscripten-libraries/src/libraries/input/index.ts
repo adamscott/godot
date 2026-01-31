@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  bundle.ts                                                             */
+/*  index.ts                                                              */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,9 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import "./libraries/runtime";
-import "./libraries/os";
-
-import "./libraries/audio";
-import "./libraries/webgl2";
-import "./libraries/webmidi";
+export { _GodotIME } from "./godot_ime.js";
+export { _GodotInputGamepads } from "./godot_input_gamepads.js";
+export { _GodotInputDragDrop } from "./godot_input_drag_drop.js";
+export { _GodotInput } from "./godot_input.js";

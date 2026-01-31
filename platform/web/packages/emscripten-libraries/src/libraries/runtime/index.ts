@@ -28,10 +28,9 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- No way around this rule. */
-
 import type { AnyFunction } from "@godotengine/utils/types";
 
+import { asCType } from "@godotengine/emscripten-utils/types";
 import type {
 	CCharArrayPointer,
 	CCharPointer,
@@ -47,39 +46,46 @@ import type {
 	CIntPointer,
 	CPointer,
 	CPointerType,
+	CUint,
+	CUintPointer,
 } from "@godotengine/emscripten-utils/types";
 
 import type { TypedArray } from "@godotengine/emscripten-utils/types/browser";
 
-interface GetHeapValue {
-	(pPtr: CIntPointer, pType: Extract<CPointerType, "i8" | "i16" | "i32">): CInt;
-	(pPtr: CInt64Pointer, pType: Extract<CPointerType, "i64">): CInt64;
-	(pPtr: CFloatPointer, pType: Extract<CPointerType, "f32" | "float">): CFloat;
-	(pPtr: CDoublePointer, pType: Extract<CPointerType, "f64" | "double">): CDouble;
-	(pPtr: CPointer, pType: CPointerType): number;
+function getHeapValue(pPtr: CIntPointer, pType: Extract<CPointerType, "i8" | "i16" | "i32">): CInt;
+function getHeapValue(pPtr: CUintPointer, pType: Extract<CPointerType, "i8" | "i16" | "i32">): CUint;
+function getHeapValue(pPtr: CInt64Pointer, pType: Extract<CPointerType, "i64">): CInt64;
+function getHeapValue(pPtr: CFloatPointer, pType: Extract<CPointerType, "f32" | "float">): CFloat;
+function getHeapValue(pPtr: CDoublePointer, pType: Extract<CPointerType, "f64" | "double">): CDouble;
+function getHeapValue(
+	pPtr: Parameters<typeof getValue>[0],
+	pType: Parameters<typeof getValue>[1],
+): ReturnType<typeof getValue> {
+	return getValue(pPtr, pType);
 }
-interface SetHeapValue {
-	(pPtr: CIntPointer, pValue: CInt, pType: Extract<CPointerType, "i18" | "i16" | "i32">): void;
-	(pPtr: CInt64Pointer, pValue: CInt64, pType: Extract<CPointerType, "i64">): void;
-	(pPtr: CFloatPointer, pValue: CFloat, pType: Extract<CPointerType, "f32" | "float">): void;
-	(pPtr: CDoublePointer, pValue: CDouble, pType: Extract<CPointerType, "f64" | "double">): void;
-	(pPtr: CPointer, pValue: number, pType: CPointerType): void;
+
+function setHeapValue(pPtr: CIntPointer, pValue: CInt, pType: Extract<CPointerType, "i18" | "i16" | "i32">): void;
+function setHeapValue(pPtr: CUintPointer, pValue: CUint, pType: Extract<CPointerType, "i18" | "i16" | "i32">): void;
+function setHeapValue(pPtr: CInt64Pointer, pValue: CInt64, pType: Extract<CPointerType, "i64">): void;
+function setHeapValue(pPtr: CFloatPointer, pValue: CFloat, pType: Extract<CPointerType, "f32" | "float">): void;
+function setHeapValue(pPtr: CDoublePointer, pValue: CDouble, pType: Extract<CPointerType, "f64" | "double">): void;
+function setHeapValue(
+	pPtr: Parameters<typeof setValue>[0],
+	pValue: Parameters<typeof setValue>[1],
+	pType: Parameters<typeof setValue>[2],
+): ReturnType<typeof setValue> {
+	setValue(pPtr, pValue, pType);
 }
 
 export const _GodotRuntime = {
 	$GodotRuntime: {
-		NULLPTR: 0 as CPointer,
-		status: Object.freeze({
-			OK: 0 as CInt,
-			FAILED: 1 as CInt,
-		}),
-
 		// Functions.
 		getFunction: <T extends CFunctionPointer<AnyFunction>>(pPtr: T): CFunctionPointerExtract<T> => {
 			const func = wasmTable.get(pPtr);
 			if (func == null) {
 				throw new Error("Function is null");
 			}
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- We need to force the casting here.
 			return func as CFunctionPointerExtract<T>;
 		},
 
@@ -101,23 +107,20 @@ export const _GodotRuntime = {
 			_free(pPtr);
 		},
 
-		getHeapValue: ((pPtr, pType) => {
-			getValue(pPtr, pType);
-		}) as GetHeapValue,
-
-		setHeapValue: ((pPtr: CPointer, pValue: number, pType: CPointerType): void => {
-			setValue(pPtr, pValue, pType);
-		}) as SetHeapValue,
+		getHeapValue,
+		setHeapValue,
 
 		heapSub: <T extends TypedArray>(pHeap: T, pPtr: CPointer, pLength: number): T => {
 			const { BYTES_PER_ELEMENT } = pHeap;
 			const index = pPtr / BYTES_PER_ELEMENT;
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Make sure to match the `pHeap` type.
 			return pHeap.subarray(index, index + pLength) as T;
 		},
 
 		heapSlice: <T extends TypedArray>(pHeap: T, pPtr: CPointer, pLength: number): T => {
 			const { BYTES_PER_ELEMENT } = pHeap;
 			const index = pPtr / BYTES_PER_ELEMENT;
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Make sure to match the `pHeap` type.
 			return pHeap.slice(index, index + pLength) as T;
 		},
 
@@ -134,7 +137,7 @@ export const _GodotRuntime = {
 
 		parseStringArray: (pPtr: CCharArrayPointer, pSize: number): string[] => {
 			return Array.from(GodotRuntime.heapSub(HEAP32, pPtr, pSize)).map((pMappedPtr) =>
-				GodotRuntime.parseString(pMappedPtr as CCharPointer),
+				GodotRuntime.parseString(asCType<CCharPointer>(pMappedPtr)),
 			);
 		},
 
@@ -146,12 +149,14 @@ export const _GodotRuntime = {
 			const length = GodotRuntime.strlen(pString);
 			const cStringPtr = GodotRuntime.malloc(length);
 			stringToUTF8(pString, cStringPtr, length);
-			return cStringPtr as CCharPointer;
+			return asCType<CCharPointer>(cStringPtr);
 		},
 
 		allocStringArray: (pStrings: string[]): CCharArrayPointer => {
 			const size = pStrings.length;
-			const cStringArrayPointer = GodotRuntime.malloc(size * Uint32Array.BYTES_PER_ELEMENT) as CCharArrayPointer;
+			const cStringArrayPointer = asCType<CCharArrayPointer>(
+				GodotRuntime.malloc(size * Uint32Array.BYTES_PER_ELEMENT),
+			);
 			for (let i = 0; i < size; i++) {
 				HEAP32[(cStringArrayPointer >> 2) + i] = GodotRuntime.allocString(pStrings[i]);
 			}
@@ -160,17 +165,13 @@ export const _GodotRuntime = {
 
 		freeStringArray: (pStringArrayPtr: CCharArrayPointer, pLength: number): void => {
 			for (let i = 0; i < pLength; i++) {
-				GodotRuntime.free(HEAP32[((pStringArrayPtr as number) >> 2) + i] as CPointer);
+				GodotRuntime.free(asCType<CCharArrayPointer>(HEAP32[((pStringArrayPtr as number) >> 2) + i]));
 			}
 			GodotRuntime.free(pStringArrayPtr);
 		},
 
-		stringToHeap: (pString: string, pPtr: CCharPointer, pLength: number): CInt => {
-			return stringToUTF8Array(pString, HEAP8, pPtr, pLength) as CInt;
-		},
-
-		boolean: (pValue: boolean): CInt => {
-			return Number(pValue) as CInt;
+		stringToHeap: (pString: string, pPtr: CCharPointer, pLength: number): CPointer => {
+			return asCType<CCharArrayPointer>(stringToUTF8Array(pString, HEAP8, pPtr, pLength));
 		},
 	},
 };
