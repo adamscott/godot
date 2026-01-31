@@ -48,6 +48,9 @@ async function main(): Promise<void> {
 		bundle: true,
 		format: "esm",
 		outfile: LIBRARIES_JS_PATH,
+		treeShaking: true,
+		minify: true,
+		sourcemap: true,
 		plugins: [
 			esbuildPluginUseMacro(),
 			esbuildPluginBrowserslist(
