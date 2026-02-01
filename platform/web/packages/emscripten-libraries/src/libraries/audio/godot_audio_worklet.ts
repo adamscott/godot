@@ -30,7 +30,6 @@
 
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- Need to cast to emscripten types. */
 
-import { ErrorList } from "@godotengine/emscripten-utils/constants";
 import type {
 	CFloatPointer,
 	CFunctionPointer,
@@ -39,6 +38,7 @@ import type {
 	CIntPointer,
 	CPointer,
 } from "@godotengine/emscripten-utils/types";
+
 import { throwIfIsNotOfType } from "@godotengine/utils/error";
 
 type RingBufferOutCallback = (pWPosition: number, pPendingSamples: number) => void;
@@ -290,9 +290,9 @@ export const _GodotAudioWorklet = {
 			GodotAudioWorklet.create(pChannels);
 		} catch (pError) {
 			GodotRuntime.error("Error starting AudioDriverWorklet", pError);
-			return ErrorList.FAILED;
+			return GodotRuntime.CIntError.FAILED;
 		}
-		return ErrorList.OK;
+		return GodotRuntime.CIntError.OK;
 	},
 
 	godot_audio_worklet_start__proxy: "sync",

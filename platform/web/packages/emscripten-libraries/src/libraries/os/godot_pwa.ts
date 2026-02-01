@@ -83,7 +83,7 @@ export const _GodotPWA = {
 	godot_js_pwa_update__sig: "i",
 	godot_js_pwa_update: (): CInt => {
 		if (!("serviceWorker" in navigator) || !GodotPWA.hasUpdate) {
-			return GodotOS.status.FAILED;
+			return GodotRuntime.CIntError.FAILED;
 		}
 
 		try {
@@ -100,9 +100,9 @@ export const _GodotPWA = {
 				});
 		} catch (error) {
 			GodotRuntime.error(error);
-			return GodotOS.status.FAILED;
+			return GodotRuntime.CIntError.FAILED;
 		}
-		return GodotOS.status.OK;
+		return GodotRuntime.CIntError.OK;
 	},
 };
 

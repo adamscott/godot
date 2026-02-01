@@ -32,65 +32,19 @@
 
 import type { AnyFunction } from "@godotengine/utils/types";
 
-import type {
-	CInt,
-	CInt64,
-	CInt64Pointer,
-	CUint,
-	CCharArrayPointer,
-	CCharPointer,
-	CDouble,
-	CDoubleArrayPointer,
-	CDoublePointer,
-	CFloat,
-	CFloatArrayPointer,
-	CFloatPointer,
-	CFunctionPointer,
-	CIntArrayPointer,
-	CIntPointer,
-	CPointer,
-	CUintArrayPointer,
-	CUintPointer,
-	CVoidArrayPointer,
-	CVoidPointer,
-	CFloatPointerType,
-	CIDHandlerId,
-	CPointerSize,
-	CPointerType,
-	CSignedIntegerPointerType,
-	CUnsignedIntegerPointerType,
-} from "./aliases.js";
-
-// `CFunctionPointer` and `CIDHandlerId` need generic parameters.
-type CType =
-	| CInt
-	| CInt64
-	| CInt64Pointer
-	| CUint
-	| CCharArrayPointer
-	| CCharPointer
-	| CDouble
-	| CDoubleArrayPointer
-	| CDoublePointer
-	| CFloat
-	| CFloatArrayPointer
-	| CFloatPointer
-	| CIntArrayPointer
-	| CIntPointer
-	| CPointer
-	| CUintArrayPointer
-	| CUintPointer
-	| CVoidArrayPointer
-	| CVoidPointer
-	| CFloatPointerType
-	| CPointerSize
-	| CPointerType
-	| CSignedIntegerPointerType
-	| CUnsignedIntegerPointerType;
+import type { CInt, CInt64, CFunctionPointer, CIDHandlerId, CType } from "./aliases.js";
 
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- We want the developer to specify the generic type.
-export function asCType<T extends CType>(pValue: number): T {
+export function asCType<T extends CType>(pValue: number | CType): T {
 	return pValue as T;
+}
+
+export function asCInt(pValue: number | CType): CInt {
+	return pValue as CInt;
+}
+
+export function asCInt64(pValue: number | bigint | CType): CInt64 {
+	return pValue as CInt64;
 }
 
 export function asCFunctionPointer<T extends AnyFunction>(pFunctionPointer: number): CFunctionPointer<T> {
@@ -105,4 +59,20 @@ export function asCIDHandlerId<T>(pId: number): CIDHandlerId<T> {
 export function asCIntBoolean(pValue: any): CInt {
 	// eslint-disable-next-line no-extra-boolean-cast -- Need to cast as boolean here.
 	return Boolean(pValue) ? asCType<CInt>(1) : asCType<CInt>(0);
+}
+
+export function fromCTypeToNumber(pValue: CType): number {
+	return pValue as number;
+}
+
+export function fromCInt64ToBigint(pValue: CInt64): bigint {
+	return pValue as bigint;
+}
+
+export function fromCTypeToBoolean(pValue: CType): boolean {
+	return fromCTypeToNumber(pValue) !== 0;
+}
+
+export function fromCInt64ToBoolean(pValue: CInt64): boolean {
+	return fromCInt64ToBigint(pValue) !== 0n;
 }

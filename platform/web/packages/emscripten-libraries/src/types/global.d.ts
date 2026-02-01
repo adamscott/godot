@@ -33,7 +33,9 @@ import type { CPointers, CPointer, CPointerType, ErrnoError } from "@godotengine
 import type { TypedArray, GLContext, GLContextHandle, GLTexture } from "@godotengine/emscripten-utils/types/browser";
 
 import type { _GodotAudio, _GodotAudioScript, _GodotAudioWorklet } from "#/libraries/audio";
+import type { _GodotDisplay, _GodotDisplayCursor, _GodotDisplayScreen, _GodotDisplayVK } from "#/libraries/display";
 import type { _GodotFetch } from "#/libraries/fetch";
+import type { _GodotEval, _GodotJSWrapper } from "#/libraries/jswrapper";
 import type { _GodotIME, _GodotInputGamepads, _GodotInputDragDrop, _GodotInput } from "#/libraries/input";
 import type { _IDHandler, _GodotConfig, _GodotFS, _GodotOS, _GodotEventListeners, _GodotPWA } from "#/libraries/os";
 import type { _GodotRuntime } from "#/libraries/runtime";
@@ -122,7 +124,7 @@ declare global {
 	// eslint-disable-next-line @typescript-eslint/naming-convention -- emscripten function.
 	const _emscripten_webgl_get_current_context: () => GLContextHandle;
 
-	const Module: object;
+	const Module: Record<string, unknown>;
 
 	const GodotRuntime: typeof _GodotRuntime.$GodotRuntime;
 	const GodotOS: typeof _GodotOS.$GodotOS;
@@ -134,6 +136,7 @@ declare global {
 	const GodotDisplayCursor: typeof _GodotDisplayCursor.$GodotDisplayCursor;
 	const GodotDisplayScreen: typeof _GodotDisplayScreen.$GodotDisplayScreen;
 	const GodotDisplay: typeof _GodotDisplay.$GodotDisplay;
+	const GodotEval: typeof _GodotEval.$GodotEval;
 	const GodotFetch: typeof _GodotFetch.$GodotFetch;
 	const GodotJSWrapper: typeof _GodotJSWrapper.$GodotJSWrapper;
 	const GodotEventListeners: typeof _GodotEventListeners.$GodotEventListeners;

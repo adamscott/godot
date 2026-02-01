@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  id_handler.ts                                                         */
+/*  godot_display_cursor.ts                                               */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,35 +28,79 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- Need to cast to emscripten types. */
-
-import type { CIDHandlerId, CIDHandlerIdExtract } from "@godotengine/emscripten-utils/types";
-
 import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils" with { type: "macro" };
 
-export const _IDHandler = {
-	$IDHandler__postset: $convertFunctionToIifeString(() => {
-		IDHandler._references = new Map();
+interface Cursor {
+	url: string;
+	x: number;
+	y: number;
+}
+
+/*
+ * Display server cursor helper.
+ * Keeps track of cursor status and custom shapes.
+ */
+export const _GodotDisplayCursor = {
+	$GodotDisplayCursor__deps: ["$GodotOS", "$GodotConfig"],
+	$GodotDisplayCursor__postset: $convertFunctionToIifeString(() => {
+		GodotDisplayCursor.init();
+		GodotOS.atExit(async () => {
+			GodotDisplayCursor.clear();
+		});
 	}),
-	$IDHandler: {
-		_lastId: 0 as CIDHandlerId<unknown>,
-		_references: null as unknown as Map<number, unknown>,
+	$GodotDisplayCursor: {
+		shape: "default",
+		visible: true,
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- We want to type `cursors:`, `satisfies` doesn't.
+		cursors: null as unknown as Map<string, Cursor>,
 
-		get: <T extends CIDHandlerId<unknown>>(pId: T): CIDHandlerIdExtract<T> | null =>
-			IDHandler._references.get(pId) as CIDHandlerIdExtract<T> | null,
-
-		add: <T>(pData: T): CIDHandlerId<T> => {
-			const id = (IDHandler._lastId + 1) as CIDHandlerId<T>;
-			IDHandler._references.set(id, pData);
-			IDHandler._lastId = id;
-			return id;
+		init: (): void => {
+			GodotDisplayCursor.cursors = new Map();
 		},
 
-		remove: (pId: CIDHandlerId<unknown>): void => {
-			IDHandler._references.delete(pId);
+		setStyle: (pStyle: string): void => {
+			GodotConfig.canvas.style.cursor = pStyle;
+		},
+
+		setShape: (pShape: string): void => {
+			GodotDisplayCursor.shape = pShape;
+			let css = pShape;
+			const cursor = GodotDisplayCursor.cursors.get(pShape);
+			if (cursor != null) {
+				GodotDisplayCursor.cursors.delete(pShape);
+				css = `url("${cursor.url}") ${cursor.x} ${cursor.y}, default`;
+			}
+			if (GodotDisplayCursor.visible) {
+				GodotDisplayCursor.setStyle(css);
+			}
+		},
+
+		clear: (): void => {
+			GodotDisplayCursor.setStyle("");
+			GodotDisplayCursor.shape = "default";
+			GodotDisplayCursor.visible = true;
+			for (const [key, cursor] of GodotDisplayCursor.cursors) {
+				URL.revokeObjectURL(cursor.url);
+				GodotDisplayCursor.cursors.delete(key);
+			}
+		},
+
+		lockPointer: (): void => {
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- The lock is not supported by all browsers. It may not be available.
+			GodotConfig.canvas.requestPointerLock?.().catch((pError: unknown) => {
+				GodotRuntime.error("Error while requesting pointer lock:", pError);
+			});
+		},
+
+		releasePointer: (): void => {
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- The lock is not supported by all browsers. It may not be available.
+			document.exitPointerLock?.();
+		},
+
+		isPointerLocked: (): boolean => {
+			return document.pointerLockElement === GodotConfig.canvas;
 		},
 	},
 };
-
-autoAddDeps(_IDHandler, "$IDHandler");
-addToLibrary(_IDHandler);
+autoAddDeps(_GodotDisplayCursor, "$GodotDisplayCursor");
+addToLibrary(_GodotDisplayCursor);

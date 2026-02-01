@@ -118,6 +118,7 @@ repos:
           - --no-warn-ignored
           - --cache
           - --
+        additional_dependencies: ["corepack@^0.34.6"]
 
       - id: prettier
         name: prettier
@@ -132,6 +133,8 @@ repos:
           - --write
           - --cache
           - --
+        additional_dependencies: ["corepack@^0.34.6"]
+        exclude: (?:^pnpm-(?:lock|workspace)\.yaml)$
 
       - id: stylelint
         name: stylelint
@@ -146,6 +149,7 @@ repos:
           - --fix
           - --cache
           - --
+        additional_dependencies: ["corepack@^0.34.6"]
 
       - id: jsdoc
         name: jsdoc

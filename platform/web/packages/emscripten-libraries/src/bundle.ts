@@ -28,9 +28,13 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import "./libraries/runtime";
-import "./libraries/os";
+import "#/libraries/runtime";
+import "#/libraries/os";
 
-import "./libraries/audio";
-import "./libraries/webgl2";
-import "./libraries/webmidi";
+import "#/libraries/audio";
+import "#/libraries/display";
+import "#/libraries/fetch";
+import "#/libraries/input";
+import "#/libraries/jswrapper";
+import "#/libraries/webgl2";
+import "#/libraries/webmidi";

@@ -32,4 +32,15 @@ export type * from "./aliases.js";
 export type * from "./brand.js";
 export type * from "./error.js";
 
-export { asCType, asCFunctionPointer, asCIDHandlerId, asCIntBoolean } from "./cast.js";
+export {
+	asCType,
+	asCInt,
+	asCInt64,
+	asCFunctionPointer,
+	asCIDHandlerId,
+	asCIntBoolean,
+	fromCTypeToNumber,
+	fromCInt64ToBigint,
+	fromCTypeToBoolean,
+	fromCInt64ToBoolean,
+} from "./cast.js";

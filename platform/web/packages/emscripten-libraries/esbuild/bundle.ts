@@ -34,7 +34,7 @@ import { fileURLToPath } from "node:url";
 import esbuild from "esbuild";
 import browserslist from "browserslist";
 import { esbuildPluginBrowserslist } from "esbuild-plugin-browserslist";
-import { esbuildPluginUseMacro } from "use-macro";
+import unpluginMacros from "unplugin-macros/esbuild";
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const ESBUILD_DIR_PATH = dirname(SCRIPT_PATH);
@@ -49,10 +49,10 @@ async function main(): Promise<void> {
 		format: "esm",
 		outfile: LIBRARIES_JS_PATH,
 		treeShaking: true,
-		minify: true,
+		// minify: true,
 		sourcemap: true,
 		plugins: [
-			esbuildPluginUseMacro(),
+			unpluginMacros(),
 			esbuildPluginBrowserslist(
 				browserslist([
 					"last 2 chrome major versions and last 1 year",

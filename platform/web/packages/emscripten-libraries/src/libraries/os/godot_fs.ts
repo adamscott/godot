@@ -28,18 +28,21 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- Need to cast to emscripten types. */
-
-import { GodotFSPostsetFnString } from "./postset.nocheck.js";
+import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils" with { type: "macro" };
 
 export const _GodotFS = {
 	$GodotFS__deps: ["$FS", "$IDBFS", "$GodotRuntime"],
-	$GodotFS__postset: GodotFSPostsetFnString,
+	$GodotFS__postset: $convertFunctionToIifeString(() => {
+		Module.initFS = GodotFS.initialize;
+		Module.copyToFS = GodotFS.copyToFS;
+		GodotFS._mountPoints = new Set();
+	}),
 	$GodotFS: {
 		ENOENT: 44,
 		_idbfs: false,
 		_syncing: false,
-		_mountPoints: [] as string[],
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- We force the cast to `Set`, as it will be setup in postset.
+		_mountPoints: null as unknown as Set<string>,
 
 		isPersistent: (): boolean => {
 			return GodotFS._idbfs;
@@ -57,15 +60,27 @@ export const _GodotFS = {
 			if (pPersistentPaths.length === 0) {
 				return null;
 			}
-			GodotFS._mountPoints = pPersistentPaths.slice();
+			for (const persistentPath of pPersistentPaths.slice()) {
+				GodotFS._mountPoints.add(persistentPath);
+			}
 
 			const createRecursive = (pDirectory: string): void => {
 				try {
 					FS.stat(pDirectory);
-				} catch (error) {
-					if ((error as typeof FS.ErrnoError | null)?.errno !== GodotFS.ENOENT) {
-						GodotRuntime.error(error);
+				} catch (eError: unknown) {
+					let reportError = true;
+					if (eError instanceof Error) {
+						if (Object.hasOwn(eError, "errno")) {
+							// @ts-expect-error: We just checked for "errno".
+							if (eError.errno === GodotFS.ENOENT) {
+								reportError = false;
+							}
+						}
 					}
+					if (reportError) {
+						GodotRuntime.error(`Error while creating recursive directory "${pDirectory}":`, eError);
+					}
+
 					FS.mkdirTree(pDirectory);
 				}
 			};
@@ -80,7 +95,7 @@ export const _GodotFS = {
 					if (pErrorCode == null) {
 						GodotFS._idbfs = true;
 					} else {
-						GodotFS._mountPoints = [];
+						GodotFS._mountPoints.clear();
 						GodotFS._idbfs = false;
 						GodotRuntime.print(`IndexedDB not available: ${pErrorCode.message}`);
 					}
@@ -102,7 +117,7 @@ export const _GodotFS = {
 					delete IDBFS.dbs[mountPoint];
 				}
 			}
-			GodotFS._mountPoints = [];
+			GodotFS._mountPoints.clear();
 			GodotFS._idbfs = false;
 			GodotFS._syncing = false;
 		},
@@ -132,9 +147,18 @@ export const _GodotFS = {
 			}
 			try {
 				FS.stat(dir);
-			} catch (error) {
-				if ((error as typeof FS.ErrnoError | null)?.errno !== GodotFS.ENOENT) {
-					GodotRuntime.error(error);
+			} catch (eError: unknown) {
+				let reportError = true;
+				if (eError instanceof Error) {
+					if (Object.hasOwn(eError, "errno")) {
+						// @ts-expect-error: We just checked for "errno".
+						if (eError.errno === GodotFS.ENOENT) {
+							reportError = false;
+						}
+					}
+				}
+				if (reportError) {
+					GodotRuntime.error(`Error while creating recursive directory "${dir}":`, eError);
 				}
 				FS.mkdirTree(dir);
 			}
@@ -142,5 +166,6 @@ export const _GodotFS = {
 		},
 	},
 };
+
 autoAddDeps(_GodotFS, "$GodotFS");
 addToLibrary(_GodotFS);

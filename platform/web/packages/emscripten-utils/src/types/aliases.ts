@@ -70,9 +70,9 @@ export type CPointerSize = 8 | 16 | 32 | 64;
 export type CSignedIntegerPointerType = `i${CPointerSize}`;
 export type CUnsignedIntegerPointerType = `u${CPointerSize}`;
 export type CFloatPointerType = "f32" | "float" | "f64" | "double";
-export type CPointerType = CSignedIntegerPointerType | CUnsignedIntegerPointerType | CFloatPointerType | "*";
+export type CPointerTypeAll = CSignedIntegerPointerType | CUnsignedIntegerPointerType | CFloatPointerType | "*";
 
-export type CPointers =
+export type CPointerAll =
 	| CPointer
 	| CVoidPointer
 	| CCharPointer
@@ -87,3 +87,29 @@ export type CPointers =
 	| CUintArrayPointer
 	| CFloatArrayPointer
 	| CDoubleArrayPointer;
+
+export type CType =
+	| CInt
+	| CInt64
+	| CInt64Pointer
+	| CUint
+	| CCharArrayPointer
+	| CCharPointer
+	| CDouble
+	| CDoubleArrayPointer
+	| CDoublePointer
+	| CFloat
+	| CFloatArrayPointer
+	| CFloatPointer
+	| CIntArrayPointer
+	| CIntPointer
+	| CPointer
+	| CUintArrayPointer
+	| CUintPointer
+	| CVoidArrayPointer
+	| CVoidPointer
+	| CFunctionPointer<AnyFunction>;
+
+export type CPointerAllWithoutCInt64Pointer = Exclude<CPointerAll, CInt64Pointer>;
+export type CPointerTypeAllWithoutCInt64PointerType = Exclude<CPointerTypeAll, CInt64Pointer>;
+export type CTypeWithoutCInt64 = Exclude<CType, CInt64>;

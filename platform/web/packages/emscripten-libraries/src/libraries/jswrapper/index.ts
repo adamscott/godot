@@ -28,4 +28,5 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-export { _GodotWebMidi } from "./gotot_webmidi.js";
+export { _GodotEval } from "./godot_eval.js";
+export { _GodotJSWrapper } from "./godot_jswrapper.js";

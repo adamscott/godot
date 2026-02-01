@@ -29,7 +29,8 @@
 /**************************************************************************/
 
 import type { AnyFunction } from "@godotengine/utils/types";
-import { GodotEventListenersPostsetFnString } from "./postset.nocheck";
+
+import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils" with { type: "macro" };
 
 class Handler {
 	target: EventTarget;
@@ -123,7 +124,11 @@ type RemoveEventListeners = (
 
 export const _GodotEventListeners = {
 	$GodotEventListeners__deps: ["$GodotOS"],
-	$GodotEventListeners__postset: GodotEventListenersPostsetFnString,
+	$GodotEventListeners__postset: $convertFunctionToIifeString(() => {
+		GodotOS.atExit(async () => {
+			GodotEventListeners.clear();
+		});
+	}),
 	$GodotEventListeners: {
 		handlers: [] as Handler[],
 		Handler,

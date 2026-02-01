@@ -28,4 +28,8 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-export { _GodotWebMidi } from "./gotot_webmidi.js";
+import type { AnyFunction } from "#/types";
+
+export function convertFunctionToIifeString(pFunction: AnyFunction): string {
+	return `(${pFunction.toString()})()`;
+}

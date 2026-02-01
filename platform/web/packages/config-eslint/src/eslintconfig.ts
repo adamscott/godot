@@ -50,10 +50,12 @@ export default defineConfig([
 			"@typescript-eslint/max-params": "off",
 			"@typescript-eslint/no-magic-numbers": "off",
 			"@typescript-eslint/no-unsafe-member-access": "off",
+			"@typescript-eslint/require-await": "off",
 			"arrow-body-style": "off",
 			complexity: ["error", 20],
 			eqeqeq: ["error", "smart"],
 			"max-lines": ["error", 3000],
+			"no-param-reassign": ["error", { props: false }],
 			"no-plusplus": [
 				"error",
 				{

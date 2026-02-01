@@ -28,14 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import { ErrorList } from "@godotengine/emscripten-utils/constants";
-import {
-	asCType,
-	type CFloatPointer,
-	type CFunctionPointer,
-	type CInt,
-	type CIntPointer,
-} from "@godotengine/emscripten-utils/types";
+import type { CFloatPointer, CFunctionPointer, CInt, CIntPointer } from "@godotengine/emscripten-utils/types";
 import { throwIfNullish } from "@godotengine/utils/error";
 
 type AudioScriptStartCallback = () => void;
@@ -126,12 +119,12 @@ export const _GodotAudioScript = {
 		const bufferLength = GodotRuntime.getHeapValue(pBufferSizePtr, "i32");
 		try {
 			const outLength = GodotAudioScript.create(bufferLength, pChannelCount);
-			GodotRuntime.setHeapValue(pBufferSizePtr, asCType<CInt>(outLength), "i32");
+			GodotRuntime.setHeapValue(pBufferSizePtr, GodotRuntime.asCInt(outLength), "i32");
 		} catch (error) {
 			GodotRuntime.error("Error starting AudioDriverScriptProcessor", error);
-			return ErrorList.FAILED;
+			return GodotRuntime.CIntError.FAILED;
 		}
-		return ErrorList.OK;
+		return GodotRuntime.CIntError.OK;
 	},
 
 	godot_audio_script_start__proxy: "sync",

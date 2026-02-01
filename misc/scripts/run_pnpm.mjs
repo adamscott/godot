@@ -1,21 +1,30 @@
 import { spawn } from "node:child_process";
 import { stat } from "node:fs/promises";
 import { dirname, resolve, isAbsolute } from "node:path";
-import { argv, chdir, cwd, exit } from "node:process";
+import { argv, chdir, cwd, exit, execPath, env } from "node:process";
 import { fileURLToPath } from "node:url";
 
 const FILE_PATH = fileURLToPath(import.meta.url);
 const SCRIPT_DIR_PATH = dirname(FILE_PATH);
 const ROOT_DIR_PATH = resolve(SCRIPT_DIR_PATH, "../..");
 
+async function isFile(pPath) {
+	try {
+		const stats = await stat(pPath);
+		return stats.isFile();
+	} catch (eError) {
+		return false;
+	}
+}
+
 /**
  * Returns the nearest package.json path.
- * @param {string} pFilePath
+ * @param {string} pDirPath
  * @returns {Promise<string | null>}
  * @throws
  */
-async function getNearestPackageJsonDirPath(pFilePath) {
-	let currentDir = resolve(dirname(pFilePath));
+async function getNearestPackageJsonDirPath(pDirPath) {
+	let currentDir = pDirPath;
 	while (currentDir !== ROOT_DIR_PATH) {
 		const packageJsonPath = resolve(currentDir, "package.json");
 		try {
@@ -40,7 +49,7 @@ async function getNearestPackageJsonDirPath(pFilePath) {
  * @returns {Promise<number | null>}
  */
 async function launchPnpmInstall() {
-	const command = ["npx", "--yes", "pnpm", "install"];
+	const command = ["corepack", "pnpm", "install"];
 	const commandString = command.join(" ");
 	return await new Promise((pResolve, _) => {
 		console.info(`Launching \`${commandString}\``);
@@ -50,7 +59,7 @@ async function launchPnpmInstall() {
 		npxInstallProcess.on("error", (pError) => {
 			console.error(`Error while running \`${commandString}\`:`, pError);
 		});
-		npxInstallProcess.on("exit", (pCode) => {
+		npxInstallProcess.on("close", (pCode) => {
 			pResolve(pCode);
 		});
 	});
@@ -60,31 +69,52 @@ async function launchPnpmInstall() {
  * Launch process for the specified file.
  * @param {string} pCommand
  * @param {string[]} pArgs
- * @param {string} pFileToProcess
+ * @param {string} pDirectory
+ * @param {string[]} pFilesToProcess
  * @returns {Promise<number | null>}
  */
-async function processFile(pCommand, pArgs, pFileToProcess) {
+async function processFiles(pCommand, pArgs, pDirectory, pFilesToProcess) {
 	const args = pArgs;
-	let fileToProcess = pFileToProcess;
+	let filesToProcess = pFilesToProcess;
 	let currentDir = cwd();
 
-	if (!isAbsolute(fileToProcess)) {
-		fileToProcess = resolve(ROOT_DIR_PATH, fileToProcess);
-	}
+	const nearestPackageJsonDir = await getNearestPackageJsonDirPath(pDirectory);
 
-	const nearestPackageJsonDir = await getNearestPackageJsonDirPath(fileToProcess);
-	if (nearestPackageJsonDir == null) {
+	let hasNoConfig = nearestPackageJsonDir == null;
+
+	if (nearestPackageJsonDir != null) {
+		let configFile;
 		switch (pCommand.toLowerCase()) {
 			case "eslint":
-				currentDir = resolve(ROOT_DIR_PATH, "platform/web/packages/eslint-config/");
+				configFile = "eslint.config.ts";
+				break;
+			case "prettier":
+				configFile = "prettier.config.mts";
+				break;
+			case "stylelint":
+				configFile = "stylelint.config.ts";
+				break;
+			default:
+				throw new Error(`Command \`${pCommand}\` not supported by "misc/scripts/run_pnpm.mjs".`);
+		}
+		const configPath = resolve(nearestPackageJsonDir, configFile);
+		if (!(await isFile(configPath))) {
+			hasNoConfig = true;
+		}
+	}
+
+	if (nearestPackageJsonDir == null || hasNoConfig) {
+		switch (pCommand.toLowerCase()) {
+			case "eslint":
+				currentDir = resolve(ROOT_DIR_PATH, "platform/web/packages/config-eslint/");
 				args.push("--no-config-lookup", "--config", "eslint.config.ts");
 				break;
 			case "prettier":
-				currentDir = resolve(ROOT_DIR_PATH, "platform/web/packages/prettier-config/");
+				currentDir = resolve(ROOT_DIR_PATH, "platform/web/packages/config-prettier/");
 				args.push("--config", "prettier.config.mts");
 				break;
 			case "stylelint":
-				currentDir = resolve(ROOT_DIR_PATH, "platform/web/packages/stylelint-config/");
+				currentDir = resolve(ROOT_DIR_PATH, "platform/web/packages/config-stylelint/");
 				args.push("--config", "stylelint.config.ts");
 				break;
 			default:
@@ -94,7 +124,7 @@ async function processFile(pCommand, pArgs, pFileToProcess) {
 		currentDir = nearestPackageJsonDir;
 	}
 
-	const command = ["npx", "--yes", "pnpm", "exec", pCommand, ...args, fileToProcess];
+	const command = ["corepack", "pnpm", "exec", pCommand, ...args, ...filesToProcess];
 	const commandString = command.join(" ");
 
 	return await new Promise((resolve, _) => {
@@ -104,9 +134,9 @@ async function processFile(pCommand, pArgs, pFileToProcess) {
 			cwd: currentDir,
 		});
 		commandProcess.on("error", (pError) => {
-			console.error(`Error while running \`${command}\`:`, pError);
+			console.error(`Error while running \`${commandString}\`:`, pError);
 		});
-		commandProcess.on("exit", (pCode) => {
+		commandProcess.on("close", (pCode) => {
 			resolve(pCode);
 		});
 	});
@@ -117,7 +147,7 @@ async function processFile(pCommand, pArgs, pFileToProcess) {
  */
 async function main() {
 	chdir(ROOT_DIR_PATH);
-	console.info("main argv:", argv)
+	// console.info("main argv:", argv)
 
 	let returnCode = await launchPnpmInstall();
 	if (returnCode != null && returnCode !== 0) {
@@ -134,7 +164,7 @@ async function main() {
 	}
 	const command = argv[indexOfCommand];
 	const indexOfCommandArgs = indexOfCommand + 1;
-	const indexOfSecondDoubleDash = argv.indexOf("-- ", indexOfCommand);
+	const indexOfSecondDoubleDash = argv.indexOf("--", indexOfCommand);
 	if (indexOfSecondDoubleDash === -1) {
 		throw new Error("Couldn't find second `--` in args to signal list of files to feed to command.");
 	}
@@ -149,12 +179,24 @@ async function main() {
 	}
 	const filesToProcess = argv.slice(indexOfFilesToProcess);
 
+	/** @type {Map<string, string[]>} */
+	const filesByDir = new Map();
 	for (const fileToProcess of filesToProcess) {
-		let processedFileResult = null;
+		const fileToProcessDir = dirname(fileToProcess);
+		const absoluteFileToProcessPath = resolve(ROOT_DIR_PATH, fileToProcess);
+		if (filesByDir.has(fileToProcessDir)) {
+			filesByDir.get(fileToProcessDir).push(absoluteFileToProcessPath);
+		} else {
+			filesByDir.set(fileToProcessDir, [absoluteFileToProcessPath]);
+		}
+	}
+
+	for (const [filesDir, filesToProcess] of filesByDir) {
+		let processedFilesResult = null;
 		try {
-			processedFileResult = await processFile(command, commandArgs, fileToProcess);
-			if (processedFileResult != null && processedFileResult !== 0) {
-				exit(processedFileResult);
+			processedFilesResult = await processFiles(command, commandArgs, filesDir, filesToProcess);
+			if (processedFilesResult != null && processedFilesResult !== 0) {
+				exit(processedFilesResult);
 			}
 		} catch (eError) {
 			console.error(eError);

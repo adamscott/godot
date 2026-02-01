@@ -34,11 +34,13 @@ import type { ConfigOptions } from "@godotengine/utils/types";
 
 import type { CCharPointer, CInt } from "@godotengine/emscripten-utils/types";
 
-import { GodotConfigPostsetFnString } from "./postset.nocheck.js";
+import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils" with { type: "macro" };
 
 export const _GodotConfig = {
 	// TODO: Rename Module to GodotEngine
-	$GodotConfig__postset: GodotConfigPostsetFnString,
+	$GodotConfig__postset: $convertFunctionToIifeString(() => {
+		Module.initConfig = GodotConfig.initialize;
+	}),
 	$GodotConfig__deps: ["$GodotRuntime"],
 	$GodotConfig: {
 		canvas: null as unknown as HTMLCanvasElement,
@@ -79,7 +81,7 @@ export const _GodotConfig = {
 
 		locateFile: (pFile: string): string => {
 			// @ts-expect-error TODO: Replace module for ESM engine module.
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call -- TODO: Fix this.
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-return -- TODO: Fix this.
 			return Module.locateFile(pFile);
 		},
 

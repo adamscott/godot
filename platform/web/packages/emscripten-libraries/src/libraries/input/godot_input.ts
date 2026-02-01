@@ -28,10 +28,6 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-// /* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- Need to cast to emscripten types. */
-
-import { ErrorList, NULLPTR } from "@godotengine/emscripten-utils/constants";
-import { asCType, asCIntBoolean } from "@godotengine/emscripten-utils/types";
 import type {
 	CCharArrayPointer,
 	CCharPointer,
@@ -116,11 +112,11 @@ export const _GodotInput = {
 			const relativePositionY = pEvent.movementY * rectHeight;
 			const modifiers = GodotInput.getModifiers(pEvent);
 			callback(
-				asCType<CDouble>(position[0]),
-				asCType<CDouble>(position[1]),
-				asCType<CDouble>(relativePositionX),
-				asCType<CDouble>(relativePositionY),
-				asCType<CInt>(modifiers),
+				GodotRuntime.asCType<CDouble>(position[0]),
+				GodotRuntime.asCType<CDouble>(position[1]),
+				GodotRuntime.asCType<CDouble>(relativePositionX),
+				GodotRuntime.asCType<CDouble>(relativePositionY),
+				GodotRuntime.asCInt(modifiers),
 			);
 		};
 		GodotEventListeners.add(window, "mousemove", moveEventCallback, false);
@@ -131,7 +127,10 @@ export const _GodotInput = {
 	godot_js_input_mouse_wheel_cb: (pCallbackPtr: CFunctionPointer<InputMouseWheelCbCallback>): void => {
 		const callback = GodotRuntime.getFunction(pCallbackPtr);
 		const wheelEventCallback = (pEvent: WheelEvent): void => {
-			if (callback(asCType<CDouble>(pEvent.deltaX), asCType<CDouble>(pEvent.deltaY)) !== asCType<CInt>(0)) {
+			if (
+				callback(GodotRuntime.asCType<CDouble>(pEvent.deltaX), GodotRuntime.asCType<CDouble>(pEvent.deltaY)) !==
+				GodotRuntime.asCInt(0)
+			) {
 				pEvent.preventDefault();
 			}
 		};
@@ -154,11 +153,11 @@ export const _GodotInput = {
 			}
 			if (
 				callback(
-					asCIntBoolean(pPressed),
-					asCType<CInt>(pEvent.button),
-					asCType<CDouble>(position[0]),
-					asCType<CDouble>(position[1]),
-					asCType<CInt>(modifiers),
+					GodotRuntime.asCIntBoolean(pPressed),
+					GodotRuntime.asCInt(pEvent.button),
+					GodotRuntime.asCType<CDouble>(position[0]),
+					GodotRuntime.asCType<CDouble>(position[1]),
+					GodotRuntime.asCInt(modifiers),
 				) !== 0
 			) {
 				pEvent.preventDefault();
@@ -207,18 +206,18 @@ export const _GodotInput = {
 				const touch = touches[i];
 				const position = GodotInput.computePosition(touch, rect);
 				GodotRuntime.setHeapValue(
-					asCType<CDoublePointer>(pCoordsPtr + i * 2 * Float64Array.BYTES_PER_ELEMENT),
-					asCType<CDouble>(position[0]),
+					GodotRuntime.asCType<CDoublePointer>(pCoordsPtr + i * 2 * Float64Array.BYTES_PER_ELEMENT),
+					GodotRuntime.asCType<CDouble>(position[0]),
 					"double",
 				);
 				GodotRuntime.setHeapValue(
-					asCType<CDoublePointer>(pCoordsPtr + (i * 2 + 1) * Float64Array.BYTES_PER_ELEMENT),
-					asCType<CDouble>(position[1]),
+					GodotRuntime.asCType<CDoublePointer>(pCoordsPtr + (i * 2 + 1) * Float64Array.BYTES_PER_ELEMENT),
+					GodotRuntime.asCType<CDouble>(position[1]),
 					"double",
 				);
 				GodotRuntime.setHeapValue(
-					asCType<CUintPointer>(pIdsPtr + i * Uint32Array.BYTES_PER_ELEMENT),
-					asCType<CUint>(touch.identifier),
+					GodotRuntime.asCType<CUintPointer>(pIdsPtr + i * Uint32Array.BYTES_PER_ELEMENT),
+					GodotRuntime.asCType<CUint>(touch.identifier),
 					"i32",
 				);
 			}
@@ -235,7 +234,7 @@ export const _GodotInput = {
 					callbackType = 2;
 					break;
 			}
-			callback(asCType<CInt>(callbackType), asCType<CInt>(touches.length));
+			callback(GodotRuntime.asCInt(callbackType), GodotRuntime.asCInt(touches.length));
 			if (pEvent.cancelable) {
 				pEvent.preventDefault();
 			}
@@ -291,7 +290,11 @@ export const _GodotInput = {
 			const modifiers = GodotInput.getModifiers(pEvent);
 			GodotRuntime.stringToHeap(pEvent.code, pCodePtr, 32);
 			GodotRuntime.stringToHeap(pEvent.key, pKeyPtr, 32);
-			callback(asCIntBoolean(pPressed), asCIntBoolean(pEvent.repeat), asCType<CInt>(modifiers));
+			callback(
+				GodotRuntime.asCIntBoolean(pPressed),
+				GodotRuntime.asCIntBoolean(pEvent.repeat),
+				GodotRuntime.asCInt(modifiers),
+			);
 			pEvent.preventDefault();
 		};
 
@@ -340,10 +343,17 @@ export const _GodotInput = {
 		const keyCallback = GodotRuntime.getFunction(pKeyCallbackPtr);
 
 		const imeCallbackWrapper: Parameters<typeof GodotIME.initialize>[0] = (pCompositionType, pStringPtr): void => {
-			imeCallback(asCType<CInt>(pCompositionType), asCType<CCharPointer>(pStringPtr ?? NULLPTR));
+			imeCallback(
+				GodotRuntime.asCInt(pCompositionType),
+				GodotRuntime.asCType<CCharPointer>(pStringPtr ?? GodotRuntime.NULLPTR),
+			);
 		};
 		const keyCallbackWrapper: Parameters<typeof GodotIME.initialize>[1] = (pPressed, pRepeat, pModifiers): void => {
-			keyCallback(asCIntBoolean(pPressed), asCIntBoolean(pRepeat), asCType<CInt>(pModifiers));
+			keyCallback(
+				GodotRuntime.asCIntBoolean(pPressed),
+				GodotRuntime.asCIntBoolean(pRepeat),
+				GodotRuntime.asCInt(pModifiers),
+			);
 		};
 
 		GodotIME.initialize(imeCallbackWrapper, keyCallbackWrapper, pCodePtr, pKeyPtr);
@@ -352,7 +362,7 @@ export const _GodotInput = {
 	godot_js_is_ime_focused__proxy: "sync",
 	godot_js_is_ime_focused__sig: "i",
 	godot_js_is_ime_focused: (): CInt => {
-		return asCIntBoolean(GodotIME.getActive());
+		return GodotRuntime.asCIntBoolean(GodotIME.getActive());
 	},
 
 	//
@@ -369,10 +379,10 @@ export const _GodotInput = {
 			pGuidPtr,
 		) => {
 			onChangeCallback(
-				asCType<CInt>(pPadIndex),
-				asCIntBoolean(pConnected),
-				asCType<CCharPointer>(pIdPtr ?? NULLPTR),
-				asCType<CCharPointer>(pGuidPtr ?? NULLPTR),
+				GodotRuntime.asCInt(pPadIndex),
+				GodotRuntime.asCIntBoolean(pConnected),
+				GodotRuntime.asCType<CCharPointer>(pIdPtr ?? GodotRuntime.NULLPTR),
+				GodotRuntime.asCType<CCharPointer>(pGuidPtr ?? GodotRuntime.NULLPTR),
 			);
 		};
 		GodotInputGamepads.initialize(onChangeCallbackWrapper);
@@ -381,13 +391,13 @@ export const _GodotInput = {
 	godot_js_input_gamepad_sample_count__proxy: "sync",
 	godot_js_input_gamepad_sample_count__sig: "i",
 	godot_js_input_gamepad_sample_count: (): CInt => {
-		return asCType<CInt>(GodotInputGamepads.getSamples().length);
+		return GodotRuntime.asCInt(GodotInputGamepads.getSamples().length);
 	},
 
 	godot_js_input_gamepad_sample__proxy: "sync",
 	godot_js_input_gamepad_sample__sig: "i",
 	godot_js_input_gamepad_sample: (): CInt => {
-		return asCType<CInt>(GodotInputGamepads.sampleGamepads());
+		return GodotRuntime.asCInt(GodotInputGamepads.sampleGamepads());
 	},
 
 	godot_js_input_gamepad_sample_get__proxy: "sync",
@@ -402,33 +412,37 @@ export const _GodotInput = {
 	): CInt => {
 		const sample = GodotInputGamepads.getSample(pIndex);
 		if (sample == null) {
-			return ErrorList.FAILED;
+			return GodotRuntime.CIntError.FAILED;
 		}
 		if (!sample.connected) {
-			return ErrorList.FAILED;
+			return GodotRuntime.CIntError.FAILED;
 		}
 
 		const buttons = sample.buttons;
 		const buttonsCount = Math.min(buttons.length, 16);
 		for (let i = 0; i < buttonsCount; i++) {
 			GodotRuntime.setHeapValue(
-				asCType<CFloatPointer>(rButtonsPtr + (i << 2)),
-				asCType<CFloat>(buttons[i]),
+				GodotRuntime.asCType<CFloatPointer>(rButtonsPtr + (i << 2)),
+				GodotRuntime.asCType<CFloat>(buttons[i]),
 				"float",
 			);
 		}
-		GodotRuntime.setHeapValue(rButtonsCountPtr, asCType<CInt>(buttonsCount), "i32");
+		GodotRuntime.setHeapValue(rButtonsCountPtr, GodotRuntime.asCInt(buttonsCount), "i32");
 
 		const axes = sample.axes;
 		const axesCount = Math.min(axes.length, 10);
 		for (let i = 0; i < axesCount; i++) {
-			GodotRuntime.setHeapValue(asCType<CFloatPointer>(rAxesPtr + (i << 2)), asCType<CFloat>(axes[i]), "float");
+			GodotRuntime.setHeapValue(
+				GodotRuntime.asCType<CFloatPointer>(rAxesPtr + (i << 2)),
+				GodotRuntime.asCType<CFloat>(axes[i]),
+				"float",
+			);
 		}
-		GodotRuntime.setHeapValue(rAxesCountPtr, asCType<CInt>(axesCount), "i32");
+		GodotRuntime.setHeapValue(rAxesCountPtr, GodotRuntime.asCInt(axesCount), "i32");
 
-		GodotRuntime.setHeapValue(rStandardPtr, asCType<CInt>(Number(sample.standard)), "i32");
+		GodotRuntime.setHeapValue(rStandardPtr, GodotRuntime.asCInt(Number(sample.standard)), "i32");
 
-		return ErrorList.OK;
+		return GodotRuntime.CIntError.OK;
 	},
 
 	//
@@ -464,7 +478,7 @@ export const _GodotInput = {
 			if (args.length === 0) {
 				return;
 			}
-			const argc = asCType<CInt>(args.length);
+			const argc = GodotRuntime.asCInt(args.length);
 			const argv = GodotRuntime.allocStringArray(args);
 			callback(argv, argc);
 			GodotRuntime.freeStringArray(argv, argc);

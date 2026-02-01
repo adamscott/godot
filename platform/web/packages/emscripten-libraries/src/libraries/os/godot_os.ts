@@ -32,7 +32,7 @@
 
 import type { CCharPointer, CInt, CUintPointer, CFunctionPointer } from "@godotengine/emscripten-utils/types";
 
-import { GodotOSPostsetFnString } from "./postset.nocheck.js";
+import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils" with { type: "macro" };
 
 type OSFinishAsyncCallback = () => void;
 type OSRequestQuitCbCallback = () => void;
@@ -51,27 +51,21 @@ export type GodotOSOS =
 	| "Haiku"
 	| "Unknown";
 
-const cIntStatus = Object.freeze({
-	OK: 0 as CInt,
-	FAILED: 1 as CInt,
-});
-const cIntBoolean = Object.freeze({
-	TRUE: 0 as CInt,
-	FALSE: 1 as CInt,
-});
-
 export const _GodotOS = {
 	$GodotOS__deps: ["$GodotRuntime", "$GodotConfig", "$GodotFS"],
-	$GodotOS__postset: GodotOSPostsetFnString,
+	$GodotOS__postset: $convertFunctionToIifeString(() => {
+		Module.request_quit = function () {
+			GodotOS.requestQuit();
+		};
+		Module.onExit = GodotOS.cleanup;
+		GodotOS._fsSyncPromise = Promise.resolve(null);
+	}),
 	$GodotOS: {
 		requestQuit: () => {
 			/* empty */
 		},
 		_asyncCallbacks: [] as Array<() => Promise<void>>,
 		_fsSyncPromise: null as unknown as Promise<Error | null>,
-
-		status: cIntStatus,
-		boolean: cIntBoolean,
 
 		atExit: (pPromiseCallback: () => Promise<void>): void => {
 			GodotOS._asyncCallbacks.push(pPromiseCallback);
@@ -190,22 +184,22 @@ export const _GodotOS = {
 				case "NetBSD":
 				case "Haiku":
 				case "ChromeOS":
-					return GodotOS.boolean.TRUE;
+					return GodotRuntime.CIntBoolean.TRUE;
 
 				case "Unknown": {
 					const userAgent = navigator.userAgent;
 					if (!userAgent.includes("X11")) {
-						return GodotOS.boolean.FALSE;
+						return GodotRuntime.CIntBoolean.FALSE;
 					}
-					return GodotOS.boolean.TRUE;
+					return GodotRuntime.CIntBoolean.TRUE;
 				}
 
 				default:
-					return GodotOS.boolean.FALSE;
+					return GodotRuntime.CIntBoolean.FALSE;
 			}
 		}
 
-		return GodotOS.boolean.FALSE;
+		return GodotRuntime.CIntBoolean.FALSE;
 	},
 
 	godot_js_os_execute__proxy: "sync",
@@ -214,10 +208,10 @@ export const _GodotOS = {
 		const jsonRaw = GodotRuntime.parseString(pJsonPtr);
 		const args = JSON.parse(jsonRaw) as Record<string, unknown>;
 		if (GodotConfig.onExecute == null) {
-			return GodotOS.status.FAILED;
+			return GodotRuntime.CIntError.FAILED;
 		}
 		GodotConfig.onExecute(args);
-		return GodotOS.status.OK;
+		return GodotRuntime.CIntError.OK;
 	},
 
 	godot_js_os_shell_open__proxy: "sync",
