@@ -260,8 +260,14 @@ export const _GodotDisplay = {
 	godot_js_display_window_size_get__proxy: "sync",
 	godot_js_display_window_size_get__sig: "vpp",
 	godot_js_display_window_size_get: function (pWidthPtr: CIntPointer, pHeightPtr: CIntPointer) {
-		GodotRuntime.setHeapValue(pWidthPtr, GodotRuntime.asCInt(GodotConfig.canvas.width), "i32");
-		GodotRuntime.setHeapValue(pHeightPtr, GodotRuntime.asCInt(GodotConfig.canvas.height), "i32");
+		const canvas = GodotConfig.canvas;
+		const canvasSize = {
+			width: canvas?.width ?? 0,
+			height: canvas?.height ?? 0,
+		};
+
+		GodotRuntime.setHeapValue(pWidthPtr, GodotRuntime.asCInt(canvasSize.width), "i32");
+		GodotRuntime.setHeapValue(pHeightPtr, GodotRuntime.asCInt(canvasSize.height), "i32");
 	},
 
 	godot_js_display_has_webgl__proxy: "sync",
@@ -286,7 +292,7 @@ export const _GodotDisplay = {
 	godot_js_display_canvas_focus__proxy: "sync",
 	godot_js_display_canvas_focus__sig: "v",
 	godot_js_display_canvas_focus: (): void => {
-		GodotConfig.canvas.focus();
+		GodotConfig.canvas?.focus();
 	},
 
 	godot_js_display_canvas_is_focused__proxy: "sync",
@@ -496,6 +502,10 @@ export const _GodotDisplay = {
 		pOut: CInt,
 	): void => {
 		const canvas = GodotConfig.canvas;
+		if (canvas == null) {
+			return;
+		}
+
 		const callback = GodotRuntime.getFunction(pCallbackPtr);
 		const list: Array<[CInt, string]> = [
 			[pEnter, "mouseover"],
@@ -514,6 +524,10 @@ export const _GodotDisplay = {
 	godot_js_display_setup_canvas__sig: "viiii",
 	godot_js_display_setup_canvas: (pWidth: CInt, pHeight: CInt, pFullscreen: CInt, pHiDPI: CInt): void => {
 		const canvas = GodotConfig.canvas;
+		if (canvas == null) {
+			return;
+		}
+
 		GodotEventListeners.add(
 			canvas,
 			"contextmenu",

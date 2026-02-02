@@ -81,7 +81,7 @@ export const _GodotDisplayVK = {
 					false,
 				);
 
-				GodotConfig.canvas.insertAdjacentElement("beforebegin", element);
+				GodotConfig.canvas?.insertAdjacentElement("beforebegin", element);
 				return element;
 			};
 
@@ -173,7 +173,12 @@ export const _GodotDisplayVK = {
 				return;
 			}
 
-			const rect = GodotConfig.canvas.getBoundingClientRect();
+			const canvas = GodotConfig.canvas;
+			if (canvas == null) {
+				return;
+			}
+
+			const rect = canvas.getBoundingClientRect();
 			const update = (element: HTMLInputElement | HTMLTextAreaElement): void => {
 				element.style.left = `${rect.left}px`;
 				element.style.top = `${rect.top}px`;

@@ -158,13 +158,9 @@ def update_node_in_env(env):
 def run_corepack(env, command, cwd=""):
     corepack_path = get_node_command_path(env, command="corepack")
 
-    return env.Action("cd {} && {} {}".format(shellQuote(cwd), shellQuote(corepack_path), command))
-
-
-def run_npx(env, command, cwd=""):
-    npx_path = get_node_command_path(env, command="npx")
-
-    return env.Action("cd {} && {} --yes {}".format(shellQuote(cwd), shellQuote(npx_path), command))
+    return env.Action(
+        "cd {} && {} {}".format(shellQuote(cwd), shellQuote(corepack_path), command),
+    )
 
 
 def run_pnpm(env, command, cwd=""):

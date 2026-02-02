@@ -4,6 +4,7 @@
 		"module": "nodenext",
 		"moduleResolution": "nodenext",
 		"types": ["node"],
-		"emitDeclarationOnly": true
+		"emitDeclarationOnly": true,
+		"declaration": false
 	}
 }

@@ -115,11 +115,11 @@ export const _GodotIME = {
 
 			imeElement.addEventListener("blur", () => {
 				imeElement.style.display = "none";
-				GodotConfig.canvas.focus();
+				GodotConfig.canvas?.focus();
 				GodotIME._active = false;
 			});
 
-			GodotConfig.canvas.parentElement?.appendChild(imeElement);
+			GodotConfig.canvas?.parentElement?.appendChild(imeElement);
 			GodotIME.imeElement = imeElement;
 		},
 
@@ -153,7 +153,7 @@ export const _GodotIME = {
 				GodotIME.focusTimerIntervalId = setInterval(focusTimer, 100);
 			} else {
 				GodotIME.imeElement.style.display = "none";
-				GodotConfig.canvas.focus();
+				GodotConfig.canvas?.focus();
 			}
 		},
 
@@ -166,6 +166,10 @@ export const _GodotIME = {
 				return;
 			}
 			const canvas = GodotConfig.canvas;
+			if (canvas == null) {
+				return;
+			}
+
 			const rect = canvas.getBoundingClientRect();
 			const rectWidth = canvas.width / rect.width;
 			const rectHeight = canvas.height / rect.height;

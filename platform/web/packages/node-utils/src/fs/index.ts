@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  bundle.ts                                                             */
+/*  index.ts                                                              */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,53 +28,13 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { stat } from "node:fs/promises";
 
-import esbuild from "esbuild";
-import browserslist from "browserslist";
-import { esbuildPluginBrowserslist } from "esbuild-plugin-browserslist";
-import unpluginMacros from "unplugin-macros/esbuild";
-
-const SCRIPT_PATH = fileURLToPath(import.meta.url);
-const ESBUILD_DIR_PATH = dirname(SCRIPT_PATH);
-const PACKAGE_DIR_PATH = resolve(ESBUILD_DIR_PATH, "..");
-const BUNDLE_JS_PATH = resolve(PACKAGE_DIR_PATH, "dist/bundle.js");
-const LIBRARIES_JS_PATH = resolve(PACKAGE_DIR_PATH, "dist/godot-emscripten-libraries.js");
-
-async function main(): Promise<void> {
-	await esbuild.build({
-		entryPoints: [BUNDLE_JS_PATH],
-		bundle: true,
-		format: "esm",
-		outfile: LIBRARIES_JS_PATH,
-		treeShaking: true,
-		// minify: true,
-		sourcemap: true,
-		plugins: [
-			unpluginMacros(),
-			esbuildPluginBrowserslist(
-				browserslist([
-					"last 2 chrome major versions and last 1 year",
-					"last 2 and_chr major versions and last 1 year",
-					"last 2 safari major versions and last 1 year",
-					"last 2 ios_saf major versions and last 1 year",
-					"last 2 firefox major versions and last 1 year, firefox esr",
-					"last 2 and_ff major versions and last 1 year",
-					"last 2 edge major versions and last 1 year",
-					"last 2 samsung major versions and last 1 year",
-				]),
-				{
-					printUnknownTargets: false,
-				},
-			),
-		],
-	});
-}
-
-try {
-	await main();
-} catch (eError) {
-	// eslint-disable-next-line no-console -- Not for the public, prints out the error.
-	console.error("Error while bundling emscripten libraries:", eError);
+export async function isFile(pFilePath: string): Promise<boolean> {
+	try {
+		const stats = await stat(pFilePath);
+		return stats.isFile();
+	} catch (eError) {
+		return false;
+	}
 }

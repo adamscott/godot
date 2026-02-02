@@ -28,7 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- Need to cast to emscripten types. */
+import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils" with { type: "macro" };
 
 import type {
 	CCharPointer,
@@ -48,6 +48,33 @@ import { SampleNodeBus } from "./sample_node_bus.js";
 
 import { throwIfNullish } from "@godotengine/utils/error";
 
+/**
+ * Represents the index of each sound channel relative to the engine.
+ * See `AudioStreamPlayer3D::_calc_output_vol()` for output array indices.
+ */
+export const GodotChannel = {
+	CHANNEL_L: 0,
+	CHANNEL_R: 1,
+	CHANNEL_C: 2,
+	CHANNEL_LFE: 3,
+	CHANNEL_RL: 4,
+	CHANNEL_RR: 5,
+	CHANNEL_SL: 6,
+	CHANNEL_SR: 7,
+} as const;
+
+/**
+ * Represents the index of each sound channel relative to the Web Audio API.
+ */
+export const WebChannel = {
+	CHANNEL_L: 0,
+	CHANNEL_R: 1,
+	CHANNEL_SL: 2,
+	CHANNEL_SR: 3,
+	CHANNEL_C: 4,
+	CHANNEL_LFE: 5,
+};
+
 type AudioInitOnStateChangeCallback = (pState: CInt) => void;
 type AudioInitOnLatencyChangeCallback = (pLatency: CFloat) => void;
 
@@ -55,47 +82,33 @@ type AudioSampleSetFinishedCallbackCallback = (pPlaybackObjectId: CPointer) => v
 
 export const _GodotAudio = {
 	$GodotAudio__deps: ["$GodotRuntime", "$GodotOS", "$GodotEventListeners"],
+	$GodotAudio__postset: $convertFunctionToIifeString(() => {
+		GodotAudio.samples = new Map();
+		GodotAudio.sampleNodes = new Map();
+		GodotAudio.buses = [];
+		GodotAudio.audioPositionWorkletPromise = Promise.resolve();
+	}),
 	$GodotAudio: {
 		/**
 		 * Max number of volume channels.
 		 */
 		MAX_VOLUME_CHANNELS: 8,
 
-		/**
-		 * Represents the index of each sound channel relative to the engine.
-		 * See `AudioStreamPlayer3D::_calc_output_vol()` for output array indices.
-		 */
-		GodotChannel: Object.freeze({
-			CHANNEL_L: 0,
-			CHANNEL_R: 1,
-			CHANNEL_C: 2,
-			CHANNEL_LFE: 3,
-			CHANNEL_RL: 4,
-			CHANNEL_RR: 5,
-			CHANNEL_SL: 6,
-			CHANNEL_SR: 7,
-		}),
+		GodotChannel,
+		WebChannel,
 
-		/**
-		 * Represents the index of each sound channel relative to the Web Audio API.
-		 */
-		WebChannel: Object.freeze({
-			CHANNEL_L: 0,
-			CHANNEL_R: 1,
-			CHANNEL_SL: 2,
-			CHANNEL_SR: 3,
-			CHANNEL_C: 4,
-			CHANNEL_LFE: 5,
-		}),
-
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Initialized in postset.
 		samples: null as unknown as Map<string, Sample>,
 		Sample,
 
 		SampleNodeBus,
 
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Initialized in postset.
 		sampleNodes: null as unknown as Map<string, SampleNode>,
 		SampleNode,
 
+		// This is a rare case where `Array` is preferred to `Set` as indices are needed.
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Initialized in postset.
 		buses: null as unknown as Bus[],
 		busSolo: null as Bus | null,
 		Bus,
@@ -104,11 +117,12 @@ export const _GodotAudio = {
 
 		context: null as AudioContext | null,
 
-		input: null as unknown as MediaStreamAudioSourceNode | null,
-		driver: null as unknown as typeof GodotAudioWorklet | typeof GodotAudioScript | null,
+		input: null as MediaStreamAudioSourceNode | null,
+		driver: null as typeof GodotAudioWorklet | typeof GodotAudioScript | null,
 		interval: 0,
 		sampleRate: 44100,
 
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Initialized in postset.
 		audioPositionWorkletPromise: null as unknown as Promise<void>,
 
 		linearToDb: (pLinear: number): number => {
@@ -128,12 +142,6 @@ export const _GodotAudio = {
 			pOnStateChange: (pState: number) => void,
 			pOnLatencyUpdate: (pLatency: number) => void,
 		): number => {
-			// Initialize classes static values.
-			GodotAudio.samples = new Map();
-			GodotAudio.sampleNodes = new Map();
-			GodotAudio.buses = [];
-			GodotAudio.busSolo = null;
-
 			const opts: Partial<NonNullable<ConstructorParameters<typeof AudioContext>[0]>> = {};
 			// If `pMixRate` is `0`, let the browser choose.
 			if (pMixRate !== 0) {
@@ -353,13 +361,13 @@ export const _GodotAudio = {
 	godot_audio_is_available__proxy: "sync",
 	godot_audio_is_available: (): CInt => {
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- We really want to check.
-		return Number(globalThis.AudioContext != null) as CInt;
+		return GodotRuntime.asCIntBoolean(globalThis.AudioContext != null);
 	},
 
 	godot_audio_has_worklet__proxy: "sync",
 	godot_audio_has_worklet__sig: "i",
 	godot_audio_has_worklet: (): CInt => {
-		return Number(GodotAudio.context?.audioWorklet != null) as CInt;
+		return GodotRuntime.asCIntBoolean(GodotAudio.context?.audioWorklet != null);
 	},
 
 	godot_audio_has_script_processor__proxy: "sync",
@@ -383,10 +391,10 @@ export const _GodotAudio = {
 			mixRate,
 			pLatency,
 			(pState) => {
-				onStateChangeCallback(pState as CInt);
+				onStateChangeCallback(GodotRuntime.asCInt(pState));
 			},
 			(pLatency) => {
-				onLatencyUpdateCallback(pLatency as CFloat);
+				onLatencyUpdateCallback(GodotRuntime.asCType<CFloat>(pLatency));
 			},
 		);
 		const context = GodotAudio.context;
@@ -395,7 +403,7 @@ export const _GodotAudio = {
 		} else {
 			GodotRuntime.setHeapValue(pMixRatePtr, GodotRuntime.asCInt(context.sampleRate), "i32");
 		}
-		return channels as CInt;
+		return GodotRuntime.asCInt(channels);
 	},
 
 	godot_audio_resume__proxy: "sync",
@@ -415,13 +423,15 @@ export const _GodotAudio = {
 	godot_audio_input_start__proxy: "sync",
 	godot_audio_input_start__sig: "i",
 	godot_audio_input_start: (): CInt => {
-		return GodotAudio.createInput((pInput) => {
-			throwIfNullish(GodotAudio.driver, new Error("GodotAudio.driver is null"));
-			const worklet = GodotAudio.driver.getNode();
-			if (worklet != null) {
-				pInput.connect(worklet);
-			}
-		}) as CInt;
+		return GodotRuntime.asCInt(
+			GodotAudio.createInput((pInput) => {
+				throwIfNullish(GodotAudio.driver, new Error("GodotAudio.driver is null"));
+				const worklet = GodotAudio.driver.getNode();
+				if (worklet != null) {
+					pInput.connect(worklet);
+				}
+			}),
+		);
 	},
 
 	godot_audio_input_stop__proxy: "sync",
@@ -443,7 +453,7 @@ export const _GodotAudio = {
 	godot_audio_sample_stream_is_registered__sig: "ip",
 	godot_audio_sample_stream_is_registered: (pStreamObjectIdStrPtr: CCharPointer): CInt => {
 		const streamObjectId = GodotRuntime.parseString(pStreamObjectIdStrPtr);
-		return Number(GodotAudio.Sample.getSampleOrNull(streamObjectId) != null) as CInt;
+		return GodotRuntime.asCIntBoolean(GodotAudio.Sample.getSampleOrNull(streamObjectId) != null);
 	},
 
 	godot_audio_sample_register_stream__proxy: "sync",
@@ -473,7 +483,7 @@ export const _GodotAudio = {
 		const subLeft = GodotRuntime.heapSub(HEAPF32, pFramesPtr, pFramesTotal);
 		const subRight = GodotRuntime.heapSub(
 			HEAPF32,
-			(pFramesPtr + pFramesTotal * Float32Array.BYTES_PER_ELEMENT) as CPointer,
+			GodotRuntime.asCType<CPointer>(pFramesPtr + pFramesTotal * Float32Array.BYTES_PER_ELEMENT),
 			pFramesTotal,
 		);
 
@@ -549,7 +559,7 @@ export const _GodotAudio = {
 	godot_audio_sample_is_active__sig: "ip",
 	godot_audio_sample_is_active: (pPlaybackObjectIdStrPtr: CCharPointer): CInt => {
 		const playbackObjectId = GodotRuntime.parseString(pPlaybackObjectIdStrPtr);
-		return Number(GodotAudio.sampleNodes.has(playbackObjectId)) as CInt;
+		return GodotRuntime.asCIntBoolean(GodotAudio.sampleNodes.has(playbackObjectId));
 	},
 
 	godot_audio_get_sample_playback_position__proxy: "sync",
@@ -558,9 +568,9 @@ export const _GodotAudio = {
 		const playbackObjectId = GodotRuntime.parseString(pPlaybackObjectIdStrPtr);
 		const sampleNode = GodotAudio.SampleNode.getSampleNodeOrNull(playbackObjectId);
 		if (sampleNode == null) {
-			return 0 as CDouble;
+			return GodotRuntime.asCType<CDouble>(0);
 		}
-		return sampleNode.getPlaybackPosition() as CDouble;
+		return GodotRuntime.asCType<CDouble>(sampleNode.getPlaybackPosition());
 	},
 
 	godot_audio_sample_update_pitch_scale__proxy: "sync",

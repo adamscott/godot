@@ -86,6 +86,10 @@ export const _GodotInput = {
 
 		computePosition: (pEvent: MouseEvent | Touch, pRect: DOMRect): [number, number] => {
 			const canvas = GodotConfig.canvas;
+			if (canvas == null) {
+				return [0, 0];
+			}
+
 			const rectWidth = canvas.width / pRect.width;
 			const rectHeight = canvas.height / pRect.height;
 			const x = (pEvent.clientX - pRect.x) * rectWidth;
@@ -101,6 +105,10 @@ export const _GodotInput = {
 	godot_js_input_mouse_move_cb__sig: "vp",
 	godot_js_input_mouse_move_cb: (pCallbackPtr: CFunctionPointer<InputMouseMoveCbCallback>): void => {
 		const canvas = GodotConfig.canvas;
+		if (canvas == null) {
+			return;
+		}
+
 		const callback = GodotRuntime.getFunction(pCallbackPtr);
 		const moveEventCallback = (pEvent: MouseEvent): void => {
 			const rect = canvas.getBoundingClientRect();
@@ -134,13 +142,20 @@ export const _GodotInput = {
 				pEvent.preventDefault();
 			}
 		};
-		GodotEventListeners.add(GodotConfig.canvas, "wheel", wheelEventCallback, false);
+		const canvas = GodotConfig.canvas;
+		if (canvas != null) {
+			GodotEventListeners.add(canvas, "wheel", wheelEventCallback, false);
+		}
 	},
 
 	godot_js_input_mouse_button_cb__proxy: "sync",
 	godot_js_input_mouse_button_cb__sig: "vp",
 	godot_js_input_mouse_button_cb: (pCallbackPtr: CFunctionPointer<InputMouseButtonCbCallback>): void => {
 		const canvas = GodotConfig.canvas;
+		if (canvas == null) {
+			return;
+		}
+
 		const callback = GodotRuntime.getFunction(pCallbackPtr);
 		const mouseEventCallback = (pEvent: MouseEvent, pPressed: boolean): void => {
 			const rect = canvas.getBoundingClientRect();
@@ -192,6 +207,10 @@ export const _GodotInput = {
 		pCoordsPtr: CDoublePointer,
 	): void => {
 		const canvas = GodotConfig.canvas;
+		if (canvas == null) {
+			return;
+		}
+
 		const callback = GodotRuntime.getFunction(pCallbackPtr);
 		const touchEventCallback = (
 			pEvent: TouchEvent,
@@ -285,6 +304,10 @@ export const _GodotInput = {
 		pKeyPtr: CCharArrayPointer,
 	): void => {
 		const canvas = GodotConfig.canvas;
+		if (canvas == null) {
+			return;
+		}
+
 		const callback = GodotRuntime.getFunction(pCallbackPtr);
 		const keyboardEventHandler = (pEvent: KeyboardEvent, pPressed: boolean): void => {
 			const modifiers = GodotInput.getModifiers(pEvent);
@@ -440,7 +463,7 @@ export const _GodotInput = {
 		}
 		GodotRuntime.setHeapValue(rAxesCountPtr, GodotRuntime.asCInt(axesCount), "i32");
 
-		GodotRuntime.setHeapValue(rStandardPtr, GodotRuntime.asCInt(Number(sample.standard)), "i32");
+		GodotRuntime.setHeapValue(rStandardPtr, GodotRuntime.asCIntBoolean(sample.standard), "i32");
 
 		return GodotRuntime.CIntError.OK;
 	},
@@ -472,6 +495,10 @@ export const _GodotInput = {
 	godot_js_input_drop_files_cb__sig: "vp",
 	godot_js_input_drop_files_cb: (pCallbackPtr: CFunctionPointer<InputDropFilesCbCallback>): void => {
 		const canvas = GodotConfig.canvas;
+		if (canvas == null) {
+			return;
+		}
+
 		const callback = GodotRuntime.getFunction(pCallbackPtr);
 		const dropEventHandler = (files: string[]): void => {
 			const args = files;
@@ -504,5 +531,6 @@ export const _GodotInput = {
 		navigator.vibrate(pDurationMs);
 	},
 };
+
 autoAddDeps(_GodotInput, "$GodotInput");
 addToLibrary(_GodotInput);

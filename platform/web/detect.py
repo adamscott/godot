@@ -12,7 +12,6 @@ from emscripten_helpers import (
     create_template_zip,
     get_template_zip_path,
     run_closure_compiler,
-    run_npx,
     run_pnpm,
     update_node_in_env,
 )
@@ -65,8 +64,6 @@ def get_opts():
         BoolVariable("wasm_simd", "Use WebAssembly SIMD to improve CPU performance", True),
         ("pnpm_run", "Run PNPM command. See the `pnpm_cwd` variable to set the current working directory.", ""),
         ("pnpm_cwd", "Sets the working directory for the `pnpm_run` variable. Defaults to project root directory.", ""),
-        ("npx_run", "Run NPX command. See the `npx_cwd` variable to set the current working directory.", ""),
-        ("npx_cwd", "Sets the working directory for the `npx_run` variable. Defaults to project root directory.", ""),
     ]
 
 
@@ -228,7 +225,6 @@ def configure(env: "SConsEnvironment"):
 
     # Run commands.
     env.AddMethod(update_node_in_env, "UpdateNodeInENV")
-    env.AddMethod(run_npx, "RunNpx")
     env.AddMethod(run_pnpm, "RunPnpm")
 
     # Add method that joins/compiles our Engine files.

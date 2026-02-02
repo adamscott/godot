@@ -28,8 +28,6 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- Need to cast to emscripten types. */
-
 import type {
 	CFloatPointer,
 	CFunctionPointer,
@@ -326,12 +324,12 @@ export const _GodotAudioWorklet = {
 			pOutBufferPtr,
 			pOutBufferSize,
 			(pPosition, pFrames) => {
-				outCallback(pPosition as CInt, pFrames as CInt);
+				outCallback(GodotRuntime.asCInt(pPosition), GodotRuntime.asCInt(pFrames));
 			},
 			pInBufferPtr,
 			pInBufferSize,
 			(pPosition, pFrames) => {
-				inCallback(pPosition as CInt, pFrames as CInt);
+				inCallback(GodotRuntime.asCInt(pPosition), GodotRuntime.asCInt(pFrames));
 			},
 		);
 	},
@@ -339,17 +337,17 @@ export const _GodotAudioWorklet = {
 	godot_audio_worklet_state_wait__sig: "ipiii",
 	godot_audio_worklet_state_wait: (pStatePtr: CIntPointer, pIndex: CInt, pExpected: CInt, pTimeout: CInt): CInt => {
 		Atomics.wait(HEAP32, (pStatePtr >> 2) + pIndex, pExpected, pTimeout);
-		return Atomics.load(HEAP32, (pStatePtr >> 2) + pIndex) as CInt;
+		return GodotRuntime.asCInt(Atomics.load(HEAP32, (pStatePtr >> 2) + pIndex));
 	},
 
 	godot_audio_worklet_state_add__sig: "ipii",
 	godot_audio_worklet_state_add: (pStatePtr: CPointer, pIndex: CInt, pValue: CInt): CInt => {
-		return Atomics.add(HEAP32, (pStatePtr >> 2) + pIndex, pValue) as CInt;
+		return GodotRuntime.asCInt(Atomics.add(HEAP32, (pStatePtr >> 2) + pIndex, pValue));
 	},
 
 	godot_audio_worklet_state_get__sig: "ipi",
 	godot_audio_worklet_state_get: (pStatePtr: CPointer, pIdx: CInt): CInt => {
-		return Atomics.load(HEAP32, (pStatePtr >> 2) + pIdx) as CInt;
+		return GodotRuntime.asCInt(Atomics.load(HEAP32, (pStatePtr >> 2) + pIdx));
 	},
 };
 autoAddDeps(_GodotAudioWorklet, "$GodotAudioWorklet");

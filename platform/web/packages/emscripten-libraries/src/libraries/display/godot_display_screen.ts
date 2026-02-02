@@ -51,12 +51,17 @@ export const _GodotDisplayScreen = {
 		},
 
 		requestFullscreen: (): boolean => {
+			const canvas = GodotConfig.canvas;
+			if (canvas == null) {
+				return false;
+			}
+
 			if (!GodotDisplayScreen.hasFullscreen()) {
 				return false;
 			}
 			try {
 				// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- This property is not available in every browser.
-				GodotConfig.canvas.requestFullscreen()?.catch((_pError: unknown) => {
+				canvas.requestFullscreen()?.catch((_pError: unknown) => {
 					// Nothing to do.
 				});
 			} catch (_error) {
@@ -81,12 +86,16 @@ export const _GodotDisplayScreen = {
 		},
 
 		updateSize: (): boolean => {
+			const canvas = GodotConfig.canvas;
+			if (canvas == null) {
+				return false;
+			}
+
 			const isFullscreen = GodotDisplayScreen.isFullscreen();
 			const wantsFullWindow = GodotConfig.canvasResizePolicy === 2;
 			const noResize = GodotConfig.canvasResizePolicy === 0;
 			const desiredWidth = GodotDisplayScreen.desiredSize.width;
 			const desiredHeight = GodotDisplayScreen.desiredSize.height;
-			const canvas = GodotConfig.canvas;
 			let width = desiredWidth;
 			let height = desiredHeight;
 

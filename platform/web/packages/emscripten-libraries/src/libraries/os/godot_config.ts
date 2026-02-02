@@ -28,8 +28,6 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- Need to cast to emscripten types. */
-
 import type { ConfigOptions } from "@godotengine/utils/types";
 
 import type { CCharPointer, CInt } from "@godotengine/emscripten-utils/types";
@@ -43,7 +41,7 @@ export const _GodotConfig = {
 	}),
 	$GodotConfig__deps: ["$GodotRuntime"],
 	$GodotConfig: {
-		canvas: null as unknown as HTMLCanvasElement,
+		canvas: null as HTMLCanvasElement | null,
 		locale: "en",
 		// Adaptative.
 		canvasResizePolicy: 2,
@@ -86,7 +84,7 @@ export const _GodotConfig = {
 		},
 
 		clear: (): void => {
-			GodotConfig.canvas = null as unknown as HTMLCanvasElement;
+			GodotConfig.canvas = null;
 			GodotConfig.locale = "en";
 			GodotConfig.canvasResizePolicy = 2;
 			GodotConfig.virtualKeyboard = false;
@@ -105,6 +103,10 @@ export const _GodotConfig = {
 	godot_js_config_canvas_id_get__proxy: "sync",
 	godot_js_config_canvas_id_get__sig: "vpi",
 	godot_js_config_canvas_id_get: (pPtr: CCharPointer, pMaxSize: CInt): void => {
+		if (GodotConfig.canvas == null) {
+			GodotRuntime.stringToHeap("", pPtr, pMaxSize);
+			return;
+		}
 		GodotRuntime.stringToHeap(`#${GodotConfig.canvas.id}`, pPtr, pMaxSize);
 	},
 };

@@ -28,25 +28,28 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- Need to cast to emscripten types. */
+import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils" with { type: "macro" };
+import { asCIDHandlerId as $asCIDHandlerId } from "@godotengine/emscripten-utils/types" with { type: "macro" };
 
 import type { CIDHandlerId, CIDHandlerIdExtract } from "@godotengine/emscripten-utils/types";
 
-import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils" with { type: "macro" };
-
 export const _IDHandler = {
+	$IDHandler__deps: ["$GodotRuntime"],
 	$IDHandler__postset: $convertFunctionToIifeString(() => {
 		IDHandler._references = new Map();
 	}),
 	$IDHandler: {
-		_lastId: 0 as CIDHandlerId<unknown>,
+		_lastId: $asCIDHandlerId<unknown>(0),
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- We init `_references` in postset.
 		_references: null as unknown as Map<number, unknown>,
 
-		get: <T extends CIDHandlerId<unknown>>(pId: T): CIDHandlerIdExtract<T> | null =>
-			IDHandler._references.get(pId) as CIDHandlerIdExtract<T> | null,
+		get: <T extends CIDHandlerId<unknown>>(pId: T): CIDHandlerIdExtract<T> | null => {
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- We don't keep track of types.
+			return IDHandler._references.get(pId) as CIDHandlerIdExtract<T> | null;
+		},
 
 		add: <T>(pData: T): CIDHandlerId<T> => {
-			const id = (IDHandler._lastId + 1) as CIDHandlerId<T>;
+			const id = GodotRuntime.asCIDHandlerId<T>(IDHandler._lastId + 1);
 			IDHandler._references.set(id, pData);
 			IDHandler._lastId = id;
 			return id;

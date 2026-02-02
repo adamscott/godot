@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  bundle.ts                                                             */
+/*  godot_webxr.ts                                                        */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,13 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import "#/libraries/runtime";
-import "#/libraries/os";
-
-import "#/libraries/audio";
-import "#/libraries/display";
-import "#/libraries/fetch";
-import "#/libraries/input";
-import "#/libraries/jswrapper";
-import "#/libraries/webgl2";
-import "#/libraries/webmidi";
+export const _GodotWebXR = {
+	$GodotWebXR__deps: ["$MainLoop", "$GL", "$GodotRuntime", "$runtimeKeepalivePush", "$runtimeKeepalivePop"],
+	$GodotWebXR: {},
+};

@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  cast.ts                                                               */
+/*  eslint.config.ts                                                      */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,52 +28,12 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- Need to cast to emscripten types. */
+import { defineConfig } from "eslint/config";
 
-import type { AnyFunction } from "@godotengine/utils/types";
+import baseConfig from "@godotengine/config-eslint";
 
-import type { CInt, CInt64, CFunctionPointer, CIDHandlerId, CType } from "./aliases.js";
-
-// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- We want the developer to specify the generic type.
-export function asCType<T extends CType>(pValue: number | CType): T {
-	return pValue as T;
-}
-
-export function asCInt(pValue: number | CType): CInt {
-	return pValue as CInt;
-}
-
-export function asCInt64(pValue: number | bigint | CType): CInt64 {
-	return pValue as CInt64;
-}
-
-export function asCFunctionPointer<T extends AnyFunction>(pFunctionPointer: number): CFunctionPointer<T> {
-	return pFunctionPointer as CFunctionPointer<T>;
-}
-
-export function asCIDHandlerId<T>(pId: number): CIDHandlerId<T> {
-	return pId as CIDHandlerId<T>;
-}
-
-export function asCIntBoolean(pValue: boolean): CInt;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- We really want to test any value to `Boolean()`.
-export function asCIntBoolean(pValue: any): CInt {
-	// eslint-disable-next-line no-extra-boolean-cast -- Need to cast as boolean here.
-	return Boolean(pValue) ? asCInt(1) : asCInt(0);
-}
-
-export function fromCTypeToNumber(pValue: CType): number {
-	return pValue as number;
-}
-
-export function fromCInt64ToBigint(pValue: CInt64): bigint {
-	return pValue as bigint;
-}
-
-export function fromCTypeToBoolean(pValue: CType): boolean {
-	return fromCTypeToNumber(pValue) !== 0;
-}
-
-export function fromCInt64ToBoolean(pValue: CInt64): boolean {
-	return fromCInt64ToBigint(pValue) !== 0n;
-}
+export default defineConfig([
+	{
+		extends: [baseConfig],
+	},
+]);

@@ -10,6 +10,8 @@
 		"@godotengine/config-stylelint": "workspace:^",
 		"@godotengine/config-tsconfig-browser": "workspace:^",
 		"@godotengine/config-tsconfig-tools": "workspace:^",
+		"@godotengine/emscripten-builder": "workspace:^",
+		"@godotengine/emscripten-libraries": "workspace:^",
 		"@godotengine/emscripten-utils": "workspace:^",
 		"@types/node": "^25.1.0",
 		"eslint": "^9.39.2",

@@ -121,7 +121,7 @@ declare global {
 		textures: GLTexture[];
 	};
 
-	// eslint-disable-next-line @typescript-eslint/naming-convention -- emscripten function.
+	// eslint-disable-next-line @typescript-eslint/naming-convention -- emscripten function, not ours.
 	const _emscripten_webgl_get_current_context: () => GLContextHandle;
 
 	const Module: Record<string, unknown>;

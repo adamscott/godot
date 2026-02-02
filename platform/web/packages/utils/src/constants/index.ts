@@ -40,3 +40,7 @@ export const PRIMITIVES = [
 	"object",
 	"function",
 ] as const satisfies Array<keyof PrimitiveMap>;
+
+// Taken from SCons.
+export const ENABLE_STRINGS = ["1", "yes", "true", "on", "enable"] as const;
+export const DISABLE_STRINGS = ["0", "no", "false", "off", "disable"] as const;

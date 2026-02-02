@@ -4,6 +4,8 @@
 		"composite": true,
 		"allowJs": true,
 		"allowImportingTsExtensions": false,
+		"declaration": true,
+		"declarationMap": true,
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
 		"incremental": true,

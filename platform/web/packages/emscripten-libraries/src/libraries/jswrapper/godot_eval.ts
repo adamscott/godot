@@ -74,7 +74,7 @@ export const _GodotEval = {
 			case "boolean":
 				GodotRuntime.setHeapValue(
 					GodotRuntime.asCType<CIntPointer>(pUnionPtr),
-					GodotRuntime.asCInt(Number(evalReturnValue)),
+					GodotRuntime.asCIntBoolean(evalReturnValue),
 					"i32",
 				);
 				return GodotRuntime.asCInt(1); // BOOL
@@ -126,5 +126,5 @@ export const _GodotEval = {
 		return GodotRuntime.asCInt(0); // NIL
 	},
 };
-autoAddDeps(_GodotEval, "$GodotEval");
+
 addToLibrary(_GodotEval);

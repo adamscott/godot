@@ -28,8 +28,6 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- Need to cast to emscripten types. */
-
 import type { CCharPointer, CInt, CUintPointer, CFunctionPointer } from "@godotengine/emscripten-utils/types";
 
 import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils" with { type: "macro" };
@@ -65,6 +63,7 @@ export const _GodotOS = {
 			/* empty */
 		},
 		_asyncCallbacks: [] as Array<() => Promise<void>>,
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Real value is set in postset.
 		_fsSyncPromise: null as unknown as Promise<Error | null>,
 
 		atExit: (pPromiseCallback: () => Promise<void>): void => {
@@ -143,7 +142,7 @@ export const _GodotOS = {
 	godot_js_os_fs_is_persistent__proxy: "sync",
 	godot_js_os_fs_is_persistent__sig: "i",
 	godot_js_os_fs_is_persistent: (): CInt => {
-		return Number(GodotFS.isPersistent()) as CInt;
+		return GodotRuntime.asCIntBoolean(GodotFS.isPersistent());
 	},
 
 	godot_js_os_fs_sync__proxy: "sync",
@@ -165,16 +164,16 @@ export const _GodotOS = {
 	godot_js_os_has_feature: (pFeaturePtr: CCharPointer): CInt => {
 		const feature = GodotRuntime.parseString(pFeaturePtr);
 		if (feature === "web_android") {
-			return Number(GodotOS.getCurrentOS() === "Android") as CInt;
+			return GodotRuntime.asCIntBoolean(GodotOS.getCurrentOS() === "Android");
 		}
 		if (feature === "web_ios") {
-			return Number(GodotOS.getCurrentOS() === "iOS") as CInt;
+			return GodotRuntime.asCIntBoolean(GodotOS.getCurrentOS() === "iOS");
 		}
 		if (feature === "web_macos") {
-			return Number(GodotOS.getCurrentOS() === "macOS") as CInt;
+			return GodotRuntime.asCIntBoolean(GodotOS.getCurrentOS() === "macOS");
 		}
 		if (feature === "web_windows") {
-			return Number(GodotOS.getCurrentOS() === "Windows") as CInt;
+			return GodotRuntime.asCIntBoolean(GodotOS.getCurrentOS() === "Windows");
 		}
 		if (feature === "web_linuxbsd") {
 			switch (GodotOS.getCurrentOS()) {
@@ -206,6 +205,7 @@ export const _GodotOS = {
 	godot_js_os_execute__sig: "ip",
 	godot_js_os_execute: (pJsonPtr: CCharPointer): CInt => {
 		const jsonRaw = GodotRuntime.parseString(pJsonPtr);
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- We're trying to type JSON.
 		const args = JSON.parse(jsonRaw) as Record<string, unknown>;
 		if (GodotConfig.onExecute == null) {
 			return GodotRuntime.CIntError.FAILED;
@@ -226,7 +226,7 @@ export const _GodotOS = {
 		// TODO Godot core needs fixing to avoid spawning too many threads (> 24).
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Property exists since 2022.
 		const concurrency = navigator.hardwareConcurrency ?? 1;
-		return Math.min(concurrency, 2) as CInt;
+		return GodotRuntime.asCInt(Math.min(concurrency, 2));
 	},
 
 	godot_js_os_download_buffer__proxy: "sync",

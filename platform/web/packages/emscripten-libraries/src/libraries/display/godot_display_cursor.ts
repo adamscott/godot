@@ -59,7 +59,11 @@ export const _GodotDisplayCursor = {
 		},
 
 		setStyle: (pStyle: string): void => {
-			GodotConfig.canvas.style.cursor = pStyle;
+			const canvas = GodotConfig.canvas;
+			if (canvas == null) {
+				return;
+			}
+			canvas.style.cursor = pStyle;
 		},
 
 		setShape: (pShape: string): void => {
@@ -87,7 +91,7 @@ export const _GodotDisplayCursor = {
 
 		lockPointer: (): void => {
 			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- The lock is not supported by all browsers. It may not be available.
-			GodotConfig.canvas.requestPointerLock?.().catch((pError: unknown) => {
+			GodotConfig.canvas?.requestPointerLock?.().catch((pError: unknown) => {
 				GodotRuntime.error("Error while requesting pointer lock:", pError);
 			});
 		},

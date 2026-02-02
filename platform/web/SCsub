@@ -7,9 +7,6 @@ Import("env")
 
 env.UpdateNodeInENV()
 
-if len(env["npx_run"]) > 0:
-    npx_run_status = env.Execute(env.RunNpx(command=env["npx_run"], cwd=env["npx_cwd"]))
-    env.Exit(npx_run_status)
 if len(env["pnpm_run"]) > 0:
     pnpm_run_status = env.Execute(env.RunPnpm(command=env["pnpm_run"], cwd=env["pnpm_cwd"]))
     env.Exit(pnpm_run_status)
@@ -43,19 +40,7 @@ if env["target"] == "editor":
     env.add_source_files(web_files, "editor/*.cpp")
 
 sys_env = env.Clone()
-sys_env.AddJSLibraries(
-    [
-        "js/libs/library_godot_audio.js",
-        "js/libs/library_godot_display.js",
-        "js/libs/library_godot_emscripten.js",
-        "js/libs/library_godot_fetch.js",
-        "js/libs/library_godot_webmidi.js",
-        "js/libs/library_godot_os.js",
-        "js/libs/library_godot_runtime.js",
-        "js/libs/library_godot_input.js",
-        "js/libs/library_godot_webgl2.js",
-    ]
-)
+sys_env.AddJSLibraries(["packages/emscripten-libraries/dist/godot-emscripten-libraries.js"])
 sys_env.AddJSExterns(
     [
         "js/libs/library_godot_webgl2.externs.js",
@@ -68,8 +53,8 @@ sys_env.AddJSPost(
     ]
 )
 
-if env["javascript_eval"]:
-    sys_env.AddJSLibraries(["js/libs/library_godot_javascript_singleton.js"])
+if sys_env["javascript_eval"]:
+    sys_env.AppendENVPath("GODOT_JAVASCRIPT_EVAL", "1", delete_existing=True)
 
 for lib in sys_env["JS_LIBS"]:
     sys_env.Append(LINKFLAGS=["--js-library", lib.abspath])
@@ -127,11 +112,8 @@ turbo_build = sys_env.Alias(
     "turbo_build", [], sys_env.RunPnpm(command="exec turbo run build", cwd=sys_env.Dir("#").abspath)
 )
 sys_env.Depends(build, turbo_build)
-# sys_env.Depends(turbo_build, pnpm_install)
-sys_env.AlwaysBuild(
-    # pnpm_install,
-    turbo_build
-)
+sys_env.Depends(turbo_build, pnpm_install)
+sys_env.AlwaysBuild(pnpm_install, turbo_build)
 
 engine = [
     "js/engine/features.js",

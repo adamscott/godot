@@ -328,7 +328,7 @@ export const _GodotFetch = {
 			return GodotRuntime.asCInt(-1);
 		}
 
-		return GodotRuntime.asCInt(Number(fetchEntry.chunked));
+		return GodotRuntime.asCIntBoolean(fetchEntry.chunked);
 	},
 
 	godot_js_fetch_free__proxy: "sync",
