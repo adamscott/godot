@@ -2,7 +2,8 @@
 	"name": "@godotengine/config-stylelint",
 	"type": "module",
 	"scripts": {
-		"build": "tsc"
+		"build": "tsc",
+		"clean": "shx rm -rf ./dist && shx rm -f tsconfig.tsbuildinfo"
 	},
 	"exports": {
 		"import": "./dist/index.js"
@@ -16,6 +17,7 @@
 		"@types/node": "^25.1.0",
 		"eslint": "^9.39.2",
 		"prettier": "3.8.1",
+		"shx": "^0.4.0",
 		"stylelint": "^17.1.0",
 		"stylelint-config-standard-scss": "^17.0.0",
 		"turbo": "^2.8.1",

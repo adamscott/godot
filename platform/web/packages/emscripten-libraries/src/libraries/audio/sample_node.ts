@@ -28,10 +28,10 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import { throwIfNullish, throwIfIsNotOfType } from "@godotengine/utils/error";
-
-import type { Bus } from "./bus.js";
+import { GodotAudio, GodotEventListeners, GodotRuntime } from "#/external/index.js";
 import type { LoopMode, Sample } from "./sample.js";
+import { getNullishErrorString as $getNullishErrorString } from "@godotengine/utils/macros" with { type: "macro" };
+import type { Bus } from "./bus.js";
 import type { SampleNodeBus } from "./sample_node_bus.js";
 
 export interface SampleNodeParams {
@@ -109,7 +109,9 @@ export class SampleNode {
 
 	constructor(pParams: SampleNodeParams, pOptions: Partial<SampleNodeOptions> = {}) {
 		const context = GodotAudio.context;
-		throwIfNullish(context, new Error("`GodotAudio.context` is null or undefined."));
+		if (context == null) {
+			throw new TypeError($getNullishErrorString("GodotAudio.context"));
+		}
 
 		this.id = pParams.id;
 		this.streamObjectId = pParams.streamObjectId;
@@ -269,7 +271,9 @@ export class SampleNode {
 
 	getPositionWorklet(): AudioWorkletNode {
 		const context = GodotAudio.context;
-		throwIfNullish(context, new Error("`GodotAudio.context` is null or undefined."));
+		if (context == null) {
+			throw new TypeError($getNullishErrorString("GodotAudio.context"));
+		}
 		if (this._positionWorklet != null) {
 			return this._positionWorklet;
 		}
@@ -279,7 +283,12 @@ export class SampleNode {
 				case "position":
 					{
 						const eventData = pEvent.data.data as unknown;
-						throwIfIsNotOfType(eventData, "string", new TypeError("`pEvent.data.data` is not a `string`."));
+						if (eventData == null) {
+							throw new TypeError($getNullishErrorString("pEvent.data.data"));
+						}
+						if (typeof eventData !== "string") {
+							throw new TypeError(`\`pEvent.data.data\` is not \`string\` (\`${typeof eventData}\`).`);
+						}
 						this._playbackPosition = parseInt(eventData, 10) / this.getSample().sampleRate + this.offset;
 					}
 					break;
@@ -331,7 +340,9 @@ export class SampleNode {
 	}
 
 	_syncPlaybackRate(): void {
-		throwIfNullish(this._source, new Error("Source is null"));
+		if (this._source == null) {
+			throw new TypeError($getNullishErrorString("_source"));
+		}
 		this._source.playbackRate.value = this.getPlaybackRate() * this.getPitchScale();
 	}
 

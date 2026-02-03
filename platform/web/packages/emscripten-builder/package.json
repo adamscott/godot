@@ -4,7 +4,7 @@
 	"type": "module",
 	"scripts": {
 		"build": "tsc && tsc-alias",
-		"postinstall": "corepack pnpm run build"
+		"clean": "shx rm -rf ./dist && shx rm -f tsconfig.tsbuildinfo"
 	},
 	"exports": {
 		"import": "./dist/index.js"
@@ -19,6 +19,7 @@
 		"@godotengine/config-tsconfig-tools": "workspace:^",
 		"eslint": "^9.39.2",
 		"prettier": "3.8.1",
+		"shx": "^0.4.0",
 		"stylelint": "^17.1.0",
 		"ts-node": "^10.9.2",
 		"tsc-alias": "^1.8.16",

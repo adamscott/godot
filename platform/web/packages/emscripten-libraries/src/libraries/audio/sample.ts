@@ -28,7 +28,9 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import { throwIfNullish } from "@godotengine/utils/error";
+import { getNullishErrorString as $getNullishErrorString } from "@godotengine/utils/macros" with { type: "macro" };
+
+import { GodotAudio } from "#/external/index.js";
 
 const LOOP_MODE_VALUES = ["disabled", "forward", "backward", "pingpong"] as const;
 export type LoopMode = (typeof LOOP_MODE_VALUES)[number];
@@ -108,9 +110,13 @@ export class Sample {
 	}
 
 	_duplicateAudioBuffer(): AudioBuffer {
-		throwIfNullish(this._audioBuffer, new Error("Couldn't duplicate a null audioBuffer"));
+		if (this._audioBuffer == null) {
+			throw new TypeError("Couldn't duplicate a null audioBuffer");
+		}
 		const context = GodotAudio.context;
-		throwIfNullish(context, new Error("`GodotAudio.context` is null."));
+		if (context == null) {
+			throw new TypeError($getNullishErrorString("GodotAudio.context"));
+		}
 		const channels = new Array<Float32Array<ArrayBuffer>>(this._audioBuffer.numberOfChannels);
 		for (let i = 0; i < this._audioBuffer.numberOfChannels; i++) {
 			const channel = new Float32Array(this._audioBuffer.getChannelData(i));

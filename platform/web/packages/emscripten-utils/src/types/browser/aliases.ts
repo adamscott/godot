@@ -33,18 +33,6 @@ export type GLTexture = WebGLTexture & {
 	name?: number;
 };
 
-export interface OCULUS_multiview extends OVR_multiview2 {
-	framebufferTextureMultisampleMultiviewOVR: (
-		target: GLenum,
-		attachment: GLenum,
-		texture: WebGLTexture | undefined,
-		level: GLint,
-		samples: GLsizei,
-		baseViewIndex: GLint,
-		numViews: GLsizei,
-	) => void;
-}
-
 export interface GLContext {
 	handle: unknown;
 	attributes: unknown;

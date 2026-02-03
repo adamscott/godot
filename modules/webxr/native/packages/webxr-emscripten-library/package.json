@@ -1,9 +1,20 @@
 {
 	"name": "@godotengine/webxr-emscripten-library",
+	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "tsc"
+		"build": "tsc && tsc-alias",
+		"clean": "shx rm -rf ./dist && shx rm -f tsconfig.tsbuildinfo"
 	},
+	"exports": {
+		".": "./dist/index.js",
+		"./external": "./dist/external/index.js",
+		"./libraries": "./dist/libraries/index.js"
+	},
+	"types": "./dist/index.d.ts",
+	"files": [
+		"./dist/types/global.d.ts"
+	],
 	"devDependencies": {
 		"@godotengine/config-eslint": "workspace:^",
 		"@godotengine/config-prettier": "workspace:^",
@@ -13,9 +24,13 @@
 		"@godotengine/emscripten-builder": "workspace:^",
 		"@godotengine/emscripten-libraries": "workspace:^",
 		"@godotengine/emscripten-utils": "workspace:^",
+		"@godotengine/utils": "workspace:^",
 		"@types/node": "^25.1.0",
+		"@types/webxr": "^0.5.24",
 		"eslint": "^9.39.2",
 		"prettier": "3.8.1",
+		"shx": "^0.4.0",
+		"tsc-alias": "^1.8.16",
 		"turbo": "^2.8.1",
 		"typescript": "^5.9.3"
 	}

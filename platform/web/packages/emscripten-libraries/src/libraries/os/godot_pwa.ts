@@ -29,6 +29,7 @@
 /**************************************************************************/
 
 import type { CFunctionPointer, CInt } from "@godotengine/emscripten-utils/types";
+import { GodotEventListeners, GodotPWA, GodotRuntime, addToLibrary, autoAddDeps } from "#/external/index.js";
 
 type PWACbCallback = () => void;
 

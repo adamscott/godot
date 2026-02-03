@@ -28,9 +28,8 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import type { CPointer } from "#/types";
-
-import { asCType, asCInt } from "#/types";
+import { asCInt, asCType } from "#/types/index.js";
+import type { CPointer } from "#/types/index.js";
 
 export const NULLPTR = asCType<CPointer>(0);
 

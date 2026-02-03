@@ -28,9 +28,18 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import type { CCharPointer, CInt, CUintPointer, CFunctionPointer } from "@godotengine/emscripten-utils/types";
-
-import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils" with { type: "macro" };
+import type { CCharPointer, CFunctionPointer, CInt, CUintPointer } from "@godotengine/emscripten-utils/types";
+import {
+	GodotConfig,
+	GodotFS,
+	GodotOS,
+	GodotRuntime,
+	HEAP8,
+	Module,
+	addToLibrary,
+	autoAddDeps,
+} from "#/external/index.js";
+import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils/macros" with { type: "macro" };
 
 type OSFinishAsyncCallback = () => void;
 type OSRequestQuitCbCallback = () => void;

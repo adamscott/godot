@@ -28,8 +28,8 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import type { Constructor, PrimitiveMap } from "#/types";
-import { PRIMITIVES } from "#/constants";
+import type { Constructor, PrimitiveMap } from "#/types/index.js";
+import { PRIMITIVES } from "#/constants/index.js";
 
 export function isNull(pTest: unknown): pTest is null {
 	return pTest === null;

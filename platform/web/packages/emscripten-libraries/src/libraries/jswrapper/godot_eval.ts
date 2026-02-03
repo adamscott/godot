@@ -28,8 +28,6 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import { fromCTypeToBoolean } from "@godotengine/emscripten-utils/types";
-
 import type {
 	CCharPointer,
 	CDouble,
@@ -39,10 +37,15 @@ import type {
 	CIntPointer,
 	CVoidPointer,
 } from "@godotengine/emscripten-utils/types";
+import { GodotRuntime, HEAPU8, addToLibrary, autoAddDeps } from "#/external/index.js";
+import { fromCTypeToBoolean } from "@godotengine/emscripten-utils/types";
 
 type GodotJSEvalCallback = (pPtr: CVoidPointer, pPtr2: CVoidPointer, pLength: CInt) => CVoidPointer;
 
 export const _GodotEval = {
+	$GodotEval__deps: ["$GodotRuntime"],
+	$GodotEval: {},
+
 	godot_js_eval__deps: ["$GodotRuntime"],
 	godot_js_eval__sig: "ipipppp",
 	godot_js_eval: (
@@ -127,4 +130,5 @@ export const _GodotEval = {
 	},
 };
 
+autoAddDeps(_GodotEval, "$GodotEval");
 addToLibrary(_GodotEval);

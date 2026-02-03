@@ -28,6 +28,8 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
+import { GodotRuntime, addToLibrary, autoAddDeps } from "#/external/index.js";
+
 export const _GodotEmscripten = {
 	$GodotEmscripten__deps: ["$GodotRuntime"],
 	$GodotEmscripten: {},

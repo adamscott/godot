@@ -28,6 +28,15 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
+import {
+	GodotEventListeners,
+	GodotInputGamepads,
+	GodotOS,
+	GodotRuntime,
+	addToLibrary,
+	autoAddDeps,
+} from "#/external/index.js";
+
 import type { CPointer } from "@godotengine/emscripten-utils/types";
 
 export interface GodotInputGamepadSample {

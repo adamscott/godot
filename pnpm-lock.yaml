@@ -38,15 +38,27 @@ importers:
       '@godotengine/emscripten-utils':
         specifier: workspace:^
         version: link:../../../../../platform/web/packages/emscripten-utils
+      '@godotengine/utils':
+        specifier: workspace:^
+        version: link:../../../../../platform/web/packages/utils
       '@types/node':
         specifier: ^25.1.0
         version: 25.1.0
+      '@types/webxr':
+        specifier: ^0.5.24
+        version: 0.5.24
       eslint:
         specifier: ^9.39.2
         version: 9.39.2(jiti@2.6.1)
       prettier:
         specifier: 3.8.1
         version: 3.8.1
+      shx:
+        specifier: ^0.4.0
+        version: 0.4.0
+      tsc-alias:
+        specifier: ^1.8.16
+        version: 1.8.16
       turbo:
         specifier: ^2.8.1
         version: 2.8.1
@@ -137,6 +149,12 @@ importers:
       prettier:
         specifier: 3.8.1
         version: 3.8.1
+      shx:
+        specifier: ^0.4.0
+        version: 0.4.0
+      tsc-alias:
+        specifier: ^1.8.16
+        version: 1.8.16
       turbo:
         specifier: ^2.8.1
         version: 2.8.1
@@ -164,6 +182,9 @@ importers:
       prettier:
         specifier: 3.8.1
         version: 3.8.1
+      shx:
+        specifier: ^0.4.0
+        version: 0.4.0
       turbo:
         specifier: ^2.8.1
         version: 2.8.1
@@ -194,6 +215,9 @@ importers:
       prettier:
         specifier: 3.8.1
         version: 3.8.1
+      shx:
+        specifier: ^0.4.0
+        version: 0.4.0
       stylelint:
         specifier: ^17.1.0
         version: 17.1.0(typescript@5.9.3)
@@ -287,6 +311,9 @@ importers:
       prettier:
         specifier: 3.8.1
         version: 3.8.1
+      shx:
+        specifier: ^0.4.0
+        version: 0.4.0
       stylelint:
         specifier: ^17.1.0
         version: 17.1.0(typescript@5.9.3)
@@ -323,6 +350,9 @@ importers:
       '@godotengine/utils':
         specifier: workspace:^
         version: link:../utils
+      '@types/webxr':
+        specifier: ^0.5.24
+        version: 0.5.24
       browserslist:
         specifier: ^4.28.1
         version: 4.28.1
@@ -374,12 +404,18 @@ importers:
       '@godotengine/utils':
         specifier: workspace:^
         version: link:../utils
+      '@types/webxr':
+        specifier: ^0.5.24
+        version: 0.5.24
       eslint:
         specifier: ^9.39.2
         version: 9.39.2(jiti@2.6.1)
       prettier:
         specifier: 3.8.1
         version: 3.8.1
+      shx:
+        specifier: ^0.4.0
+        version: 0.4.0
       tsc-alias:
         specifier: ^1.8.16
         version: 1.8.16
@@ -404,6 +440,9 @@ importers:
       prettier:
         specifier: 3.8.1
         version: 3.8.1
+      shx:
+        specifier: ^0.4.0
+        version: 0.4.0
       tsc-alias:
         specifier: ^1.8.16
         version: 1.8.16
@@ -428,6 +467,9 @@ importers:
       prettier:
         specifier: 3.8.1
         version: 3.8.1
+      shx:
+        specifier: ^0.4.0
+        version: 0.4.0
       tsc-alias:
         specifier: ^1.8.16
         version: 1.8.16
@@ -1059,6 +1101,9 @@ packages:
 
   '@types/node@25.1.0':
     resolution: {integrity: sha512-t7frlewr6+cbx+9Ohpl0NOTKXZNV9xHRmNOvql47BFJKcEG1CxtxlPEEe+gR9uhVWM4DwhnvTF110mIL4yP9RA==}
+
+  '@types/webxr@0.5.24':
+    resolution: {integrity: sha512-h8fgEd/DpoS9CBrjEQXR+dIDraopAEfu4wYVNY2tEPwk60stPWhvZMf4Foo5FakuQ7HFZoa8WceaWFervK2Ovg==}
 
   '@typescript-eslint/eslint-plugin@8.54.0':
     resolution: {integrity: sha512-hAAP5io/7csFStuOmR782YmTthKBJ9ND3WVL60hcOjvtGFb+HJxH4O5huAcmcZ9v9G8P+JETiZ/G1B8MALnWZQ==}
@@ -3499,6 +3544,8 @@ snapshots:
   '@types/node@25.1.0':
     dependencies:
       undici-types: 7.16.0
+
+  '@types/webxr@0.5.24': {}
 
   '@typescript-eslint/eslint-plugin@8.54.0(@typescript-eslint/parser@8.54.0(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3)':
     dependencies:

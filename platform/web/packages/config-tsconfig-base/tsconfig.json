@@ -15,8 +15,8 @@
 		"sourceMap": false,
 		"skipLibCheck": true,
 		"target": "ES2024",
-		"module": "es2022",
+		"module": "nodenext",
 		"moduleDetection": "auto",
-		"moduleResolution": "node16"
+		"moduleResolution": "nodenext"
 	}
 }

@@ -28,7 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import type { PrimitiveMap } from "#/types";
+import type { PrimitiveMap } from "#/types/index.js";
 
 export const PRIMITIVES = [
 	"string",

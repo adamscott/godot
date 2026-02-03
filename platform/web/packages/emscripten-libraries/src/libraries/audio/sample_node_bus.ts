@@ -28,8 +28,9 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import { throwIfNullish } from "@godotengine/utils/error";
+import { getNullishErrorString as $getNullishErrorString } from "@godotengine/utils/macros" with { type: "macro" };
 import type { Bus } from "./bus.js";
+import { GodotAudio } from "#/external/index.js";
 
 export class SampleNodeBus {
 	_bus: Bus | null;
@@ -50,7 +51,9 @@ export class SampleNodeBus {
 		const NUMBER_OF_WEB_CHANNELS = 6;
 
 		const context = GodotAudio.context;
-		throwIfNullish(context, new Error("`GodotAudio.context` is nullish."));
+		if (context == null) {
+			throw new TypeError($getNullishErrorString("GodotAudio.context"));
+		}
 
 		this._bus = pBus;
 		this._channelSplitter = context.createChannelSplitter(NUMBER_OF_WEB_CHANNELS);

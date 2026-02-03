@@ -29,12 +29,12 @@
 /**************************************************************************/
 
 import { defineConfig } from "eslint/config";
-import love from "eslint-config-love";
 import html from "@html-eslint/eslint-plugin";
+import love from "eslint-config-love";
 
 export default defineConfig([
 	{
-		files: ["**/*.js", "**/*.ts", "**/*.mjs", "**/*.mts"],
+		files: ["**/*.js", "**/*.ts", "**/*.mjs", "**/*.mts", "**/*.d.ts"],
 		ignores: ["**/*.nocheck.*"],
 		extends: [
 			// @ts-expect-error: love and eslint don't use exactly the same types.
@@ -71,6 +71,7 @@ export default defineConfig([
 					rejectPattern: "^_?pReject$",
 				},
 			],
+			"sort-imports": ["error", {}],
 		},
 	},
 	{

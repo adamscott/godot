@@ -102,6 +102,12 @@ platform/android/java/*/libs/
 node_modules/
 *.bc
 *.tsbuildinfo
+eslint.config.d.ts
+eslint.config.js
+prettier.config.d.ts
+prettier.config.js
+stylelint.config.d.ts
+stylelint.config.js
 .eslintcache
 .prettiercache
 .stylelintcache

@@ -6,8 +6,8 @@
 		"paths": {
 			"#/*": ["./src/*"]
 		},
-		"types": []
+		"types": ["webxr"]
 	},
-	"references": [{ "path": "./tsconfig.tools.json" }, { "path": "./tsconfig.esbuild.json" }],
-	"include": ["./src/**/*.ts"]
+	"references": [{ "path": "./tsconfig.tools.json" }],
+	"include": ["./src/**/*"]
 }

@@ -28,20 +28,6 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import type { AnyFunction } from "@godotengine/utils/types";
-
-import {
-	asCType,
-	asCInt,
-	asCInt64,
-	asCFunctionPointer,
-	asCIDHandlerId,
-	asCIntBoolean,
-	fromCInt64ToBigint,
-	fromCInt64ToBoolean,
-	fromCTypeToBoolean,
-	fromCTypeToNumber,
-} from "@godotengine/emscripten-utils/types";
 import type {
 	CCharArrayPointer,
 	CCharPointer,
@@ -56,20 +42,48 @@ import type {
 	CInt64Pointer,
 	CIntPointer,
 	CPointer,
-	CPointerTypeAll,
-	CUint,
-	CUintPointer,
 	CPointerAll,
+	CPointerAllWithoutCInt64Pointer,
+	CPointerTypeAll,
+	CPointerTypeAllWithoutCInt64PointerType,
 	CType,
 	CTypeWithoutCInt64,
-	CPointerAllWithoutCInt64Pointer,
-	CPointerTypeAllWithoutCInt64PointerType,
+	CUint,
+	CUintPointer,
 } from "@godotengine/emscripten-utils/types";
-
+import { CIntBoolean, CIntError, NULLPTR } from "@godotengine/emscripten-utils/constants";
+import {
+	GodotRuntime,
+	HEAP32,
+	HEAP8,
+	UTF8ToString,
+	_free,
+	_malloc,
+	addToLibrary,
+	autoAddDeps,
+	err,
+	getValue,
+	lengthBytesUTF8,
+	out,
+	setValue,
+	stringToUTF8,
+	stringToUTF8Array,
+	wasmTable,
+} from "#/external/index.js";
+import {
+	asCFunctionPointer,
+	asCIDHandlerId,
+	asCInt,
+	asCInt64,
+	asCIntBoolean,
+	asCType,
+	fromCInt64ToBigint,
+	fromCInt64ToBoolean,
+	fromCTypeToBoolean,
+	fromCTypeToNumber,
+} from "@godotengine/emscripten-utils/types";
+import type { AnyFunction } from "@godotengine/utils/types";
 import type { TypedArray } from "@godotengine/emscripten-utils/types/browser";
-
-import { CIntError, CIntBoolean, NULLPTR } from "@godotengine/emscripten-utils/constants";
-import { throwIfIsNotOfType, throwIfNullish } from "@godotengine/utils/error";
 
 function getHeapValue(pPtr: CIntPointer, pType: Extract<CPointerTypeAll, "i8" | "i16" | "i32">): CInt;
 function getHeapValue(pPtr: CUintPointer, pType: Extract<CPointerTypeAll, "i8" | "i16" | "i32">): CUint;
@@ -117,9 +131,6 @@ export const _GodotRuntime = {
 		fromCInt64ToBoolean,
 		fromCTypeToBoolean,
 		fromCTypeToNumber,
-
-		throwIfIsNotOfType,
-		throwIfNullish,
 
 		// Functions.
 		getFunction: <T extends CFunctionPointer<AnyFunction>>(pPtr: T): CFunctionPointerExtract<T> => {

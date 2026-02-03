@@ -2,10 +2,11 @@
 	"name": "@godotengine/config-eslint",
 	"type": "module",
 	"scripts": {
-		"build": "tsc"
+		"build": "tsc && tsc-alias",
+		"clean": "shx rm -rf ./dist && shx rm -f tsconfig.tsbuildinfo"
 	},
 	"exports": {
-		"import": "./dist/index.js"
+		".": "./dist/index.js"
 	},
 	"types": "./dist/index.d.ts",
 	"devDependencies": {
@@ -16,6 +17,8 @@
 		"eslint": "^9.39.2",
 		"eslint-config-love": "^147.0.0",
 		"prettier": "3.8.1",
+		"shx": "^0.4.0",
+		"tsc-alias": "^1.8.16",
 		"turbo": "^2.8.1",
 		"typescript": "^5.9.3"
 	}

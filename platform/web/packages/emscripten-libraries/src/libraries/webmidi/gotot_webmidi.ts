@@ -28,7 +28,15 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import type { CCharArrayPointer, CInt, CUintPointer, CFunctionPointer } from "@godotengine/emscripten-utils/types";
+import type { CCharArrayPointer, CFunctionPointer, CInt, CUintPointer } from "@godotengine/emscripten-utils/types";
+import {
+	GodotEventListeners,
+	GodotRuntime,
+	GodotWebMidi,
+	HEAPU8,
+	addToLibrary,
+	autoAddDeps,
+} from "#/external/index.js";
 
 type WebMIDIOpenMIDIInputsCallback = (
 	pConnectedInputNamesPtr: CCharArrayPointer,

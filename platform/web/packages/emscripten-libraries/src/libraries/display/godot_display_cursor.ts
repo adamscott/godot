@@ -28,6 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
+import { GodotConfig, GodotDisplayCursor, GodotOS, GodotRuntime, addToLibrary, autoAddDeps } from "#/external/index.js";
 import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils" with { type: "macro" };
 
 interface Cursor {

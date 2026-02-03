@@ -28,8 +28,10 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils" with { type: "macro" };
-
+import {
+	convertFunctionToIifeString as $convertFunctionToIifeString,
+	getNullishErrorString as $getNullishErrorString,
+} from "@godotengine/utils/macros" with { type: "macro" };
 import type {
 	CCharPointer,
 	CDouble,
@@ -40,13 +42,25 @@ import type {
 	CIntPointer,
 	CPointer,
 } from "@godotengine/emscripten-utils/types";
+import {
+	GodotAudio,
+	type GodotAudioScript,
+	type GodotAudioWorklet,
+	GodotConfig,
+	GodotEventListeners,
+	GodotOS,
+	GodotRuntime,
+	HEAP32,
+	HEAPF32,
+	addToLibrary,
+	autoAddDeps,
+} from "#/external/index.js";
+
+import { Sample, isLoopMode } from "./sample.js";
+import { SampleNode, type SampleNodeOptions } from "./sample_node.js";
 
 import { Bus } from "./bus.js";
-import { isLoopMode, Sample } from "./sample.js";
-import { SampleNode, type SampleNodeOptions } from "./sample_node.js";
 import { SampleNodeBus } from "./sample_node_bus.js";
-
-import { throwIfNullish } from "@godotengine/utils/error";
 
 /**
  * Represents the index of each sound channel relative to the engine.
@@ -425,8 +439,11 @@ export const _GodotAudio = {
 	godot_audio_input_start: (): CInt => {
 		return GodotRuntime.asCInt(
 			GodotAudio.createInput((pInput) => {
-				throwIfNullish(GodotAudio.driver, new Error("GodotAudio.driver is null"));
-				const worklet = GodotAudio.driver.getNode();
+				const driver = GodotAudio.driver;
+				if (driver == null) {
+					throw new TypeError($getNullishErrorString("GodotAudio.driver"));
+				}
+				const worklet = driver.getNode();
 				if (worklet != null) {
 					pInput.connect(worklet);
 				}

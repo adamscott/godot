@@ -28,9 +28,17 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import type { CCharPointer } from "@godotengine/emscripten-utils/types";
-
+import {
+	GodotConfig,
+	GodotDisplayVK,
+	GodotEventListeners,
+	GodotOS,
+	GodotRuntime,
+	addToLibrary,
+	autoAddDeps,
+} from "#/external/index.js";
 import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils" with { type: "macro" };
+import type { CCharPointer } from "@godotengine/emscripten-utils/types";
 
 export const _GodotDisplayVK = {
 	$GodotDisplayVK__deps: ["$GodotRuntime", "$GodotOS", "$GodotConfig", "$GodotEventListeners"],

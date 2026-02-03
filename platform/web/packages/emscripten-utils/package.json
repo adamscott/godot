@@ -3,11 +3,13 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "tsc && tsc-alias"
+		"build": "tsc && tsc-alias",
+		"clean": "shx rm -rf ./dist && shx rm -f tsconfig.tsbuildinfo"
 	},
 	"exports": {
 		".": "./dist/index.js",
 		"./constants": "./dist/constants/index.js",
+		"./external": "./dist/external/index.js",
 		"./types": "./dist/types/index.js",
 		"./types/browser": "./dist/types/browser/index.js"
 	},
@@ -16,8 +18,10 @@
 		"@godotengine/config-tsconfig-browser": "workspace:^",
 		"@godotengine/config-tsconfig-tools": "workspace:^",
 		"@godotengine/utils": "workspace:^",
+		"@types/webxr": "^0.5.24",
 		"eslint": "^9.39.2",
 		"prettier": "3.8.1",
+		"shx": "^0.4.0",
 		"tsc-alias": "^1.8.16",
 		"turbo": "^2.8.1",
 		"typescript": "^5.9.3"

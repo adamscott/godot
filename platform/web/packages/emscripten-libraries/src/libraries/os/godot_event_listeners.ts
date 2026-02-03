@@ -28,9 +28,9 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
+import { GodotEventListeners, GodotOS, addToLibrary, autoAddDeps } from "#/external/index.js";
+import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils/macros" with { type: "macro" };
 import type { AnyFunction } from "@godotengine/utils/types";
-
-import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils" with { type: "macro" };
 
 class Handler {
 	target: EventTarget;

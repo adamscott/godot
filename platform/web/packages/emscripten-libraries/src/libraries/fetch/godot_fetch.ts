@@ -28,8 +28,6 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import type { TypedArray } from "@godotengine/emscripten-utils/types/browser";
-
 import type {
 	CCharArrayPointer,
 	CCharPointer,
@@ -39,6 +37,8 @@ import type {
 	CUintPointer,
 	CVoidPointer,
 } from "@godotengine/emscripten-utils/types";
+import { GodotFetch, GodotRuntime, HEAP8, IDHandler, addToLibrary, autoAddDeps } from "#/external/index.js";
+import type { TypedArray } from "@godotengine/emscripten-utils/types/browser";
 
 type GodotFetchEntryId = CIDHandlerId<GodotFetchEntry>;
 

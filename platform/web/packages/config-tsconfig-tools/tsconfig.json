@@ -5,6 +5,7 @@
 		"moduleResolution": "nodenext",
 		"types": ["node"],
 		"emitDeclarationOnly": true,
-		"declaration": false
+		"declaration": false,
+		"sourceMap": false
 	}
 }

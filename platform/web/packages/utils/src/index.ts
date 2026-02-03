@@ -28,7 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import type { AnyFunction } from "#/types";
+import type { AnyFunction } from "#/types/index.js";
 
 export function convertFunctionToIifeString(pFunction: AnyFunction): string {
 	return `(${pFunction.toString()})()`;

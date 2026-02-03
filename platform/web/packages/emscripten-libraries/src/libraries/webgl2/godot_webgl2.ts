@@ -29,6 +29,14 @@
 /**************************************************************************/
 
 import type { CInt, CIntPointer, CUint, CVoidPointer } from "@godotengine/emscripten-utils/types";
+import {
+	GL,
+	GodotRuntime,
+	HEAPU8,
+	_emscripten_webgl_get_current_context,
+	addToLibrary,
+	autoAddDeps,
+} from "#/external/index.js";
 
 export const _GodotWebGL2 = {
 	$GodotWebGL2__deps: ["$GL", "$GodotRuntime"],

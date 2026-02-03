@@ -1,8 +1,7 @@
 {
 	"extends": "@godotengine/config-tsconfig-base",
 	"compilerOptions": {
-		"module": "esnext",
-		"moduleResolution": "bundler",
+		"module": "nodenext",
 		"lib": ["DOM", "DOM.AsyncIterable", "DOM.Iterable", "ES2022"]
 	}
 }

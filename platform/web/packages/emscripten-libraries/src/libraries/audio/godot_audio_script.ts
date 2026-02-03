@@ -29,7 +29,8 @@
 /**************************************************************************/
 
 import type { CFloatPointer, CFunctionPointer, CInt, CIntPointer } from "@godotengine/emscripten-utils/types";
-import { throwIfNullish } from "@godotengine/utils/error";
+import { GodotAudio, GodotAudioScript, GodotRuntime, HEAPF32, addToLibrary, autoAddDeps } from "#/external/index.js";
+import { getNullishErrorString as $getNullishErrorString } from "@godotengine/utils/macros" with { type: "macro" };
 
 type AudioScriptStartCallback = () => void;
 
@@ -40,7 +41,9 @@ export const _GodotAudioScript = {
 
 		create: (pBufferLength: number, pChannelCount: number): number => {
 			const context = GodotAudio.context;
-			throwIfNullish(context, new Error("`GodotAudio.context` is null or undefined"));
+			if (context == null) {
+				throw new TypeError($getNullishErrorString("GodotAudio.context"));
+			}
 			GodotAudioScript.script = context.createScriptProcessor(pBufferLength, 2, pChannelCount);
 			GodotAudio.driver = GodotAudioScript;
 			return GodotAudioScript.script.bufferSize;
@@ -55,8 +58,7 @@ export const _GodotAudioScript = {
 		): void => {
 			const context = GodotAudio.context;
 			if (context == null) {
-				GodotRuntime.error("`GodotAudio.context` is null or undefined");
-				return;
+				throw new TypeError($getNullishErrorString("GodotAudio.context"));
 			}
 
 			const script = GodotAudioScript.script;

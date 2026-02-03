@@ -28,10 +28,17 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import type { _GodotWebXR } from "#/libraries/webxr";
-
-declare global {
-	import "@godotengine/emscripten-libraries/types/global.d.ts";
-
-	const GodotWebXR: typeof _GodotWebXR.$GodotWebXR;
+declare module "webxr" {
+	declare global {
+		interface XRWebGLSubImage {
+			motionVectorTexture?: WebGLTexture;
+		}
+		interface XRReferenceSpace {
+			boundsGeometry?: DOMPointReadOnly[];
+		}
+		interface XRFrame {
+			fillPoses: (spaces: XRSpace[], baseSpace: XRSpace, transforms: Float32Array) => boolean;
+			fillJointRadii: (jointSpaces: XRJointSpace[], radii: Float32Array) => boolean;
+		}
+	}
 }

@@ -28,6 +28,8 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
+import { FS, GodotFS, GodotInputDragDrop, GodotRuntime, addToLibrary, autoAddDeps } from "#/external/index.js";
+
 export interface GodotInputFile {
 	path: string;
 	name: string;

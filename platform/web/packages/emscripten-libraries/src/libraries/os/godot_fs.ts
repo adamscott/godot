@@ -28,7 +28,8 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils" with { type: "macro" };
+import { FS, GodotFS, GodotRuntime, IDBFS, Module, addToLibrary, autoAddDeps } from "#/external/index.js";
+import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils/macros" with { type: "macro" };
 
 export const _GodotFS = {
 	$GodotFS__deps: ["$FS", "$IDBFS", "$GodotRuntime"],

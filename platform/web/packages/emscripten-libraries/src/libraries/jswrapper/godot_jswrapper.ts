@@ -28,8 +28,6 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils" with { type: "macro" };
-
 import type {
 	CCharPointer,
 	CDouble,
@@ -42,6 +40,8 @@ import type {
 	CVoidArrayPointer,
 	CVoidPointer,
 } from "@godotengine/emscripten-utils/types";
+import { GodotJSWrapper, GodotRuntime, HEAPU8, IDHandler, addToLibrary, autoAddDeps } from "#/external/index.js";
+import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils/macros" with { type: "macro" };
 
 type GodotJSWrapperProxyId = CIDHandlerId<GodotJSWrapperProxy<unknown>>;
 
@@ -533,5 +533,6 @@ export const _GodotJSWrapper = {
 		return GodotRuntime.asCInt(0);
 	},
 };
+
 autoAddDeps(_GodotJSWrapper, "$GodotJSWrapper");
 addToLibrary(_GodotJSWrapper);

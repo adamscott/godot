@@ -6,9 +6,9 @@
 		"paths": {
 			"#/*": ["./src/*"]
 		},
-		"types": []
+		"types": ["webxr"]
 	},
 	"references": [{ "path": "./tsconfig.tools.json" }],
-	"include": ["src/**/*.ts"],
+	"include": ["src/**/*"],
 	"exclude": []
 }

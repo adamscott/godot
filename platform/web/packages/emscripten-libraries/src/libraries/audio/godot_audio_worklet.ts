@@ -36,8 +36,17 @@ import type {
 	CIntPointer,
 	CPointer,
 } from "@godotengine/emscripten-utils/types";
-
-import { throwIfIsNotOfType } from "@godotengine/utils/error";
+import {
+	GodotAudio,
+	GodotAudioWorklet,
+	GodotConfig,
+	GodotEventListeners,
+	GodotRuntime,
+	HEAP32,
+	HEAPF32,
+	addToLibrary,
+	autoAddDeps,
+} from "#/external/index.js";
 
 type RingBufferOutCallback = (pWPosition: number, pPendingSamples: number) => void;
 type RingBufferInCallback = (pFrom: number, pLength: number) => void;
@@ -223,18 +232,21 @@ export const _GodotAudioWorklet = {
 							case "read":
 								{
 									const read = pEvent.data.data as unknown;
-									throwIfIsNotOfType(read, "number", new Error('`read` is not a `"number"`.'));
+									if (typeof read !== "number") {
+										throw new TypeError('`read` is not a `"number"`.');
+									}
 									ringBuffer.consumed(read, worklet.port);
 								}
 								break;
 							case "input":
 								{
 									const buffer = pEvent.data.data as unknown;
-									throwIfIsNotOfType(
-										buffer,
-										Float32Array<ArrayBuffer>,
-										new Error("`buffer` is not a `Float32Array`"),
-									);
+									if (buffer == null) {
+										throw new TypeError("`buffer` is null or undefined.");
+									}
+									if (!(buffer instanceof Float32Array)) {
+										throw new TypeError("`buffer` is not a `Float32Array`");
+									}
 									if (buffer.length > pInBufferSize) {
 										GodotRuntime.error("Input chunk is too big.");
 										return;

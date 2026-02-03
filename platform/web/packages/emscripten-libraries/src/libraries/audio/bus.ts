@@ -28,7 +28,8 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import { throwIfNullish } from "@godotengine/utils/error";
+import { getNullishErrorString as $getNullishErrorString } from "@godotengine/utils/macros" with { type: "macro" };
+import { GodotAudio } from "#/external/index.js";
 import type { SampleNode } from "./sample_node.js";
 
 export class Bus {
@@ -110,7 +111,9 @@ export class Bus {
 
 	constructor() {
 		const context = GodotAudio.context;
-		throwIfNullish(context, new Error("`GodotAudio.context` is null or undefined."));
+		if (context == null) {
+			throw new TypeError($getNullishErrorString("GodotAudio.context"));
+		}
 
 		this._sampleNodes = new Set();
 		this.isSolo = false;
@@ -144,7 +147,9 @@ export class Bus {
 
 	setSend(pSend: Bus | null): void {
 		const context = GodotAudio.context;
-		throwIfNullish(context, new Error("`GodotAudio.context` is null or undefined."));
+		if (context == null) {
+			throw new TypeError($getNullishErrorString("GodotAudio.context"));
+		}
 
 		this._send = pSend;
 		if (pSend == null) {

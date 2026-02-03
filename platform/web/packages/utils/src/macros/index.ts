@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  utils.ts                                                              */
+/*  index.ts                                                              */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,11 +28,12 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-export function getModifiers(pEvent: KeyboardEvent | MouseEvent): number {
-	return (
-		(Number(pEvent.shiftKey) << 0) +
-		(Number(pEvent.altKey) << 1) +
-		(Number(pEvent.ctrlKey) << 2) +
-		(Number(pEvent.metaKey) << 3)
-	);
+import type { AnyFunction } from "#/types/index.js";
+
+export function convertFunctionToIifeString(pFunction: AnyFunction): string {
+	return `(${pFunction.toString()})()`;
+}
+
+export function getNullishErrorString(pVariableName: string): string {
+	return `\`${pVariableName}\` is null or undefined.`;
 }

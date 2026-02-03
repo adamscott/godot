@@ -37,6 +37,19 @@ import type {
 	CIntPointer,
 	CUintPointer,
 } from "@godotengine/emscripten-utils/types";
+import {
+	GodotConfig,
+	GodotDisplay,
+	GodotDisplayCursor,
+	GodotDisplayScreen,
+	GodotDisplayVK,
+	GodotEventListeners,
+	GodotOS,
+	GodotRuntime,
+	HEAPU8,
+	addToLibrary,
+	autoAddDeps,
+} from "#/external/index.js";
 
 type TTSGetVoicesCallback = (pSize: CInt, pVoices: CCharArrayPointer) => void;
 type TTSSpeakCallback = (pEvent: CInt, pId: CInt, pPosition: CInt) => void;

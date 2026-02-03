@@ -29,14 +29,29 @@
 /**************************************************************************/
 
 import type { CCharPointer, CPointer } from "@godotengine/emscripten-utils/types";
+import {
+	GodotConfig,
+	GodotEventListeners,
+	GodotIME,
+	GodotRuntime,
+	addToLibrary,
+	autoAddDeps,
+} from "#/external/index.js";
 
-import { getModifiers } from "./utils";
+interface GodotIMECompositionType {
+	start: 0;
+	update: 1;
+	end: 2;
+}
 
-export const GodotIMECompositionType = Object.freeze({
-	start: 0,
-	update: 1,
-	end: 2,
-});
+export function getModifiers(pEvent: KeyboardEvent | MouseEvent): number {
+	return (
+		(Number(pEvent.shiftKey) << 0) +
+		(Number(pEvent.altKey) << 1) +
+		(Number(pEvent.ctrlKey) << 2) +
+		(Number(pEvent.metaKey) << 3)
+	);
+}
 
 export const _GodotIME = {
 	$GodotIME__deps: ["$GodotRuntime", "$GodotEventListeners"],
@@ -48,7 +63,7 @@ export const _GodotIME = {
 
 		initialize: (
 			pIMECallback: (
-				pCompositionType: (typeof GodotIMECompositionType)[keyof typeof GodotIMECompositionType],
+				pCompositionType: GodotIMECompositionType[keyof GodotIMECompositionType],
 				pStringPtr: CPointer | null,
 			) => void,
 			pKeyCallback: (pPressed: boolean, pRepeat: boolean, pModifiers: number) => void,

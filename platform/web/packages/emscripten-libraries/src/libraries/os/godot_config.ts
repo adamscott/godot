@@ -28,11 +28,10 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import type { ConfigOptions } from "@godotengine/utils/types";
-
 import type { CCharPointer, CInt } from "@godotengine/emscripten-utils/types";
-
-import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils" with { type: "macro" };
+import { GodotConfig, GodotRuntime, Module, addToLibrary, autoAddDeps } from "#/external/index.js";
+import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils/macros" with { type: "macro" };
+import type { ConfigOptions } from "@godotengine/utils/types";
 
 export const _GodotConfig = {
 	// TODO: Rename Module to GodotEngine

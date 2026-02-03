@@ -42,8 +42,17 @@ import type {
 	CUint,
 	CUintPointer,
 } from "@godotengine/emscripten-utils/types";
-
-import { getModifiers } from "./utils";
+import {
+	GodotConfig,
+	GodotEventListeners,
+	GodotIME,
+	GodotInput,
+	GodotInputDragDrop,
+	GodotInputGamepads,
+	GodotRuntime,
+	addToLibrary,
+	autoAddDeps,
+} from "#/external/index.js";
 
 type InputMouseButtonCbCallback = (pPressed: CInt, pButton: CInt, pX: CDouble, pY: CDouble, pModifiers: CInt) => CInt;
 type InputMouseMoveCbCallback = (
@@ -82,8 +91,6 @@ export const _GodotInput = {
 		"$GodotIME",
 	],
 	$GodotInput: {
-		getModifiers,
-
 		computePosition: (pEvent: MouseEvent | Touch, pRect: DOMRect): [number, number] => {
 			const canvas = GodotConfig.canvas;
 			if (canvas == null) {
@@ -118,7 +125,7 @@ export const _GodotInput = {
 			const rectHeight = canvas.height / rect.height;
 			const relativePositionX = pEvent.movementX * rectWidth;
 			const relativePositionY = pEvent.movementY * rectHeight;
-			const modifiers = GodotInput.getModifiers(pEvent);
+			const modifiers = GodotIME.getModifiers(pEvent);
 			callback(
 				GodotRuntime.asCType<CDouble>(position[0]),
 				GodotRuntime.asCType<CDouble>(position[1]),
@@ -160,7 +167,7 @@ export const _GodotInput = {
 		const mouseEventCallback = (pEvent: MouseEvent, pPressed: boolean): void => {
 			const rect = canvas.getBoundingClientRect();
 			const position = GodotInput.computePosition(pEvent, rect);
-			const modifiers = GodotInput.getModifiers(pEvent);
+			const modifiers = GodotIME.getModifiers(pEvent);
 			// Since the event is consumed, focus manually.
 			// NOTE: The iframe container may not have focus yet, so focus even when already active.
 			if (pPressed) {
@@ -310,7 +317,7 @@ export const _GodotInput = {
 
 		const callback = GodotRuntime.getFunction(pCallbackPtr);
 		const keyboardEventHandler = (pEvent: KeyboardEvent, pPressed: boolean): void => {
-			const modifiers = GodotInput.getModifiers(pEvent);
+			const modifiers = GodotIME.getModifiers(pEvent);
 			GodotRuntime.stringToHeap(pEvent.code, pCodePtr, 32);
 			GodotRuntime.stringToHeap(pEvent.key, pKeyPtr, 32);
 			callback(

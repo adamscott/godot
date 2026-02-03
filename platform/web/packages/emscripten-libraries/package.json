@@ -3,13 +3,16 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "pnpm run build:typescript && pnpm run build:copy-globaldts",
-		"build:typescript": "tsc && tsc-alias",
-		"build:copy-globaldts": "shx mkdir -p ./dist/types/ && shx cp ./src/types/global.d.ts ./dist/types/ && tsc-alias"
+		"build": "corepack pnpm run build:typescript",
+		"build:typescript": "corepack pnpm run build:typescript-compile && corepack pnpm run build:typescript-alias",
+		"build:typescript-compile": "tsc",
+		"build:typescript-alias": "tsc-alias",
+		"clean": "shx rm -rf ./dist && shx rm -f tsconfig.tsbuildinfo"
 	},
 	"exports": {
 		".": "./dist/index.js",
-		"./types/global.d.ts": "./dist/types/global.d.ts"
+		"./external": "./dist/external/index.js",
+		"./libraries": "./dist/libraries/index.js"
 	},
 	"types": "./dist/index.d.ts",
 	"files": [
@@ -21,6 +24,7 @@
 		"@godotengine/emscripten-builder": "workspace:^",
 		"@godotengine/emscripten-utils": "workspace:^",
 		"@godotengine/utils": "workspace:^",
+		"@types/webxr": "^0.5.24",
 		"browserslist": "^4.28.1",
 		"dedent": "^1.7.1",
 		"esbuild": "^0.27.2",

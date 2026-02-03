@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  id_handler.ts                                                         */
+/*  index.ts                                                              */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,38 +28,14 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import type { CIDHandlerId, CIDHandlerIdExtract } from "@godotengine/emscripten-utils/types";
-import { GodotRuntime, IDHandler, addToLibrary, autoAddDeps } from "#/external/index.js";
-import { asCIDHandlerId as $asCIDHandlerId } from "@godotengine/emscripten-utils/types" with { type: "macro" };
-import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils/macros" with { type: "macro" };
+import type { MainLoop as BaseMainLoop } from "@godotengine/emscripten-libraries/external";
+import type { _GodotWebXR } from "#/libraries/webxr/index.js";
+export * from "@godotengine/emscripten-libraries/external";
 
-export const _IDHandler = {
-	$IDHandler__deps: ["$GodotRuntime"],
-	$IDHandler__postset: $convertFunctionToIifeString(() => {
-		IDHandler._references = new Map();
-	}),
-	$IDHandler: {
-		_lastId: $asCIDHandlerId<unknown>(0),
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- We init `_references` in postset.
-		_references: null as unknown as Map<number, unknown>,
+export declare const GodotWebXR: typeof _GodotWebXR.$GodotWebXR;
 
-		get: <T extends CIDHandlerId<unknown>>(pId: T): CIDHandlerIdExtract<T> | null => {
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- We don't keep track of types.
-			return IDHandler._references.get(pId) as CIDHandlerIdExtract<T> | null;
-		},
-
-		add: <T>(pData: T): CIDHandlerId<T> => {
-			const id = GodotRuntime.asCIDHandlerId<T>(IDHandler._lastId + 1);
-			IDHandler._references.set(id, pData);
-			IDHandler._lastId = id;
-			return id;
-		},
-
-		remove: (pId: CIDHandlerId<unknown>): void => {
-			IDHandler._references.delete(pId);
-		},
-	},
-};
-
-autoAddDeps(_IDHandler, "$IDHandler");
-addToLibrary(_IDHandler);
+type BaseMainLoop = typeof BaseMainLoop;
+interface WebXRMainLoop extends BaseMainLoop {
+	requestAnimationFrame: BaseMainLoop["requestAnimationFrame"] | XRSession["requestAnimationFrame"];
+}
+export declare const MainLoop: WebXRMainLoop;
