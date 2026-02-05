@@ -1,12 +1,12 @@
 {
-	"name": "@godotengine/emscripten-webxr-library",
+	"name": "@godotengine/emscripten-library-webxr",
 	"private": true,
 	"type": "module",
 	"scripts": {
 		"build": "corepack pnpm run build:external-global && corepack pnpm run build:ts && corepack pnpm run build:library",
 		"build:external-global": "external-global-d-ts-builder \"#/external/index.ts\" && corepack pnpm run lint:external-global",
 		"build:ts": "tsdown",
-		"build:library": "emscripten-builder --name emscripten-webxr-library ./libraries/index.js",
+		"build:library": "emscripten-builder --name emscripten-library-webxr ./libraries/index.js",
 		"lint": "eslint . && prettier .",
 		"lint:fix": "eslint --fix . && prettier --write .",
 		"lint:external-global": "eslint --fix ./src/types/external-global.d.ts && prettier --write ./src/types/external-global.d.ts"
@@ -22,7 +22,7 @@
 		"./dist/types/global.d.ts"
 	],
 	"dependencies": {
-		"@godotengine/emscripten-base-library": "workspace:^"
+		"@godotengine/emscripten-library-base": "workspace:^"
 	},
 	"devDependencies": {
 		"@godotengine/config-eslint": "workspace:^",

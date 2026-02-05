@@ -40,9 +40,9 @@ if env["target"] == "editor":
     env.add_source_files(web_files, "editor/*.cpp")
 
 sys_env = env.Clone()
-sys_env.AddJSLibraries(["packages/emscripten-base-library/dist/emscripten-base-library.js"])
+sys_env.AddJSLibraries(["packages/emscripten-library-base/dist/emscripten-library-base.js"])
 if sys_env["javascript_eval"]:
-    sys_env.AddJSLibraries(["packages/emscripten-jswrapper-library/dist/emscripten-jswrapper-library.js"])
+    sys_env.AddJSLibraries(["packages/emscripten-library-jswrapper/dist/emscripten-library-jswrapper.js"])
 
 sys_env.AddJSPost(
     [

@@ -12,11 +12,11 @@ importers:
         specifier: ^2.8.1
         version: 2.8.1
 
-  modules/webxr/native/packages/emscripten-webxr-library:
+  modules/webxr/native/packages/emscripten-library-webxr:
     dependencies:
-      '@godotengine/emscripten-base-library':
+      '@godotengine/emscripten-library-base':
         specifier: workspace:^
-        version: link:../../../../../platform/web/packages/emscripten-base-library
+        version: link:../../../../../platform/web/packages/emscripten-library-base
     devDependencies:
       '@godotengine/config-eslint':
         specifier: workspace:^
@@ -406,11 +406,11 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  platform/web/packages/emscripten-jswrapper-library:
+  platform/web/packages/emscripten-library-jswrapper:
     dependencies:
-      '@godotengine/emscripten-base-library':
+      '@godotengine/emscripten-library-base':
         specifier: workspace:^
-        version: link:../emscripten-base-library
+        version: link:../emscripten-library-base
     devDependencies:
       '@godotengine/config-eslint':
         specifier: workspace:^
@@ -467,7 +467,7 @@ importers:
         specifier: ^0.18.7
         version: 0.18.7(@types/node@25.1.0)(jiti@2.6.1)(sass-embedded@1.97.3)(sass@1.97.3)
 
-  platform/web/packages/emscripten-base-library:
+  platform/web/packages/emscripten-library-base:
     dependencies:
       '@godotengine/emscripten-utils':
         specifier: workspace:^
