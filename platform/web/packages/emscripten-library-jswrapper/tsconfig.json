@@ -6,8 +6,7 @@
 		"outDir": "./dist",
 		"paths": {
 			"#/*": ["./src/*"]
-		},
-		"types": ["webxr"]
+		}
 	},
 	"references": [{ "path": "./tsconfig.tools.json" }],
 	"include": ["src/**/*"],
