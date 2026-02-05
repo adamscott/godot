@@ -32,7 +32,9 @@
 
 import type { CPointer, CPointerAll, CPointerTypeAll, ErrnoError } from "#/types/index.js";
 import type { GLContext, GLContextHandle, GLTexture, TypedArray } from "#/types/browser/index.js";
+import type { AnyFunction } from "@godotengine/utils/types";
 
+export declare const addOnPostRun: (pFunctionToPostRun: AnyFunction) => void;
 export declare const addToLibrary: (pElementToAdd: unknown) => void;
 /**
  * @deprecated Use `addToLibrary()` instead.
@@ -47,7 +49,7 @@ export declare const _free: (pPtr: CPointer) => void;
 
 export declare const getValue: (pPtr: CPointerAll, pType: CPointerTypeAll) => number | bigint;
 export declare const setValue: (pPtr: CPointerAll, pValue: number | bigint, pType: CPointerTypeAll) => void;
-export declare const UTF8ToString: (pPtr: CPointer) => string;
+export declare const UTF8ToString: (pPtr: CPointer, pLength?: number) => string;
 export declare const lengthBytesUTF8: (pString: string) => number;
 export declare const stringToUTF8: (pString: string, pStringPtr: CPointer, pLength: number) => number;
 export declare const stringToUTF8Array: (
@@ -56,6 +58,7 @@ export declare const stringToUTF8Array: (
 	pPtr: CPointer,
 	pLength: number,
 ) => number;
+export declare const UTF8Decoder: TextDecoder;
 
 export declare const HEAP8: Int8Array<ArrayBuffer>;
 export declare const HEAP16: Int16Array<ArrayBuffer>;
@@ -113,8 +116,10 @@ export declare const MainLoop: MainLoop;
 export declare const runtimeKeepalivePush: () => void;
 export declare const runtimeKeepalivePop: () => void;
 
+// Reference: https://github.com/emscripten-core/emscripten/blob/main/src/lib/libwebgl.js.
 export interface GL {
-	getContext: (pContextHandle: GLContextHandle) => GLContext | null;
+	getContext: (contextHandle: GLContextHandle) => GLContext | null;
+	getSource: (shader: number, count: number, string: number, length?: number) => string;
 	getNewId: (pTable: unknown[]) => number;
 	resizeOffscreenFramebuffer: (pGLContext: GLContext) => void;
 	currentContext: GLContext;

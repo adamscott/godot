@@ -28,14 +28,14 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
+import { basename, dirname, resolve } from "node:path";
 import { chdir, cwd } from "node:process";
+import { rm, writeFile } from "node:fs/promises";
 import browserslist from "browserslist";
 import esbuild from "esbuild";
 import { esbuildPluginBrowserslist } from "esbuild-plugin-browserslist";
 import { isFile } from "@godotengine/node-utils/fs";
 import { program } from "@commander-js/extra-typings";
-import { resolve } from "node:path";
-import { writeFile } from "node:fs/promises";
 
 async function createPreBundleFile(pPreBundlePath: string, pImports: string[]): Promise<void> {
 	const bundleContent = `${pImports
@@ -52,7 +52,7 @@ async function createPreBundleFile(pPreBundlePath: string, pImports: string[]): 
 program
 	.name("emscripten-builder")
 	.description("CLI to compile a emscripten library")
-	.option("-n, --name <name>", "Name to give to the generated bundle file.", "emscripten-library")
+	.option("-n, --name <name>", "Name to give to the generated bundle file.")
 	.option(
 		"-o, --outdir <path>",
 		"Path of the output directory (usually the one with compiled JS files in it).",
@@ -74,13 +74,16 @@ program
 			chdir(cwdArg);
 		}
 
-		if (!(await isFile(resolve(cwd(), "package.json")))) {
+		const packageJsonPath = resolve(cwd(), "package.json");
+		if (!(await isFile(packageJsonPath))) {
 			// eslint-disable-next-line no-console -- We're in a node env.
 			console.error(`Did not find package.json in the cwd ("${cwd()}"), cannot run.`);
 		}
 
-		const bundlePath = resolve(options.outdir, `${options.name}.js`);
-		const preBundlePath = resolve(options.outdir, `${options.name}__pre-bundle.js`);
+		const packageDirName = basename(dirname(packageJsonPath));
+		const name = options.name ?? packageDirName;
+		const bundlePath = resolve(options.outdir, `${name}.js`);
+		const preBundlePath = resolve(options.outdir, `${name}__pre-bundle.js`);
 
 		await createPreBundleFile(preBundlePath, imports);
 
@@ -111,6 +114,8 @@ program
 				),
 			],
 		});
+
+		await rm(preBundlePath);
 	});
 
 program.parse();

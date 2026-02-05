@@ -8,7 +8,8 @@
 		"build:ts": "tsdown",
 		"lint": "eslint . && prettier .",
 		"lint:fix": "eslint --fix . && prettier --write .",
-		"lint:external-global": "eslint --fix ./src/types/external_global.d.ts && prettier --write ./src/types/external_global.d.ts"
+		"lint:external-global": "eslint --fix ./src/types/external_global.d.ts && prettier --write ./src/types/external_global.d.ts",
+		"clean": "shx rm -rf ./dist && shx rm -f tsconfig.tsbuildinfo"
 	},
 	"exports": {
 		"./constants": "./dist/constants/index.js",

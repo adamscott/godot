@@ -127,19 +127,18 @@ def get_template_zip_path(env):
 
 
 def add_js_libraries(env, libraries):
-    env.Append(JS_LIBS=env.File(libraries))
+    js_libs = env.Append(JS_LIBS=env.File(libraries))
+    env.Depends(js_libs, env["TURBO_BUILD"])
 
 
 def add_js_pre(env, js_pre):
-    env.Append(JS_PRE=env.File(js_pre))
+    js_libs = env.Append(JS_PRE=env.File(js_pre))
+    env.Depends(js_libs, env["TURBO_BUILD"])
 
 
 def add_js_post(env, js_post):
-    env.Append(JS_POST=env.File(js_post))
-
-
-def add_js_externs(env, externs):
-    env.Append(JS_EXTERNS=env.File(externs))
+    js_libs = env.Append(JS_POST=env.File(js_post))
+    env.Depends(js_libs, env["TURBO_BUILD"])
 
 
 def get_node_command_path(env, command):

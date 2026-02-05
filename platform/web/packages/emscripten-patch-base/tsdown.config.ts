@@ -34,6 +34,6 @@ import { defineConfig } from "tsdown";
 
 export default defineConfig({
 	...baseConfig,
-	entry: ["src/index.ts", "src/external/index.ts", "src/libraries/index.ts"],
+	entry: ["src/index.ts", "src/external/index.ts", "src/patches/index.ts"],
 	plugins: [Macros()],
 });

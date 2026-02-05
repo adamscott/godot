@@ -1,12 +1,12 @@
 {
-	"name": "@godotengine/emscripten-library-jswrapper",
+	"name": "@godotengine/emscripten-patch-base",
 	"private": true,
 	"type": "module",
 	"scripts": {
 		"build": "corepack pnpm run build:external-global && corepack pnpm run build:ts && corepack pnpm run build:library",
 		"build:external-global": "external-global-d-ts-builder \"#/external/index.ts\" && corepack pnpm run lint:external-global",
 		"build:ts": "tsdown",
-		"build:library": "emscripten-builder \"#/libraries/index.js\"",
+		"build:library": "emscripten-builder \"#/patches/index.js\"",
 		"lint": "eslint . && prettier .",
 		"lint:fix": "eslint --fix . && prettier --write .",
 		"lint:external-global": "eslint --fix ./src/types/external_global.d.ts && prettier --write ./src/types/external_global.d.ts",
@@ -15,7 +15,7 @@
 	"exports": {
 		".": "./dist/index.js",
 		"./external": "./dist/external/index.js",
-		"./libraries": "./dist/libraries/index.js",
+		"./patches": "./dist/patches/index.js",
 		"./package.json": "./package.json"
 	},
 	"types": "./dist/index.d.ts",

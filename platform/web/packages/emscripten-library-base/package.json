@@ -6,10 +6,11 @@
 		"build": "corepack pnpm run build:external-global && corepack pnpm run build:ts && corepack pnpm run build:library",
 		"build:external-global": "external-global-d-ts-builder \"#/external/index.ts\" && corepack pnpm run lint:external-global",
 		"build:ts": "tsdown",
-		"build:library": "emscripten-builder --name emscripten-library-webxr ./libraries/index.js",
+		"build:library": "emscripten-builder \"#/libraries/index.js\"",
 		"lint": "eslint . && prettier .",
 		"lint:fix": "eslint --fix . && prettier --write .",
-		"lint:external-global": "eslint --fix ./src/types/external_global.d.ts && prettier --write ./src/types/external_global.d.ts"
+		"lint:external-global": "eslint --fix ./src/types/external_global.d.ts && prettier --write ./src/types/external_global.d.ts",
+		"clean": "shx rm -rf ./dist && shx rm -f tsconfig.tsbuildinfo"
 	},
 	"exports": {
 		".": "./dist/index.js",

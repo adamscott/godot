@@ -5,8 +5,7 @@ Import("env")
 Import("env_modules")
 
 if env["platform"] == "web":
-    env.AddJSLibraries(["native/library_godot_webxr.js"])
-    env.AddJSExterns(["native/webxr.externs.js"])
+    env.AddJSLibraries(["web/packages/emscripten-library-webxr/dist/emscripten-library-webxr.js"])
 
 env_webxr = env_modules.Clone()
 env_webxr.add_source_files(env.modules_sources, "*.cpp")

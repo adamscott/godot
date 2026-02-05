@@ -1,7 +1,6 @@
 packages:
-  - ./platform/web/
   - ./platform/web/packages/*
-  - ./modules/webxr/native/packages/*
+  - ./modules/**/web/packages/*
 
 onlyBuiltDependencies:
   - '@parcel/watcher'

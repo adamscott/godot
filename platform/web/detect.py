@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from emscripten_helpers import (
-    add_js_externs,
     add_js_libraries,
     add_js_post,
     add_js_pre,
@@ -217,11 +216,9 @@ def configure(env: "SConsEnvironment"):
     env["JS_LIBS"] = []
     env["JS_PRE"] = []
     env["JS_POST"] = []
-    env["JS_EXTERNS"] = []
     env.AddMethod(add_js_libraries, "AddJSLibraries")
     env.AddMethod(add_js_pre, "AddJSPre")
     env.AddMethod(add_js_post, "AddJSPost")
-    env.AddMethod(add_js_externs, "AddJSExterns")
 
     # Run commands.
     env.AddMethod(update_node_in_env, "UpdateNodeInENV")
@@ -376,3 +373,13 @@ def configure(env: "SConsEnvironment"):
 
     # Disable `turbo` tracking.
     env.Append(ENV={"TURBO_TELEMETRY_DISABLED": "1"})
+
+    # `pnpm` and `turbo` aliases for modules and others to access.
+    env.Append(
+        PNPM_INSTALL=env.Alias("pnpm_install", [], env.RunPnpm(command="install", cwd=env.Dir("#").abspath)),
+        TURBO_BUILD=env.Alias(
+            "turbo_build",
+            [],
+            env.RunPnpm(command="exec turbo run build", cwd=env.Dir("#").abspath),
+        ),
+    )

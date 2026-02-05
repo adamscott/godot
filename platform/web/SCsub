@@ -41,14 +41,9 @@ if env["target"] == "editor":
 
 sys_env = env.Clone()
 sys_env.AddJSLibraries(["packages/emscripten-library-base/dist/emscripten-library-base.js"])
+sys_env.AddJSPost(["packages/emscripten-patch-base/dist/emscripten-patch-base.js"])
 if sys_env["javascript_eval"]:
     sys_env.AddJSLibraries(["packages/emscripten-library-jswrapper/dist/emscripten-library-jswrapper.js"])
-
-sys_env.AddJSPost(
-    [
-        "js/patches/patch_em_gl.js",
-    ]
-)
 
 for lib in sys_env["JS_LIBS"]:
     sys_env.Append(LINKFLAGS=["--js-library", lib.abspath])
@@ -56,12 +51,6 @@ for js in sys_env["JS_PRE"]:
     sys_env.Append(LINKFLAGS=["--pre-js", js.abspath])
 for js in sys_env["JS_POST"]:
     sys_env.Append(LINKFLAGS=["--post-js", js.abspath])
-
-# Add JS externs to Closure.
-sys_env["ENV"]["EMCC_CLOSURE_ARGS"] = sys_env["ENV"].get("EMCC_CLOSURE_ARGS", "")
-for ext in sys_env["JS_EXTERNS"]:
-    sys_env["ENV"]["EMCC_CLOSURE_ARGS"] += " --externs " + ext.abspath
-sys_env["ENV"]["EMCC_CLOSURE_ARGS"] = sys_env["ENV"]["EMCC_CLOSURE_ARGS"].strip()
 
 if len(env["EXPORTED_FUNCTIONS"]):
     sys_env.Append(LINKFLAGS=["-sEXPORTED_FUNCTIONS=" + repr(sorted(list(set(env["EXPORTED_FUNCTIONS"]))))])
@@ -99,16 +88,11 @@ else:
 sys_env.Depends(build, sys_env["JS_LIBS"])
 sys_env.Depends(build, sys_env["JS_PRE"])
 sys_env.Depends(build, sys_env["JS_POST"])
-sys_env.Depends(build, sys_env["JS_EXTERNS"])
 
 # TypeScript projects.
-pnpm_install = sys_env.Alias("pnpm_install", [], sys_env.RunPnpm(command="install", cwd=sys_env.Dir("#").abspath))
-turbo_build = sys_env.Alias(
-    "turbo_build", [], sys_env.RunPnpm(command="exec turbo run build", cwd=sys_env.Dir("#").abspath)
-)
-sys_env.Depends(build, turbo_build)
-sys_env.Depends(turbo_build, pnpm_install)
-sys_env.AlwaysBuild(pnpm_install, turbo_build)
+sys_env.Depends(build, env["TURBO_BUILD"])
+sys_env.Depends(env["TURBO_BUILD"], env["PNPM_INSTALL"])
+sys_env.AlwaysBuild(env["PNPM_INSTALL"], env["TURBO_BUILD"])
 
 engine = [
     "js/engine/features.js",
@@ -132,3 +116,6 @@ js_wrapped = env.NoCache(
 # 1 - wasm file
 # 2 - wasm side (when dlink is enabled).
 env.CreateTemplateZip(js_wrapped, build[1], build[2] if len(build) > 2 else None)
+
+if env.GetOption("clean"):
+    env.Execute(env.RunPnpm(command="exec turbo run clean", cwd=env.Dir("#").abspath))

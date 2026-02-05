@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  tsdown.config.ts                                                      */
+/*  index.ts                                                              */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,12 +28,4 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import Macros from "unplugin-macros/rollup";
-import baseConfig from "@godotengine/config-tsdown";
-import { defineConfig } from "tsdown";
-
-export default defineConfig({
-	...baseConfig,
-	entry: ["src/index.ts", "src/external/index.ts", "src/libraries/index.ts"],
-	plugins: [Macros()],
-});
+export * from "@godotengine/emscripten-library-base/external";

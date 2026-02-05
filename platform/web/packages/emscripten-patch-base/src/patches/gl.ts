@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  tsdown.config.ts                                                      */
+/*  gl.ts                                                                 */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,12 +28,24 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import Macros from "unplugin-macros/rollup";
-import baseConfig from "@godotengine/config-tsdown";
-import { defineConfig } from "tsdown";
+import type { CPointer } from "@godotengine/emscripten-utils/types";
 
-export default defineConfig({
-	...baseConfig,
-	entry: ["src/index.ts", "src/external/index.ts", "src/libraries/index.ts"],
-	plugins: [Macros()],
+addOnPostRun(() => {
+	GL.getSource = (_pShader, pCount, pString, pLength) => {
+		let source = "";
+		for (let i = 0; i < pCount; ++i) {
+			const ptr = HEAPU32[(pString + i * 4) >> 2];
+			const len = pLength != null && pLength > 0 ? HEAPU32[(length + i * 4) >> 2] : undefined;
+			if (len == null) {
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Casting directly here, we don't know if `GodotRuntime` is available or not here in this context.
+				source += UTF8ToString(ptr as CPointer, len);
+			} else {
+				const endPtr = ptr + len;
+				const slice =
+					HEAPU8.buffer instanceof ArrayBuffer ? HEAPU8.subarray(ptr, endPtr) : HEAPU8.slice(ptr, endPtr);
+				source += UTF8Decoder.decode(slice);
+			}
+		}
+		return source;
+	};
 });
