@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  external-global.d.ts                                                  */
+/*  external_global.d.ts                                                  */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -105,29 +105,6 @@ import type {
 	Module as __Module,
 	LibraryManager as __LibraryManagerType,
 	LibraryManager as __LibraryManager,
-	GodotAudio as __GodotAudio,
-	GodotAudioScript as __GodotAudioScript,
-	GodotAudioWorklet as __GodotAudioWorklet,
-	GodotConfig as __GodotConfig,
-	GodotDisplay as __GodotDisplay,
-	GodotDisplayCursor as __GodotDisplayCursor,
-	GodotDisplayScreen as __GodotDisplayScreen,
-	GodotDisplayVK as __GodotDisplayVK,
-	GodotEval as __GodotEval,
-	GodotEventListeners as __GodotEventListeners,
-	GodotFS as __GodotFS,
-	GodotFetch as __GodotFetch,
-	GodotIME as __GodotIME,
-	GodotInput as __GodotInput,
-	GodotInputDragDrop as __GodotInputDragDrop,
-	GodotInputGamepads as __GodotInputGamepads,
-	GodotJSWrapper as __GodotJSWrapper,
-	GodotOS as __GodotOS,
-	GodotPWA as __GodotPWA,
-	GodotRuntime as __GodotRuntime,
-	GodotWebGL2 as __GodotWebGL2,
-	GodotWebMidi as __GodotWebMidi,
-	IDHandler as __IDHandler,
 	GodotRuntime as __GodotRuntime,
 	GodotOS as __GodotOS,
 	GodotFS as __GodotFS,
@@ -266,29 +243,6 @@ declare global {
 	interface LibraryManager extends __LibraryManagerType {}
 
 	const LibraryManager: typeof __LibraryManager;
-	const GodotAudio: typeof __GodotAudio;
-	const GodotAudioScript: typeof __GodotAudioScript;
-	const GodotAudioWorklet: typeof __GodotAudioWorklet;
-	const GodotConfig: typeof __GodotConfig;
-	const GodotDisplay: typeof __GodotDisplay;
-	const GodotDisplayCursor: typeof __GodotDisplayCursor;
-	const GodotDisplayScreen: typeof __GodotDisplayScreen;
-	const GodotDisplayVK: typeof __GodotDisplayVK;
-	const GodotEval: typeof __GodotEval;
-	const GodotEventListeners: typeof __GodotEventListeners;
-	const GodotFS: typeof __GodotFS;
-	const GodotFetch: typeof __GodotFetch;
-	const GodotIME: typeof __GodotIME;
-	const GodotInput: typeof __GodotInput;
-	const GodotInputDragDrop: typeof __GodotInputDragDrop;
-	const GodotInputGamepads: typeof __GodotInputGamepads;
-	const GodotJSWrapper: typeof __GodotJSWrapper;
-	const GodotOS: typeof __GodotOS;
-	const GodotPWA: typeof __GodotPWA;
-	const GodotRuntime: typeof __GodotRuntime;
-	const GodotWebGL2: typeof __GodotWebGL2;
-	const GodotWebMidi: typeof __GodotWebMidi;
-	const IDHandler: typeof __IDHandler;
 	const GodotRuntime: typeof __GodotRuntime;
 	const GodotOS: typeof __GodotOS;
 	const GodotFS: typeof __GodotFS;

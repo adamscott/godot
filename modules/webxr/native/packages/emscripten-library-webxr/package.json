@@ -9,7 +9,7 @@
 		"build:library": "emscripten-builder --name emscripten-library-webxr ./libraries/index.js",
 		"lint": "eslint . && prettier .",
 		"lint:fix": "eslint --fix . && prettier --write .",
-		"lint:external-global": "eslint --fix ./src/types/external-global.d.ts && prettier --write ./src/types/external-global.d.ts"
+		"lint:external-global": "eslint --fix ./src/types/external_global.d.ts && prettier --write ./src/types/external_global.d.ts"
 	},
 	"exports": {
 		".": "./dist/index.js",

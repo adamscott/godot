@@ -36,8 +36,8 @@ import { resolve } from "node:path";
 
 program
 	.name("external-global-d-ts-builder")
-	.description("CLI to compile an external-global.d.ts file.")
-	.option("-o, --out <path>", "Path of the output file. (relative to cwd)", "./src/types/external-global.d.ts")
+	.description("CLI to compile an external_global.d.ts file.")
+	.option("-o, --out <path>", "Path of the output file. (relative to cwd)", "./src/types/external_global.d.ts")
 	.option("-c, --tsconfig <path>", "Path of the tsconfig.json file. (relative to cwd)", "./tsconfig.json")
 	.option("-d, --cwd <path>", "Working directory (cwd).")
 	.argument("<module...>", "Modules to import externals from.")
