@@ -28,7 +28,6 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import { GodotAudio, GodotEventListeners, GodotRuntime } from "#/external/index.js";
 import type { LoopMode, Sample } from "./sample.js";
 import { getNullishErrorString as $getNullishErrorString } from "@godotengine/utils/macros" with { type: "macro" };
 import type { Bus } from "./bus.js";

@@ -36,17 +36,6 @@ import type {
 	CIntPointer,
 	CPointer,
 } from "@godotengine/emscripten-utils/types";
-import {
-	GodotAudio,
-	GodotAudioWorklet,
-	GodotConfig,
-	GodotEventListeners,
-	GodotRuntime,
-	HEAP32,
-	HEAPF32,
-	addToLibrary,
-	autoAddDeps,
-} from "#/external/index.js";
 
 type RingBufferOutCallback = (pWPosition: number, pPendingSamples: number) => void;
 type RingBufferInCallback = (pFrom: number, pLength: number) => void;
@@ -140,7 +129,7 @@ type AudioWorkletStateAddOnOutCallback = (pPosition: CInt, pFrames: CInt) => voi
 type AudioWorkletStateAddOnInCallback = (pPosition: CInt, pFrames: CInt) => void;
 
 export const _GodotAudioWorklet = {
-	$GodotAudioWorklet__deps: ["$GodotAudio", "$GodotConfig", "$GodotEventListeners"],
+	$GodotAudioWorklet__deps: ["$GodotAudio", "$GodotConfig", "$GodotEventListeners"] as const,
 	$GodotAudioWorklet: {
 		promise: null as Promise<void> | null,
 		worklet: null as AudioWorkletNode | null,
@@ -268,7 +257,7 @@ export const _GodotAudioWorklet = {
 			return GodotAudioWorklet.worklet;
 		},
 
-		close: async () => {
+		close: async (): Promise<void> => {
 			if (GodotAudioWorklet.promise == null) {
 				return;
 			}

@@ -30,7 +30,6 @@
 
 import { getNullishErrorString as $getNullishErrorString } from "@godotengine/utils/macros" with { type: "macro" };
 import type { Bus } from "./bus.js";
-import { GodotAudio } from "#/external/index.js";
 
 export class SampleNodeBus {
 	_bus: Bus | null;

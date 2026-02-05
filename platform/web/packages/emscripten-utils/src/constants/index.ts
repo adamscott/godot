@@ -31,7 +31,7 @@
 import { asCInt, asCType } from "#/types/index.js";
 import type { CPointer } from "#/types/index.js";
 
-export const NULLPTR = asCType<CPointer>(0);
+export const NULLPTR: CPointer = asCType<CPointer>(0);
 
 // Based on core/error/error_list.h.
 export const CIntError = {

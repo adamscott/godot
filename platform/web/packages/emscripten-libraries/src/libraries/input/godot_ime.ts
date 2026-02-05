@@ -29,14 +29,7 @@
 /**************************************************************************/
 
 import type { CCharPointer, CPointer } from "@godotengine/emscripten-utils/types";
-import {
-	GodotConfig,
-	GodotEventListeners,
-	GodotIME,
-	GodotRuntime,
-	addToLibrary,
-	autoAddDeps,
-} from "#/external/index.js";
+import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils/macros" with { type: "macro" };
 
 interface GodotIMECompositionType {
 	start: 0;
@@ -54,8 +47,12 @@ export function getModifiers(pEvent: KeyboardEvent | MouseEvent): number {
 }
 
 export const _GodotIME = {
-	$GodotIME__deps: ["$GodotRuntime", "$GodotEventListeners"],
-	$GodotIME__postset: "GodotOS.atExit(async () => { GodotIME.clear(); });",
+	$GodotIME__deps: ["$GodotRuntime", "$GodotEventListeners"] as const,
+	$GodotIME__postset: $convertFunctionToIifeString(() => {
+		GodotOS.atExit(async () => {
+			GodotIME.clear();
+		});
+	}),
 	$GodotIME: {
 		imeElement: null as HTMLDivElement | null,
 		_active: false,
@@ -195,7 +192,7 @@ export const _GodotIME = {
 			GodotIME.imeElement.style.top = `${clY}px`;
 		},
 
-		clear: function () {
+		clear: (): void => {
 			if (GodotIME.imeElement == null) {
 				return;
 			}

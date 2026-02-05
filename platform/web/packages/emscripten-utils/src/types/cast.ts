@@ -30,9 +30,8 @@
 
 /* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- Need to cast to emscripten types. */
 
+import type { CFunctionPointer, CIDHandlerId, CInt, CInt64, CType } from "./aliases.js";
 import type { AnyFunction } from "@godotengine/utils/types";
-
-import type { CInt, CInt64, CFunctionPointer, CIDHandlerId, CType } from "./aliases.js";
 
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- We want the developer to specify the generic type.
 export function asCType<T extends CType>(pValue: number | CType): T {

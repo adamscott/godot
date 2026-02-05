@@ -28,10 +28,15 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
+/* eslint-disable @typescript-eslint/no-deprecated -- Do not flag that items are deprecated. */
+
 import type { CPointer, CPointerAll, CPointerTypeAll, ErrnoError } from "#/types/index.js";
 import type { GLContext, GLContextHandle, GLTexture, TypedArray } from "#/types/browser/index.js";
 
 export declare const addToLibrary: (pElementToAdd: unknown) => void;
+/**
+ * @deprecated Use `addToLibrary()` instead.
+ */
 export declare const mergeInto: (pElement: unknown, pElementToAdd: object) => void;
 export declare const autoAddDeps: (pTarget: unknown, pDeps: string) => void;
 export declare const wasmTable: Map<CPointer, (...args: unknown[]) => unknown>;
@@ -99,7 +104,7 @@ export interface IDBFS {
 }
 export declare const IDBFS: IDBFS;
 
-interface MainLoop {
+export interface MainLoop {
 	requestAnimationFrame: Window["requestAnimationFrame"];
 	pause: () => void;
 	resume: () => void;
@@ -122,11 +127,10 @@ export declare const _emscripten_webgl_get_current_context: () => GLContextHandl
 
 export declare const Module: Record<string, unknown>;
 
-interface LibraryManager {
+export interface LibraryManager {
 	library: unknown;
 }
+/**
+ * @deprecated Use `addToLibrary()` instead.
+ */
 export declare const LibraryManager: LibraryManager;
-
-// "./global.d.ts": {
-// 	"types": "./dist/types/global.d.ts"
-// },

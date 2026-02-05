@@ -2,11 +2,11 @@
 	"name": "@godotengine/config-stylelint",
 	"type": "module",
 	"scripts": {
-		"build": "tsc",
-		"clean": "shx rm -rf ./dist && shx rm -f tsconfig.tsbuildinfo"
+		"build": "tsdown"
 	},
 	"exports": {
-		"import": "./dist/index.js"
+		".": "./dist/index.js",
+		"./package.json": "./package.json"
 	},
 	"types": "./dist/index.d.ts",
 	"devDependencies": {
@@ -14,12 +14,14 @@
 		"@godotengine/config-prettier": "workspace:^",
 		"@godotengine/config-tsconfig-node": "workspace:^",
 		"@godotengine/config-tsconfig-tools": "workspace:^",
+		"@godotengine/config-tsdown": "workspace:^",
 		"@types/node": "^25.1.0",
 		"eslint": "^9.39.2",
 		"prettier": "3.8.1",
 		"shx": "^0.4.0",
 		"stylelint": "^17.1.0",
 		"stylelint-config-standard-scss": "^17.0.0",
+		"tsdown": "^0.20.1",
 		"turbo": "^2.8.1",
 		"typescript": "^5.9.3"
 	}

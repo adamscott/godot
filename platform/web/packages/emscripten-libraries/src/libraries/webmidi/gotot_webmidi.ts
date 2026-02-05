@@ -29,14 +29,6 @@
 /**************************************************************************/
 
 import type { CCharArrayPointer, CFunctionPointer, CInt, CUintPointer } from "@godotengine/emscripten-utils/types";
-import {
-	GodotEventListeners,
-	GodotRuntime,
-	GodotWebMidi,
-	HEAPU8,
-	addToLibrary,
-	autoAddDeps,
-} from "#/external/index.js";
 
 type WebMIDIOpenMIDIInputsCallback = (
 	pConnectedInputNamesPtr: CCharArrayPointer,
@@ -50,13 +42,13 @@ type WebMIDIOpenMIDIInputsOnMIDIMessageCallback = (
 ) => void;
 
 export const _GodotWebMidi = {
-	$GodotWebMidi__deps: ["$GodotRuntime"],
+	$GodotWebMidi__deps: ["$GodotRuntime"] as const,
 	$GodotWebMidi: {
 		abortControllers: [] as AbortController[],
 		isListening: false,
 	},
 
-	godot_js_webmidi_open_midi_inputs__deps: ["$GodotWebMidi"],
+	godot_js_webmidi_open_midi_inputs__deps: ["$GodotWebMidi"] as const,
 	godot_js_webmidi_open_midi_inputs__proxy: "sync",
 	godot_js_webmidi_open_midi_inputs__sig: "ipppi",
 	godot_js_webmidi_open_midi_inputs: (

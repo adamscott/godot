@@ -37,19 +37,6 @@ import type {
 	CIntPointer,
 	CUintPointer,
 } from "@godotengine/emscripten-utils/types";
-import {
-	GodotConfig,
-	GodotDisplay,
-	GodotDisplayCursor,
-	GodotDisplayScreen,
-	GodotDisplayVK,
-	GodotEventListeners,
-	GodotOS,
-	GodotRuntime,
-	HEAPU8,
-	addToLibrary,
-	autoAddDeps,
-} from "#/external/index.js";
 
 type TTSGetVoicesCallback = (pSize: CInt, pVoices: CCharArrayPointer) => void;
 type TTSSpeakCallback = (pEvent: CInt, pId: CInt, pPosition: CInt) => void;
@@ -76,7 +63,7 @@ export const _GodotDisplay = {
 		"$GodotDisplayCursor",
 		"$GodotDisplayScreen",
 		"$GodotDisplayVK",
-	],
+	] as const,
 	$GodotDisplay: {
 		windowIcon: "" as string | null,
 
@@ -133,7 +120,7 @@ export const _GodotDisplay = {
 		pRate: CFloat,
 		pUtteranceId: CInt,
 		pCallbackPtr: CFunctionPointer<TTSSpeakCallback>,
-	) => {
+	): void => {
 		const callback = GodotRuntime.getFunction(pCallbackPtr);
 
 		const utterance = new SpeechSynthesisUtterance(GodotRuntime.parseString(pTextPtr));
@@ -272,7 +259,7 @@ export const _GodotDisplay = {
 
 	godot_js_display_window_size_get__proxy: "sync",
 	godot_js_display_window_size_get__sig: "vpp",
-	godot_js_display_window_size_get: function (pWidthPtr: CIntPointer, pHeightPtr: CIntPointer) {
+	godot_js_display_window_size_get: (pWidthPtr: CIntPointer, pHeightPtr: CIntPointer): void => {
 		const canvas = GodotConfig.canvas;
 		const canvasSize = {
 			width: canvas?.width ?? 0,

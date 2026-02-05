@@ -3,7 +3,7 @@
 	"type": "module",
 	"scripts": {
 		"build": "tsc && tsc-alias",
-		"clean": "shx rm -rf ./dist && shx rm -f tsconfig.tsbuildinfo"
+		"clean": "shx rm -rf ./dist && shx rm -f ./tsconfig.tsbuildinfo"
 	},
 	"exports": {
 		".": "./dist/index.js"

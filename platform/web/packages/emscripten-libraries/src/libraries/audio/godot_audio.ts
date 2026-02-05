@@ -42,23 +42,8 @@ import type {
 	CIntPointer,
 	CPointer,
 } from "@godotengine/emscripten-utils/types";
-import {
-	GodotAudio,
-	type GodotAudioScript,
-	type GodotAudioWorklet,
-	GodotConfig,
-	GodotEventListeners,
-	GodotOS,
-	GodotRuntime,
-	HEAP32,
-	HEAPF32,
-	addToLibrary,
-	autoAddDeps,
-} from "#/external/index.js";
-
 import { Sample, isLoopMode } from "./sample.js";
 import { SampleNode, type SampleNodeOptions } from "./sample_node.js";
-
 import { Bus } from "./bus.js";
 import { SampleNodeBus } from "./sample_node_bus.js";
 
@@ -95,7 +80,7 @@ type AudioInitOnLatencyChangeCallback = (pLatency: CFloat) => void;
 type AudioSampleSetFinishedCallbackCallback = (pPlaybackObjectId: CPointer) => void;
 
 export const _GodotAudio = {
-	$GodotAudio__deps: ["$GodotRuntime", "$GodotOS", "$GodotEventListeners"],
+	$GodotAudio__deps: ["$GodotRuntime", "$GodotOS", "$GodotEventListeners"] as const,
 	$GodotAudio__postset: $convertFunctionToIifeString(() => {
 		GodotAudio.samples = new Map();
 		GodotAudio.sampleNodes = new Map();
@@ -335,7 +320,7 @@ export const _GodotAudio = {
 			GodotAudio.Bus.move(pBusIndex, pToPos);
 		},
 
-		setSampleBusSend: (pBusIndex: number, pSendIndex: number) => {
+		setSampleBusSend: (pBusIndex: number, pSendIndex: number): void => {
 			const bus = GodotAudio.Bus.getBusOrNull(pBusIndex);
 			if (bus == null) {
 				// Cannot send from an invalid bus.
@@ -346,7 +331,7 @@ export const _GodotAudio = {
 			bus.setSend(targetBus);
 		},
 
-		setSampleBusVolumeDb: (pBusIndex: number, pVolumeDb: number) => {
+		setSampleBusVolumeDb: (pBusIndex: number, pVolumeDb: number): void => {
 			const bus = GodotAudio.Bus.getBusOrNull(pBusIndex);
 			if (bus == null) {
 				return;

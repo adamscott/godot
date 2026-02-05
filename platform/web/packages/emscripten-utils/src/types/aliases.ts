@@ -28,9 +28,8 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import type { AnyFunction } from "@godotengine/utils/types";
-
 import type { Brand, BrandSuper, BrandSuperSuper, BrandSuperSuperSuper } from "./brand.ts";
+import type { AnyFunction } from "@godotengine/utils/types";
 
 export type CInt = Brand<number, "CInt">;
 export type CUint = Brand<number, "CUint">;

@@ -28,15 +28,15 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import { GodotRuntime, addToLibrary, autoAddDeps } from "#/external/index.js";
+import type { CCharPointer } from "@godotengine/emscripten-utils/types";
 
 export const _GodotEmscripten = {
-	$GodotEmscripten__deps: ["$GodotRuntime"],
+	$GodotEmscripten__deps: ["$GodotRuntime"] as const,
 	$GodotEmscripten: {},
 
 	godot_js_emscripten_get_version__proxy: "sync",
 	godot_js_emscripten_get_version__sig: "p",
-	godot_js_emscripten_get_version: function () {
+	godot_js_emscripten_get_version: (): CCharPointer => {
 		// WARNING: The caller needs to free the string pointer.
 		const emscriptenVersionPtr = GodotRuntime.allocString("{{{ EMSCRIPTEN_VERSION }}}");
 		return emscriptenVersionPtr;

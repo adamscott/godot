@@ -1,6 +1,7 @@
 {
 	"extends": "@godotengine/config-tsconfig-base",
 	"compilerOptions": {
+		"baseUrl": ".",
 		"module": "nodenext",
 		"lib": ["DOM", "DOM.AsyncIterable", "DOM.Iterable", "ES2022"]
 	}

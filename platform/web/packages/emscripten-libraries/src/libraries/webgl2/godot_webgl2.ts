@@ -29,24 +29,16 @@
 /**************************************************************************/
 
 import type { CInt, CIntPointer, CUint, CVoidPointer } from "@godotengine/emscripten-utils/types";
-import {
-	GL,
-	GodotRuntime,
-	HEAPU8,
-	_emscripten_webgl_get_current_context,
-	addToLibrary,
-	autoAddDeps,
-} from "#/external/index.js";
 
 export const _GodotWebGL2 = {
-	$GodotWebGL2__deps: ["$GL", "$GodotRuntime"],
+	$GodotWebGL2__deps: ["$GL", "$GodotRuntime"] as const,
 	$GodotWebGL2: {},
 
 	// This is implemented as "glGetBufferSubData" in new emscripten versions.
 	// Since we have to support older (pre 2.0.17) emscripten versions, we add this wrapper function instead.
 	godot_webgl2_glGetBufferSubData__proxy: "sync",
 	godot_webgl2_glGetBufferSubData__sig: "vippp",
-	godot_webgl2_glGetBufferSubData__deps: ["$GL", "emscripten_webgl_get_current_context"],
+	godot_webgl2_glGetBufferSubData__deps: ["$GL", "emscripten_webgl_get_current_context"] as const,
 	godot_webgl2_glGetBufferSubData: (
 		pTarget: CInt,
 		pOffset: CIntPointer,
@@ -62,7 +54,7 @@ export const _GodotWebGL2 = {
 		gl.GLctx.getBufferSubData(pTarget, pOffset, HEAPU8, pSize, pData);
 	},
 
-	godot_webgl2_glFramebufferTextureMultiviewOVR__deps: ["emscripten_webgl_get_current_context"],
+	godot_webgl2_glFramebufferTextureMultiviewOVR__deps: ["emscripten_webgl_get_current_context"] as const,
 	godot_webgl2_glFramebufferTextureMultiviewOVR__proxy: "sync",
 	godot_webgl2_glFramebufferTextureMultiviewOVR__sig: "viiiiii",
 	godot_webgl2_glFramebufferTextureMultiviewOVR: (
@@ -91,7 +83,7 @@ export const _GodotWebGL2 = {
 		);
 	},
 
-	godot_webgl2_glFramebufferTextureMultisampleMultiviewOVR__deps: ["emscripten_webgl_get_current_context"],
+	godot_webgl2_glFramebufferTextureMultisampleMultiviewOVR__deps: ["emscripten_webgl_get_current_context"] as const,
 	godot_webgl2_glFramebufferTextureMultisampleMultiviewOVR__proxy: "sync",
 	godot_webgl2_glFramebufferTextureMultisampleMultiviewOVR__sig: "viiiiiii",
 	godot_webgl2_glFramebufferTextureMultisampleMultiviewOVR: (

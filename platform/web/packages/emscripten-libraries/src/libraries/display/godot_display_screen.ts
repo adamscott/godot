@@ -28,17 +28,8 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import {
-	GL,
-	GodotConfig,
-	GodotDisplayScreen,
-	_emscripten_webgl_get_current_context,
-	addToLibrary,
-	autoAddDeps,
-} from "#/external/index.js";
-
 export const _GodotDisplayScreen = {
-	$GodotDisplayScreen__deps: ["$GodotOS", "$GodotConfig", "$GL", "emscripten_webgl_get_current_context"],
+	$GodotDisplayScreen__deps: ["$GodotOS", "$GodotConfig", "$GL", "emscripten_webgl_get_current_context"] as const,
 	$GodotDisplayScreen: {
 		desiredSize: {
 			width: 0,

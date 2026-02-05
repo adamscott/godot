@@ -42,17 +42,6 @@ import type {
 	CUint,
 	CUintPointer,
 } from "@godotengine/emscripten-utils/types";
-import {
-	GodotConfig,
-	GodotEventListeners,
-	GodotIME,
-	GodotInput,
-	GodotInputDragDrop,
-	GodotInputGamepads,
-	GodotRuntime,
-	addToLibrary,
-	autoAddDeps,
-} from "#/external/index.js";
 
 type InputMouseButtonCbCallback = (pPressed: CInt, pButton: CInt, pX: CDouble, pY: CDouble, pModifiers: CInt) => CInt;
 type InputMouseMoveCbCallback = (
@@ -89,7 +78,7 @@ export const _GodotInput = {
 		"$GodotInputGamepads",
 		"$GodotInputDragDrop",
 		"$GodotIME",
-	],
+	] as const,
 	$GodotInput: {
 		computePosition: (pEvent: MouseEvent | Touch, pRect: DOMRect): [number, number] => {
 			const canvas = GodotConfig.canvas;

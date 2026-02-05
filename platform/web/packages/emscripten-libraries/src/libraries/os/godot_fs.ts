@@ -28,11 +28,10 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import { FS, GodotFS, GodotRuntime, IDBFS, Module, addToLibrary, autoAddDeps } from "#/external/index.js";
 import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils/macros" with { type: "macro" };
 
 export const _GodotFS = {
-	$GodotFS__deps: ["$FS", "$IDBFS", "$GodotRuntime"],
+	$GodotFS__deps: ["$FS", "$IDBFS", "$GodotRuntime"] as const,
 	$GodotFS__postset: $convertFunctionToIifeString(() => {
 		Module.initFS = GodotFS.initialize;
 		Module.copyToFS = GodotFS.copyToFS;

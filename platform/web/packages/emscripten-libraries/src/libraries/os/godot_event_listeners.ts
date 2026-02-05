@@ -28,7 +28,6 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import { GodotEventListeners, GodotOS, addToLibrary, autoAddDeps } from "#/external/index.js";
 import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils/macros" with { type: "macro" };
 import type { AnyFunction } from "@godotengine/utils/types";
 
@@ -123,7 +122,7 @@ type RemoveEventListeners = (
 ) => void;
 
 export const _GodotEventListeners = {
-	$GodotEventListeners__deps: ["$GodotOS"],
+	$GodotEventListeners__deps: ["$GodotOS"] as const,
 	$GodotEventListeners__postset: $convertFunctionToIifeString(() => {
 		GodotOS.atExit(async () => {
 			GodotEventListeners.clear();
@@ -138,7 +137,7 @@ export const _GodotEventListeners = {
 			pEvent: InstanceType<typeof Handler>["event"],
 			pMethod: InstanceType<typeof Handler>["method"],
 			pCapture?: InstanceType<typeof Handler>["capture"],
-		) => {
+		): boolean => {
 			return (
 				GodotEventListeners.handlers.findIndex((pHandler) => {
 					return pHandler.isSame(pTarget, pEvent, pMethod, pCapture);
@@ -151,7 +150,7 @@ export const _GodotEventListeners = {
 			pEvent: InstanceType<typeof Handler>["event"],
 			pMethod: InstanceType<typeof Handler>["method"],
 			pCapture?: InstanceType<typeof Handler>["capture"],
-		) => {
+		): void => {
 			if (GodotEventListeners.has(pTarget, pEvent, pMethod, pCapture)) {
 				return;
 			}
@@ -170,7 +169,7 @@ export const _GodotEventListeners = {
 			});
 		}) as RemoveEventListeners,
 
-		clear: () => {
+		clear: (): void => {
 			for (const handler of GodotEventListeners.handlers) {
 				handler.removeTargetEventListener();
 			}

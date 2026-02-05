@@ -29,7 +29,6 @@
 /**************************************************************************/
 
 import { getNullishErrorString as $getNullishErrorString } from "@godotengine/utils/macros" with { type: "macro" };
-import { GodotAudio } from "#/external/index.js";
 import type { SampleNode } from "./sample_node.js";
 
 export class Bus {

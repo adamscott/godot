@@ -191,18 +191,19 @@ async function main() {
 		}
 	}
 
+	let hasError = false;
 	for (const [filesDir, filesToProcess] of filesByDir) {
 		let processedFilesResult = null;
 		try {
 			processedFilesResult = await processFiles(command, commandArgs, filesDir, filesToProcess);
 			if (processedFilesResult != null && processedFilesResult !== 0) {
-				exit(processedFilesResult);
+				hasError = true;
 			}
 		} catch (eError) {
 			console.error(eError);
-			exit(1);
 		}
 	}
+	exit(hasError ? 1 : 0);
 }
 
 try {

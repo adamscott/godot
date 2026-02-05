@@ -29,12 +29,11 @@
 /**************************************************************************/
 
 import type { CFunctionPointer, CInt } from "@godotengine/emscripten-utils/types";
-import { GodotEventListeners, GodotPWA, GodotRuntime, addToLibrary, autoAddDeps } from "#/external/index.js";
 
 type PWACbCallback = () => void;
 
 export const _GodotPWA = {
-	$GodotPWA__deps: ["$GodotRuntime", "$GodotEventListeners"],
+	$GodotPWA__deps: ["$GodotRuntime", "$GodotEventListeners"] as const,
 	$GodotPWA: {
 		hasUpdate: false,
 

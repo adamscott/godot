@@ -50,6 +50,18 @@ export default defineConfig([
 			"@typescript-eslint/max-params": "off",
 			"@typescript-eslint/no-magic-numbers": "off",
 			"@typescript-eslint/no-unsafe-member-access": "off",
+			"@typescript-eslint/no-unused-vars": [
+				"error",
+				{
+					args: "all",
+					argsIgnorePattern: "^_",
+					caughtErrors: "all",
+					caughtErrorsIgnorePattern: "^_",
+					destructuredArrayIgnorePattern: "^_",
+					varsIgnorePattern: "^_",
+					ignoreRestSiblings: true,
+				},
+			],
 			"@typescript-eslint/require-await": "off",
 			"arrow-body-style": "off",
 			complexity: ["error", 20],

@@ -29,16 +29,6 @@
 /**************************************************************************/
 
 import type { CCharPointer, CFunctionPointer, CInt, CUintPointer } from "@godotengine/emscripten-utils/types";
-import {
-	GodotConfig,
-	GodotFS,
-	GodotOS,
-	GodotRuntime,
-	HEAP8,
-	Module,
-	addToLibrary,
-	autoAddDeps,
-} from "#/external/index.js";
 import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils/macros" with { type: "macro" };
 
 type OSFinishAsyncCallback = () => void;
@@ -59,7 +49,7 @@ export type GodotOSOS =
 	| "Unknown";
 
 export const _GodotOS = {
-	$GodotOS__deps: ["$GodotRuntime", "$GodotConfig", "$GodotFS"],
+	$GodotOS__deps: ["$GodotRuntime", "$GodotConfig", "$GodotFS"] as const,
 	$GodotOS__postset: $convertFunctionToIifeString(() => {
 		Module.request_quit = function () {
 			GodotOS.requestQuit();
@@ -68,8 +58,8 @@ export const _GodotOS = {
 		GodotOS._fsSyncPromise = Promise.resolve(null);
 	}),
 	$GodotOS: {
-		requestQuit: () => {
-			/* empty */
+		requestQuit: (): void => {
+			// Empty.
 		},
 		_asyncCallbacks: [] as Array<() => Promise<void>>,
 		// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Real value is set in postset.

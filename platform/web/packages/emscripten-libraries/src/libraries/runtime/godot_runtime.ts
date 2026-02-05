@@ -53,24 +53,6 @@ import type {
 } from "@godotengine/emscripten-utils/types";
 import { CIntBoolean, CIntError, NULLPTR } from "@godotengine/emscripten-utils/constants";
 import {
-	GodotRuntime,
-	HEAP32,
-	HEAP8,
-	UTF8ToString,
-	_free,
-	_malloc,
-	addToLibrary,
-	autoAddDeps,
-	err,
-	getValue,
-	lengthBytesUTF8,
-	out,
-	setValue,
-	stringToUTF8,
-	stringToUTF8Array,
-	wasmTable,
-} from "#/external/index.js";
-import {
 	asCFunctionPointer,
 	asCIDHandlerId,
 	asCInt,
@@ -132,7 +114,7 @@ export const _GodotRuntime = {
 		fromCTypeToBoolean,
 		fromCTypeToNumber,
 
-		// Functions.
+		//
 		getFunction: <T extends CFunctionPointer<AnyFunction>>(pPtr: T): CFunctionPointerExtract<T> => {
 			const func = wasmTable.get(pPtr);
 			if (func == null) {

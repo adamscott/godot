@@ -29,12 +29,11 @@
 /**************************************************************************/
 
 import type { CIDHandlerId, CIDHandlerIdExtract } from "@godotengine/emscripten-utils/types";
-import { GodotRuntime, IDHandler, addToLibrary, autoAddDeps } from "#/external/index.js";
 import { asCIDHandlerId as $asCIDHandlerId } from "@godotengine/emscripten-utils/types" with { type: "macro" };
 import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils/macros" with { type: "macro" };
 
 export const _IDHandler = {
-	$IDHandler__deps: ["$GodotRuntime"],
+	$IDHandler__deps: ["$GodotRuntime"] as const,
 	$IDHandler__postset: $convertFunctionToIifeString(() => {
 		IDHandler._references = new Map();
 	}),

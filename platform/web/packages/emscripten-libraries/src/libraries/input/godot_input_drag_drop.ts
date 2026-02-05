@@ -28,8 +28,6 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import { FS, GodotFS, GodotInputDragDrop, GodotRuntime, addToLibrary, autoAddDeps } from "#/external/index.js";
-
 export interface GodotInputFile {
 	path: string;
 	name: string;
@@ -49,7 +47,7 @@ export interface GodotInputFile {
  * deferred callbacks won't be able to access the files.
  */
 export const _GodotInputDragDrop = {
-	$GodotInputDragDrop__deps: ["$FS", "$GodotFS"],
+	$GodotInputDragDrop__deps: ["$FS", "$GodotFS"] as const,
 	$GodotInputDragDrop: {
 		_promises: [] as Array<Promise<void>>,
 		_pendingFiles: [] as GodotInputFile[],
@@ -126,7 +124,7 @@ export const _GodotInputDragDrop = {
 			);
 		},
 
-		processEvent: (pEvent: DragEvent, pCallback: (pFiles: string[]) => void) => {
+		processEvent: (pEvent: DragEvent, pCallback: (pFiles: string[]) => void): void => {
 			pEvent.preventDefault();
 
 			if (pEvent.dataTransfer?.items == null) {
@@ -208,8 +206,10 @@ export const _GodotInputDragDrop = {
 			}
 		},
 
-		handler: (pCallback: (pFiles: string[]) => void) => (pEvent: DragEvent) => {
-			GodotInputDragDrop.processEvent(pEvent, pCallback);
+		handler: (pCallback: (pFiles: string[]) => void) => {
+			return (pEvent: DragEvent): void => {
+				GodotInputDragDrop.processEvent(pEvent, pCallback);
+			};
 		},
 	},
 };

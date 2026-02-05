@@ -2,7 +2,7 @@
 	"name": "@godotengine/config-prettier",
 	"type": "module",
 	"scripts": {
-		"build": "tsc",
+		"build": "tsc && tsc-alias",
 		"clean": "shx rm -rf ./dist && shx rm -f tsconfig.tsbuildinfo"
 	},
 	"exports": {
@@ -17,6 +17,7 @@
 		"eslint": "^9.39.2",
 		"prettier": "3.8.1",
 		"shx": "^0.4.0",
+		"tsc-alias": "^1.8.16",
 		"turbo": "^2.8.1",
 		"typescript": "^5.9.3"
 	}

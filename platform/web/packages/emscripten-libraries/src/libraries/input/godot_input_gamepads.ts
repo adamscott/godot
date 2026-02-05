@@ -28,15 +28,6 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import {
-	GodotEventListeners,
-	GodotInputGamepads,
-	GodotOS,
-	GodotRuntime,
-	addToLibrary,
-	autoAddDeps,
-} from "#/external/index.js";
-
 import type { CPointer } from "@godotengine/emscripten-utils/types";
 
 export interface GodotInputGamepadSample {
@@ -47,7 +38,7 @@ export interface GodotInputGamepadSample {
 }
 
 export const _GodotInputGamepads = {
-	$GodotInputGamepads__deps: ["$GodotRuntime", "$GodotEventListeners"],
+	$GodotInputGamepads__deps: ["$GodotRuntime", "$GodotEventListeners"] as const,
 	$GodotInputGamepads: {
 		samples: [] as Array<GodotInputGamepadSample | null>,
 

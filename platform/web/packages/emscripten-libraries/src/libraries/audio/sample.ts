@@ -30,8 +30,6 @@
 
 import { getNullishErrorString as $getNullishErrorString } from "@godotengine/utils/macros" with { type: "macro" };
 
-import { GodotAudio } from "#/external/index.js";
-
 const LOOP_MODE_VALUES = ["disabled", "forward", "backward", "pingpong"] as const;
 export type LoopMode = (typeof LOOP_MODE_VALUES)[number];
 

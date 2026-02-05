@@ -3,24 +3,27 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "tsc && tsc-alias",
-		"clean": "shx rm -rf ./dist && shx rm -f tsconfig.tsbuildinfo"
+		"build": "tsdown"
 	},
 	"exports": {
 		".": "./dist/index.js",
 		"./constants": "./dist/constants/index.js",
 		"./error": "./dist/error/index.js",
 		"./macros": "./dist/macros/index.js",
-		"./types": "./dist/types/index.js"
+		"./types": "./dist/types/index.js",
+		"./package.json": "./package.json"
 	},
 	"types": "./dist/index.d.ts",
 	"devDependencies": {
+		"@godotengine/config-eslint": "workspace:^",
 		"@godotengine/config-tsconfig-browser": "workspace:^",
 		"@godotengine/config-tsconfig-tools": "workspace:^",
+		"@godotengine/config-tsdown": "workspace:^",
 		"eslint": "^9.39.2",
 		"prettier": "3.8.1",
 		"shx": "^0.4.0",
 		"tsc-alias": "^1.8.16",
+		"tsdown": "^0.20.1",
 		"turbo": "^2.8.1",
 		"typescript": "^5.9.3"
 	}

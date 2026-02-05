@@ -50,7 +50,7 @@ import type { _GodotRuntime } from "#/libraries/runtime/index.js";
 import type { _GodotWebGL2 } from "#/libraries/webgl2/index.js";
 import type { _GodotWebMidi } from "#/libraries/webmidi/index.js";
 
-export * from "@godotengine/emscripten-utils/external";
+export type * from "@godotengine/emscripten-utils/external";
 
 export declare const GodotRuntime: typeof _GodotRuntime.$GodotRuntime;
 export declare const GodotOS: typeof _GodotOS.$GodotOS;

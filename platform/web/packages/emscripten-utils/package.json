@@ -3,26 +3,34 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "tsc && tsc-alias",
-		"clean": "shx rm -rf ./dist && shx rm -f tsconfig.tsbuildinfo"
+		"build": "corepack pnpm run build:external-global && corepack pnpm run build:ts",
+		"build:external-global": "external-global-d-ts-builder \"#/external/index.ts\" && corepack pnpm run lint:external-global",
+		"build:ts": "tsdown",
+		"lint": "eslint . && prettier .",
+		"lint:fix": "eslint --fix . && prettier --write .",
+		"lint:external-global": "eslint --fix ./src/types/external-global.d.ts && prettier --write ./src/types/external-global.d.ts"
 	},
 	"exports": {
-		".": "./dist/index.js",
 		"./constants": "./dist/constants/index.js",
 		"./external": "./dist/external/index.js",
+		"./fetch": "./dist/fetch/index.js",
 		"./types": "./dist/types/index.js",
-		"./types/browser": "./dist/types/browser/index.js"
+		"./types/browser": "./dist/types/browser/index.js",
+		"./package.json": "./package.json"
 	},
 	"types": "./dist/index.d.ts",
 	"devDependencies": {
 		"@godotengine/config-tsconfig-browser": "workspace:^",
 		"@godotengine/config-tsconfig-tools": "workspace:^",
+		"@godotengine/config-tsdown": "workspace:^",
+		"@godotengine/external-global-d-ts-builder": "workspace:^",
 		"@godotengine/utils": "workspace:^",
 		"@types/webxr": "^0.5.24",
 		"eslint": "^9.39.2",
 		"prettier": "3.8.1",
 		"shx": "^0.4.0",
 		"tsc-alias": "^1.8.16",
+		"tsdown": "^0.20.1",
 		"turbo": "^2.8.1",
 		"typescript": "^5.9.3"
 	}

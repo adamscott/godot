@@ -29,13 +29,12 @@
 /**************************************************************************/
 
 import type { CFloatPointer, CFunctionPointer, CInt, CIntPointer } from "@godotengine/emscripten-utils/types";
-import { GodotAudio, GodotAudioScript, GodotRuntime, HEAPF32, addToLibrary, autoAddDeps } from "#/external/index.js";
 import { getNullishErrorString as $getNullishErrorString } from "@godotengine/utils/macros" with { type: "macro" };
 
 type AudioScriptStartCallback = () => void;
 
 export const _GodotAudioScript = {
-	$GodotAudioScript__deps: ["$GodotAudio", "$GodotRuntime"],
+	$GodotAudioScript__deps: ["$GodotAudio", "$GodotRuntime"] as const,
 	$GodotAudioScript: {
 		script: null as ScriptProcessorNode | null,
 

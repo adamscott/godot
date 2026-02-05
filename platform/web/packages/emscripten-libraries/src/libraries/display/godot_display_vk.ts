@@ -28,20 +28,11 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import {
-	GodotConfig,
-	GodotDisplayVK,
-	GodotEventListeners,
-	GodotOS,
-	GodotRuntime,
-	addToLibrary,
-	autoAddDeps,
-} from "#/external/index.js";
 import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils" with { type: "macro" };
 import type { CCharPointer } from "@godotengine/emscripten-utils/types";
 
 export const _GodotDisplayVK = {
-	$GodotDisplayVK__deps: ["$GodotRuntime", "$GodotOS", "$GodotConfig", "$GodotEventListeners"],
+	$GodotDisplayVK__deps: ["$GodotRuntime", "$GodotOS", "$GodotConfig", "$GodotEventListeners"] as const,
 	$GodotDisplayVK__postset: $convertFunctionToIifeString(() => {
 		GodotOS.atExit(async () => {
 			GodotDisplayVK.clear();
@@ -51,7 +42,7 @@ export const _GodotDisplayVK = {
 		textInput: null as HTMLInputElement | null,
 		textArea: null as HTMLTextAreaElement | null,
 
-		initialize: (pInputCallback: (pInputPtr: CCharPointer, pSelectionEnd: number) => void) => {
+		initialize: (pInputCallback: (pInputPtr: CCharPointer, pSelectionEnd: number) => void): void => {
 			const create = <T extends "input" | "textarea">(pElementName: T): HTMLElementTagNameMap[T] => {
 				const element = document.createElement(pElementName);
 				element.style.display = "none";

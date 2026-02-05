@@ -28,7 +28,6 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import { GodotConfig, GodotDisplayCursor, GodotOS, GodotRuntime, addToLibrary, autoAddDeps } from "#/external/index.js";
 import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils" with { type: "macro" };
 
 interface Cursor {
@@ -42,7 +41,7 @@ interface Cursor {
  * Keeps track of cursor status and custom shapes.
  */
 export const _GodotDisplayCursor = {
-	$GodotDisplayCursor__deps: ["$GodotOS", "$GodotConfig"],
+	$GodotDisplayCursor__deps: ["$GodotOS", "$GodotConfig"] as const,
 	$GodotDisplayCursor__postset: $convertFunctionToIifeString(() => {
 		GodotDisplayCursor.init();
 		GodotOS.atExit(async () => {

@@ -67,14 +67,14 @@ export async function fetchWithRetry<T>(
 		if (targetAttempt <= 0) {
 			return null;
 		}
-		return await new Promise((resolve, _reject) => {
+		return await new Promise((pResolve, _pReject) => {
 			setTimeout(() => {
 				if (retryStrategy === "exponentialBackoff") {
 					retryCurrentDelay += retryCurrentDelay;
 					if (retryMaxDelayMs != null) {
 						retryCurrentDelay = Math.min(retryCurrentDelay, retryMaxDelayMs);
 					}
-					resolve(retryFetch(targetAttempt));
+					pResolve(retryFetch(targetAttempt));
 				}
 			}, retryCurrentDelay);
 		});

@@ -37,7 +37,6 @@ import type {
 	CUintPointer,
 	CVoidPointer,
 } from "@godotengine/emscripten-utils/types";
-import { GodotFetch, GodotRuntime, HEAP8, IDHandler, addToLibrary, autoAddDeps } from "#/external/index.js";
 import type { TypedArray } from "@godotengine/emscripten-utils/types/browser";
 
 type GodotFetchEntryId = CIDHandlerId<GodotFetchEntry>;
@@ -68,7 +67,7 @@ function createGodotFetchErrorHandler(pId: GodotFetchEntryId) {
 }
 
 export const _GodotFetch = {
-	$GodotFetch__deps: ["$IDHandler", "$GodotRuntime"],
+	$GodotFetch__deps: ["$IDHandler", "$GodotRuntime"] as const,
 	$GodotFetch: {
 		onRead: (pId: GodotFetchEntryId, pResult: ReadableStreamReadResult<Uint8Array<ArrayBuffer>>): void => {
 			const fetchEntry = IDHandler.get(pId);
