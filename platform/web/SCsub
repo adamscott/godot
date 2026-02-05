@@ -40,21 +40,15 @@ if env["target"] == "editor":
     env.add_source_files(web_files, "editor/*.cpp")
 
 sys_env = env.Clone()
-sys_env.AddJSLibraries(["packages/emscripten-libraries/dist/godot-emscripten-libraries.js"])
-sys_env.AddJSExterns(
-    [
-        "js/libs/library_godot_webgl2.externs.js",
-    ]
-)
+sys_env.AddJSLibraries(["packages/emscripten-base-library/dist/emscripten-base-library.js"])
+if sys_env["javascript_eval"]:
+    sys_env.AddJSLibraries(["packages/emscripten-jswrapper-library/dist/emscripten-jswrapper-library.js"])
 
 sys_env.AddJSPost(
     [
         "js/patches/patch_em_gl.js",
     ]
 )
-
-if sys_env["javascript_eval"]:
-    sys_env.AppendENVPath("GODOT_JAVASCRIPT_EVAL", "1", delete_existing=True)
 
 for lib in sys_env["JS_LIBS"]:
     sys_env.Append(LINKFLAGS=["--js-library", lib.abspath])
@@ -107,6 +101,7 @@ sys_env.Depends(build, sys_env["JS_PRE"])
 sys_env.Depends(build, sys_env["JS_POST"])
 sys_env.Depends(build, sys_env["JS_EXTERNS"])
 
+# TypeScript projects.
 pnpm_install = sys_env.Alias("pnpm_install", [], sys_env.RunPnpm(command="install", cwd=sys_env.Dir("#").abspath))
 turbo_build = sys_env.Alias(
     "turbo_build", [], sys_env.RunPnpm(command="exec turbo run build", cwd=sys_env.Dir("#").abspath)

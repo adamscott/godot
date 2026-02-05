@@ -28,6 +28,8 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
+/* eslint-disable @typescript-eslint/no-deprecated -- Yes, some APIs are deprecated. It's intentional. */
+
 import type { CFloatPointer, CFunctionPointer, CInt, CIntPointer } from "@godotengine/emscripten-utils/types";
 import { getNullishErrorString as $getNullishErrorString } from "@godotengine/utils/macros" with { type: "macro" };
 

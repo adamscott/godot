@@ -28,4 +28,4 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-export * from "@godotengine/emscripten-libraries/external";
+export * from "@godotengine/emscripten-base-library/external";

@@ -28,7 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import type * as ExternalTypes from "@godotengine/emscripten-libraries/external";
+import type * as ExternalTypes from "@godotengine/emscripten-base-library/external";
 import type { _GodotWebXR } from "#/libraries/webxr/index.js";
 
 export declare const GodotWebXR: typeof _GodotWebXR.$GodotWebXR;
