@@ -35,14 +35,13 @@
 		"@godotengine/emscripten-utils": "workspace:^",
 		"@godotengine/external-global-d-ts-builder": "workspace:^",
 		"@godotengine/utils": "workspace:^",
-		"@types/node": "^25.1.0",
-		"@types/webxr": "^0.5.24",
 		"eslint": "^9.39.2",
 		"prettier": "3.8.1",
 		"shx": "^0.4.0",
 		"tsc-alias": "^1.8.16",
 		"tsdown": "^0.20.1",
 		"turbo": "^2.8.1",
-		"typescript": "^5.9.3"
+		"typescript": "^5.9.3",
+		"unplugin-macros": "^0.18.7"
 	}
 }

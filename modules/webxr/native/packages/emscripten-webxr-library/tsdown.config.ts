@@ -28,10 +28,12 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
+import Macros from "unplugin-macros/rollup";
 import baseConfig from "@godotengine/config-tsdown";
 import { defineConfig } from "tsdown";
 
 export default defineConfig({
 	...baseConfig,
 	entry: ["src/index.ts", "src/libraries/index.ts", "src/external/index.ts"],
+	plugins: [Macros()],
 });

@@ -37,7 +37,6 @@ import type {
 	CIntPointer,
 	CVoidPointer,
 } from "@godotengine/emscripten-utils/types";
-import { fromCTypeToBoolean } from "@godotengine/emscripten-utils/types";
 
 type GodotJSEvalCallback = (pPtr: CVoidPointer, pPtr2: CVoidPointer, pLength: CInt) => CVoidPointer;
 
@@ -59,7 +58,7 @@ export const _GodotEval = {
 		let evalReturnValue = null as unknown;
 		try {
 			// https://esbuild.github.io/content-types/#direct-eval
-			if (fromCTypeToBoolean(pUseGlobalContext)) {
+			if (GodotRuntime.fromCTypeToBoolean(pUseGlobalContext)) {
 				// Indirect eval call grants global execution context.
 				// eslint-disable-next-line no-void, no-eval -- By design.
 				evalReturnValue = (void 0, eval)(jsCode);

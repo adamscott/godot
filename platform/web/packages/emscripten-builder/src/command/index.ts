@@ -35,7 +35,6 @@ import { esbuildPluginBrowserslist } from "esbuild-plugin-browserslist";
 import { isFile } from "@godotengine/node-utils/fs";
 import { program } from "@commander-js/extra-typings";
 import { resolve } from "node:path";
-import unpluginMacros from "unplugin-macros/esbuild";
 import { writeFile } from "node:fs/promises";
 
 async function createPreBundleFile(pPreBundlePath: string, pImports: string[]): Promise<void> {
@@ -95,7 +94,6 @@ program
 			// minify: true,
 			sourcemap: true,
 			plugins: [
-				unpluginMacros(),
 				esbuildPluginBrowserslist(
 					browserslist([
 						"last 2 chrome major versions and last 1 year",
