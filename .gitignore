@@ -113,6 +113,7 @@ stylelint.config.js
 .stylelintcache
 .turbo
 **/src/types/external_global.d.ts
+**/web/packages/*/dist/
 
 # Misc
 *.debug

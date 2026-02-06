@@ -37,7 +37,7 @@ export type CFloat = Brand<number, "CFloat">;
 export type CDouble = Brand<number, "CDouble">;
 export type CPointer = Brand<number, "CPointer">;
 
-export type CInt64 = BrandSuper<bigint, "CInt", "CInt64">;
+export type CInt64 = BrandSuper<number | bigint, "CInt", "CInt64">;
 
 export type CVoidPointer = BrandSuper<number, "CPointer", "CVoidPointer">;
 export type CCharPointer = BrandSuper<number, "CPointer", "CCharPointer">;

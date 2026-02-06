@@ -28,17 +28,9 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import type { AnyFunction } from "#/types/index.js";
+import type { _GodotRTCDataChannel, _GodotRTCPeerConnection } from "#/libraries/webrtc/index.js";
 
-export function convertFunctionToIifeString(pFunction: AnyFunction): string {
-	return `(${pFunction.toString()})()`;
-}
+export declare const GodotRTCDataChannel: typeof _GodotRTCDataChannel.$GodotRTCDataChannel;
+export declare const GodotRTCPeerConnection: typeof _GodotRTCPeerConnection.$GodotRTCPeerConnection;
 
-export function getNullishErrorString(pVariableName: string): string {
-	return `\`${pVariableName}\` is null or undefined.`;
-}
-
-export function getMaxUInt16(): number {
-	// 65535.
-	return (1 << 16) - 1;
-}
+export * from "@godotengine/emscripten-library-base/external";

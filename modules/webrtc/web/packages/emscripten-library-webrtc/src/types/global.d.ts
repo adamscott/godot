@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  index.ts                                                              */
+/*  global.d.ts                                                           */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,17 +28,10 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import type { AnyFunction } from "#/types/index.js";
-
-export function convertFunctionToIifeString(pFunction: AnyFunction): string {
-	return `(${pFunction.toString()})()`;
+declare global {
+	interface RTCDataChannel {
+		maxRetransmitTime: number | null;
+	}
 }
 
-export function getNullishErrorString(pVariableName: string): string {
-	return `\`${pVariableName}\` is null or undefined.`;
-}
-
-export function getMaxUInt16(): number {
-	// 65535.
-	return (1 << 16) - 1;
-}
+export {};

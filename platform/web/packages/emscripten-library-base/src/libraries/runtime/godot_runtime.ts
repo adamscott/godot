@@ -67,29 +67,29 @@ import {
 import type { AnyFunction } from "@godotengine/utils/types";
 import type { TypedArray } from "@godotengine/emscripten-utils/types/browser";
 
-function getHeapValue(pPtr: CIntPointer, pType: Extract<CPointerTypeAll, "i8" | "i16" | "i32">): CInt;
-function getHeapValue(pPtr: CUintPointer, pType: Extract<CPointerTypeAll, "i8" | "i16" | "i32">): CUint;
-function getHeapValue(pPtr: CInt64Pointer, pType: Extract<CPointerTypeAll, "i64">): CInt64;
-function getHeapValue(pPtr: CFloatPointer, pType: Extract<CPointerTypeAll, "f32" | "float">): CFloat;
-function getHeapValue(pPtr: CDoublePointer, pType: Extract<CPointerTypeAll, "f64" | "double">): CDouble;
-function getHeapValue(
+function _getHeapValue(pPtr: CIntPointer, pType: Extract<CPointerTypeAll, "i8" | "i16" | "i32">): CInt;
+function _getHeapValue(pPtr: CUintPointer, pType: Extract<CPointerTypeAll, "i8" | "i16" | "i32">): CUint;
+function _getHeapValue(pPtr: CInt64Pointer, pType: Extract<CPointerTypeAll, "i64">): CInt64;
+function _getHeapValue(pPtr: CFloatPointer, pType: Extract<CPointerTypeAll, "f32" | "float">): CFloat;
+function _getHeapValue(pPtr: CDoublePointer, pType: Extract<CPointerTypeAll, "f64" | "double">): CDouble;
+function _getHeapValue(
 	pPtr: CPointerAllWithoutCInt64Pointer,
 	pType: CPointerTypeAllWithoutCInt64PointerType,
 ): CTypeWithoutCInt64;
-function getHeapValue(
+function _getHeapValue(
 	pPtr: Parameters<typeof getValue>[0],
 	pType: Parameters<typeof getValue>[1],
 ): ReturnType<typeof getValue> {
 	return getValue(pPtr, pType);
 }
 
-function setHeapValue(pPtr: CIntPointer, pValue: CInt, pType: Extract<CPointerTypeAll, "i18" | "i16" | "i32">): void;
-function setHeapValue(pPtr: CUintPointer, pValue: CUint, pType: Extract<CPointerTypeAll, "i18" | "i16" | "i32">): void;
-function setHeapValue(pPtr: CInt64Pointer, pValue: CInt64, pType: Extract<CPointerTypeAll, "i64">): void;
-function setHeapValue(pPtr: CFloatPointer, pValue: CFloat, pType: Extract<CPointerTypeAll, "f32" | "float">): void;
-function setHeapValue(pPtr: CDoublePointer, pValue: CDouble, pType: Extract<CPointerTypeAll, "f64" | "double">): void;
-function setHeapValue(pPtr: CPointerAll, pValue: CType, pType: CPointerTypeAll): void;
-function setHeapValue(
+function _setHeapValue(pPtr: CIntPointer, pValue: CInt, pType: Extract<CPointerTypeAll, "i18" | "i16" | "i32">): void;
+function _setHeapValue(pPtr: CUintPointer, pValue: CUint, pType: Extract<CPointerTypeAll, "i18" | "i16" | "i32">): void;
+function _setHeapValue(pPtr: CInt64Pointer, pValue: CInt64, pType: Extract<CPointerTypeAll, "i64">): void;
+function _setHeapValue(pPtr: CFloatPointer, pValue: CFloat, pType: Extract<CPointerTypeAll, "f32" | "float">): void;
+function _setHeapValue(pPtr: CDoublePointer, pValue: CDouble, pType: Extract<CPointerTypeAll, "f64" | "double">): void;
+function _setHeapValue(pPtr: CPointerAll, pValue: CType, pType: CPointerTypeAll): void;
+function _setHeapValue(
 	pPtr: Parameters<typeof setValue>[0],
 	pValue: Parameters<typeof setValue>[1],
 	pType: Parameters<typeof setValue>[2],
@@ -97,7 +97,14 @@ function setHeapValue(
 	setValue(pPtr, pValue, pType);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- We want to be able to override `T` manually.
+function godotRuntimeMalloc<T extends CPointer>(pSize: number): T {
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Force the type to `T`, as intended.
+	return _malloc(pSize) as T;
+}
+
 export const _GodotRuntime = {
+	$GodotRuntime__deps: ["$UTF8Decoder"] as const,
 	$GodotRuntime: {
 		NULLPTR,
 		CIntError,
@@ -134,16 +141,14 @@ export const _GodotRuntime = {
 		},
 
 		// Memory.
-		malloc: (pSize: number): CPointer => {
-			return _malloc(pSize);
-		},
+		malloc: godotRuntimeMalloc,
 
 		free: (pPtr: CPointer): void => {
 			_free(pPtr);
 		},
 
-		getHeapValue,
-		setHeapValue,
+		getHeapValue: _getHeapValue,
+		setHeapValue: _setHeapValue,
 
 		heapSub: <T extends TypedArray>(pHeap: T, pPtr: CPointer, pLength: number): T => {
 			const { BYTES_PER_ELEMENT } = pHeap;
@@ -171,9 +176,9 @@ export const _GodotRuntime = {
 		},
 
 		parseStringArray: (pPtr: CCharArrayPointer, pSize: number): string[] => {
-			return Array.from(GodotRuntime.heapSub(HEAP32, pPtr, pSize)).map((pMappedPtr) =>
-				GodotRuntime.parseString(asCType<CCharPointer>(pMappedPtr)),
-			);
+			return Array.from(GodotRuntime.heapSub(HEAP32, pPtr, pSize)).map((pMappedPtr) => {
+				return GodotRuntime.parseString(asCType<CCharPointer>(pMappedPtr));
+			});
 		},
 
 		strlen: (pString: string): number => {

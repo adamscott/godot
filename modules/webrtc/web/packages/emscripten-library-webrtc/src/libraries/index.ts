@@ -28,17 +28,4 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import type { AnyFunction } from "#/types/index.js";
-
-export function convertFunctionToIifeString(pFunction: AnyFunction): string {
-	return `(${pFunction.toString()})()`;
-}
-
-export function getNullishErrorString(pVariableName: string): string {
-	return `\`${pVariableName}\` is null or undefined.`;
-}
-
-export function getMaxUInt16(): number {
-	// 65535.
-	return (1 << 16) - 1;
-}
+export * from "./webrtc/index.js";
