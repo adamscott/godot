@@ -28,152 +28,331 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
+import type { GetEventTargetEventMap, GetEventTargetListener } from "@godotengine/utils-browser/types";
 import { convertFunctionToIifeString as $convertFunctionToIifeString } from "@godotengine/utils/macros" with { type: "macro" };
-import type { AnyFunction } from "@godotengine/utils/types";
 
-class Handler {
-	target: EventTarget;
-	event: string;
-	method: AnyFunction;
-	capture: Parameters<EventTarget["addEventListener"]>[2];
+const _GodotEventListenersHandlerDefaultOptions = {
+	capture: false,
+	once: false,
+	passive: false,
+	signal: undefined,
+} as const;
+
+class _GodotEventListenersHandler<
+	ET extends EventTarget = EventTarget,
+	// Without the `Extract`, `keyof` of extended types can return `number` and `symbol`.
+	T extends Extract<keyof GetEventTargetEventMap<ET>, string> = Extract<keyof GetEventTargetEventMap<ET>, string>,
+> {
+	target: ET;
+	type: T;
+	listener: GetEventTargetListener<ET, T>;
+	options: AddEventListenerOptions;
+	_registeredMethod: typeof this.listener | undefined;
 
 	constructor(
 		pTarget: typeof this.target,
-		pEvent: typeof this.event,
-		pMethod: typeof this.method,
-		pCapture?: typeof this.capture,
+		pType: typeof this.type,
+		pListener: typeof this.listener,
+		pOptions?: boolean | typeof this.options,
 	) {
 		this.target = pTarget;
-		this.event = pEvent;
-		this.method = pMethod;
-		this.capture = pCapture;
+		this.type = pType;
+		this.listener = pListener;
+		this._registeredMethod = undefined;
+
+		if (typeof pOptions === "boolean") {
+			this.options = {
+				...GodotEventListeners._handlerDefaultOptions,
+				capture: pOptions,
+			};
+		} else {
+			this.options = {
+				...GodotEventListeners._handlerDefaultOptions,
+				...pOptions,
+			};
+		}
 	}
 
-	isSame(
-		pTarget: typeof this.target,
-		pEvent?: typeof this.event,
-		pMethod?: typeof this.method,
-		pCapture?: typeof this.capture,
-	): boolean {
-		if (this.target !== pTarget) {
+	// @ts-expect-error: If `isSame()` passes, yes, pHandler is of type `this`.
+	isSame(pHandler: _GodotEventListenersHandler): pHandler is typeof this;
+	isSame(pTarget: EventTarget, pType?: undefined, pListener?: undefined, pOptions?: undefined): boolean;
+	isSame<NET extends EventTarget, NT extends Extract<keyof GetEventTargetEventMap<NET>, string>>(
+		pTarget: NET,
+		pType?: NT,
+		pListener?: undefined,
+		pOptions?: undefined,
+	): this is _GodotEventListenersHandler<NET, NT>;
+	isSame<NET extends EventTarget, NT extends Extract<keyof GetEventTargetEventMap<NET>, string>>(
+		pTarget: NET,
+		pType?: NT,
+		pListener?: GetEventTargetListener<NET, NT>,
+		pOptions?: boolean | AddEventListenerOptions,
+	): this is _GodotEventListenersHandler<NET, NT>;
+	isSame(pTarget: unknown, pType?: unknown, pListener?: unknown, pOptions?: unknown): unknown {
+		/* eslint-disable @typescript-eslint/init-declarations -- We are initializing all values just after. */
+		let target: EventTarget | null;
+		let type: string | null;
+		let listener: EventListenerOrEventListenerObject | null;
+		let options: boolean | AddEventListenerOptions | null;
+		/* eslint-enable @typescript-eslint/init-declarations */
+
+		if (pTarget instanceof GodotEventListeners.Handler) {
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- We just checked.
+			const handler: _GodotEventListenersHandler = pTarget;
+			target = handler.target;
+			type = handler.type;
+			listener = handler.listener;
+			options = handler.options;
+		} else {
+			/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- We are casting unknown types. */
+			target = pTarget as EventTarget | null;
+			type = pType as string | null;
+			listener = pListener as EventListenerOrEventListenerObject | null;
+			options = pOptions as boolean | AddEventListenerOptions | null;
+			/* eslint-enable @typescript-eslint/no-unsafe-type-assertion */
+		}
+
+		if ((this.target as EventTarget) !== target) {
 			return false;
 		}
-		if (pEvent == null) {
+		if (type == null) {
 			return true;
 		}
-		if (this.event !== pEvent) {
+		if ((this.type as string) !== type) {
 			return false;
 		}
-		if (pMethod == null) {
+		if (listener == null) {
 			return true;
 		}
-		if (this.method !== pMethod) {
+
+		if (this.listener !== listener) {
 			return false;
 		}
-		if (pCapture == null) {
-			return true;
-		}
-		return this.isCaptureSame(pCapture);
+
+		return this.areOptionsSame(options ?? GodotEventListeners._handlerDefaultOptions);
 	}
 
-	isCaptureSame(pCapture: typeof this.capture): boolean {
-		if (pCapture == null) {
-			return this.capture == null;
+	areOptionsSame(pOptions: boolean | AddEventListenerOptions): boolean {
+		if (typeof pOptions === "boolean") {
+			return this._compareOptions({ capture: pOptions });
 		}
+		return this._compareOptions(pOptions);
+	}
 
-		if (typeof pCapture === "boolean") {
-			if (typeof this.capture !== "boolean") {
-				return false;
-			}
-			return pCapture === this.capture;
-		}
-
-		// `pCapture` is of type `AddEventListenerOptions`
-		if (typeof this.capture !== "object") {
-			return false;
-		}
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- We know the exact type.
-		const captureKeys = Object.keys(pCapture) as Array<keyof typeof pCapture>;
-		if (captureKeys.length !== Object.keys(this.capture).length) {
-			return false;
-		}
-		for (const key of captureKeys) {
-			if (pCapture[key] !== this.capture[key]) {
-				return false;
-			}
-		}
-		return true;
+	_compareOptions(pOptions: AddEventListenerOptions): boolean {
+		const defaultOptions = GodotEventListeners._handlerDefaultOptions;
+		return (
+			this.options.capture === (pOptions.capture ?? defaultOptions.capture) &&
+			this.options.once === (pOptions.once ?? defaultOptions.once) &&
+			this.options.passive === (pOptions.passive ?? defaultOptions.passive) &&
+			this.options.signal === (pOptions.signal ?? defaultOptions.signal)
+		);
 	}
 
 	addTargetEventListnener(): void {
-		this.target.addEventListener(this.event, this.method, this.capture);
+		this.target.addEventListener(
+			this.type as string,
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Yes, we know it's narrower.
+			this.listener as EventListenerOrEventListenerObject | null,
+			this.options,
+		);
 	}
 
 	removeTargetEventListener(): void {
-		this.target.removeEventListener(this.event, this.method, this.capture);
+		this.target.removeEventListener(
+			this.type as string,
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Yes, we know it's narrower.
+			this.listener as EventListenerOrEventListenerObject | null,
+			this.options,
+		);
+	}
+
+	clear(): void {
+		this.removeTargetEventListener();
 	}
 }
 
-type RemoveEventListeners = (
-	pTarget: InstanceType<typeof Handler>["target"],
-	pEvent?: InstanceType<typeof Handler>["event"],
-	pMethod?: InstanceType<typeof Handler>["method"],
-	pCapture?: InstanceType<typeof Handler>["capture"],
-) => void;
+class _GodotEventListenersHandlerMap {
+	_internalHandlerMap = new Map<
+		unknown,
+		Map<string, Set<_GodotEventListenersHandler<EventTarget, string>> | undefined> | undefined
+	>();
+
+	set<ET extends EventTarget, T extends Extract<keyof GetEventTargetEventMap<ET>, string>>(
+		pTarget: ET,
+		pType: T,
+		pHandler: _GodotEventListenersHandler<ET, T>,
+	): void {
+		let targetMap = this._internalHandlerMap.get(pTarget);
+		if (targetMap == null) {
+			targetMap = new Map();
+			this._internalHandlerMap.set(pTarget, targetMap);
+		}
+
+		let typeSetInTargetMap = targetMap.get(pType);
+		if (typeSetInTargetMap == null) {
+			typeSetInTargetMap = new Set();
+			targetMap.set(pType, typeSetInTargetMap);
+		}
+
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- We force the type for the generic container.
+		typeSetInTargetMap.add(pHandler as unknown as _GodotEventListenersHandler<EventTarget, string>);
+	}
+
+	get<ET extends EventTarget, T extends Extract<keyof GetEventTargetEventMap<ET>, string>>(
+		pTarget: ET,
+		pType: T,
+		pListener: GetEventTargetListener<ET, T>,
+		pOptions?: boolean | AddEventListenerOptions,
+	): _GodotEventListenersHandler<ET, T> | null {
+		const targetMap = this._internalHandlerMap.get(pTarget);
+		if (targetMap == null) {
+			return null;
+		}
+
+		const typeSetInTargetMap = targetMap.get(pType);
+		if (typeSetInTargetMap == null) {
+			return null;
+		}
+
+		for (const handler of typeSetInTargetMap) {
+			if (handler.isSame(pTarget, pType, pListener, pOptions)) {
+				return handler;
+			}
+		}
+
+		return null;
+	}
+
+	has<ET extends EventTarget, T extends Extract<keyof GetEventTargetEventMap<ET>, string>>(
+		pTarget: ET,
+		pType: T,
+		pListener: GetEventTargetListener<ET, T>,
+		pOptions?: boolean | AddEventListenerOptions,
+	): boolean {
+		return this.get(pTarget, pType, pListener, pOptions) != null;
+	}
+
+	remove<ET extends EventTarget, T extends Extract<keyof GetEventTargetEventMap<ET>, string>>(
+		pTarget: ET,
+		pType?: T,
+		pListener?: GetEventTargetListener<ET, T>,
+		pOptions?: boolean | AddEventListenerOptions,
+	): void {
+		for (const [target, targetMap] of this._internalHandlerMap.entries()) {
+			if (targetMap == null) {
+				continue;
+			}
+			for (const [type, handlerSet] of targetMap.entries()) {
+				if (handlerSet == null) {
+					continue;
+				}
+				for (const handler of handlerSet) {
+					if (handler.isSame(pTarget, pType, pListener, pOptions)) {
+						handlerSet.delete(handler);
+						handler.clear();
+					}
+				}
+				if (handlerSet.size === 0) {
+					targetMap.delete(type);
+				}
+			}
+			if (targetMap.size === 0) {
+				this._internalHandlerMap.delete(target);
+			}
+		}
+	}
+
+	clear(): void {
+		for (const [_target, targetMap] of this._internalHandlerMap.entries()) {
+			if (targetMap == null) {
+				continue;
+			}
+			for (const [_type, handlerSet] of targetMap.entries()) {
+				if (handlerSet == null) {
+					continue;
+				}
+				for (const handler of handlerSet) {
+					handler.clear();
+				}
+				handlerSet.clear();
+			}
+			targetMap.clear();
+		}
+		this._internalHandlerMap.clear();
+	}
+
+	*[Symbol.iterator](): Generator<_GodotEventListenersHandler> {
+		for (const [_target, targetMap] of this._internalHandlerMap.entries()) {
+			if (targetMap == null) {
+				continue;
+			}
+			for (const [_type, handlerSet] of targetMap.entries()) {
+				if (handlerSet == null) {
+					continue;
+				}
+				for (const handler of handlerSet) {
+					yield handler;
+				}
+			}
+		}
+	}
+}
 
 export const _GodotEventListeners = {
 	$GodotEventListeners__deps: ["$GodotOS"] as const,
 	$GodotEventListeners__postset: $convertFunctionToIifeString(() => {
+		GodotEventListeners.handlers = new GodotEventListeners.HandlerMap();
 		GodotOS.atExit(async () => {
 			GodotEventListeners.clear();
 		});
 	}),
 	$GodotEventListeners: {
-		handlers: [] as Handler[],
-		Handler,
+		Handler: _GodotEventListenersHandler,
+		_handlerDefaultOptions: _GodotEventListenersHandlerDefaultOptions,
+		HandlerMap: _GodotEventListenersHandlerMap,
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- We're setting it in the postset.
+		handlers: null as unknown as InstanceType<typeof _GodotEventListenersHandlerMap>,
 
-		has: (
-			pTarget: InstanceType<typeof Handler>["target"],
-			pEvent: InstanceType<typeof Handler>["event"],
-			pMethod: InstanceType<typeof Handler>["method"],
-			pCapture?: InstanceType<typeof Handler>["capture"],
+		has: <ET extends EventTarget, T extends Extract<keyof GetEventTargetEventMap<ET>, string>>(
+			pTarget: ET,
+			pType: T,
+			pListener: GetEventTargetListener<ET, T>,
+			pCapture?: boolean | AddEventListenerOptions,
 		): boolean => {
-			return (
-				GodotEventListeners.handlers.findIndex((pHandler) => {
-					return pHandler.isSame(pTarget, pEvent, pMethod, pCapture);
-				}) !== -1
-			);
+			for (const handler of GodotEventListeners.handlers) {
+				if (handler.isSame(pTarget, pType, pListener, pCapture)) {
+					return true;
+				}
+			}
+			return false;
 		},
 
-		add: (
-			pTarget: InstanceType<typeof Handler>["target"],
-			pEvent: InstanceType<typeof Handler>["event"],
-			pMethod: InstanceType<typeof Handler>["method"],
-			pCapture?: InstanceType<typeof Handler>["capture"],
+		add: <ET extends EventTarget, T extends Extract<keyof GetEventTargetEventMap<ET>, string>>(
+			pTarget: ET,
+			pType: T,
+			pListener: GetEventTargetListener<ET, T>,
+			pOptions?: boolean | AddEventListenerOptions,
 		): void => {
-			if (GodotEventListeners.has(pTarget, pEvent, pMethod, pCapture)) {
+			if (GodotEventListeners.has(pTarget, pType, pListener, pOptions)) {
 				return;
 			}
-			const handler = new GodotEventListeners.Handler(pTarget, pEvent, pMethod, pCapture);
-			GodotEventListeners.handlers.push(handler);
+			const handler = new GodotEventListeners.Handler(pTarget, pType, pListener, pOptions);
+			GodotEventListeners.handlers.set(pTarget, pType, handler);
 			handler.addTargetEventListnener();
 		},
 
-		remove: ((pTarget, pEvent, pMethod, pCapture) => {
-			GodotEventListeners.handlers = GodotEventListeners.handlers.filter((pHandler) => {
-				if (pHandler.isSame(pTarget, pEvent, pMethod, pCapture)) {
-					pHandler.removeTargetEventListener();
-					return false;
-				}
-				return true;
-			});
-		}) as RemoveEventListeners,
+		remove: <ET extends EventTarget, T extends Extract<keyof GetEventTargetEventMap<ET>, string>>(
+			pTarget: ET,
+			pType?: T,
+			pListener?: GetEventTargetListener<ET, T>,
+			pOptions?: boolean | AddEventListenerOptions,
+		): void => {
+			GodotEventListeners.handlers.remove(pTarget, pType, pListener, pOptions);
+		},
 
 		clear: (): void => {
-			for (const handler of GodotEventListeners.handlers) {
-				handler.removeTargetEventListener();
-			}
-			GodotEventListeners.handlers.length = 0;
+			GodotEventListeners.handlers.clear();
 		},
 	},
 };

@@ -49,7 +49,7 @@ import {
 } from "ts-morph";
 import { generateDisableEslintComment, generateDoNotModifyByHand, generateHeader } from "./header.js";
 import { basename } from "node:path";
-import { isFile } from "@godotengine/node-utils/fs";
+import { isFile } from "@godotengine/utils-node/fs";
 import { rm } from "node:fs/promises";
 
 interface ModuleData {

@@ -1,5 +1,5 @@
 {
-	"name": "@godotengine/node-utils",
+	"name": "@godotengine/utils-browser",
 	"private": true,
 	"type": "module",
 	"scripts": {
@@ -8,15 +8,17 @@
 	},
 	"exports": {
 		".": "./dist/index.js",
-		"./fs": "./dist/fs/index.js",
+		"./types": "./dist/types/index.js",
 		"./package.json": "./package.json"
 	},
 	"types": "./dist/index.d.ts",
 	"devDependencies": {
 		"@godotengine/config-eslint": "workspace:^",
-		"@godotengine/config-tsconfig-node": "workspace:^",
+		"@godotengine/config-prettier": "workspace:^",
+		"@godotengine/config-tsconfig-browser": "workspace:^",
 		"@godotengine/config-tsconfig-tools": "workspace:^",
 		"@godotengine/config-tsdown": "workspace:^",
+		"@types/webxr": "^0.5.24",
 		"eslint": "^9.39.2",
 		"prettier": "3.8.1",
 		"shx": "^0.4.0",
@@ -24,5 +26,8 @@
 		"tsdown": "^0.20.1",
 		"turbo": "^2.8.1",
 		"typescript": "^5.9.3"
+	},
+	"peerDependencies": {
+		"@types/webxr": "^0.5.24"
 	}
 }

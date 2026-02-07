@@ -34,7 +34,7 @@ export async function isFile(pFilePath: string): Promise<boolean> {
 	try {
 		const stats = await stat(pFilePath);
 		return stats.isFile();
-	} catch (eError) {
+	} catch (_eError: unknown) {
 		return false;
 	}
 }

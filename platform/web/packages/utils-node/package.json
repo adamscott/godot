@@ -1,5 +1,5 @@
 {
-	"name": "@godotengine/external-global-d-ts-builder",
+	"name": "@godotengine/utils-node",
 	"private": true,
 	"type": "module",
 	"scripts": {
@@ -8,20 +8,11 @@
 	},
 	"exports": {
 		".": "./dist/index.js",
-		"./command": "./dist/command/index.js",
+		"./fs": "./dist/fs/index.js",
 		"./package.json": "./package.json"
 	},
 	"types": "./dist/index.d.ts",
-	"bin": {
-		"external-global-d-ts-builder": "./dist/command/index.js"
-	},
-	"dependencies": {
-		"@godotengine/utils-node": "workspace:^",
-		"commander": "^14.0.3",
-		"dedent": "^1.7.1"
-	},
 	"devDependencies": {
-		"@commander-js/extra-typings": "^14.0.0",
 		"@godotengine/config-eslint": "workspace:^",
 		"@godotengine/config-prettier": "workspace:^",
 		"@godotengine/config-tsconfig-node": "workspace:^",
@@ -30,8 +21,6 @@
 		"eslint": "^9.39.2",
 		"prettier": "3.8.1",
 		"shx": "^0.4.0",
-		"stylelint": "^17.1.0",
-		"ts-morph": "^27.0.2",
 		"tsc-alias": "^1.8.16",
 		"tsdown": "^0.20.1",
 		"turbo": "^2.8.1",

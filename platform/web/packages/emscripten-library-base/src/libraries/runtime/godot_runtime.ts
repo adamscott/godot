@@ -104,7 +104,6 @@ function godotRuntimeMalloc<T extends CPointer>(pSize: number): T {
 }
 
 export const _GodotRuntime = {
-	$GodotRuntime__deps: ["$UTF8Decoder"] as const,
 	$GodotRuntime: {
 		NULLPTR,
 		CIntError,
@@ -121,7 +120,6 @@ export const _GodotRuntime = {
 		fromCTypeToBoolean,
 		fromCTypeToNumber,
 
-		//
 		getFunction: <T extends CFunctionPointer<AnyFunction>>(pPtr: T): CFunctionPointerExtract<T> => {
 			const func = wasmTable.get(pPtr);
 			if (func == null) {

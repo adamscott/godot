@@ -34,7 +34,7 @@ import { rm, writeFile } from "node:fs/promises";
 import browserslist from "browserslist";
 import esbuild from "esbuild";
 import { esbuildPluginBrowserslist } from "esbuild-plugin-browserslist";
-import { isFile } from "@godotengine/node-utils/fs";
+import { isFile } from "@godotengine/utils-node/fs";
 import { program } from "@commander-js/extra-typings";
 
 async function createPreBundleFile(pPreBundlePath: string, pImports: string[]): Promise<void> {

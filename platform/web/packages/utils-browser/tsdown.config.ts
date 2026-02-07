@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  index.ts                                                              */
+/*  tsdown.config.ts                                                      */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,35 +28,10 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import { chdir, cwd } from "node:process";
-import { buildGlobalDTs } from "#/builder/index.js";
-import { isFile } from "@godotengine/utils-node/fs";
-import { program } from "@commander-js/extra-typings";
-import { resolve } from "node:path";
+import baseConfig from "@godotengine/config-tsdown";
+import { defineConfig } from "tsdown";
 
-program
-	.name("external-global-d-ts-builder")
-	.description("CLI to compile an external_global.d.ts file.")
-	.option("-o, --out <path>", "Path of the output file. (relative to cwd)", "./src/types/external_global.d.ts")
-	.option("-c, --tsconfig <path>", "Path of the tsconfig.json file. (relative to cwd)", "./tsconfig.json")
-	.option("-d, --cwd <path>", "Working directory (cwd).")
-	.argument("<module...>", "Modules to import externals from.")
-	.action(async (pModules, pOptions) => {
-		const cwdArg = pOptions.cwd;
-		if (cwdArg != null) {
-			chdir(cwdArg);
-		}
-
-		if (!(await isFile(resolve(cwd(), "package.json")))) {
-			// eslint-disable-next-line no-console -- We're in a node env.
-			console.error(`Did not find package.json in the cwd ("${cwd()}"), cannot run.`);
-		}
-
-		const projectRootPath = cwd();
-		const tsConfigPath = resolve(projectRootPath, pOptions.tsconfig);
-		const targetFilePath = resolve(projectRootPath, pOptions.out);
-
-		await buildGlobalDTs(tsConfigPath, targetFilePath, pModules);
-	});
-
-program.parse();
+export default defineConfig({
+	...baseConfig,
+	entry: ["src/index.ts", "src/types/index.ts"],
+});

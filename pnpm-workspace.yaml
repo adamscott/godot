@@ -3,7 +3,13 @@ packages:
   - ./modules/**/web/packages/*
 
 onlyBuiltDependencies:
-  - '@parcel/watcher'
+  - "@parcel/watcher"
   - esbuild
 
+publicHoistPattern:
+  - "@types/*"
+
 linkWorkspacePackages: true
+autoInstallPeers: true
+preferFrozenLockfile: true
+recursiveInstall: true

@@ -49,7 +49,7 @@ export declare const _free: (pPtr: CPointer) => void;
 
 export declare const getValue: (pPtr: CPointerAll, pType: CPointerTypeAll) => number | bigint;
 export declare const setValue: (pPtr: CPointerAll, pValue: number | bigint, pType: CPointerTypeAll) => void;
-export declare const UTF8ToString: (pPtr: CPointer, pLength?: number) => string;
+export declare const UTF8ToString: (pPtr: CPointer, pMaxBytesToRead?: number, pIgnoreNul?: boolean) => string;
 export declare const lengthBytesUTF8: (pString: string) => number;
 export declare const stringToUTF8: (pString: string, pStringPtr: CPointer, pLength: number) => number;
 export declare const stringToUTF8Array: (
