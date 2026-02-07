@@ -1,6 +1,7 @@
 packages:
   - ./platform/web/packages/*
   - ./modules/**/web/packages/*
+  - ./platform/web/  # legacy
 
 onlyBuiltDependencies:
   - "@parcel/watcher"

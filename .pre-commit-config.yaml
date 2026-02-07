@@ -104,11 +104,33 @@ repos:
         files: ^(doc/classes|.*/doc_classes)/.*\.xml$
         additional_dependencies: [xmlschema]
 
+      - id: eslint-legacy
+        name: eslint-legacy
+        language: node
+        entry: eslint
+        files: ^(platform/web/js/|misc/dist/html/).*\.(js|html)$
+        args:
+          - --fix
+          - --no-warn-ignored
+          - --no-config-lookup
+          - --config
+          - platform/web/eslint.config.cjs
+        additional_dependencies:
+          - "@eslint/js@^9.3.0"
+          - "@html-eslint/eslint-plugin@^0.24.1"
+          - "@html-eslint/parser@^0.24.1"
+          - "@stylistic/eslint-plugin@^2.1.0"
+          - eslint@^9.3.0
+          - eslint-plugin-html@^8.1.1
+          - globals@^15.3.0
+          - espree@^10.0.1
+
       - id: eslint
         name: eslint
         language: node
         entry: node
         files: ^.*\.(m?js|m?ts|html)$
+        exclude: (?:^(platform/web/js/|misc/dist/html/).*\.(js|html)$)
         require_serial: true
         args:
           - misc/scripts/run_pnpm.mjs
@@ -125,6 +147,7 @@ repos:
         language: node
         entry: node
         files: ^.*\.(m?js|m?ts|html|s?css|ya?ml|json)$
+        exclude: (?:^pnpm-(?:lock|workspace)\.yaml|package-lock\.json|^(platform/web/js/|misc/dist/html/).*\.(js|html)$)$
         require_serial: true
         args:
           - misc/scripts/run_pnpm.mjs
@@ -134,13 +157,13 @@ repos:
           - --cache
           - --
         additional_dependencies: ["corepack@^0.34.6"]
-        exclude: (?:^pnpm-(?:lock|workspace)\.yaml)$
 
       - id: stylelint
         name: stylelint
         language: node
         entry: node
         files: ^.*\.(s?css|html)$
+        exclude: (?:^pnpm-(?:lock|workspace)\.yaml|^(platform/web/js/|misc/dist/html/).*\.(html)$)$
         require_serial: true
         args:
           - misc/scripts/run_pnpm.mjs
