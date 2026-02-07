@@ -17,6 +17,7 @@
 	"types": "./dist/index.d.ts",
 	"devDependencies": {
 		"@godotengine/config-eslint": "workspace:^",
+		"@godotengine/config-prettier": "workspace:^",
 		"@godotengine/config-tsconfig-browser": "workspace:^",
 		"@godotengine/config-tsconfig-tools": "workspace:^",
 		"@godotengine/config-tsdown": "workspace:^",

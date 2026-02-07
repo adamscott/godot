@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  typescript.ts                                                         */
+/*  types.ts                                                              */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,28 +28,26 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-export interface PrimitiveMap {
-	string: string;
-	number: number;
-	boolean: boolean;
-	bigint: bigint;
-	symbol: symbol;
-	undefined: undefined;
-	object: object | null;
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- We want to explicitly test the primitive.
-	function: Function;
+import type { FixedLengthArray } from "@godotengine/utils/types";
+
+// https://developer.mozilla.org/en-US/docs/Web/API/AudioWorkletProcessor/parameterDescriptors_static#value
+export interface AudioParamDescriptor {
+	name: string;
+	automationRate?: "a-rate" | "k-rate";
+	minValue?: number;
+	maxValue?: number;
+	defaultValue?: number;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- We want to test any constructor.
-export type Constructor<T> = new (...args: any[]) => T;
+// https://developer.mozilla.org/en-US/docs/Web/API/AudioWorkletProcessor/AudioWorkletProcessor#options
+export interface AudioWorkletProcessorConstructorOptions<NO extends number = number> {
+	numberOfInputs?: number;
+	numberOfOutputs?: NO;
+	outputChannelCount?: FixedLengthArray<number, NO>;
+	parameterData?: Record<AudioParamDescriptor["name"], Omit<AudioParamDescriptor, "name">>;
+	processorOptions?: unknown;
+}
 
-// See https://stackoverflow.com/a/59906630.
-type ArrayLengthMutationKeys = "splice" | "push" | "pop" | "shift" | "unshift";
-export type FixedLengthArray<T, L extends number, TObj = [T, ...T[]]> = Pick<
-	TObj,
-	Exclude<keyof TObj, ArrayLengthMutationKeys>
-> & {
-	readonly length: L;
-	[I: number]: T;
-	[Symbol.iterator]: () => IterableIterator<T>;
-};
+export type Channel = Float32Array<ArrayBuffer>;
+export type Input = Channel[];
+export type Output = Channel[];

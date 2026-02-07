@@ -1,0 +1,13 @@
+{
+	"extends": "@godotengine/config-tsconfig-browser-workers",
+	"compilerOptions": {
+		"baseUrl": ".",
+		"rootDir": "./src",
+		"outDir": "./dist",
+		"paths": {
+			"#/*": ["./src/*"]
+		},
+		"types": ["audioworklet"]
+	},
+	"include": ["./src/workers/audio/**/*", "./src/shared/**/*"]
+}

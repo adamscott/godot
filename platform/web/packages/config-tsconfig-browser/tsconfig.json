@@ -3,7 +3,7 @@
 	"compilerOptions": {
 		"baseUrl": ".",
 		"module": "nodenext",
-		"lib": ["DOM", "DOM.AsyncIterable", "DOM.Iterable", "ES2022"],
+		"lib": ["DOM", "DOM.Iterable", "DOM.AsyncIterable", "ES2024"],
 		"types": ["webxr"]
 	}
 }

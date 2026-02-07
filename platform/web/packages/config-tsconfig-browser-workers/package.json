@@ -1,0 +1,31 @@
+{
+	"name": "@godotengine/config-tsconfig-browser-workers",
+	"type": "module",
+	"files": [
+		"./tsconfig.json"
+	],
+	"devDependencies": {
+		"@godotengine/config-tsconfig-browser": "workspace:^",
+		"@types/audioworklet": "^0.0.94",
+		"@types/serviceworker": "^0.0.183",
+		"@types/sharedworker": "^0.0.212",
+		"@types/webxr": "^0.5.24",
+		"turbo": "^2.8.1"
+	},
+	"peerDependencies": {
+		"@types/audioworklet": "^0.0.94",
+		"@types/serviceworker": "^0.0.183",
+		"@types/sharedworker": "^0.0.212"
+	},
+	"peerDependenciesMeta": {
+		"@types/audioworklet": {
+			"optional": false
+		},
+		"@types/serviceworker": {
+			"optional": false
+		},
+		"@types/sharedworker": {
+			"optional": false
+		}
+	}
+}

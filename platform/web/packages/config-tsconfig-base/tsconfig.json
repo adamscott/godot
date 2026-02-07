@@ -11,15 +11,16 @@
 		"incremental": true,
 		"isolatedModules": true,
 		"isolatedDeclarations": false,
+		"lib": ["ES2024"],
+		"module": "nodenext",
+		"moduleDetection": "auto",
+		"moduleResolution": "nodenext",
+		"noImplicitAny": true,
 		"strictNullChecks": true,
 		"strictFunctionTypes": true,
 		"strict": true,
 		"sourceMap": false,
 		"skipLibCheck": true,
-		"target": "ES2024",
-		"module": "nodenext",
-		"moduleDetection": "auto",
-		"moduleResolution": "nodenext",
-		"noImplicitAny": true
+		"target": "ES2024"
 	}
 }

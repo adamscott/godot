@@ -6,9 +6,9 @@
 		"outDir": "./dist",
 		"paths": {
 			"#/*": ["./src/*"]
-		},
-		"types": ["webxr"]
+		}
 	},
-	"references": [{ "path": "./tsconfig.tools.json" }],
-	"include": ["./src/**/*"]
+	"references": [{ "path": "./tsconfig.tools.json" }, { "path": "./tsconfig.audio.json" }],
+	"include": ["./src/**/*", "./src/shared/**/*"],
+	"exclude": ["./src/workers/**/*"]
 }

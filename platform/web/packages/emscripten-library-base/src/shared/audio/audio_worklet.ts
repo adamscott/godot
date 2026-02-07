@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  typescript.ts                                                         */
+/*  audio_worklet.ts                                                      */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,28 +28,17 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-export interface PrimitiveMap {
-	string: string;
-	number: number;
-	boolean: boolean;
-	bigint: bigint;
-	symbol: symbol;
-	undefined: undefined;
-	object: object | null;
-	// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- We want to explicitly test the primitive.
-	function: Function;
+export interface GodotAudioWorkletPostDataMap {
+	chunk: Float32Array;
+	start: [pState: Int32Array, pInput: Float32Array, pOutput: Float32Array];
+	start_nothreads: [pInput: Float32Array, pInputSize: number];
+	stop: null;
+	read: number;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- We want to test any constructor.
-export type Constructor<T> = new (...args: any[]) => T;
-
-// See https://stackoverflow.com/a/59906630.
-type ArrayLengthMutationKeys = "splice" | "push" | "pop" | "shift" | "unshift";
-export type FixedLengthArray<T, L extends number, TObj = [T, ...T[]]> = Pick<
-	TObj,
-	Exclude<keyof TObj, ArrayLengthMutationKeys>
-> & {
-	readonly length: L;
-	[I: number]: T;
-	[Symbol.iterator]: () => IterableIterator<T>;
-};
+export type GodotAudioWorkletPostMessage = {
+	[K in keyof GodotAudioWorkletPostDataMap]: {
+		command: K;
+		data: GodotAudioWorkletPostDataMap[K];
+	};
+}[keyof GodotAudioWorkletPostDataMap];
