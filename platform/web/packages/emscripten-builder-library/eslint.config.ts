@@ -28,9 +28,8 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import { defineConfig } from "eslint/config";
-
 import baseConfig from "@godotengine/config-eslint";
+import { defineConfig } from "eslint/config";
 
 export default defineConfig([
 	{

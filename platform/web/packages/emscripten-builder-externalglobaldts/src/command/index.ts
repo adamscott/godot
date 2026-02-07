@@ -28,94 +28,35 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-import { basename, dirname, resolve } from "node:path";
 import { chdir, cwd } from "node:process";
-import { rm, writeFile } from "node:fs/promises";
-import browserslist from "browserslist";
-import esbuild from "esbuild";
-import { esbuildPluginBrowserslist } from "esbuild-plugin-browserslist";
+import { buildGlobalDTs } from "#/builder/index.js";
 import { isFile } from "@godotengine/utils-node/fs";
 import { program } from "@commander-js/extra-typings";
-
-async function createPreBundleFile(pPreBundlePath: string, pImports: string[]): Promise<void> {
-	const bundleContent = `${pImports
-		.map((pImport) => {
-			return `import "${pImport}";`.replaceAll("#", ".");
-		})
-		.join("\n")}\n`;
-	await writeFile(pPreBundlePath, bundleContent, {
-		encoding: "utf-8",
-		flag: "w",
-	});
-}
+import { resolve } from "node:path";
 
 program
-	.name("emscripten-builder")
-	.description("CLI to compile a emscripten library")
-	.option("-n, --name <name>", "Name to give to the generated bundle file.")
-	.option(
-		"-o, --outdir <path>",
-		"Path of the output directory (usually the one with compiled JS files in it).",
-		"./dist/",
-	)
-	.option("-d, --cwd <path>", "Working directory.")
-	.option(
-		"-e, --external <module>",
-		"External JS module. (repeatable)",
-		(pValue, pPrevious) => {
-			return pPrevious.concat([pValue]);
-		},
-		[] as string[],
-	)
-	.argument("<imports...>")
-	.action(async (imports, options) => {
-		const cwdArg = options.cwd;
+	.name("emscripten-builder-externalglobaldts")
+	.description("CLI to compile an external_global.d.ts file.")
+	.option("-o, --out <path>", "Path of the output file. (relative to cwd)", "./src/types/external_global.d.ts")
+	.option("-c, --tsconfig <path>", "Path of the tsconfig.json file. (relative to cwd)", "./tsconfig.json")
+	.option("-d, --cwd <path>", "Working directory (cwd).")
+	.argument("<module...>", "Modules to import externals from.")
+	.action(async (pModules, pOptions) => {
+		const cwdArg = pOptions.cwd;
 		if (cwdArg != null) {
 			chdir(cwdArg);
 		}
 
-		const packageJsonPath = resolve(cwd(), "package.json");
-		if (!(await isFile(packageJsonPath))) {
+		if (!(await isFile(resolve(cwd(), "package.json")))) {
 			// eslint-disable-next-line no-console -- We're in a node env.
 			console.error(`Did not find package.json in the cwd ("${cwd()}"), cannot run.`);
 		}
 
-		const packageDirName = basename(dirname(packageJsonPath));
-		const name = options.name ?? packageDirName;
-		const bundlePath = resolve(options.outdir, `${name}.js`);
-		const preBundlePath = resolve(options.outdir, `${name}__pre-bundle.js`);
+		const projectRootPath = cwd();
+		const tsConfigPath = resolve(projectRootPath, pOptions.tsconfig);
+		const targetFilePath = resolve(projectRootPath, pOptions.out);
 
-		await createPreBundleFile(preBundlePath, imports);
-
-		await esbuild.build({
-			entryPoints: [preBundlePath],
-			bundle: true,
-			format: "esm",
-			outfile: bundlePath,
-			external: options.external,
-			treeShaking: true,
-			// minify: true,
-			sourcemap: true,
-			plugins: [
-				esbuildPluginBrowserslist(
-					browserslist([
-						"last 2 chrome major versions and last 1 year",
-						"last 2 and_chr major versions and last 1 year",
-						"last 2 safari major versions and last 1 year",
-						"last 2 ios_saf major versions and last 1 year",
-						"last 2 firefox major versions and last 1 year, firefox esr",
-						"last 2 and_ff major versions and last 1 year",
-						"last 2 edge major versions and last 1 year",
-						"last 2 samsung major versions and last 1 year",
-					]),
-					{
-						printUnknownTargets: false,
-					},
-				),
-			],
-		});
-
-		await rm(preBundlePath);
+		await buildGlobalDTs(tsConfigPath, targetFilePath, pModules);
 	});
 
 program.parse();

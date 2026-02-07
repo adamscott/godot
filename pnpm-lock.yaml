@@ -36,15 +36,15 @@ importers:
       '@godotengine/config-tsdown':
         specifier: workspace:^
         version: link:../../../../../platform/web/packages/config-tsdown
-      '@godotengine/emscripten-builder':
+      '@godotengine/emscripten-builder-library':
         specifier: workspace:^
-        version: link:../../../../../platform/web/packages/emscripten-builder
+        version: link:../../../../../platform/web/packages/emscripten-builder-library
       '@godotengine/emscripten-utils':
         specifier: workspace:^
         version: link:../../../../../platform/web/packages/emscripten-utils
-      '@godotengine/external-global-d-ts-builder':
+      '@godotengine/emscripten-builder-externalglobaldts':
         specifier: workspace:^
-        version: link:../../../../../platform/web/packages/external-global-d-ts-builder
+        version: link:../../../../../platform/web/packages/emscripten-builder-externalglobaldts
       '@godotengine/utils':
         specifier: workspace:^
         version: link:../../../../../platform/web/packages/utils
@@ -103,15 +103,15 @@ importers:
       '@godotengine/config-tsdown':
         specifier: workspace:^
         version: link:../../../../../platform/web/packages/config-tsdown
-      '@godotengine/emscripten-builder':
+      '@godotengine/emscripten-builder-library':
         specifier: workspace:^
-        version: link:../../../../../platform/web/packages/emscripten-builder
+        version: link:../../../../../platform/web/packages/emscripten-builder-library
       '@godotengine/emscripten-utils':
         specifier: workspace:^
         version: link:../../../../../platform/web/packages/emscripten-utils
-      '@godotengine/external-global-d-ts-builder':
+      '@godotengine/emscripten-builder-externalglobaldts':
         specifier: workspace:^
-        version: link:../../../../../platform/web/packages/external-global-d-ts-builder
+        version: link:../../../../../platform/web/packages/emscripten-builder-externalglobaldts
       '@godotengine/utils':
         specifier: workspace:^
         version: link:../../../../../platform/web/packages/utils
@@ -164,15 +164,15 @@ importers:
       '@godotengine/config-tsdown':
         specifier: workspace:^
         version: link:../../../../../platform/web/packages/config-tsdown
-      '@godotengine/emscripten-builder':
+      '@godotengine/emscripten-builder-library':
         specifier: workspace:^
-        version: link:../../../../../platform/web/packages/emscripten-builder
+        version: link:../../../../../platform/web/packages/emscripten-builder-library
       '@godotengine/emscripten-utils':
         specifier: workspace:^
         version: link:../../../../../platform/web/packages/emscripten-utils
-      '@godotengine/external-global-d-ts-builder':
+      '@godotengine/emscripten-builder-externalglobaldts':
         specifier: workspace:^
-        version: link:../../../../../platform/web/packages/external-global-d-ts-builder
+        version: link:../../../../../platform/web/packages/emscripten-builder-externalglobaldts
       '@godotengine/utils':
         specifier: workspace:^
         version: link:../../../../../platform/web/packages/utils
@@ -448,7 +448,7 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  platform/web/packages/emscripten-builder:
+  platform/web/packages/emscripten-builder-library:
     dependencies:
       '@godotengine/emscripten-utils':
         specifier: workspace:^
@@ -533,12 +533,12 @@ importers:
       '@godotengine/config-tsdown':
         specifier: workspace:^
         version: link:../config-tsdown
-      '@godotengine/emscripten-builder':
+      '@godotengine/emscripten-builder-library':
         specifier: workspace:^
-        version: link:../emscripten-builder
-      '@godotengine/external-global-d-ts-builder':
+        version: link:../emscripten-builder-library
+      '@godotengine/emscripten-builder-externalglobaldts':
         specifier: workspace:^
-        version: link:../external-global-d-ts-builder
+        version: link:../emscripten-builder-externalglobaldts
       '@godotengine/utils':
         specifier: workspace:^
         version: link:../utils
@@ -615,15 +615,15 @@ importers:
       '@godotengine/config-tsdown':
         specifier: workspace:^
         version: link:../config-tsdown
-      '@godotengine/emscripten-builder':
+      '@godotengine/emscripten-builder-library':
         specifier: workspace:^
-        version: link:../emscripten-builder
+        version: link:../emscripten-builder-library
       '@godotengine/emscripten-utils':
         specifier: workspace:^
         version: link:../emscripten-utils
-      '@godotengine/external-global-d-ts-builder':
+      '@godotengine/emscripten-builder-externalglobaldts':
         specifier: workspace:^
-        version: link:../external-global-d-ts-builder
+        version: link:../emscripten-builder-externalglobaldts
       '@godotengine/utils':
         specifier: workspace:^
         version: link:../utils
@@ -676,15 +676,15 @@ importers:
       '@godotengine/config-tsdown':
         specifier: workspace:^
         version: link:../config-tsdown
-      '@godotengine/emscripten-builder':
+      '@godotengine/emscripten-builder-library':
         specifier: workspace:^
-        version: link:../emscripten-builder
+        version: link:../emscripten-builder-library
       '@godotengine/emscripten-utils':
         specifier: workspace:^
         version: link:../emscripten-utils
-      '@godotengine/external-global-d-ts-builder':
+      '@godotengine/emscripten-builder-externalglobaldts':
         specifier: workspace:^
-        version: link:../external-global-d-ts-builder
+        version: link:../emscripten-builder-externalglobaldts
       '@godotengine/utils':
         specifier: workspace:^
         version: link:../utils
@@ -727,9 +727,9 @@ importers:
       '@godotengine/config-tsdown':
         specifier: workspace:^
         version: link:../config-tsdown
-      '@godotengine/external-global-d-ts-builder':
+      '@godotengine/emscripten-builder-externalglobaldts':
         specifier: workspace:^
-        version: link:../external-global-d-ts-builder
+        version: link:../emscripten-builder-externalglobaldts
       '@godotengine/utils':
         specifier: workspace:^
         version: link:../utils
@@ -758,7 +758,7 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  platform/web/packages/external-global-d-ts-builder:
+  platform/web/packages/emscripten-builder-externalglobaldts:
     dependencies:
       '@godotengine/utils-node':
         specifier: workspace:^
