@@ -569,6 +569,12 @@ Ref<ResourceLoader::LoadToken> ResourceLoader::_load_start(const String &p_path,
 
 	bool ignoring_cache = p_cache_mode == ResourceFormatLoader::CACHE_MODE_IGNORE || p_cache_mode == ResourceFormatLoader::CACHE_MODE_IGNORE_DEEP;
 
+	LoadThreadMode thread_mode =
+#ifdef THREADS_ENABLED
+			p_thread_mode;
+#else
+			LOAD_THREAD_FROM_CURRENT;
+#endif // THREADS_ENABLED
 	Ref<LoadToken> load_token;
 	bool must_not_register = false;
 	ThreadLoadTask *load_task_ptr = nullptr;
@@ -612,7 +618,7 @@ Ref<ResourceLoader::LoadToken> ResourceLoader::_load_start(const String &p_path,
 			load_task.local_path = local_path;
 			load_task.type_hint = p_type_hint;
 			load_task.cache_mode = p_cache_mode;
-			load_task.use_sub_threads = p_thread_mode == LOAD_THREAD_DISTRIBUTE;
+			load_task.use_sub_threads = thread_mode == LOAD_THREAD_DISTRIBUTE;
 			if (p_cache_mode == ResourceFormatLoader::CACHE_MODE_REUSE) {
 				Ref<Resource> existing = ResourceCache::get_ref(local_path);
 				if (existing.is_valid()) {
@@ -643,7 +649,7 @@ Ref<ResourceLoader::LoadToken> ResourceLoader::_load_start(const String &p_path,
 		// the token anymore so it's released.
 		load_task_ptr->load_token->reference();
 
-		if (p_thread_mode == LOAD_THREAD_FROM_CURRENT) {
+		if (thread_mode == LOAD_THREAD_FROM_CURRENT) {
 			// The current thread may happen to be a thread from the pool.
 			WorkerThreadPool::TaskID tid = WorkerThreadPool::get_singleton()->get_caller_task_id();
 			if (tid != WorkerThreadPool::INVALID_TASK_ID) {
@@ -656,7 +662,7 @@ Ref<ResourceLoader::LoadToken> ResourceLoader::_load_start(const String &p_path,
 		}
 	} // MutexLock(thread_load_mutex).
 
-	if (p_thread_mode == LOAD_THREAD_FROM_CURRENT) {
+	if (thread_mode == LOAD_THREAD_FROM_CURRENT) {
 		_run_load_task(load_task_ptr);
 	}
 
