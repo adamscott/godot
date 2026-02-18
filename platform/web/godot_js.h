@@ -64,8 +64,10 @@ extern void godot_js_os_shell_open(const char *p_uri);
 extern int godot_js_os_hw_concurrency_get();
 extern int godot_js_os_thread_pool_size_get();
 extern int godot_js_os_has_feature(const char *p_ftr);
-extern int godot_js_os_asyncpck_install_file(const char *p_pck_dir, const char *p_path);
-extern char *godot_js_os_asyncpck_install_file_get_status(const char *p_pck_dir, const char *p_path, const int32_t *p_return_string_length);
+extern int godot_js_os_async_pck_is_file_installed(const char *p_pck_dir, const char *p_path);
+extern int godot_js_os_async_pck_add_install_file_callback(const char *p_pck_dir, const char *p_path, void (*p_callback)(const char *p_status_json_ptr, int p_status_json_len));
+extern int godot_js_os_async_pck_install_file(const char *p_pck_dir, const char *p_path);
+extern char *godot_js_os_async_pck_install_file_get_status(const char *p_pck_dir, const char *p_path, const int32_t *p_return_string_length);
 extern int godot_js_pwa_cb(void (*p_callback)());
 extern int godot_js_pwa_update();
 

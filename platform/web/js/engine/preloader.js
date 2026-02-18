@@ -31,7 +31,7 @@ const Preloader = /** @constructor */ function () { // eslint-disable-line no-un
 			return onLoadProgress(pReader, pController);
 		}
 
-		const reader = pResponse.body.getReader();
+		const reader = pResponse.clone().body.getReader();
 		return new Response(new ReadableStream({
 			start: async function (pController) {
 				try {

@@ -164,11 +164,30 @@ int OS_Web::get_default_thread_pool_size() const {
 #endif
 }
 
+bool OS_Web::async_pck_is_file_installed(const String &p_path) const {
+	String path = ResourceUID::ensure_path(p_path);
+	ERR_FAIL_COND_V_MSG(!path.begins_with("res://"), ERR_FILE_BAD_PATH, vformat(R"*(Not able to install "%s" from a ".asyncpck".)*", path));
+
+	if (!OS::get_singleton()->async_pck_is_file_installable(path)) {
+		return false;
+	}
+
+	Error err;
+	String pck_path = async_pck_get_async_pck_path(p_path, &err);
+	if (err != OK) {
+		return false;
+	}
+
+	String pck_base_dir = pck_path.get_base_dir().get_base_dir();
+	err = static_cast<Error>(godot_js_os_async_pck_is_file_installed(pck_base_dir.utf8().get_data(), path.utf8().get_data()));
+	return err;
+}
+
 Error OS_Web::async_pck_install_file(const String &p_path) const {
 	String path = ResourceUID::ensure_path(p_path);
 	ERR_FAIL_COND_V_MSG(!path.begins_with("res://"), ERR_FILE_BAD_PATH, vformat(R"*(Not able to install "%s" from a ".asyncpck".)*", path));
 
-	if (FileAccess::exists(path)) {
+	if (async_pck_is_file_installed(path)) {
 		return OK;
 	}
 
@@ -178,8 +197,8 @@ Error OS_Web::async_pck_install_file(const String &p_path) const {
 		return err;
 	}
 
-	String pck_base_dir = pck_path.get_base_dir();
-	err = static_cast<Error>(godot_js_os_asyncpck_install_file(pck_base_dir.utf8().get_data(), path.utf8().get_data()));
+	String pck_base_dir = pck_path.get_base_dir().get_base_dir();
+	err = static_cast<Error>(godot_js_os_async_pck_install_file(pck_base_dir.utf8().get_data(), path.utf8().get_data()));
 	return err;
 }
 
@@ -210,10 +229,10 @@ Dictionary OS_Web::async_pck_install_file_get_status(const String &p_path) const
 		return status;
 	}
 
-	String pck_base_dir = pck_path.get_base_dir();
+	String pck_base_dir = pck_path.get_base_dir().get_base_dir();
 
 	int32_t status_text_length = 0;
-	char *status_text_ptr = godot_js_os_asyncpck_install_file_get_status(pck_base_dir.utf8().get_data(), path.utf8().get_data(), &status_text_length);
+	char *status_text_ptr = godot_js_os_async_pck_install_file_get_status(pck_base_dir.utf8().get_data(), path.utf8().get_data(), &status_text_length);
 	if (status_text_ptr == nullptr || status_text_length <= 0) {
 		Dictionary status;
 		status["files"] = Dictionary();

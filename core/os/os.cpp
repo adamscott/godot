@@ -826,17 +826,17 @@ String OS::async_pck_get_async_pck_path(const String &p_path, Error *r_error) co
 	String async_path;
 	String pck_path;
 
-#define RETURN_ERROR          \
+#define RETURN_ERROR \
 	if (r_error != nullptr) { \
-		*r_error = err;       \
-	}                         \
+		*r_error = err; \
+	} \
 	return pck_path
 
 #define _ERR_FAIL_COND(m_cond, m_err) \
-	if (unlikely(m_cond)) {           \
-		err = m_err;                  \
-		RETURN_ERROR;                 \
-	}                                 \
+	if (unlikely(m_cond)) { \
+		err = m_err; \
+		RETURN_ERROR; \
+	} \
 	(void)0
 
 	_ERR_FAIL_COND(p_path.is_empty(), ERR_INVALID_PARAMETER);

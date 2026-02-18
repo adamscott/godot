@@ -93,8 +93,7 @@ const Engine = (function () {
 
 				const doInit = async () => {
 					const loadResponse = await loadPromise;
-					const clonedResponse = new Response(loadResponse.clone().body, { 'headers': [['content-type', 'application/wasm']] });
-					const module = await Godot(this.config.getModuleConfig(loadPath, clonedResponse));
+					const module = await Godot(this.config.getModuleConfig(loadPath, loadResponse));
 					const paths = this.config.persistentPaths;
 					const err = await module['initFS'](paths);
 					if (err != null) {

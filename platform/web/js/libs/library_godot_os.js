@@ -614,16 +614,16 @@ class AsyncPCKResource {
 
 			const jsonDataSize
 				= this.size
-					+ dependenciesResources.reduce(
-						(pAccumulator, pDependencyResource) => pAccumulator + pDependencyResource.size,
-						0
-					);
+				+ dependenciesResources.reduce(
+					(pAccumulator, pDependencyResource) => pAccumulator + pDependencyResource.size,
+					0
+				);
 			const jsonDataProgress
 				= this.progress
-					+ dependenciesResources.reduce(
-						(pAccumulator, pDependencyResource) => pAccumulator + pDependencyResource.progress,
-						0
-					);
+				+ dependenciesResources.reduce(
+					(pAccumulator, pDependencyResource) => pAccumulator + pDependencyResource.progress,
+					0
+				);
 			let jsonDataProgressRatio = 0;
 			if (jsonDataSize > 0) {
 				jsonDataProgressRatio = jsonDataProgress / jsonDataSize;
@@ -708,7 +708,7 @@ const _GodotOS = {
 		'GodotOS._asyncPCKInstallMap = new Map();',
 	].join(' '),
 	$GodotOS: {
-		request_quit: function () {},
+		request_quit: function () { },
 		_async_cbs: [],
 		_fs_sync_promise: null,
 		AsyncPCKFile: AsyncPCKFile,
@@ -717,6 +717,7 @@ const _GodotOS = {
 		_asyncPCKConcurrencyQueueManager: null,
 		_asyncPCKFetchMaxRetry: 5,
 		_asyncPCKWaitTimeBaseMs: 100,
+		_asyncPCKCallbacks: [],
 		_mainPack: '',
 		_prefixRes: 'res://',
 
@@ -845,6 +846,14 @@ const _GodotOS = {
 			return GodotOS._asyncPCKInstallMap.get(pPckDir).get(path);
 		},
 
+		asyncPCKIsFileInstalled: function (pPckDir, pPath) {
+			const asyncPCKResource = GodotOS.asyncPCKGetAsyncPCKResource(pPckDir, pPath);
+			if (asyncPCKResource == null) {
+				return false;
+			}
+			return asyncPCKResource.status === GodotOS.AsyncPCKFile.Status.STATUS_INSTALLED;
+		},
+
 		asyncPCKInstallFile: async function (pPckDir, pPath) {
 			let asyncPCKResource = GodotOS.asyncPCKGetAsyncPCKResource(pPckDir, pPath);
 			if (asyncPCKResource != null) {
@@ -965,9 +974,17 @@ const _GodotOS = {
 		return 0;
 	},
 
-	godot_js_os_asyncpck_install_file__proxy: 'sync',
-	godot_js_os_asyncpck_install_file__sig: 'ipp',
-	godot_js_os_asyncpck_install_file: function (pPckDirPtr, pPathPtr) {
+	godot_js_os_async_pck_is_file_installed__proxy: 'sync',
+	godot_js_os_async_pck_is_file_installed__sig: 'ipp',
+	godot_js_os_async_pck_is_file_installed: function (pPckDirPtr, pPathPtr) {
+		const pckDir = GodotOS._trimLastSlash(GodotRuntime.parseString(pPckDirPtr));
+		const path = GodotOS._addResPrefix(GodotOS._trimLastSlash(GodotRuntime.parseString(pPathPtr)));
+		return GodotOS.asyncPCKIsFileInstalled(pckDir, path);
+	},
+
+	godot_js_os_async_pck_install_file__proxy: 'sync',
+	godot_js_os_async_pck_install_file__sig: 'ipp',
+	godot_js_os_async_pck_install_file: function (pPckDirPtr, pPathPtr) {
 		const pckDir = GodotOS._trimLastSlash(GodotRuntime.parseString(pPckDirPtr));
 		const path = GodotOS._addResPrefix(GodotOS._trimLastSlash(GodotRuntime.parseString(pPathPtr)));
 
@@ -977,9 +994,9 @@ const _GodotOS = {
 		return 0;
 	},
 
-	godot_js_os_asyncpck_install_file_get_status__proxy: 'sync',
-	godot_js_os_asyncpck_install_file_get_status__sig: 'ppp',
-	godot_js_os_asyncpck_install_file_get_status: function (pPckDirPtr, pPathPtr, pReturnStringLengthPtr) {
+	godot_js_os_async_pck_install_file_get_status__proxy: 'sync',
+	godot_js_os_async_pck_install_file_get_status__sig: 'ppp',
+	godot_js_os_async_pck_install_file_get_status: function (pPckDirPtr, pPathPtr, pReturnStringLengthPtr) {
 		const pckDir = GodotOS._trimLastSlash(GodotRuntime.parseString(pPckDirPtr));
 		const path = GodotOS._addResPrefix(GodotOS._trimLastSlash(GodotRuntime.parseString(pPathPtr)));
 
