@@ -43,7 +43,9 @@ const Engine = (function () {
 	Engine.load = function (basePath, size) {
 		if (loadPromise == null) {
 			loadPath = basePath;
-			loadPromise = preloader.loadPromise(`${loadPath}.wasm`, size, true);
+			const wasmPath = `${loadPath}.wasm`;
+			preloader.preparePreload(wasmPath, wasmPath, size);
+			loadPromise = preloader.loadPromise(wasmPath, size, true);
 			requestAnimationFrame(preloader.animateProgress);
 		}
 		return loadPromise;
@@ -79,10 +81,6 @@ const Engine = (function () {
 					return initPromise;
 				}
 
-				preloader.init({
-					fileSizes: this.config.fileSizes,
-				});
-
 				if (loadPromise == null) {
 					if (!basePath) {
 						const initPromiseError = new Error('A base path must be provided when calling `init` and the engine is not loaded.');
@@ -108,7 +106,6 @@ const Engine = (function () {
 					}
 				};
 
-				preloader.setProgressFunc(this.config.onProgress);
 				initPromise = doInit();
 				return initPromise;
 			},
@@ -130,6 +127,7 @@ const Engine = (function () {
 			 * @returns {Promise} A Promise that resolves once the file is loaded.
 			 */
 			preloadFile: function (file, path) {
+				preloader.preparePreload(file, path, this.config.fileSizes[file]);
 				return preloader.preload(file, path, this.config.fileSizes[file]);
 			},
 
@@ -161,7 +159,7 @@ const Engine = (function () {
 						me.rtenv = null;
 					});
 				} catch (err) {
-					const newErr = new Error('Error geeting Godot config.');
+					const newErr = new Error('Error getting Godot config.');
 					newErr.cause = err;
 					throw newErr;
 				}
@@ -179,7 +177,8 @@ const Engine = (function () {
 				}
 
 				try {
-					for (const file of preloader.preloadedFiles) {
+					// eslint-disable-next-line no-unused-vars -- We don't use `_path`.
+					for (const [_path, file] of preloader.preloadedFiles) {
 						me.rtenv['copyToFS'](file.path, file.buffer);
 					}
 					preloader.preloadedFiles.length = 0; // Clear memory
@@ -220,7 +219,7 @@ const Engine = (function () {
 				this.config.args = ['--main-pack', pack].concat(this.config.args);
 				// Start and init with execName as loadPath if not inited.
 				const me = this;
-				const filesToPreload = [];
+				const asyncFilesToPreload = [];
 
 				if (pack.endsWith('.asyncpck')) {
 					if (this.config.asyncPckData == null) {
@@ -251,13 +250,18 @@ const Engine = (function () {
 
 					for (const resourcePath of asyncPckInitialLoadFiles) {
 						const pathToPreload = resToLocal(resourcePath);
-						filesToPreload.push(this.preloadFile(pathToPreload, pathToPreload));
+						asyncFilesToPreload.push(this.preloadFile(pathToPreload, pathToPreload));
 					}
 				} else {
-					filesToPreload.push(this.preloadFile(pack, pack));
+					asyncFilesToPreload.push(this.preloadFile(pack, pack));
 				}
 
-				await Promise.all([this.init(exe), ...filesToPreload]);
+				preloader.init({
+					fileSizes: this.config.fileSizes,
+				});
+				preloader.setProgressFunc(this.config.onProgress);
+
+				await Promise.all([this.init(exe), ...asyncFilesToPreload]);
 
 				return me.start.apply(me);
 			},
