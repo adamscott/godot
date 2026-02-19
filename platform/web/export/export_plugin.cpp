@@ -903,11 +903,6 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 	// Export pck and shared objects.
 	Vector<SharedObject> shared_objects;
 	String pck_path;
-	// A temporary .gdignore is needed for AsyncPCK non-ignored export directories.
-	// Otherwise, the editor will try to reimport deleted AsyncPCK directories (when overwriting one) and fail,
-	// resulting in a slew of errors.
-	String temp_gdignore_path;
-	bool temp_gdignore_created = false;
 
 	// Async PCK related.
 	Dictionary async_pck_data;
@@ -947,8 +942,6 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 
 		case ASYNC_INITIAL_INSTALL_MODE_ONLY_REQUIRED_RESOURCES: {
 			pck_path = base_path + ".asyncpck";
-			temp_gdignore_path = pck_path.get_base_dir().path_join(".gdignore");
-			temp_gdignore_created = false;
 
 			if (DirAccess::dir_exists_absolute(pck_path)) {
 				Ref<DirAccess> pck_path_access = DirAccess::create_for_path(pck_path);
@@ -956,18 +949,6 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 				pck_path_access->erase_contents_recursive();
 				pck_path_access->change_dir("..");
 				pck_path_access->remove_absolute(pck_path);
-			}
-
-			if (!FileAccess::exists(temp_gdignore_path)) {
-				{
-					// Creates a temporary empty `.gdignore`.
-					FileAccess::open(temp_gdignore_path, FileAccess::ModeFlags::WRITE_READ, &error);
-				}
-				if (error != OK) {
-					add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\" (%s)."), temp_gdignore_path, error_names[error]));
-					return error;
-				}
-				temp_gdignore_created = true;
 			}
 
 			ExportData export_data;
@@ -993,6 +974,13 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 			}
 
 			error = EditorExportPlatformUtils::store_file_at_path(export_data.assets_directory.path_join("assets.sparsepck"), encoded_data);
+			if (error != OK) {
+				add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not store contents of async pck: \"%s\"."), pck_path));
+				return error;
+			}
+
+			// Ensures that Godot doesn't start to load content from an AsyncPCK as resources.
+			error = EditorExportPlatformUtils::store_file_at_path(pck_path.path_join(".gdignore"), PackedByteArray());
 			if (error != OK) {
 				add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not store contents of async pck: \"%s\"."), pck_path));
 				return error;
@@ -1321,10 +1309,6 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 			// Message is supplied by the subroutine method.
 			return err;
 		}
-	}
-
-	if (temp_gdignore_created) {
-		DirAccess::remove_absolute(temp_gdignore_path);
 	}
 
 	return OK;
