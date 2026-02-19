@@ -867,11 +867,6 @@ void OS::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("add_logger", "logger"), &OS::add_logger);
 	ClassDB::bind_method(D_METHOD("remove_logger", "logger"), &OS::remove_logger);
 
-	ClassDB::bind_method(D_METHOD("async_pck_is_supported"), &OS::async_pck_is_supported);
-	ClassDB::bind_method(D_METHOD("async_pck_is_file_installable", "path"), &OS::async_pck_is_file_installable);
-	ClassDB::bind_method(D_METHOD("async_pck_install_file", "path"), &OS::async_pck_install_file);
-	ClassDB::bind_method(D_METHOD("async_pck_install_file_get_status", "path"), &OS::async_pck_install_file_get_status);
-
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "low_processor_usage_mode"), "set_low_processor_usage_mode", "is_in_low_processor_usage_mode");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "low_processor_usage_mode_sleep_usec"), "set_low_processor_usage_mode_sleep_usec", "get_low_processor_usage_mode_sleep_usec");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "delta_smoothing"), "set_delta_smoothing", "is_delta_smoothing_enabled");
