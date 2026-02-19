@@ -59,9 +59,9 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 		REMOTE_DEBUG_STATE_SERVING,
 	};
 
-	enum AsyncLoadSetting {
-		ASYNC_LOAD_SETTING_LOAD_EVERYTHING = 0,
-		ASYNC_LOAD_SETTING_MINIMUM_INITIAL_RESOURCES = 1,
+	enum AsyncInitialInstallMode {
+		ASYNC_INITIAL_INSTALL_MODE_EVERYTHING = 0,
+		ASYNC_INITIAL_INSTALL_MODE_ONLY_REQUIRED_RESOURCES = 1,
 	};
 
 	struct ExportData {
@@ -203,7 +203,7 @@ class EditorExportPlatformWeb : public EditorExportPlatform {
 
 	void _add_resource_data_tree_message(LocalVector<const ExportData::ResourceData *> &p_resource_data_entries, const String &p_context, bool p_sort_with_file_no_case_comparator = false, bool p_sort_with_size_comparator = false);
 
-	static HashSet<String> _get_mandatory_initial_load_files(const Ref<EditorExportPreset> &p_preset);
+	static HashSet<String> _get_mandatory_initial_install_files(const Ref<EditorExportPreset> &p_preset);
 	static Error _rename_and_store_file_in_async_pck(const Ref<EditorExportPreset> &p_preset, void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const PackedByteArray &p_key, uint64_t p_seed, bool p_delta);
 
 public:

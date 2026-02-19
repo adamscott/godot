@@ -61,9 +61,9 @@ public:
 	typedef EditorExportPlatformData::EditorExportRemoveFunction EditorExportRemoveFunction;
 	typedef EditorExportPlatformData::EditorExportSaveSharedObject EditorExportSaveSharedObject;
 
-	typedef EditorExportPlatformData::DebugFlags DebugFlags;
-	typedef EditorExportPlatformData::ExportMessageType ExportMessageType;
-	typedef EditorExportPlatformData::ExportMessage ExportMessage;
+	using DebugFlags = EditorExportPlatformData::DebugFlags;
+	using ExportMessageType = EditorExportPlatformData::ExportMessageType;
+	using ExportMessage = EditorExportPlatformData::ExportMessage;
 
 	friend bool EditorExportPlatformUtils::encrypt_and_store_directory(Ref<FileAccess> p_fd, EditorExportPlatformData::PackData &p_pack_data, const Vector<uint8_t> &p_key, uint64_t p_seed, uint64_t p_file_base);
 	friend Error EditorExportPlatformUtils::encrypt_and_store_data(Ref<FileAccess> p_fd, const String &p_path, const Vector<uint8_t> &p_data, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const Vector<uint8_t> &p_key, uint64_t p_seed, bool &r_encrypt);

@@ -489,12 +489,12 @@ void EditorExportPlatformWeb::_fix_html(Vector<uint8_t> &p_html, const Ref<Edito
 	config["godotPoolSize"] = p_preset->get("threads/godot_pool_size");
 	config["emscriptenPoolSize"] = p_preset->get("threads/emscripten_pool_size");
 
-	AsyncLoadSetting async_initial_load_mode = (AsyncLoadSetting)(int)p_preset->get("async/initial_load_mode");
-	switch (async_initial_load_mode) {
-		case ASYNC_LOAD_SETTING_LOAD_EVERYTHING: {
+	AsyncInitialInstallMode async_initial_install_mode = (AsyncInitialInstallMode)(int)p_preset->get("async/initial_install_mode");
+	switch (async_initial_install_mode) {
+		case ASYNC_INITIAL_INSTALL_MODE_EVERYTHING: {
 			config["mainPack"] = p_name + ".pck";
 		} break;
-		case ASYNC_LOAD_SETTING_MINIMUM_INITIAL_RESOURCES: {
+		case ASYNC_INITIAL_INSTALL_MODE_ONLY_REQUIRED_RESOURCES: {
 			config["mainPack"] = p_name + ".asyncpck";
 			config["asyncPckData"] = p_async_pck_data;
 		} break;
@@ -607,13 +607,13 @@ Error EditorExportPlatformWeb::_build_pwa(const Ref<EditorExportPreset> &p_prese
 		name + ".wasm",
 	};
 
-	AsyncLoadSetting async_initial_load_mode = (AsyncLoadSetting)(int)p_preset->get("async/initial_load_mode");
-	switch (async_initial_load_mode) {
-		case ASYNC_LOAD_SETTING_LOAD_EVERYTHING: {
+	AsyncInitialInstallMode async_initial_install_mode = (AsyncInitialInstallMode)(int)p_preset->get("async/initial_install_mode");
+	switch (async_initial_install_mode) {
+		case ASYNC_INITIAL_INSTALL_MODE_EVERYTHING: {
 			opt_cache_files.push_back(name + ".pck");
 		} break;
 
-		case ASYNC_LOAD_SETTING_MINIMUM_INITIAL_RESOURCES: {
+		case ASYNC_INITIAL_INSTALL_MODE_ONLY_REQUIRED_RESOURCES: {
 			// TODO: Add AsyncPCK contents to the cache.
 		} break;
 	}
@@ -726,10 +726,10 @@ void EditorExportPlatformWeb::get_export_options(List<ExportOption> *r_options) 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "custom_template/debug", PROPERTY_HINT_GLOBAL_FILE, "*.zip"), ""));
 	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "custom_template/release", PROPERTY_HINT_GLOBAL_FILE, "*.zip"), ""));
 
-	r_options->push_back(ExportOption(PropertyInfo(Variant::INT, "async/initial_load_mode", PROPERTY_HINT_ENUM, "Load Everything,Load Minimum Initial Resources"), 0, true));
-	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "async/initial_load_forced_files_filters_to_include"), ""));
-	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "async/initial_load_forced_files_filters_to_exclude"), ""));
-	r_options->push_back(ExportOption(PropertyInfo(Variant::PACKED_STRING_ARRAY, "async/initial_load_forced_files", PROPERTY_HINT_ARRAY_TYPE, MAKE_FILE_ARRAY_TYPE_HINT("*")), PackedStringArray()));
+	r_options->push_back(ExportOption(PropertyInfo(Variant::INT, "async/initial_install_mode", PROPERTY_HINT_ENUM, "Install Everything,Only Install Required Resources"), 0, true));
+	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "async/initial_install_only_required_resources/filters_to_include"), ""));
+	r_options->push_back(ExportOption(PropertyInfo(Variant::STRING, "async/initial_install_only_required_resources/filters_to_exclude"), ""));
+	r_options->push_back(ExportOption(PropertyInfo(Variant::PACKED_STRING_ARRAY, "async/initial_install_only_required_resources/forced_resources", PROPERTY_HINT_ARRAY_TYPE, MAKE_FILE_ARRAY_TYPE_HINT("*")), PackedStringArray()));
 
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "variant/extensions_support"), false)); // GDExtension support.
 	r_options->push_back(ExportOption(PropertyInfo(Variant::BOOL, "variant/thread_support"), false, true)); // Thread support (i.e. run with or without COEP/COOP headers).
@@ -757,8 +757,8 @@ void EditorExportPlatformWeb::get_export_options(List<ExportOption> *r_options) 
 }
 
 bool EditorExportPlatformWeb::get_export_option_visibility(const EditorExportPreset *p_preset, const String &p_option) const {
-	if (p_option == "async/initial_load_forced_files" || p_option == "async/initial_load_forced_files_filters_to_include" || p_option == "async/initial_load_forced_files_filters_to_exclude") {
-		return (int)p_preset->get("async/initial_load_mode") != ASYNC_LOAD_SETTING_LOAD_EVERYTHING;
+	if (p_option == "async/initial_install_only_required_resources/forced_resources" || p_option == "async/initial_install_only_required_resources/filters_to_include" || p_option == "async/initial_install_only_required_resources/filters_to_exclude") {
+		return (int)p_preset->get("async/initial_install_mode") != ASYNC_INITIAL_INSTALL_MODE_EVERYTHING;
 	}
 
 	bool advanced_options_enabled = p_preset->are_advanced_options_enabled();
@@ -795,7 +795,7 @@ bool EditorExportPlatformWeb::has_valid_export_configuration(const Ref<EditorExp
 
 	String err;
 
-	if ((int)p_preset->get("async/initial_load_mode") != AsyncLoadSetting::ASYNC_LOAD_SETTING_LOAD_EVERYTHING) {
+	if ((int)p_preset->get("async/initial_install_mode") != AsyncInitialInstallMode::ASYNC_INITIAL_INSTALL_MODE_EVERYTHING) {
 		if (String(EditorExportPlatformUtils::get_project_setting(p_preset, "application/run/main_scene")).is_empty()) {
 			err += TTR("No main scene has been set. The main scene must be set for the web platform in order to preload the minimal files.") + "\n";
 		}
@@ -914,9 +914,9 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 	// Parse generated file sizes (pck and wasm, to help show a meaningful loading bar).
 	Dictionary file_sizes;
 
-	AsyncLoadSetting async_initial_load_mode = (AsyncLoadSetting)(int)p_preset->get("async/initial_load_mode");
-	switch (async_initial_load_mode) {
-		case ASYNC_LOAD_SETTING_LOAD_EVERYTHING: {
+	AsyncInitialInstallMode async_initial_install_mode = (AsyncInitialInstallMode)(int)p_preset->get("async/initial_install_mode");
+	switch (async_initial_install_mode) {
+		case ASYNC_INITIAL_INSTALL_MODE_EVERYTHING: {
 			pck_path = base_path + ".pck";
 
 			error = save_pack(p_preset, p_debug, pck_path, &shared_objects);
@@ -945,7 +945,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 
 		} break;
 
-		case ASYNC_LOAD_SETTING_MINIMUM_INITIAL_RESOURCES: {
+		case ASYNC_INITIAL_INSTALL_MODE_ONLY_REQUIRED_RESOURCES: {
 			pck_path = base_path + ".asyncpck";
 			temp_gdignore_path = pck_path.get_base_dir().path_join(".gdignore");
 			temp_gdignore_created = false;
@@ -1012,10 +1012,10 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 
 			{
 				Dictionary async_pck_data_directories;
-				Dictionary async_pck_data_initial_load;
+				Dictionary async_pck_data_initial_install;
 
 				async_pck_data["directories"] = async_pck_data_directories;
-				async_pck_data["initialLoad"] = async_pck_data_initial_load;
+				async_pck_data["initialLoad"] = async_pck_data_initial_install;
 
 				const String PREFIX_ASSETS_DIRECTORY = export_data.assets_directory + "/";
 
@@ -1098,95 +1098,95 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 					}
 				}
 
-				HashSet<const ExportData::ResourceData *> initial_load_dependencies;
+				HashSet<const ExportData::ResourceData *> initial_install_dependencies;
 				{
-					Vector<String> initial_load_in_filters;
-					Vector<String> initial_load_ex_filters;
+					Vector<String> initial_install_include_filters;
+					Vector<String> initial_install_exclude_filters;
 
-					Vector<String> initial_load_in_split = String(p_preset->get("async/initial_load_forced_files_filters_to_include")).split(",");
-					for (int i = 0; i < initial_load_in_split.size(); i++) {
-						String initial_load_in_filter = initial_load_in_split[i].strip_edges();
-						if (initial_load_in_filter.is_empty()) {
+					Vector<String> initial_install_include_split = String(p_preset->get("async/initial_install_only_required_resources/filters_to_include")).split(",");
+					for (const String &initial_install_include_element : initial_install_include_split) {
+						String initial_install_include_filter = initial_install_include_element.strip_edges();
+						if (initial_install_include_filter.is_empty()) {
 							continue;
 						}
-						initial_load_in_filters.push_back(initial_load_in_filter);
+						initial_install_include_filters.push_back(initial_install_include_filter);
 					}
 
-					Vector<String> initial_load_ex_split = String(p_preset->get("async/initial_load_forced_files_filters_to_exclude")).split(",");
-					for (int i = 0; i < initial_load_ex_split.size(); i++) {
-						String initial_load_ex_filter = initial_load_ex_split[i].strip_edges();
-						if (initial_load_ex_filter.is_empty()) {
+					Vector<String> initial_install_exclude_split = String(p_preset->get("async/initial_install_only_required_resources/filters_to_exclude")).split(",");
+					for (const String &initial_install_exclude_element : initial_install_exclude_split) {
+						String initial_install_exclude_filter = initial_install_exclude_element.strip_edges();
+						if (initial_install_exclude_filter.is_empty()) {
 							continue;
 						}
-						initial_load_ex_filters.push_back(initial_load_ex_filter);
+						initial_install_exclude_filters.push_back(initial_install_exclude_filter);
 					}
 
-					if (initial_load_in_filters.size() > 0) {
+					if (initial_install_include_filters.size() > 0) {
 						for (const ExportData::ResourceData &dependency : export_data.dependencies) {
 							const String &dependency_path = dependency.path;
-							bool add_as_initial_load = false;
-							for (const String &in_filter : initial_load_in_filters) {
+							bool add_as_initial_install = false;
+							for (const String &in_filter : initial_install_include_filters) {
 								if (dependency_path.matchn(in_filter) || dependency_path.trim_prefix(PREFIX_RES).matchn(in_filter)) {
-									add_as_initial_load = true;
+									add_as_initial_install = true;
 									break;
 								}
 							}
 
-							for (const String &ex_filter : initial_load_ex_filters) {
+							for (const String &ex_filter : initial_install_exclude_filters) {
 								if (dependency_path.matchn(ex_filter) || dependency_path.trim_prefix(PREFIX_RES).matchn(ex_filter)) {
-									add_as_initial_load = false;
+									add_as_initial_install = false;
 									break;
 								}
 							}
 
-							if (add_as_initial_load) {
-								initial_load_dependencies.insert(&dependency);
+							if (add_as_initial_install) {
+								initial_install_dependencies.insert(&dependency);
 							}
 						}
 					}
 				}
 
-				HashSet<String> mandatory_initial_load_files = _get_mandatory_initial_load_files(p_preset);
-				for (const String &mandatory_initial_load_file : mandatory_initial_load_files) {
-					export_data.add_dependency(mandatory_initial_load_file, features_set, uid_cache);
+				HashSet<String> mandatory_initial_install_files = _get_mandatory_initial_install_files(p_preset);
+				for (const String &mandatory_initial_install_file : mandatory_initial_install_files) {
+					export_data.add_dependency(mandatory_initial_install_file, features_set, uid_cache);
 				}
-				for (const String &mandatory_initial_load_file : mandatory_initial_load_files) {
-					ExportData::ResourceData *mandatory_resource_data = export_data.dependencies_map[mandatory_initial_load_file];
-					initial_load_dependencies.insert(mandatory_resource_data);
+				for (const String &mandatory_initial_install_file : mandatory_initial_install_files) {
+					ExportData::ResourceData *mandatory_resource_data = export_data.dependencies_map[mandatory_initial_install_file];
+					initial_install_dependencies.insert(mandatory_resource_data);
 					LocalVector<const ExportData::ResourceData *> mandatory_resource_data_dependencies;
 					mandatory_resource_data->flatten_dependencies(&mandatory_resource_data_dependencies);
 					for (const ExportData::ResourceData *mandatory_resource_data_dependency : mandatory_resource_data_dependencies) {
-						initial_load_dependencies.insert(mandatory_resource_data_dependency);
+						initial_install_dependencies.insert(mandatory_resource_data_dependency);
 					}
 				}
 
 				{
-					PackedStringArray initial_load_paths;
-					HashSet<const ExportData::ResourceData *> initial_load_assets;
-					for (const ExportData::ResourceData *dependency : initial_load_dependencies) {
+					PackedStringArray initial_install_paths;
+					HashSet<const ExportData::ResourceData *> initial_install_assets;
+					for (const ExportData::ResourceData *dependency : initial_install_dependencies) {
 						if (dependency->remap_file.exists || dependency->native_file.exists) {
-							initial_load_assets.insert(dependency);
+							initial_install_assets.insert(dependency);
 						}
 					}
 
-					LocalVector<const ExportData::ResourceData *> initial_load_assets_data;
-					for (const ExportData::ResourceData *initial_load_asset : initial_load_assets) {
-						initial_load_assets_data.push_back(initial_load_asset);
+					LocalVector<const ExportData::ResourceData *> initial_install_assets_data;
+					for (const ExportData::ResourceData *initial_install_asset : initial_install_assets) {
+						initial_install_assets_data.push_back(initial_install_asset);
 					}
 
-					_add_resource_data_tree_message(initial_load_assets_data, "Files that will be initially loaded (sorted in alphabetical order):", true, false);
-					_add_resource_data_tree_message(initial_load_assets_data, "Files that will be initially loaded (sorted by size):", false, true);
+					_add_resource_data_tree_message(initial_install_assets_data, "Files that will be initially loaded (sorted in alphabetical order):", true, false);
+					_add_resource_data_tree_message(initial_install_assets_data, "Files that will be initially loaded (sorted by size):", false, true);
 
-					uint64_t initial_load_assets_size = initial_load_assets_data.size();
-					for (uint64_t i = 0; i < initial_load_assets_size; i++) {
-						const ExportData::ResourceData *initial_load_asset = initial_load_assets_data[i];
+					uint64_t initial_install_assets_size = initial_install_assets_data.size();
+					for (uint64_t i = 0; i < initial_install_assets_size; i++) {
+						const ExportData::ResourceData *initial_install_asset = initial_install_assets_data[i];
 
 						uint64_t asset_size = 0;
-						if (initial_load_asset->remap_file.exists) {
-							asset_size += initial_load_asset->remap_file.size;
-							asset_size += initial_load_asset->remapped_file.size;
-						} else if (initial_load_asset->native_file.exists) {
-							asset_size += initial_load_asset->native_file.size;
+						if (initial_install_asset->remap_file.exists) {
+							asset_size += initial_install_asset->remap_file.size;
+							asset_size += initial_install_asset->remapped_file.size;
+						} else if (initial_install_asset->native_file.exists) {
+							asset_size += initial_install_asset->native_file.size;
 						} else {
 							ERR_FAIL_V(ERR_BUG);
 						}
@@ -1195,7 +1195,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 					}
 
 					StringBuilder log_entry_builder;
-					log_entry_builder.append("If some files seem to be missing from this list, be sure to edit \"async/initial_load_forced_files*\" in the preset settings.\n");
+					log_entry_builder.append("If some files seem to be missing from this list, be sure to edit \"async/initial_install_forced_files*\" in the preset settings.\n");
 					log_entry_builder.append("For files not in this list, you will need to call `ResourceLoader.load_threaded_request()` beforehand.\n");
 					log_entry_builder.append("\n");
 					log_entry_builder.append(vformat("Total initial load size: %s", String::humanize_size(total_size)));
@@ -1208,7 +1208,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 					async_pck_data_directories["libraries"] = export_data.libraries_directory.trim_prefix(base_dir);
 				}
 
-				for (const ExportData::ResourceData *dependency : initial_load_dependencies) {
+				for (const ExportData::ResourceData *dependency : initial_install_dependencies) {
 					Dictionary dependency_dict;
 					Array dependency_dependencies;
 					Array dependency_files;
@@ -1233,7 +1233,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 						dependency_files.push_back(dependency->remapped_file.resource_path);
 					}
 
-					async_pck_data_initial_load[dependency->path] = dependency_dict;
+					async_pck_data_initial_install[dependency->path] = dependency_dict;
 				}
 
 				for (ExportData::ResourceData &dependency : export_data.dependencies) {
@@ -1251,7 +1251,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 		} break;
 
 		default: {
-			add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR(R"*(Invalid `async/initial_load_mode` value: %s)*"), async_initial_load_mode));
+			add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR(R"*(Invalid `async/initial_install_mode` value: %s)*"), async_initial_install_mode));
 			return ERR_INVALID_PARAMETER;
 		} break;
 	}
@@ -1342,34 +1342,34 @@ void EditorExportPlatformWeb::_add_resource_data_tree_message(LocalVector<const 
 	const String new_line_char = "\n";
 	log_entry_builder.append(vformat("%s\n", p_context));
 
-	uint64_t initial_load_assets_size = p_resource_data_entries.size();
-	for (uint64_t i = 0; i < initial_load_assets_size; i++) {
-		const ExportData::ResourceData *initial_load_asset = p_resource_data_entries[i];
+	uint64_t initial_install_assets_size = p_resource_data_entries.size();
+	for (uint64_t i = 0; i < initial_install_assets_size; i++) {
+		const ExportData::ResourceData *initial_install_asset = p_resource_data_entries[i];
 
 		uint64_t asset_size = 0;
-		if (initial_load_asset->remap_file.exists) {
-			asset_size += initial_load_asset->remap_file.size;
-			asset_size += initial_load_asset->remapped_file.size;
-		} else if (initial_load_asset->native_file.exists) {
-			asset_size += initial_load_asset->native_file.size;
+		if (initial_install_asset->remap_file.exists) {
+			asset_size += initial_install_asset->remap_file.size;
+			asset_size += initial_install_asset->remapped_file.size;
+		} else if (initial_install_asset->native_file.exists) {
+			asset_size += initial_install_asset->native_file.size;
 		} else {
 			ERR_FAIL();
 		}
 
-		String fork_char = i < initial_load_assets_size - 1
+		String fork_char = i < initial_install_assets_size - 1
 				? U"├"
 				: U"└";
-		String parent_tree_line = i < initial_load_assets_size - 1
+		String parent_tree_line = i < initial_install_assets_size - 1
 				? U"|"
 				: U" ";
 
-		log_entry_builder.append(vformat(UR"*(%s── 📦 "%s" [%s]%s)*", fork_char, initial_load_asset->path, String::humanize_size(asset_size), new_line_char));
+		log_entry_builder.append(vformat(UR"*(%s── 📦 "%s" [%s]%s)*", fork_char, initial_install_asset->path, String::humanize_size(asset_size), new_line_char));
 
-		if (initial_load_asset->remap_file.exists) {
-			log_entry_builder.append(vformat(UR"*(%s    ├ 📤 "%s" [%s]%s)*", parent_tree_line, initial_load_asset->remap_file.resource_path, String::humanize_size(initial_load_asset->remap_file.size), new_line_char));
-			log_entry_builder.append(vformat(UR"*(%s    └ 📤 "%s" [%s]%s)*", parent_tree_line, initial_load_asset->remapped_file.resource_path, String::humanize_size(initial_load_asset->remapped_file.size), new_line_char));
-		} else if (initial_load_asset->native_file.exists) {
-			log_entry_builder.append(vformat(UR"*(%s    └ 📤 "%s" [%s]%s)*", parent_tree_line, initial_load_asset->native_file.resource_path, String::humanize_size(initial_load_asset->native_file.size), new_line_char));
+		if (initial_install_asset->remap_file.exists) {
+			log_entry_builder.append(vformat(UR"*(%s    ├ 📤 "%s" [%s]%s)*", parent_tree_line, initial_install_asset->remap_file.resource_path, String::humanize_size(initial_install_asset->remap_file.size), new_line_char));
+			log_entry_builder.append(vformat(UR"*(%s    └ 📤 "%s" [%s]%s)*", parent_tree_line, initial_install_asset->remapped_file.resource_path, String::humanize_size(initial_install_asset->remapped_file.size), new_line_char));
+		} else if (initial_install_asset->native_file.exists) {
+			log_entry_builder.append(vformat(UR"*(%s    └ 📤 "%s" [%s]%s)*", parent_tree_line, initial_install_asset->native_file.resource_path, String::humanize_size(initial_install_asset->native_file.size), new_line_char));
 		}
 	}
 
@@ -1691,12 +1691,12 @@ Error EditorExportPlatformWeb::_rename_and_store_file_in_async_pck(const Ref<Edi
 	return OK;
 }
 
-HashSet<String> EditorExportPlatformWeb::_get_mandatory_initial_load_files(const Ref<EditorExportPreset> &p_preset) {
-	HashSet<String> mandatory_initial_load_files;
+HashSet<String> EditorExportPlatformWeb::_get_mandatory_initial_install_files(const Ref<EditorExportPreset> &p_preset) {
+	HashSet<String> mandatory_initial_install_files;
 
 	{
 		// Main scene.
-		mandatory_initial_load_files.insert(
+		mandatory_initial_install_files.insert(
 				EditorExportPlatformUtils::get_path_from_dependency(
 						EditorExportPlatformUtils::get_project_setting(p_preset, "application/run/main_scene")));
 	}
@@ -1705,7 +1705,7 @@ HashSet<String> EditorExportPlatformWeb::_get_mandatory_initial_load_files(const
 		// Translation files.
 		PackedStringArray translations = EditorExportPlatformUtils::get_project_setting(p_preset, "internationalization/locale/translations");
 		for (const String &translation : translations) {
-			mandatory_initial_load_files.insert(EditorExportPlatformUtils::get_path_from_dependency(translation));
+			mandatory_initial_install_files.insert(EditorExportPlatformUtils::get_path_from_dependency(translation));
 		}
 	}
 
@@ -1713,7 +1713,7 @@ HashSet<String> EditorExportPlatformWeb::_get_mandatory_initial_load_files(const
 		// Autoload files.
 		const HashMap<StringName, ProjectSettings::AutoloadInfo> &autoload_list = ProjectSettings::get_singleton()->get_autoload_list();
 		for (const KeyValue<StringName, ProjectSettings::AutoloadInfo> &key_value : autoload_list) {
-			mandatory_initial_load_files.insert(
+			mandatory_initial_install_files.insert(
 					EditorExportPlatformUtils::get_path_from_dependency(key_value.value.path));
 		}
 	}
@@ -1725,7 +1725,7 @@ HashSet<String> EditorExportPlatformWeb::_get_mandatory_initial_load_files(const
 
 		for (const StringName &global_class : global_classes) {
 			String global_class_path = ScriptServer::get_global_class_path(global_class);
-			mandatory_initial_load_files.insert(
+			mandatory_initial_install_files.insert(
 					EditorExportPlatformUtils::get_path_from_dependency(global_class_path));
 		}
 	}
@@ -1736,7 +1736,7 @@ HashSet<String> EditorExportPlatformWeb::_get_mandatory_initial_load_files(const
 			const String project_setting_file = ResourceUID::ensure_path(EditorExportPlatformUtils::get_project_setting(p_preset, l_project_setting));
 			String path = EditorExportPlatformUtils::get_path_from_dependency(project_setting_file);
 			if (FileAccess::exists(path)) {
-				mandatory_initial_load_files.insert(path);
+				mandatory_initial_install_files.insert(path);
 			}
 		};
 
@@ -1754,13 +1754,13 @@ HashSet<String> EditorExportPlatformWeb::_get_mandatory_initial_load_files(const
 
 	{
 		// Export-related files.
-		mandatory_initial_load_files.insert(PATH_PROJECT_BINARY);
-		mandatory_initial_load_files.insert(PATH_ASSETS_SPARSEPCK);
-		mandatory_initial_load_files.insert(PATH_GODOT_UID_CACHE);
-		mandatory_initial_load_files.insert(PATH_GODOT_GLOBAL_SCRIPT_CLASS_CACHE);
+		mandatory_initial_install_files.insert(PATH_PROJECT_BINARY);
+		mandatory_initial_install_files.insert(PATH_ASSETS_SPARSEPCK);
+		mandatory_initial_install_files.insert(PATH_GODOT_UID_CACHE);
+		mandatory_initial_install_files.insert(PATH_GODOT_GLOBAL_SCRIPT_CLASS_CACHE);
 	}
 
-	return mandatory_initial_load_files;
+	return mandatory_initial_install_files;
 }
 
 Ref<Texture2D> EditorExportPlatformWeb::get_run_icon() const {
