@@ -31,8 +31,11 @@
 #include "export_plugin.h"
 
 #include "core/crypto/hashing_context.h"
+#include "core/error/error_list.h"
+#include "core/error/error_macros.h"
 #include "core/extension/gdextension.h"
 #include "core/io/config_file.h"
+#include "core/io/file_access.h"
 #include "core/io/json.h"
 #include "core/io/resource_loader.h"
 #include "core/os/memory.h"
@@ -897,9 +900,14 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 
 	Error error;
 
-	// Export pck and shared objects
+	// Export pck and shared objects.
 	Vector<SharedObject> shared_objects;
 	String pck_path;
+	// A temporary .gdignore is needed for AsyncPCK non-ignored export directories.
+	// Otherwise, the editor will try to reimport deleted AsyncPCK directories (when overwriting one) and fail,
+	// resulting in a slew of errors.
+	String temp_gdignore_path;
+	bool temp_gdignore_created = false;
 
 	// Async PCK related.
 	Dictionary async_pck_data;
@@ -939,6 +947,8 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 
 		case ASYNC_LOAD_SETTING_MINIMUM_INITIAL_RESOURCES: {
 			pck_path = base_path + ".asyncpck";
+			temp_gdignore_path = pck_path.get_base_dir().path_join(".gdignore");
+			temp_gdignore_created = false;
 
 			if (DirAccess::dir_exists_absolute(pck_path)) {
 				Ref<DirAccess> pck_path_access = DirAccess::create_for_path(pck_path);
@@ -946,6 +956,18 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 				pck_path_access->erase_contents_recursive();
 				pck_path_access->change_dir("..");
 				pck_path_access->remove_absolute(pck_path);
+			}
+
+			if (!FileAccess::exists(temp_gdignore_path)) {
+				{
+					// Creates a temporary empty `.gdignore`.
+					FileAccess::open(temp_gdignore_path, FileAccess::ModeFlags::WRITE_READ, &error);
+				}
+				if (error != OK) {
+					add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not write file: \"%s\" (%s)."), temp_gdignore_path, error_names[error]));
+					return error;
+				}
+				temp_gdignore_created = true;
 			}
 
 			ExportData export_data;
@@ -975,8 +997,6 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 				add_message(EditorExportPlatformData::EXPORT_MESSAGE_ERROR, TTR("Export"), vformat(TTR("Could not store contents of async pck: \"%s\"."), pck_path));
 				return error;
 			}
-
-			// bool is_encrypted = p_preset->get_enc_pck() && p_preset->get_enc_directory();
 
 			{
 				Ref<DirAccess> da = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
@@ -1176,7 +1196,7 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 
 					StringBuilder log_entry_builder;
 					log_entry_builder.append("If some files seem to be missing from this list, be sure to edit \"async/initial_load_forced_files*\" in the preset settings.\n");
-					log_entry_builder.append("For files not in this list, you will need to call `OS.async_pck_install_file()` beforehand.\n");
+					log_entry_builder.append("For files not in this list, you will need to call `ResourceLoader.load_threaded_request()` beforehand.\n");
 					log_entry_builder.append("\n");
 					log_entry_builder.append(vformat("Total initial load size: %s", String::humanize_size(total_size)));
 
@@ -1301,6 +1321,10 @@ Error EditorExportPlatformWeb::export_project(const Ref<EditorExportPreset> &p_p
 			// Message is supplied by the subroutine method.
 			return err;
 		}
+	}
+
+	if (temp_gdignore_created) {
+		DirAccess::remove_absolute(temp_gdignore_path);
 	}
 
 	return OK;
