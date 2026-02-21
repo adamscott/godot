@@ -9,6 +9,17 @@ import methods
 
 Import("env")
 
+env.AddSCURoot("#/core")
+env.AddSCURoot("#/core/crypto")
+env.AddSCURoot("#/core/debugger")
+env.AddSCURoot("#/core/extension")
+env.AddSCURoot("#/core/input")
+env.AddSCURoot("#/core/io")
+env.AddSCURoot("#/core/math")
+env.AddSCURoot("#/core/object")
+env.AddSCURoot("#/core/os")
+env.AddSCURoot("#/core/string")
+
 env.core_sources = []
 
 # Add required thirdparty code.

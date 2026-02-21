@@ -7,90 +7,88 @@ from pathlib import Path
 
 from methods import print_error
 
-base_folder_path = str(Path(__file__).parent) + "/"
-base_folder_only = os.path.basename(os.path.normpath(base_folder_path))
-_verbose = False  # Set manually for debug prints
-_scu_folders = set()
+base_dir_path = Path(__file__).parent
+base_dir_name = base_dir_path.name
+_verbose = False  # Set manually for debug prints.
+_scu_directories = set()
 _max_includes_per_scu = 1024
 
 
-def clear_out_stale_files(output_folder, extension, fresh_files):
-    output_folder = os.path.abspath(output_folder)
-    # print("clear_out_stale_files from folder: " + output_folder)
+def clear_out_stale_files(output_dir, extension, fresh_files):
+    output_dir_path = Path(output_dir)
+    # print("clear_out_stale_files from directory: " + output_dir_path)
 
-    if not os.path.isdir(output_folder):
-        # folder does not exist or has not been created yet,
-        # no files to clearout. (this is not an error)
+    if not output_dir_path.is_dir():
+        # Directory does not exist or has not been created yet,
+        # no files to clearout. (this is not an error.)
         return
 
-    for file in glob.glob(output_folder + "/*." + extension):
-        file = Path(file)
-        if file not in fresh_files:
+    for file in glob.glob(output_dir_path.joinpath("*." + extension).as_posix()):
+        file_path = output_dir_path.joinpath(file)
+        if file_path not in fresh_files:
             # print("removed stale file: " + str(file))
-            os.remove(file)
+            os.remove(file_path)
 
 
-def folder_not_found(folder):
-    abs_folder = base_folder_path + folder + "/"
-    return not os.path.isdir(abs_folder)
+def is_dir(dir):
+    abs_dir_path = base_dir_path.joinpath(dir)
+    return abs_dir_path.is_dir()
 
 
-def find_files_in_folder(folder, sub_folder, include_list, extension, sought_exceptions, found_exceptions):
-    abs_folder = base_folder_path + folder + "/" + sub_folder
+def find_files_in_directory(dir_path, extension, sought_exceptions):
+    dir_path = Path(dir_path)
+    include_list = []
+    found_exceptions = []
 
-    if not os.path.isdir(abs_folder):
-        print_error(f'SCU: "{abs_folder}" not found.')
-        return include_list, found_exceptions
+    if not dir_path.is_dir():
+        print_error(f'SCU: "{dir_path.as_posix()}" not found.')
+        return
 
-    os.chdir(abs_folder)
-
-    sub_folder_slashed = ""
-    if sub_folder != "":
-        sub_folder_slashed = sub_folder + "/"
-
+    current_cwd = os.getcwd()
+    os.chdir(dir_path)
     for file in glob.glob("*." + extension):
-        simple_name = Path(file).stem
+        file_path = dir_path.joinpath(file)
+        simple_name = file_path.stem
 
-        if file.endswith(".gen.cpp"):
+        if file_path.name.endswith(".gen.cpp"):
             continue
 
-        li = '#include "' + folder + "/" + sub_folder_slashed + file + '"'
-
         if simple_name not in sought_exceptions:
-            include_list.append(li)
+            include_list.append(file_path)
         else:
-            found_exceptions.append(li)
+            found_exceptions.append(file_path)
+    os.chdir(current_cwd)
 
     return include_list, found_exceptions
 
 
-def write_output_file(file_count, include_list, start_line, end_line, output_folder, output_filename_prefix, extension):
-    output_folder = os.path.abspath(output_folder)
+def write_output_file(
+    file_count, include_list, start_line, end_line, output_dir_path, output_filename_prefix, extension
+):
+    output_dir_path = Path(output_dir_path)
 
-    if not os.path.isdir(output_folder):
+    if not output_dir_path.is_dir():
         # create
-        os.mkdir(output_folder)
-        if not os.path.isdir(output_folder):
-            print_error(f'SCU: "{output_folder}" could not be created.')
+        os.mkdir(output_dir_path)
+        if not output_dir_path.is_dir():
+            print_error(f'SCU: "{output_dir_path}" could not be created.')
             return
         if _verbose:
-            print("SCU: Creating folder: %s" % output_folder)
+            print("SCU: Creating directory: %s" % output_dir_path)
 
     file_text = ""
 
     for i in range(start_line, end_line):
         if i < len(include_list):
-            line = include_list[i]
-            li = line + "\n"
-            file_text += li
+            line = f'#include "{include_list[i].as_posix()}"\n'
+            file_text += line
 
     num_string = ""
     if file_count > 0:
         num_string = "_" + str(file_count)
 
     short_filename = output_filename_prefix + num_string + ".gen." + extension
-    output_filename = output_folder + "/" + short_filename
-    output_path = Path(output_filename)
+    output_path = output_dir_path.joinpath(short_filename)
 
     if not output_path.exists() or output_path.read_text() != file_text:
         if _verbose:
@@ -102,22 +100,20 @@ def write_output_file(file_count, include_list, start_line, end_line, output_fol
     return output_path
 
 
-def write_exception_output_file(file_count, exception_string, output_folder, output_filename_prefix, extension):
-    output_folder = os.path.abspath(output_folder)
-    if not os.path.isdir(output_folder):
-        print_error(f"SCU: {output_folder} does not exist.")
+def write_exception_output_file(file_count, exception_path, output_dir_path, output_filename_prefix, extension):
+    output_dir_path = Path(output_dir_path)
+    if not output_dir_path.is_dir():
+        print_error(f"SCU: {output_dir_path} does not exist.")
         return
 
-    file_text = exception_string + "\n"
+    file_text = f'#include "{exception_path.as_posix()}"\n'
 
     num_string = ""
     if file_count > 0:
         num_string = "_" + str(file_count)
 
     short_filename = output_filename_prefix + "_exception" + num_string + ".gen." + extension
-    output_filename = output_folder + "/" + short_filename
-
-    output_path = Path(output_filename)
+    output_path = output_dir_path.joinpath(short_filename)
 
     if not output_path.exists() or output_path.read_text() != file_text:
         if _verbose:
@@ -129,33 +125,18 @@ def write_exception_output_file(file_count, exception_string, output_folder, out
     return output_path
 
 
-def find_section_name(sub_folder):
-    # Construct a useful name for the section from the path for debug logging
-    section_path = os.path.abspath(base_folder_path + sub_folder) + "/"
+# Construct a useful name for the section from the path for debug logging
+def find_section_name(dir_path):
+    dir_path = Path(dir_path)
+    if dir_path.is_absolute():
+        dir_path = base_dir_path.joinpath(dir_path.as_posix()[1:])
 
-    folders = []
-    folder = ""
-
-    for i in range(8):
-        folder = os.path.dirname(section_path)
-        folder = os.path.basename(folder)
-        if folder == base_folder_only:
-            break
-        folders.append(folder)
-        section_path += "../"
-        section_path = os.path.abspath(section_path) + "/"
-
-    section_name = ""
-    for n in range(len(folders)):
-        section_name += folders[len(folders) - n - 1]
-        if n != (len(folders) - 1):
-            section_name += "_"
-
-    return section_name
+    relative_path = base_dir_path.joinpath(dir_path).relative_to(base_dir_path)
+    return relative_path.as_posix().replace("/", "_")
 
 
-# "folders" is a list of folders to add all the files from to add to the SCU
-# "section (like a module)". The name of the scu file will be derived from the first folder
+# "dirs" is a list of directories to add all the files from to add to the SCU
+# "section (like a module)". The name of the scu file will be derived from the first directory
 # (thus e.g. scene/3d becomes scu_scene_3d.gen.cpp)
 
 # "includes_per_scu" limits the number of includes in a single scu file.
@@ -171,42 +152,61 @@ def find_section_name(sub_folder):
 
 
 # "extension" will usually be cpp, but can also be set to c (for e.g. third party libraries that use c)
-def process_folder(folders, sought_exceptions=[], includes_per_scu=0, extension="cpp"):
-    if len(folders) == 0:
-        return
+def process_directory(
+    dir_to_find,
+    *,
+    additional_dirs=[],
+    sought_exceptions=[],
+    includes_per_scu=0,
+    extension="cpp",
+    files_to_put_first=[],
+):
+    dir_path = Path(dir_to_find)
 
-    # Construct the filename prefix from the FIRST folder name
-    # e.g. "scene_3d"
-    out_filename = find_section_name(folders[0])
+    global base_dir_path
+
+    # Construct the filename prefix from the directory name.
+    # e.g. "scene_3d".
+    out_filename = find_section_name(dir_path)
 
     found_includes = []
     found_exceptions = []
 
-    main_folder = folders[0]
-    abs_main_folder = base_folder_path + main_folder
+    abs_main_dir_path = base_dir_path.joinpath(dir_path)
 
-    # Keep a record of all folders that have been processed for SCU,
-    # this enables deciding what to do when we call "add_source_files()"
-    global _scu_folders
-    _scu_folders.add(main_folder)
+    # Keep a record of all directories that have been processed for SCU,
+    # this enables deciding what to do when we call "add_source_files()".
+    global _scu_directories
+    _scu_directories.add(dir_path)
 
-    # main folder (first)
-    found_includes, found_exceptions = find_files_in_folder(
-        main_folder, "", found_includes, extension, sought_exceptions, found_exceptions
-    )
-
-    # sub folders
-    for d in range(1, len(folders)):
-        found_includes, found_exceptions = find_files_in_folder(
-            main_folder, folders[d], found_includes, extension, sought_exceptions, found_exceptions
+    for dir_to_find in [dir_path, *additional_dirs]:
+        dir_to_find_path = base_dir_path.joinpath(dir_to_find[1:] if Path(dir_to_find).is_absolute() else dir_to_find)
+        dir_found_includes, dir_found_exceptions = find_files_in_directory(
+            dir_to_find_path, extension, sought_exceptions
         )
+        found_includes.extend(dir_found_includes)
+        found_exceptions.extend(dir_found_exceptions)
 
-    found_includes = sorted(found_includes)
+    files_to_put_first.reverse()
+    for file_to_put_first in files_to_put_first:
+        file_to_put_first_path = base_dir_path.joinpath(
+            file_to_put_first[1:] if Path(file_to_put_first).is_absolute() else file_to_put_first
+        )
+        if file_to_put_first_path in found_includes:
+            found_includes = [
+                file_to_put_first_path,
+                *[found_include for found_include in found_includes if found_include != file_to_put_first_path],
+            ]
+        if file_to_put_first_path in found_exceptions:
+            found_exceptions = [
+                file_to_put_first_path,
+                *[found_exception for found_exception in found_exceptions if found_exception != file_to_put_first_path],
+            ]
 
-    # calculate how many lines to write in each file
+    # Calculate how many lines to write in each file.
     total_lines = len(found_includes)
 
-    # adjust number of output files according to whether DEV or release
+    # Adjust number of output files according to whether it's a dev or release build.
     num_output_files = 1
 
     if includes_per_scu == 0:
@@ -223,8 +223,11 @@ def process_folder(folders, sought_exceptions=[], includes_per_scu=0, extension=
     start_line = 0
 
     # These do not vary throughout the loop
-    output_folder = abs_main_folder + "/.scu/"
+    output_dir_path = abs_main_dir_path.joinpath(".scu")
     output_filename_prefix = "scu_" + out_filename
+
+    # Make includes relative to the .scu directory.
+    found_includes = [Path(include).relative_to(output_dir_path, walk_up=True) for include in found_includes]
 
     fresh_files = set()
 
@@ -236,7 +239,13 @@ def process_folder(folders, sought_exceptions=[], includes_per_scu=0, extension=
             end_line = len(found_includes)
 
         fresh_file = write_output_file(
-            file_count, found_includes, start_line, end_line, output_folder, output_filename_prefix, extension
+            file_count,
+            found_includes,
+            start_line,
+            end_line,
+            output_dir_path,
+            output_filename_prefix,
+            extension,
         )
 
         fresh_files.add(fresh_file)
@@ -247,7 +256,11 @@ def process_folder(folders, sought_exceptions=[], includes_per_scu=0, extension=
     # so they can effectively compile in "old style / normal build".
     for exception_count in range(len(found_exceptions)):
         fresh_file = write_exception_output_file(
-            exception_count, found_exceptions[exception_count], output_folder, output_filename_prefix, extension
+            exception_count,
+            found_exceptions[exception_count],
+            output_dir_path.as_posix(),
+            output_filename_prefix,
+            extension,
         )
 
         fresh_files.add(fresh_file)
@@ -255,7 +268,7 @@ def process_folder(folders, sought_exceptions=[], includes_per_scu=0, extension=
     # Clear out any stale file (usually we will be overwriting if necessary,
     # but we want to remove any that are pre-existing that will not be
     # overwritten, so as to not compile anything stale).
-    clear_out_stale_files(output_folder, extension, fresh_files)
+    clear_out_stale_files(output_dir_path.as_posix(), extension, fresh_files)
 
 
 def generate_scu_files(max_includes_per_scu):
@@ -264,134 +277,133 @@ def generate_scu_files(max_includes_per_scu):
 
     print("SCU: Generating build files... (max includes per SCU: %d)" % _max_includes_per_scu)
 
-    curr_folder = os.path.abspath("./")
+    cwd = os.getcwd()
 
-    # check we are running from the correct folder
-    if folder_not_found("core") or folder_not_found("platform") or folder_not_found("scene"):
-        raise RuntimeError("scu_builders.py must be run from the godot folder.")
-        return
+    # check we are running from the correct directory.
+    if not is_dir("core") or not is_dir("platform") or not is_dir("scene"):
+        raise RuntimeError("scu_builders.py must be run from the `godot` repository directory.")
 
-    process_folder(["core"])
-    process_folder(["core/crypto"])
-    process_folder(["core/debugger"])
-    process_folder(["core/extension"])
-    process_folder(["core/input"])
-    process_folder(["core/io"])
-    process_folder(["core/math"])
-    process_folder(["core/object"])
-    process_folder(["core/os"])
-    process_folder(["core/string"])
-    process_folder(["core/variant"], ["variant_utility"])
+    process_directory("core")
+    process_directory("core/crypto")
+    process_directory("core/debugger")
+    process_directory("core/extension")
+    process_directory("core/input")
+    process_directory("core/io")
+    process_directory("core/math")
+    process_directory("core/object")
+    process_directory("core/os")
+    process_directory("core/string")
+    process_directory("core/variant", sought_exceptions=["variant_utility"])
 
-    process_folder(["drivers/unix"])
-    process_folder(["drivers/png"])
+    process_directory("drivers/unix")
+    process_directory("drivers/png")
 
-    process_folder(["drivers/gles3/effects"])
-    process_folder(["drivers/gles3/storage"])
+    process_directory("drivers/gles3/effects")
+    process_directory("drivers/gles3/storage")
 
-    process_folder(["editor"], [], 32)
-    process_folder(["editor/animation"])
-    process_folder(["editor/asset_library"])
-    process_folder(["editor/audio"])
-    process_folder(["editor/debugger"])
-    process_folder(["editor/debugger/debug_adapter"])
-    process_folder(["editor/doc"])
-    process_folder(["editor/docks"], ["file_system_dock"])
-    process_folder(["editor/export"])
-    process_folder(["editor/file_system"])
-    process_folder(["editor/gui"])
-    process_folder(["editor/inspector"], ["editor_resource_preview"])
-    process_folder(["editor/themes"])
-    process_folder(["editor/project_manager"])
-    process_folder(["editor/project_upgrade"])
-    process_folder(["editor/import"])
-    process_folder(["editor/import/3d"])
-    process_folder(["editor/plugins"])
-    process_folder(["editor/run"])
-    process_folder(["editor/scene"])
-    process_folder(["editor/scene/2d"])
-    process_folder(["editor/scene/2d/physics"])
-    process_folder(["editor/scene/2d/tiles"])
-    process_folder(["editor/scene/3d"])
-    process_folder(["editor/scene/3d/gizmos"])
-    process_folder(["editor/scene/gui"])
-    process_folder(["editor/scene/texture"])
-    process_folder(["editor/script"])
-    process_folder(["editor/settings"])
-    process_folder(["editor/shader"])
-    process_folder(["editor/translations"])
-    process_folder(["editor/version_control"])
+    process_directory("editor", includes_per_scu=32)
+    process_directory("editor/animation")
+    process_directory("editor/asset_library")
+    process_directory("editor/audio")
+    process_directory("editor/debugger")
+    process_directory("editor/debugger/debug_adapter")
+    process_directory("editor/doc")
+    process_directory("editor/docks", sought_exceptions=["file_system_dock"])
+    process_directory("editor/export")
+    process_directory("editor/file_system")
+    process_directory("editor/gui")
+    process_directory("editor/inspector", sought_exceptions=["editor_resource_preview"])
+    process_directory("editor/themes")
+    process_directory("editor/project_manager")
+    process_directory("editor/project_upgrade")
+    process_directory("editor/import")
+    process_directory("editor/import/3d")
+    process_directory("editor/plugins")
+    process_directory("editor/run")
+    process_directory("editor/scene")
+    process_directory("editor/scene/2d")
+    process_directory("editor/scene/2d/physics")
+    process_directory("editor/scene/2d/tiles")
+    process_directory("editor/scene/3d")
+    process_directory("editor/scene/3d/gizmos")
+    process_directory("editor/scene/gui")
+    process_directory("editor/scene/texture")
+    process_directory("editor/script")
+    process_directory("editor/settings")
+    process_directory("editor/shader")
+    process_directory("editor/translations")
+    process_directory("editor/version_control")
 
-    process_folder(["platform/android/export"])
-    process_folder(["platform/ios/export"])
-    process_folder(["platform/linuxbsd/export"])
-    process_folder(["platform/macos/export"])
-    process_folder(["platform/web/export"])
-    process_folder(["platform/windows/export"])
+    process_directory("platform/android/export")
+    process_directory("platform/ios/export")
+    process_directory("platform/linuxbsd/export")
+    process_directory("platform/macos/export")
+    process_directory("platform/web/export")
+    process_directory("platform/windows/export")
 
-    process_folder(["modules/lightmapper_rd"])
-    process_folder(["modules/gltf"])
-    process_folder(["modules/gltf/structures"])
-    process_folder(["modules/gltf/editor"])
-    process_folder(["modules/gltf/extensions"])
-    process_folder(["modules/gltf/extensions/physics"])
-    process_folder(["modules/navigation_3d"])
-    process_folder(["modules/navigation_3d/3d"])
-    process_folder(["modules/navigation_2d"])
-    process_folder(["modules/navigation_2d/2d"])
-    process_folder(["modules/webrtc"])
-    process_folder(["modules/websocket"])
-    process_folder(["modules/gridmap"])
-    process_folder(["modules/multiplayer"])
-    process_folder(["modules/multiplayer/editor"])
-    process_folder(["modules/openxr"], ["register_types"])
-    process_folder(["modules/openxr/action_map"])
-    process_folder(["modules/openxr/editor"])
-    # process_folder(["modules/openxr/extensions"])  # Sensitive include order for platform code.
-    process_folder(["modules/openxr/scene"])
-    process_folder(["modules/godot_physics_2d"])
-    process_folder(["modules/godot_physics_3d"])
-    process_folder(["modules/godot_physics_3d/joints"])
+    process_directory("modules/lightmapper_rd")
+    process_directory("modules/gltf")
+    process_directory("modules/gltf/structures")
+    process_directory("modules/gltf/editor")
+    process_directory("modules/gltf/extensions")
+    process_directory("modules/gltf/extensions/physics")
+    process_directory("modules/navigation_3d")
+    process_directory("modules/navigation_3d/3d")
+    process_directory("modules/navigation_2d")
+    process_directory("modules/navigation_2d/2d")
+    process_directory("modules/webrtc")
+    process_directory("modules/websocket")
+    process_directory("modules/gridmap")
+    process_directory("modules/multiplayer")
+    process_directory("modules/multiplayer/editor")
+    process_directory("modules/openxr", sought_exceptions=["register_types"])
+    process_directory("modules/openxr/action_map")
+    process_directory("modules/openxr/editor")
+    # process_directory("modules/openxr/extensions")  # Sensitive include order for platform code.
+    process_directory("modules/openxr/scene")
+    process_directory("modules/godot_physics_2d")
+    process_directory("modules/godot_physics_3d")
+    process_directory("modules/godot_physics_3d/joints")
 
-    process_folder(["modules/csg"])
-    process_folder(["modules/gdscript"])
-    process_folder(["modules/gdscript/editor"])
-    process_folder(["modules/gdscript/language_server"])
+    process_directory("modules/csg")
+    process_directory("modules/gdscript")
+    process_directory("modules/gdscript/editor")
+    process_directory("modules/gdscript/language_server")
 
-    process_folder(["scene/2d"])
-    process_folder(["scene/2d/physics"])
-    process_folder(["scene/2d/physics/joints"])
-    process_folder(["scene/3d"])
-    process_folder(["scene/3d/physics"])
-    process_folder(["scene/3d/physics/joints"])
-    process_folder(["scene/3d/xr"])
-    process_folder(["scene/animation"])
-    process_folder(["scene/gui"])
-    process_folder(["scene/main"])
-    process_folder(["scene/theme"])
-    process_folder(["scene/resources"])
-    process_folder(["scene/resources/2d"])
-    process_folder(["scene/resources/2d/skeleton"])
-    process_folder(["scene/resources/3d"])
+    process_directory("scene/2d")
+    process_directory("scene/2d/physics")
+    process_directory("scene/2d/physics/joints")
+    process_directory("scene/3d")
+    process_directory("scene/3d/physics")
+    process_directory("scene/3d/physics/joints")
+    process_directory("scene/3d/xr")
+    process_directory("scene/animation")
+    process_directory("scene/gui")
+    process_directory("scene/main")
+    process_directory("scene/theme")
+    process_directory("scene/resources")
+    process_directory("scene/resources/2d")
+    process_directory("scene/resources/2d/skeleton")
+    process_directory("scene/resources/3d")
 
-    process_folder(["servers"])
-    process_folder(["servers/rendering"])
-    process_folder(["servers/rendering/dummy/storage"])
-    process_folder(["servers/rendering/storage"])
-    process_folder(["servers/rendering/renderer_rd"])
-    process_folder(["servers/rendering/renderer_rd/effects"])
-    process_folder(["servers/rendering/renderer_rd/environment"])
-    process_folder(["servers/rendering/renderer_rd/storage_rd"])
-    process_folder(["servers/rendering/renderer_rd/forward_clustered"])
-    process_folder(["servers/rendering/renderer_rd/forward_mobile"])
-    process_folder(["servers/audio"])
-    process_folder(["servers/audio/effects"])
-    process_folder(["servers/navigation_2d"])
-    process_folder(["servers/navigation_3d"])
-    process_folder(["servers/xr"])
+    process_directory("servers")
+    process_directory("servers/rendering")
+    process_directory("servers/rendering/dummy/storage")
+    process_directory("servers/rendering/storage")
+    process_directory("servers/rendering/renderer_rd")
+    process_directory("servers/rendering/renderer_rd/effects")
+    process_directory("servers/rendering/renderer_rd/environment")
+    process_directory("servers/rendering/renderer_rd/storage_rd")
+    process_directory("servers/rendering/renderer_rd/forward_clustered")
+    process_directory("servers/rendering/renderer_rd/forward_mobile")
+    process_directory("servers/audio")
+    process_directory("servers/audio/effects")
+    process_directory("servers/navigation_2d")
+    process_directory("servers/navigation_3d")
+    process_directory("servers/xr")
 
     # NOTE: Tests previously compiled as one large unit. We replicate this behavior in SCU builds.
-    process_folder(
+    process_directory(
         [
             "tests",
             "/core",
@@ -409,13 +421,14 @@ def generate_scu_files(max_includes_per_scu):
             "/servers",
             "/servers/rendering",
         ],
-        ["test_macros", "test_main"],
+        # sought_exceptions=["test_macros", "test_main"],
+        files_to_put_first=["tests/test_main.cpp"],
     )
 
-    # Finally change back the path to the calling folder
-    os.chdir(curr_folder)
+    # Finally change back the path to the calling directory.
+    os.chdir(cwd)
 
     if _verbose:
-        print("SCU: Processed folders: %s" % sorted(_scu_folders))
+        print("SCU: Processed directories: %s" % sorted(_scu_directories))
 
-    return _scu_folders
+    return _scu_directories

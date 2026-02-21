@@ -19,18 +19,86 @@ from misc.utility.color import print_error, print_info, print_warning
 from platform_methods import detect_arch
 
 # Get the "Godot" folder name ahead of time
-base_folder = Path(__file__).resolve().parent
+base_directory = Path(__file__).resolve().parent
 
 compiler_version_cache = None
 
-# Listing all the folders we have converted
-# for SCU in scu_builders.py
-_scu_folders = set()
+
+def scu_generator(source, target, env, for_signature):
+    print(f"[scu_generator] source: {source}, target: {target}")
+    if not env["scu_build"]:
+        return
+    return
 
 
-def set_scu_folders(scu_folders):
-    global _scu_folders
-    _scu_folders = scu_folders
+def scu_emitter(target, source, env):
+    # print(f"[scu_emitter] source: {[env.File(s).abspath for s in source]}")
+    if not env["scu_build"]:
+        return target, source
+
+    new_sources = []
+    for node in env.Flatten(source):
+        for scu_root in env["SCU_ROOTS"]:
+            scu_root_path = scu_root.root_path
+            for node_source in node.sources:
+                node_source_path = Path(node_source.abspath)
+                scu_root_dir_paths = [
+                    scu_root_path,
+                    *[Path(include_subdir.abspath) for include_subdir in scu_root.include_subdirs],
+                ]
+
+                for root_dir_path in scu_root_dir_paths:
+                    if root_dir_path.joinpath(node_source_path.name) == node_source_path:
+                        new_sources.append(env.Object(scu_root.scu_base_file))
+
+    if len(new_sources) == 0:
+        return target, source
+
+    return target, new_sources
+
+
+def scu_gen_emitter(target, source, env):
+    if not env["scu_build"]:
+        return target, source
+
+    for node in env.Flatten(source):
+        for scu_root in env["SCU_ROOTS"]:
+            scu_dir_path = scu_root.scu_dir_path
+            for node_source in node.sources:
+                node_source_path = Path(node_source.abspath)
+                if scu_dir_path.joinpath(node_source_path.name) == node_source_path:
+                    pass
+
+    return target, source
+
+
+class SCURootStruct:
+    def __init__(self, env, root, *, include_subdirs=[], sought_exceptions=[], sort_function=None):
+        self.root = env.Dir(root)
+        self.root_path = Path(self.root.abspath)
+        self.scu_dir_path = self.root_path.joinpath(".scu")
+        self.scu_dir = env.Dir(self.scu_dir_path)
+        self.name = self.root_path.relative_to(base_directory).as_posix().replace("/", "_")
+        self.scu_base_file_path = self.scu_dir_path.joinpath(self.name + ".gen.cpp")
+        self.scu_base_file = env.File(self.scu_base_file_path)
+        self.include_subdirs = include_subdirs
+        self.sought_exceptions = sought_exceptions
+        self.sort_function = sort_function
+
+        self.scu_base_file.attributes.scu_root = self
+        self.scu_base_file.attributes.scu_files = []
+
+
+def add_scu_root(env, root, *, include_subdirs=[], sought_exceptions=[], sort_function=None):
+    scu_root = SCURootStruct(
+        env, root, include_subdirs=include_subdirs, sought_exceptions=sought_exceptions, sort_function=sort_function
+    )
+    env["SCU_ROOTS"].append(scu_root)
+
+
+def add_to_scu_root(env, source, root):
+    if root is not SCURootStruct:
+        raise Exception("`root` is not of type `SCURootStruct`")
 
 
 def add_source_files_orig(self, sources, files, allow_gen=False):
@@ -52,37 +120,39 @@ def add_source_files_orig(self, sources, files, allow_gen=False):
         sources.append(obj)
 
 
-def add_source_files_scu(self, sources, files, allow_gen=False):
-    if self["scu_build"] and isinstance(files, str):
-        if "*." not in files:
-            return False
+# def add_source_files_scu(self, sources, files, allow_gen=False):
+#     if self["scu_build"] and isinstance(files, str):
+#         if "*." not in files:
+#             return False
 
-        # If the files are in a subdirectory, we want to create the scu gen
-        # files inside this subdirectory.
-        subdir = os.path.dirname(files)
-        subdir = subdir if subdir == "" else subdir + "/"
-        section_name = self.Dir(subdir).tpath
-        section_name = section_name.replace("\\", "/")  # win32
-        # if the section name is in the hash table?
-        # i.e. is it part of the SCU build?
-        global _scu_folders
-        if section_name not in (_scu_folders):
-            return False
+#         # If the files are in a subdirectory, we want to create the scu gen
+#         # files inside this subdirectory.
+#         subdir = os.path.dirname(files)
+#         subdir = subdir if subdir == "" else subdir + "/"
+#         section_name = self.Dir(subdir).tpath
+#         section_name = section_name.replace("\\", "/")  # win32
+#         # if the section name is in the hash table?
+#         # i.e. is it part of the SCU build?
+#         global _scu_folders
+#         if section_name not in (_scu_folders):
+#             return False
 
-        # Add all the gen.cpp files in the SCU directory
-        add_source_files_orig(self, sources, subdir + ".scu/scu_*.gen.cpp", True)
-        return True
-    return False
+#         # Add all the gen.cpp files in the SCU directory
+#         add_source_files_orig(self, sources, subdir + ".scu/scu_*.gen.cpp", True)
+#         return True
+#     return False
 
 
 # Either builds the folder using the SCU system,
 # or reverts to regular build.
 def add_source_files(self, sources, files, allow_gen=False):
-    if not add_source_files_scu(self, sources, files, allow_gen):
-        # Wraps the original function when scu build is not active.
-        add_source_files_orig(self, sources, files, allow_gen)
-        return False
-    return True
+    add_source_files_orig(self, sources, files, allow_gen=False)
+
+    # if not add_source_files_scu(self, sources, files, allow_gen):
+    #     # Wraps the original function when scu build is not active.
+    #     add_source_files_orig(self, sources, files, allow_gen)
+    #     return False
+    # return True
 
 
 def redirect_emitter(target, source, env):
@@ -100,10 +170,10 @@ def redirect_emitter(target, source, env):
     for item in target:
         path = Path(item.get_abspath()).resolve()
 
-        if path.parent == base_folder / "bin":
+        if path.parent == base_directory / "bin":
             pass
-        elif base_folder in path.parents:
-            item = env.File(f"#bin/obj/{path.relative_to(base_folder)}")
+        elif base_directory in path.parents:
+            item = env.File(f"#bin/obj/{path.relative_to(base_directory)}")
         elif (alt_base := Path(env.Dir(".").get_abspath()).resolve().parent) in path.parents:
             item = env.File(f"#bin/obj/external/{path.relative_to(alt_base)}")
         else:
@@ -167,7 +237,7 @@ def get_version_info(module_version_string="", silent=False):
 
 
 def get_git_info():
-    os.chdir(base_folder)
+    os.chdir(base_directory)
 
     # Parse Git hash if we're in a Git repo.
     git_hash = ""
@@ -825,7 +895,7 @@ def show_progress(env):
     if env["ninja"]:
         return
 
-    NODE_COUNT_FILENAME = base_folder / ".scons_node_count"
+    NODE_COUNT_FILENAME = base_directory / ".scons_node_count"
 
     class ShowProgress:
         def __init__(self):

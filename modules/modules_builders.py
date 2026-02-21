@@ -50,7 +50,7 @@ void uninitialize_modules(ModuleInitializationLevel p_level) {{
 
 
 def modules_tests_builder(target, source, env):
-    headers = sorted([os.path.relpath(src.path, methods.base_folder).replace("\\", "/") for src in source])
+    headers = sorted([os.path.relpath(src.path, methods.base_directory).replace("\\", "/") for src in source])
     with methods.generated_wrapper(str(target[0])) as file:
         for header in headers:
             file.write(f'#include "{header}"\n')

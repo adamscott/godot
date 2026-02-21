@@ -8,9 +8,11 @@ EnsurePythonVersion(3, 9)
 import glob
 import os
 import pickle
+import shutil
 import sys
 from collections import OrderedDict
 from importlib.util import module_from_spec, spec_from_file_location
+from pathlib import Path
 from types import ModuleType
 
 from SCons import __version__ as scons_raw_version
@@ -57,7 +59,6 @@ _helper_module("misc.utility.color", "misc/utility/color.py")
 import gles3_builders
 import glsl_builders
 import methods
-import scu_builders
 from misc.utility.color import is_stderr_color, print_error, print_info, print_warning
 from platform_methods import architecture_aliases, architectures, compatibility_platform_aliases
 
@@ -371,6 +372,15 @@ if env["import_env_vars"]:
         if env_var in os.environ:
             env["ENV"][env_var] = os.environ[env_var]
 
+# SCU.
+# env.Append(
+#     BUILDERS={"BuildSCU": env.Builder(generator=methods.scu_generator, suffix=".gen.cpp", src_suffix=[".cpp", ".c"])}
+# )
+env.Append(SCU_ROOTS=[])
+env.Append(PROGEMITTER=[methods.scu_emitter, methods.scu_gen_emitter])
+env.Append(LIBEMITTER=[methods.scu_emitter, methods.scu_gen_emitter])
+env.AddMethod(methods.add_scu_root, "AddSCURoot")
+
 # Platform selection: validate input, and add options.
 
 if not env["platform"]:
@@ -676,7 +686,7 @@ if env["strict_checks"]:
     env.Append(CPPDEFINES=["STRICT_CHECKS"])
 
 # Run SCU file generation script if in a SCU build.
-if env["scu_build"]:
+if env["scu_build"] and not env.GetOption("clean"):
     env.Append(CPPDEFINES=["SCU_BUILD_ENABLED"])
     max_includes_per_scu = 8
     if env.dev_build:
@@ -687,7 +697,12 @@ if env["scu_build"]:
     if read_scu_limit != 0:
         max_includes_per_scu = read_scu_limit
 
-    methods.set_scu_folders(scu_builders.generate_scu_files(max_includes_per_scu))
+    env.AppendUnique(
+        delete_existing=True,
+        SCU_MAX_INCLUDES_PER_SCU=max_includes_per_scu,
+    )
+
+    # scu_builders.generate_scu_files(env)
 
 # Must happen after the flags' definition, as configure is when most flags
 # are actually handled to change compile options, etc.
@@ -1229,6 +1244,22 @@ if env["vsproj"]:
     methods.generate_cpp_hint_file("cpp.hint")
     env["CPPPATH"] = [Dir(path) for path in env["CPPPATH"]]
     methods.generate_vs_project(env, ARGUMENTS, env["vsproj_name"])
+
+# Manual cleaning.
+if env.GetOption("clean"):
+    root_path = Path(env.Dir("#").abspath)
+    current_cwd = os.getcwd()
+
+    # SCU.
+    os.chdir(root_path)
+    for file in glob.iglob("./**/.scu/", recursive=True):
+        file_path = root_path.joinpath(file)
+        if not file_path.is_dir():
+            continue
+        print(f"Removed {file_path.relative_to(root_path).as_posix()}/")
+        shutil.rmtree(file_path)
+    os.chdir(current_cwd)
+
 
 # Miscellaneous & post-build methods.
 if not env.GetOption("clean") and not env.GetOption("help"):
