@@ -101,7 +101,7 @@ Patches:
 
 Files extracted from upstream source:
 
-- `common/`, `dec/` and `include/` folders from `c/`,
+- `common/`, `dec/`, `enc/`, and `include/` folders from `c/`,
   minus the `dictionary.bin*` files
 - `LICENSE`
 
