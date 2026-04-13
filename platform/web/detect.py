@@ -12,7 +12,6 @@ from emscripten_helpers import (
     create_template_zip,
     get_template_zip_path,
     package_js_module_generator,
-    run_closure_compiler,
 )
 from SCons.Util import WhereIs
 
@@ -54,7 +53,6 @@ def get_opts():
         BoolVariable(
             "dlink_enabled", "Enable WebAssembly dynamic linking (GDExtension support). Produces bigger binaries", False
         ),
-        BoolVariable("use_closure_compiler", "Use closure compiler to minimize JavaScript code", False),
         BoolVariable(
             "proxy_to_pthread",
             "Use Emscripten PROXY_TO_PTHREAD option to run the main application code to a separate thread",
@@ -197,21 +195,6 @@ def configure(env: "SConsEnvironment"):
         env.Append(LINKFLAGS=["-fsanitize=leak"])
     if env["use_safe_heap"]:
         env.Append(LINKFLAGS=["-sSAFE_HEAP=1"])
-
-    # Closure compiler
-    if env["use_closure_compiler"] and cc_semver < (4, 0, 11):
-        print_warning(
-            '"use_closure_compiler=yes" support requires Emscripten 4.0.11 (detected %s.%s.%s), using "use_closure_compiler=no" instead.'
-            % cc_semver
-        )
-        env["use_closure_compiler"] = False
-
-    if env["use_closure_compiler"]:
-        # For emscripten support code.
-        env.Append(LINKFLAGS=["--closure", "1"])
-        # Register builder for our Engine files
-        jscc = env.Builder(generator=run_closure_compiler, suffix=".cc.js", src_suffix=".js")
-        env.Append(BUILDERS={"BuildJS": jscc})
 
     # Add helper method for adding libraries, externs, pre-js, post-js.
     env["JS_LIBS"] = []
