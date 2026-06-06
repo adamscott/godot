@@ -77,6 +77,7 @@ enum SceneUniformLocation {
 	SCENE_EMPTY2, // Unused, put here to avoid conflicts with SKY_MULTIVIEW_UNIFORM_LOCATION.
 	SCENE_PREV_DATA_UNIFORM_LOCATION,
 	SCENE_PREV_MULTIVIEW_UNIFORM_LOCATION,
+	SCENE_DECAL_UNIFORM_LOCATION,
 };
 
 enum SkyUniformLocation {
@@ -122,6 +123,7 @@ struct RenderDataGLES3 {
 	const PagedArray<RenderGeometryInstance *> *instances = nullptr;
 	const PagedArray<RID> *lights = nullptr;
 	const PagedArray<RID> *reflection_probes = nullptr;
+	const PagedArray<RID> *decals = nullptr;
 	RID environment;
 	RID camera_attributes;
 	RID shadow_atlas;
@@ -137,6 +139,8 @@ struct RenderDataGLES3 {
 	uint32_t spot_light_count = 0;
 	uint32_t omni_light_count = 0;
 	uint32_t area_light_count = 0;
+
+	uint32_t decal_count = 0;
 
 	float luminance_multiplier = 1.0;
 
@@ -244,6 +248,25 @@ private:
 	};
 	static_assert(sizeof(DirectionalShadowData) % 16 == 0, "DirectionalShadowData size must be a multiple of 16 bytes");
 
+	struct DecalData {
+		float xform[16];
+		float inv_extents[3];
+		float albedo_mix;
+		float albedo_rect[4];
+		float normal_rect[4];
+		float orm_rect[4];
+		float emission_rect[4];
+		float modulate[4];
+		float emission_energy;
+		uint32_t mask;
+		float upper_fade;
+		float lower_fade;
+		float normal_xform[12];
+		float normal[3];
+		float normal_fade;
+	};
+	static_assert(sizeof(DecalData) % 16 == 0, "DecalData size must be a multiple of 16 bytes");
+
 	class GeometryInstanceGLES3;
 
 	// Cached data for drawing surfaces
@@ -345,6 +368,10 @@ private:
 		LocalVector<RID> reflection_probe_rid_cache;
 		LocalVector<Transform3D> reflection_probes_local_transform_cache;
 
+		LocalVector<RID> paired_decals;
+		LocalVector<RID> decal_rid_cache;
+		LocalVector<Transform3D> decals_local_transform_cache;
+
 		RID lightmap_instance;
 		Rect2 lightmap_uv_scale;
 		uint32_t lightmap_slice_index;
@@ -364,7 +391,7 @@ private:
 		virtual void clear_light_instances() override;
 		virtual void pair_light_instance(const RID p_light_instance, RSE::LightType light_type, uint32_t placement_idx) override;
 		virtual void pair_reflection_probe_instances(const RID *p_reflection_probe_instances, uint32_t p_reflection_probe_instance_count) override;
-		virtual void pair_decal_instances(const RID *p_decal_instances, uint32_t p_decal_instance_count) override {}
+		virtual void pair_decal_instances(const RID *p_decal_instances, uint32_t p_decal_instance_count) override;
 		virtual void pair_voxel_gi_instances(const RID *p_voxel_gi_instances, uint32_t p_voxel_gi_instance_count) override {}
 
 		virtual void set_softshadow_projector_pairing(bool p_softshadow, bool p_projector) override {}
@@ -404,7 +431,7 @@ private:
 	void _update_dirty_geometry_instances();
 
 	struct SceneState {
-		struct UBO {
+		struct alignas(16) UBO {
 			float projection_matrix[16];
 			float inv_projection_matrix[16];
 			float inv_view_matrix[16];
@@ -451,6 +478,8 @@ private:
 			float luminance_multiplier;
 			uint32_t camera_visible_layers;
 			bool pancake_shadows;
+
+			uint32_t decal_count;
 		};
 		static_assert(sizeof(UBO) % 16 == 0, "Scene UBO size must be a multiple of 16 bytes");
 		static_assert(sizeof(UBO) < 16384, "Scene UBO size must be 16384 bytes or smaller");
@@ -663,6 +692,9 @@ private:
 		DirectionalShadowData *directional_shadows = nullptr;
 		GLuint directional_shadow_buffer = 0;
 		RSE::ShadowQuality directional_shadow_quality = RSE::ShadowQuality::SHADOW_QUALITY_SOFT_LOW;
+
+		DecalData *decals = nullptr;
+		GLuint decal_buffer = 0;
 	} scene_state;
 
 	struct RenderListParameters {
@@ -741,8 +773,9 @@ private:
 
 	void _update_scene_ubo(GLuint &p_ubo_buffer, GLuint p_index, uint32_t p_size, const void *p_source_data, String p_name = "");
 
-	void _setup_lights(const RenderDataGLES3 *p_render_data, bool p_using_shadows, uint32_t &r_directional_light_count, uint32_t &r_omni_light_count, uint32_t &r_spot_light_count, uint32_t &r_area_light_count, uint32_t &r_directional_shadow_count);
+	void _setup_lights(const RenderDataGLES3 *p_render_data, bool p_using_shadows, uint32_t &r_directional_light_count, uint32_t &r_omni_light_count, uint32_t &r_spot_light_count, uint32_t &r_area_light_count, uint32_t &r_directional_shadow_count_directional_shadow_count);
 	void _setup_environment(const RenderDataGLES3 *p_render_data, bool p_no_fog, const Size2i &p_screen_size, bool p_flip_y, const Color &p_default_bg_color, bool p_pancake_shadows, float p_shadow_bias = 0.0);
+	void _setup_decals(const RenderDataGLES3 *p_render_data, uint32_t &r_decal_count);
 	void _fill_render_list(RenderListType p_render_list, const RenderDataGLES3 *p_render_data, PassMode p_pass_mode, bool p_append = false);
 	void _render_shadows(const RenderDataGLES3 *p_render_data, const Size2i &p_viewport_size = Size2i(1, 1));
 	void _render_shadow_pass(RID p_light, RID p_shadow_atlas, int p_pass, const PagedArray<RenderGeometryInstance *> &p_instances, float p_lod_distance_multiplier = 0, float p_screen_mesh_lod_threshold = 0.0, RenderingServerTypes::RenderInfo *p_render_info = nullptr, const Size2i &p_viewport_size = Size2i(1, 1), const Transform3D &p_main_cam_transform = Transform3D());

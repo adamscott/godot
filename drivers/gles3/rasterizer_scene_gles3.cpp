@@ -30,6 +30,8 @@
 
 #include "rasterizer_scene_gles3.h"
 
+#include "platform_gl.h"
+
 #ifdef GLES3_ENABLED
 
 #include "core/config/project_settings.h"
@@ -73,7 +75,7 @@ RenderGeometryInstance *RasterizerSceneGLES3::geometry_instance_create(RID p_bas
 }
 
 uint32_t RasterizerSceneGLES3::geometry_instance_get_pair_mask() {
-	return ((1 << RSE::INSTANCE_LIGHT) | (1 << RSE::INSTANCE_REFLECTION_PROBE));
+	return ((1 << RSE::INSTANCE_LIGHT) | (1 << RSE::INSTANCE_REFLECTION_PROBE) | (1 << RSE::INSTANCE_DECAL));
 }
 
 uint32_t RasterizerSceneGLES3::get_max_lights_total() {
@@ -132,6 +134,14 @@ void RasterizerSceneGLES3::GeometryInstanceGLES3::pair_reflection_probe_instance
 
 	for (uint32_t i = 0; i < p_reflection_probe_instance_count; i++) {
 		paired_reflection_probes.push_back(p_reflection_probe_instances[i]);
+	}
+}
+
+void RasterizerSceneGLES3::GeometryInstanceGLES3::pair_decal_instances(const RID *p_decal_instances, uint32_t p_decal_instance_count) {
+	paired_decals.clear();
+
+	for (uint32_t i = 0; i < p_decal_instance_count; i++) {
+		paired_decals.push_back(p_decal_instances[i]);
 	}
 }
 
@@ -1277,6 +1287,7 @@ uint32_t RasterizerSceneGLES3::_indices_to_primitives(RSE::PrimitiveType p_primi
 void RasterizerSceneGLES3::_fill_render_list(RenderListType p_render_list, const RenderDataGLES3 *p_render_data, PassMode p_pass_mode, bool p_append) {
 	GLES3::MeshStorage *mesh_storage = GLES3::MeshStorage::get_singleton();
 	GLES3::LightStorage *light_storage = GLES3::LightStorage::get_singleton();
+	GLES3::TextureStorage *texture_storage = GLES3::TextureStorage::get_singleton();
 
 	if (p_render_list == RENDER_LIST_OPAQUE) {
 		scene_state.used_screen_texture = false;
@@ -1417,6 +1428,17 @@ void RasterizerSceneGLES3::_fill_render_list(RenderListType p_render_list, const
 						Transform3D local_matrix = p_render_data->inv_cam_transform * light_storage->reflection_probe_instance_get_transform(probe_instance);
 						inst->reflection_probes_local_transform_cache.push_back(local_matrix.affine_inverse());
 						inst->reflection_probe_rid_cache.push_back(probe_instance);
+					}
+				}
+			}
+
+			if (!inst->paired_decals.is_empty()) {
+				for (const RID decal_instance : inst->paired_decals) {
+					RID decal = texture_storage->decal_instance_get_base(decal_instance);
+					if (decal.is_valid()) {
+						Transform3D local_matrix = p_render_data->inv_cam_transform * texture_storage->decal_instance_get_transform(decal_instance);
+						inst->decals_local_transform_cache.push_back(local_matrix.affine_inverse());
+						inst->decal_rid_cache.push_back(decal_instance);
 					}
 				}
 			}
@@ -1689,6 +1711,18 @@ void RasterizerSceneGLES3::_setup_environment(const RenderDataGLES3 *p_render_da
 			source_data = scene_state.prev_data_state == 1 ? &scene_state.multiview_data : &scene_state.prev_multiview_data;
 			_update_scene_ubo(scene_state.prev_multiview_buffer, SCENE_PREV_MULTIVIEW_UNIFORM_LOCATION, sizeof(SceneState::MultiviewUBO), source_data, "Previous multiview UBO");
 		}
+	}
+}
+
+void RasterizerSceneGLES3::_setup_decals(const RenderDataGLES3 *p_render_data, uint32_t &r_decal_count) {
+	GLES3::TextureStorage::get_singleton()->update_decal_instances(*p_render_data->decals, p_render_data->cam_transform);
+
+	PackedByteArray decal_buffer = GLES3::TextureStorage::get_singleton()->get_decal_buffer();
+	memcpy(scene_state.decals, decal_buffer.ptr(), decal_buffer.size());
+
+	glBindBufferBase(GL_UNIFORM_BUFFER, SCENE_DECAL_UNIFORM_LOCATION, scene_state.decal_buffer);
+	if (r_decal_count > 0) {
+		glBufferData(GL_UNIFORM_BUFFER, sizeof(DecalData), scene_state.decals, GL_STREAM_DRAW);
 	}
 }
 
@@ -2452,6 +2486,7 @@ void RasterizerSceneGLES3::render_scene(const Ref<RenderSceneBuffers> &p_render_
 
 		render_data.instances = &p_instances;
 		render_data.lights = &p_lights;
+		render_data.decals = &p_decals;
 		render_data.reflection_probes = &p_reflection_probes;
 		render_data.environment = p_environment;
 		render_data.camera_attributes = p_camera_attributes;
@@ -2561,6 +2596,11 @@ void RasterizerSceneGLES3::render_scene(const Ref<RenderSceneBuffers> &p_render_
 	_render_shadows(&render_data, screen_size);
 
 	_setup_lights(&render_data, true, render_data.directional_light_count, render_data.omni_light_count, render_data.spot_light_count, render_data.area_light_count, render_data.directional_shadow_count);
+
+	uint32_t decal_count = render_data.decals->size();
+	scene_state.data.decal_count = decal_count;
+	_setup_decals(&render_data, decal_count);
+
 	_setup_environment(&render_data, is_reflection_probe, screen_size, flip_y, clear_color, false);
 
 	_fill_render_list(RENDER_LIST_OPAQUE, &render_data, PASS_MODE_COLOR);
@@ -3577,6 +3617,10 @@ void RasterizerSceneGLES3::_render_list_template(RenderListParameters *p_params,
 							spec_constants |= SceneShaderGLES3::SECOND_REFLECTION_PROBE;
 						}
 
+						if (inst->decal_rid_cache.is_empty()) {
+							spec_constants |= SceneShaderGLES3::DISABLE_DECAL;
+						}
+
 						if (inst->lightmap_instance.is_valid()) {
 							spec_constants |= SceneShaderGLES3::USE_LIGHTMAP;
 
@@ -3874,6 +3918,46 @@ void RasterizerSceneGLES3::_render_list_template(RenderListParameters *p_params,
 
 						spec_constants |= SceneShaderGLES3::SECOND_REFLECTION_PROBE;
 					}
+				}
+			}
+
+			// Pass in decal data
+			if constexpr (p_pass_mode == PASS_MODE_COLOR || p_pass_mode == PASS_MODE_COLOR_TRANSPARENT) {
+				if (pass == 0 && inst->decal_rid_cache.size() > 0) {
+					GLES3::Config *config = GLES3::Config::get_singleton();
+					GLES3::TextureStorage *texture_storage = GLES3::TextureStorage::get_singleton();
+
+					// for (const RID decal_instance_rid : inst->decal_rid_cache) {
+					// 	RID decal_rid = texture_storage->decal_instance_get_base(decal_instance_rid);
+					// 	GLES3::Decal *decal = texture_storage->get_decal(decal_rid);
+					// 	// material_storage->shaders.scene_shader.version_set_uniform(SceneShaderGLES3::DECALS, texture_storage->decals.ptr());
+					// }
+					//
+					glActiveTexture(GL_TEXTURE0 + config->max_texture_image_units - 12);
+					glBindTexture(GL_TEXTURE_2D, texture_storage->decal_atlas_get_texture());
+					// print_line(vformat("binding texture_storage->decal_atlas_get_texture(): %s", texture_storage->decal_atlas_get_texture()));
+					// glActiveTexture(GL_TEXTURE0 + config->max_texture_image_units - 13);
+					// glBindTexture(GL_TEXTURE_2D, texture_storage->decal_atlas_get_texture_srgb());
+					// glActiveTexture(GL_TEXTURE0 + config->max_texture_image_units - 14);
+					// glBindTexture(GL_TEXTURE_CUBE_MAP, texture_storage->decal_atlas_get_texture_srgb());
+
+					if (scene_state.decal_buffer == 0) {
+						// Only create if using 3D
+						glGenBuffers(1, &scene_state.decal_buffer);
+						glBindBufferBase(GL_UNIFORM_BUFFER, SCENE_DECAL_UNIFORM_LOCATION, scene_state.decal_buffer);
+						GLES3::Utilities::get_singleton()->buffer_allocate_data(GL_UNIFORM_BUFFER, scene_state.decal_buffer, sizeof(DecalData), &scene_state.decals, GL_STREAM_DRAW, "Decal UBO");
+					} else {
+						glBindBufferBase(GL_UNIFORM_BUFFER, SCENE_DECAL_UNIFORM_LOCATION, scene_state.decal_buffer);
+						glBufferData(GL_UNIFORM_BUFFER, sizeof(DecalData), &scene_state.decals, GL_STREAM_DRAW);
+					}
+
+					// glGenBuffers(1, &scene_state.decal_buffer);
+					// print_line(vformat("scene_state.decal_buffer: %s", scene_state.decal_buffer));
+					// glBindBuffer(GL_UNIFORM_BUFFER, scene_state.decal_buffer);
+					// // GLES3::Utilities::get_singleton()->buffer_allocate_data(GL_UNIFORM_BUFFER, scene_state.decal_buffer, texture_storage->get_decal_buffer().size(), texture_storage->get_decal_buffer().ptr(), GL_STREAM_DRAW, "Decal UBO");
+					// GLES3::Utilities::get_singleton()->buffer_allocate_data(GL_UNIFORM_BUFFER, scene_state.decal_buffer, sizeof(DecalUBO), scene_state.decals, GL_STREAM_DRAW, "Decal UBO");
+
+					glBindBuffer(GL_UNIFORM_BUFFER, 0);
 				}
 			}
 
@@ -4312,6 +4396,30 @@ void RasterizerSceneGLES3::_render_buffers_debug_draw(Ref<RenderSceneBuffersGLES
 			glBindTexture(GL_TEXTURE_2D, 0);
 		}
 	}
+	if (debug_draw == RSE::VIEWPORT_DEBUG_DRAW_DECAL_ATLAS) {
+		if (texture_storage->decal_atlas_get_texture() != 0) {
+			GLuint decal_atlas_texture = texture_storage->decal_atlas_get_texture();
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, decal_atlas_texture);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_RED);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_GREEN);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_BLUE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ONE);
+
+			scene_state.enable_gl_depth_test(false);
+			scene_state.enable_gl_depth_draw(false);
+
+			copy_effects->copy_to_rect(Rect2(Vector2(), Vector2(0.5, 0.5)));
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_RED);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_GREEN);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_BLUE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ALPHA);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_GREATER);
+			glBindTexture(GL_TEXTURE_2D, 0);
+		}
+	}
 }
 
 void RasterizerSceneGLES3::gi_set_use_half_resolution(bool p_enable) {
@@ -4600,6 +4708,20 @@ RasterizerSceneGLES3::RasterizerSceneGLES3() {
 		glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	}
 
+	// Decals.
+	{
+		GLES3::TextureStorage::get_singleton()->set_max_decals(config->max_decals_per_object);
+
+		uint32_t decal_buffer_size = config->max_decals_per_object * sizeof(DecalData);
+		scene_state.decals = memnew_arr(DecalData, config->max_decals_per_object);
+		glGenBuffers(1, &scene_state.decal_buffer);
+		glBindBuffer(GL_UNIFORM_BUFFER, scene_state.decal_buffer);
+		// GLES3::Utilities::get_singleton()->buffer_allocate_data(GL_UNIFORM_BUFFER, scene_state.decal_buffer, decal_buffer_size, GLES3::TextureStorage::get_singleton()->get_decal_buffer().ptr(), GL_STREAM_DRAW, "Decal UBO");
+		GLES3::Utilities::get_singleton()->buffer_allocate_data(GL_UNIFORM_BUFFER, scene_state.decal_buffer, decal_buffer_size, nullptr, GL_STREAM_DRAW, "Decal UBO");
+
+		glBindBuffer(GL_UNIFORM_BUFFER, 0);
+	}
+
 	{
 		String global_defines;
 		global_defines += "#define MAX_GLOBAL_SHADER_UNIFORMS 256\n"; // TODO: this is arbitrary for now
@@ -4607,6 +4729,7 @@ RasterizerSceneGLES3::RasterizerSceneGLES3() {
 		global_defines += "\n#define MAX_DIRECTIONAL_LIGHT_DATA_STRUCTS " + itos(MAX_DIRECTIONAL_LIGHTS) + "\n";
 		global_defines += "\n#define MAX_FORWARD_LIGHTS " + itos(config->max_lights_per_object) + "u\n";
 		global_defines += "\n#define MAX_ROUGHNESS_LOD " + itos(sky_globals.roughness_layers - 1) + ".0\n";
+		global_defines += "\n#define MAX_DECAL_DATA_STRUCTS " + itos(config->max_decals_per_object) + "\n";
 		if (config->force_vertex_shading) {
 			global_defines += "\n#define USE_VERTEX_LIGHTING\n";
 		}
@@ -4772,6 +4895,7 @@ RasterizerSceneGLES3::~RasterizerSceneGLES3() {
 	memdelete_arr(scene_state.area_light_sort);
 	memdelete_arr(scene_state.positional_shadows);
 	memdelete_arr(scene_state.directional_shadows);
+	memdelete_arr(scene_state.decals);
 
 	// Scene Shader
 	GLES3::MaterialStorage::get_singleton()->shaders.scene_shader.version_free(scene_globals.shader_default_version);

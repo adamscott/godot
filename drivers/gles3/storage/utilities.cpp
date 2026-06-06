@@ -155,6 +155,8 @@ RSE::InstanceType Utilities::get_base_type(RID p_rid) const {
 		return RSE::INSTANCE_MESH;
 	} else if (GLES3::MeshStorage::get_singleton()->owns_multimesh(p_rid)) {
 		return RSE::INSTANCE_MULTIMESH;
+	} else if (GLES3::TextureStorage::get_singleton()->owns_decal(p_rid)) {
+		return RSE::INSTANCE_DECAL;
 	} else if (GLES3::LightStorage::get_singleton()->owns_light(p_rid)) {
 		return RSE::INSTANCE_LIGHT;
 	} else if (GLES3::LightStorage::get_singleton()->owns_lightmap(p_rid)) {
@@ -397,6 +399,7 @@ void Utilities::update_dirty_resources() {
 	MaterialStorage::get_singleton()->_update_queued_materials();
 	MeshStorage::get_singleton()->_update_dirty_skeletons();
 	MeshStorage::get_singleton()->_update_dirty_multimeshes();
+	TextureStorage::get_singleton()->update_decal_atlas();
 	TextureStorage::get_singleton()->update_texture_atlas();
 }
 

@@ -14,6 +14,7 @@ DISABLE_LIGHT_OMNI = false
 DISABLE_LIGHT_SPOT = false
 DISABLE_LIGHT_AREA = false
 DISABLE_REFLECTION_PROBE = true
+DISABLE_DECAL = false
 DISABLE_FOG = false
 USE_DEPTH_FOG = false
 USE_SUN_SCATTER = false
@@ -229,6 +230,8 @@ struct SceneData {
 	float luminance_multiplier;
 	uint camera_visible_layers;
 	bool pancake_shadows;
+
+	uint decal_count;
 };
 
 // The containing data block is for historic reasons.
@@ -1214,6 +1217,8 @@ struct SceneData {
 	float luminance_multiplier;
 	uint camera_visible_layers;
 	bool pancake_shadows;
+
+	uint decal_count;
 };
 
 layout(std140) uniform SceneDataBlock { // ubo:2
@@ -1501,6 +1506,37 @@ layout(location = 0) out vec4 motion_vectors;
 #endif // !RENDER_MOTION_VECTORS
 
 #endif // !RENDER_MATERIAL
+
+#ifndef DISABLE_DECAL
+struct DecalData {
+	mat4 xform; //to decal transform
+	vec3 inv_extents;
+	float albedo_mix;
+	vec4 albedo_rect;
+	vec4 normal_rect;
+	vec4 orm_rect;
+	vec4 emission_rect;
+	vec4 modulate;
+	float emission_energy;
+	uint mask;
+	float upper_fade;
+	float lower_fade;
+	mat3x4 normal_xform;
+	vec3 normal;
+	float normal_fade;
+};
+
+uniform highp sampler2D decal_atlas; // texunit:-12
+// uniform highp sampler2D decal_atlas_srgb;
+// // ___texunit--:--13
+// uniform highp sampler2D decal_sampler;
+// // ___texunit--:--14
+
+layout(std140) uniform Decals { // ubo:15
+	DecalData decals_data[MAX_DECAL_DATA_STRUCTS];
+};
+
+#endif // !DISABLE_DECAL
 
 /* clang-format off */
 
@@ -2405,6 +2441,100 @@ void main() {
 	vec3 ambient_light = vec3(0.0, 0.0, 0.0);
 
 #ifdef BASE_PASS
+
+	/////////////////////// DECALS ////////////////////////////////
+
+#if !defined(MODE_RENDER_DEPTH) && !defined(DISABLE_DECAL)
+	vec3 vertex_ddx = dFdx(vertex);
+	vec3 vertex_ddy = dFdy(vertex);
+
+	uint decal_count = scene_data_block.data.decal_count;
+
+	// uvec2 decal_indices = instances.data[draw_call.instance_index].decals;
+	for (uint i = uint(0); i < decal_count; i++) {
+		// uint decal_index = (i > 3) ? ((decal_indices.y >> ((i - 4) * 8)) & 0xFF) : ((decal_indices.x >> (i * 8)) & 0xFF);
+		// if (decal_index == 0xFF) {
+		// 	break;
+		// }
+		uint decal_index = i;
+
+		// if (!bool(decals_data[decal_index].mask & layer_mask)) {
+		// 	continue; //not masked
+		// }
+
+		vec3 uv_local = (decals_data[decal_index].xform * vec4(vertex, 1.0)).xyz;
+		if (any(lessThan(uv_local, vec3(0.0, -1.0, 0.0))) || any(greaterThan(uv_local, vec3(1.0)))) {
+		// if (any(lessThan(uv_local, vec3(-1.0))) || any(greaterThan(uv_local, vec3(1.0)))) {
+			albedo = vec3(1.0, 0.0, 1.0);
+			continue; //out of decal
+		}
+
+		float fade = pow(1.0 - (uv_local.y > 0.0 ? uv_local.y : -uv_local.y), uv_local.y > 0.0 ? decals_data[decal_index].upper_fade : decals_data[decal_index].lower_fade);
+
+		if (decals_data[decal_index].normal_fade > 0.0) {
+			fade *= smoothstep(decals_data[decal_index].normal_fade, 1.0, dot(vec3(geo_normal), decals_data[decal_index].normal) * 0.5 + 0.5);
+		}
+
+		//we need ddx/ddy for mipmaps, so simulate them
+		vec2 ddx = (decals_data[decal_index].xform * vec4(vertex_ddx, 0.0)).xz;
+		vec2 ddy = (decals_data[decal_index].xform * vec4(vertex_ddy, 0.0)).xz;
+
+		if (decals_data[decal_index].albedo_rect != vec4(0.0)) {
+			//has albedo
+			vec4 decal_albedo;
+			// if (sc_decal_use_mipmaps()) {
+			//decal_albedo = textureGrad(sampler2D(decal_atlas_srgb, decal_sampler), uv_local.xz * decals_data[decal_index].albedo_rect.zw + decals_data[decal_index].albedo_rect.xy, ddx * decals_data[decal_index].albedo_rect.zw, ddy * decals_data[decal_index].albedo_rect.zw);
+			// } else {
+			// decal_albedo = textureLod(sampler2D(decal_atlas_srgb, decal_sampler), uv_local.xz * decals_data[decal_index].albedo_rect.zw + decals_data[decal_index].albedo_rect.xy, 0.0);
+			// }
+			// decal_albedo = textureLod(decal_atlas_srgb, uv_local.xz * decals_data[decal_index].albedo_rect.zw + decals_data[decal_index].albedo_rect.xy, 0.0);
+			decal_albedo = textureLod(decal_atlas, uv_local.xz * decals_data[decal_index].albedo_rect.zw + decals_data[decal_index].albedo_rect.xy, 0.0);
+			decal_albedo *= decals_data[decal_index].modulate;
+			decal_albedo.a *= fade;
+			albedo = vec3(mix(vec3(albedo), decal_albedo.rgb, decal_albedo.a * decals_data[decal_index].albedo_mix));
+
+			if (decals_data[decal_index].normal_rect != vec4(0.0)) {
+				vec3 decal_normal;
+				// if (sc_decal_use_mipmaps()) {
+				// decal_normal = textureGrad(sampler2D(decal_atlas, decal_sampler), uv_local.xz * decals_data[decal_index].normal_rect.zw + decals_data[decal_index].normal_rect.xy, ddx * decals_data[decal_index].normal_rect.zw, ddy * decals_data[decal_index].normal_rect.zw).xyz;
+				// } else {
+				// decal_normal = textureLod(sampler2D(decal_atlas, decal_sampler), uv_local.xz * decals_data[decal_index].normal_rect.zw + decals_data[decal_index].normal_rect.xy, 0.0).xyz;
+				// }
+				decal_normal = textureLod(decal_atlas, uv_local.xz * decals_data[decal_index].normal_rect.zw + decals_data[decal_index].normal_rect.xy, 0.0).xyz;
+				decal_normal.xy = decal_normal.xy * vec2(2.0, -2.0) - vec2(1.0, -1.0); //users prefer flipped y normal maps in most authoring software
+				decal_normal.z = sqrt(max(0.0, 1.0 - dot(decal_normal.xy, decal_normal.xy)));
+				//convert to view space, use xzy because y is up
+				decal_normal = (decals_data[decal_index].normal_xform * decal_normal.xzy).xyz;
+
+				normal = vec3(normalize(mix(vec3(normal), decal_normal, decal_albedo.a)));
+			}
+
+			if (decals_data[decal_index].orm_rect != vec4(0.0)) {
+				vec3 decal_orm;
+				// if (sc_decal_use_mipmaps()) {
+				// decal_orm = textureGrad(sampler2D(decal_atlas, decal_sampler), uv_local.xz * decals_data[decal_index].orm_rect.zw + decals.data[decal_index].orm_rect.xy, ddx * decals.data[decal_index].orm_rect.zw, ddy * decals.data[decal_index].orm_rect.zw).xyz;
+				// } else {
+				// decal_orm = textureLod(sampler2D(decal_atlas, decal_sampler), uv_local.xz * decals.data[decal_index].orm_rect.zw + decals.data[decal_index].orm_rect.xy, 0.0).xyz;
+				// }
+				decal_orm = textureLod(decal_atlas, uv_local.xz * decals_data[decal_index].orm_rect.zw + decals_data[decal_index].orm_rect.xy, 0.0).xyz;
+				ao = mix(float(ao), decal_orm.r, decal_albedo.a);
+				roughness = mix(float(roughness), decal_orm.g, decal_albedo.a);
+				metallic = mix(float(metallic), decal_orm.b, decal_albedo.a);
+			}
+		}
+
+		if (decals_data[decal_index].emission_rect != vec4(0.0)) {
+			//emission is additive, so its independent from albedo
+			// if (sc_decal_use_mipmaps()) {
+			// emission += vec3(textureGrad(sampler2D(decal_atlas_srgb, decal_sampler), uv_local.xz * decals.data[decal_index].emission_rect.zw + decals.data[decal_index].emission_rect.xy, ddx * decals.data[decal_index].emission_rect.zw, ddy * decals.data[decal_index].emission_rect.zw).xyz * decals.data[decal_index].emission_energy * fade);
+			// } else {
+			// emission += vec3(textureLod(sampler2D(decal_atlas_srgb, decal_sampler), uv_local.xz * decals.data[decal_index].emission_rect.zw + decals.data[decal_index].emission_rect.xy, 0.0).xyz * decals.data[decal_index].emission_energy * fade);
+			// }
+			emission += vec3(textureLod(decal_atlas, uv_local.xz * decals_data[decal_index].emission_rect.zw + decals_data[decal_index].emission_rect.xy, 0.0).xyz * decals_data[decal_index].emission_energy * fade);
+		}
+	}
+#endif //!defined(MODE_RENDER_DEPTH) && !defined(DISABLE_DECAL)
+
 	/////////////////////// LIGHTING //////////////////////////////
 
 #ifndef AMBIENT_LIGHT_DISABLED

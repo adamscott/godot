@@ -30,6 +30,8 @@
 
 #pragma once
 
+#include "core/templates/paged_array.h"
+#include "servers/rendering/storage/utilities.h"
 #ifdef GLES3_ENABLED
 
 #include "core/io/image.h"
@@ -418,6 +420,23 @@ struct RenderTarget {
 	}
 };
 
+struct Decal {
+	Vector3 size = Vector3(2, 2, 2);
+	RID textures[RSE::DECAL_TEXTURE_MAX];
+	float emission_energy = 1.0;
+	float albedo_mix = 1.0;
+	Color modulate = Color(1, 1, 1, 1);
+	uint32_t cull_mask = (1 << 20) - 1;
+	float upper_fade = 0.3;
+	float lower_fade = 0.3;
+	bool distance_fade = false;
+	float distance_fade_begin = 40.0;
+	float distance_fade_length = 10.0;
+	float normal_fade = 0.0;
+
+	Dependency dependency;
+};
+
 class TextureStorage : public RendererTextureStorage {
 private:
 	static TextureStorage *singleton;
@@ -466,6 +485,146 @@ private:
 		Size2i size;
 	} texture_atlas;
 
+	/* DECAL API */
+
+	struct DecalAtlas {
+		struct Texture {
+			int panorama_to_dp_users;
+			int users;
+			Rect2 uv_rect;
+		};
+
+		struct SortItem {
+			RID texture;
+			Size2i pixel_size;
+			Size2i size;
+			Point2i pos;
+
+			bool operator<(const SortItem &p_item) const {
+				//sort larger to smaller
+				if (size.height == p_item.size.height) {
+					return size.width > p_item.size.width;
+				} else {
+					return size.height > p_item.size.height;
+				}
+			}
+		};
+
+		HashMap<RID, Texture> textures;
+		bool dirty = true;
+
+		GLuint texture;
+		GLuint texture_srgb;
+		GLuint framebuffer;
+		Size2i size;
+	} decal_atlas;
+
+	// struct DecalAtlas {
+	// 	struct Texture {
+	// 		int panorama_to_dp_users;
+	// 		int users;
+	// 		Rect2 uv_rect;
+	// 	};
+
+	// 	struct SortItem {
+	// 		RID texture;
+	// 		Size2i pixel_size;
+	// 		Size2i size;
+	// 		Point2i pos;
+
+	// 		bool operator<(const SortItem &p_item) const {
+	// 			//sort larger to smaller
+	// 			if (size.height == p_item.size.height) {
+	// 				return size.width > p_item.size.width;
+	// 			} else {
+	// 				return size.height > p_item.size.height;
+	// 			}
+	// 		}
+	// 	};
+
+	// 	HashMap<RID, Texture> textures;
+	// 	bool dirty = true;
+	// 	int mipmaps = 5;
+
+	// 	RID texture;
+	// 	RID texture_srgb;
+	// 	struct MipMap {
+	// 		RID fb;
+	// 		RID texture;
+	// 		Size2i size;
+	// 	};
+	// 	Vector<MipMap> texture_mipmaps;
+
+	// 	Size2i size;
+	// } decal_atlas;
+
+	// struct Decal {
+	// 	Vector3 size = Vector3(2, 2, 2);
+	// 	RID textures[RSE::DECAL_TEXTURE_MAX];
+	// 	float emission_energy = 1.0;
+	// 	float albedo_mix = 1.0;
+	// 	Color modulate = Color(1, 1, 1, 1);
+	// 	uint32_t cull_mask = (1 << 20) - 1;
+	// 	float upper_fade = 0.3;
+	// 	float lower_fade = 0.3;
+	// 	bool distance_fade = false;
+	// 	float distance_fade_begin = 40.0;
+	// 	float distance_fade_length = 10.0;
+	// 	float normal_fade = 0.0;
+
+	// 	Dependency dependency;
+	// };
+
+	mutable RID_Owner<Decal, true> decal_owner;
+
+	/* DECAL INSTANCE */
+
+	struct DecalInstance {
+		RID decal;
+		Transform3D transform;
+		float sorting_offset = 0.0;
+		uint32_t cull_mask = 0;
+		// RendererRD::ForwardID forward_id = -1;
+	};
+
+	mutable RID_Owner<DecalInstance> decal_instance_owner;
+
+	/* DECAL DATA (UBO) */
+
+	struct DecalData {
+		float xform[16];
+		float inv_extents[3];
+		float albedo_mix;
+		float albedo_rect[4];
+		float normal_rect[4];
+		float orm_rect[4];
+		float emission_rect[4];
+		float modulate[4];
+		float emission_energy;
+		uint32_t mask;
+		float upper_fade;
+		float lower_fade;
+		float normal_xform[12];
+		float normal[3];
+		float normal_fade;
+	};
+
+	struct DecalInstanceSort {
+		float depth;
+		DecalInstance *decal_instance;
+		Decal *decal;
+		bool operator<(const DecalInstanceSort &p_sort) const {
+			return depth < p_sort.depth;
+		}
+	};
+
+	uint32_t max_decals = 0;
+	uint32_t decal_count = 0;
+	DecalData *decals = nullptr;
+	DecalInstanceSort *decal_sort = nullptr;
+	// RID decal_buffer;
+	PackedByteArray decal_buffer;
+
 	/* Render Target API */
 
 	mutable RID_Owner<RenderTarget> render_target_owner;
@@ -509,6 +668,8 @@ public:
 
 	TextureStorage();
 	virtual ~TextureStorage();
+
+	bool free(RID p_rid);
 
 	_FORCE_INLINE_ RID texture_gl_get_default(DefaultGLTexture p_texture) {
 		return default_gl_textures[p_texture];
@@ -636,9 +797,25 @@ public:
 
 	/* DECAL API */
 
+	void update_decal_atlas();
+
+	Decal *get_decal(RID p_rid) { return decal_owner.get_or_null(p_rid); }
+	bool owns_decal(RID p_rid) const { return decal_owner.owns(p_rid); }
+
+	GLuint decal_atlas_get_texture() const;
+	GLuint decal_atlas_get_texture_srgb() const;
+	_FORCE_INLINE_ Rect2 decal_atlas_get_texture_rect(RID p_texture) {
+		DecalAtlas::Texture *t = decal_atlas.textures.getptr(p_texture);
+		if (!t) {
+			return Rect2();
+		}
+
+		return t->uv_rect;
+	}
+
 	virtual RID decal_allocate() override;
 	virtual void decal_initialize(RID p_rid) override;
-	virtual void decal_free(RID p_rid) override {}
+	virtual void decal_free(RID p_rid) override;
 
 	virtual void decal_set_size(RID p_decal, const Vector3 &p_size) override;
 	virtual void decal_set_texture(RID p_decal, RSE::DecalTexture p_type, RID p_texture) override;
@@ -650,18 +827,118 @@ public:
 	virtual void decal_set_fade(RID p_decal, float p_above, float p_below) override;
 	virtual void decal_set_normal_fade(RID p_decal, float p_fade) override;
 
+	void decal_atlas_mark_dirty_on_texture(RID p_texture);
+	void decal_atlas_remove_texture(RID p_texture);
+
+	virtual void texture_add_to_decal_atlas(RID p_texture, bool p_panorama_to_dp = false) override;
+	virtual void texture_remove_from_decal_atlas(RID p_texture, bool p_panorama_to_dp = false) override;
+
+	_FORCE_INLINE_ Vector3 decal_get_size(RID p_decal) {
+		const Decal *decal = decal_owner.get_or_null(p_decal);
+		return decal->size;
+	}
+
+	_FORCE_INLINE_ RID decal_get_texture(RID p_decal, RSE::DecalTexture p_texture) {
+		const Decal *decal = decal_owner.get_or_null(p_decal);
+		return decal->textures[p_texture];
+	}
+
+	_FORCE_INLINE_ Color decal_get_modulate(RID p_decal) {
+		const Decal *decal = decal_owner.get_or_null(p_decal);
+		return decal->modulate;
+	}
+
+	_FORCE_INLINE_ float decal_get_emission_energy(RID p_decal) {
+		const Decal *decal = decal_owner.get_or_null(p_decal);
+		return decal->emission_energy;
+	}
+
+	_FORCE_INLINE_ float decal_get_albedo_mix(RID p_decal) {
+		const Decal *decal = decal_owner.get_or_null(p_decal);
+		return decal->albedo_mix;
+	}
+
+	_FORCE_INLINE_ uint32_t decal_get_cull_mask(RID p_decal) {
+		const Decal *decal = decal_owner.get_or_null(p_decal);
+		return decal->cull_mask;
+	}
+
+	_FORCE_INLINE_ float decal_get_upper_fade(RID p_decal) {
+		const Decal *decal = decal_owner.get_or_null(p_decal);
+		return decal->upper_fade;
+	}
+
+	_FORCE_INLINE_ float decal_get_lower_fade(RID p_decal) {
+		const Decal *decal = decal_owner.get_or_null(p_decal);
+		return decal->lower_fade;
+	}
+
+	_FORCE_INLINE_ float decal_get_normal_fade(RID p_decal) {
+		const Decal *decal = decal_owner.get_or_null(p_decal);
+		return decal->normal_fade;
+	}
+
+	_FORCE_INLINE_ bool decal_is_distance_fade_enabled(RID p_decal) {
+		const Decal *decal = decal_owner.get_or_null(p_decal);
+		return decal->distance_fade;
+	}
+
+	_FORCE_INLINE_ float decal_get_distance_fade_begin(RID p_decal) {
+		const Decal *decal = decal_owner.get_or_null(p_decal);
+		return decal->distance_fade_begin;
+	}
+
+	_FORCE_INLINE_ float decal_get_distance_fade_length(RID p_decal) {
+		const Decal *decal = decal_owner.get_or_null(p_decal);
+		return decal->distance_fade_length;
+	}
+
 	virtual AABB decal_get_aabb(RID p_decal) const override;
-	virtual uint32_t decal_get_cull_mask(RID p_decal) const override { return 0; }
+	virtual uint32_t decal_get_cull_mask(RID p_decal) const override;
+	Dependency *decal_get_dependency(RID p_decal);
 
-	virtual void texture_add_to_decal_atlas(RID p_texture, bool p_panorama_to_dp = false) override {}
-	virtual void texture_remove_from_decal_atlas(RID p_texture, bool p_panorama_to_dp = false) override {}
+	/* DECAL INSTANCE API */
 
-	/* DECAL INSTANCE */
+	bool owns_decal_instance(RID p_rid) const { return decal_instance_owner.owns(p_rid); }
 
-	virtual RID decal_instance_create(RID p_decal) override { return RID(); }
-	virtual void decal_instance_free(RID p_decal_instance) override {}
-	virtual void decal_instance_set_transform(RID p_decal, const Transform3D &p_transform) override {}
-	virtual void decal_instance_set_sorting_offset(RID p_decal_instance, float p_sorting_offset) override {}
+	virtual RID decal_instance_create(RID p_decal) override;
+	virtual void decal_instance_free(RID p_decal_instance) override;
+	virtual void decal_instance_set_transform(RID p_decal_instance, const Transform3D &p_transform) override;
+	virtual void decal_instance_set_sorting_offset(RID p_decal_instance, float p_sorting_offset) override;
+
+	_FORCE_INLINE_ RID decal_instance_get_base(RID p_decal_instance) const {
+		DecalInstance *di = decal_instance_owner.get_or_null(p_decal_instance);
+		return di->decal;
+	}
+
+	// _FORCE_INLINE_ RendererRD::ForwardID decal_instance_get_forward_id(RID p_decal_instance) const {
+	// 	DecalInstance *di = decal_instance_owner.get_or_null(p_decal_instance);
+	// 	return di->forward_id;
+	// }
+
+	_FORCE_INLINE_ Transform3D decal_instance_get_transform(RID p_decal_instance) const {
+		DecalInstance *di = decal_instance_owner.get_or_null(p_decal_instance);
+		return di->transform;
+	}
+
+	// _FORCE_INLINE_ ForwardID decal_instance_get_forward_id(RID p_decal_instance) {
+	// 	DecalInstance *di = decal_instance_owner.get_or_null(p_decal_instance);
+	// 	return di->forward_id;
+	// }
+
+	_FORCE_INLINE_ void decal_instance_set_cullmask(RID p_decal_instance, uint32_t p_cull_mask) const {
+		DecalInstance *di = decal_instance_owner.get_or_null(p_decal_instance);
+		di->cull_mask = p_cull_mask;
+	}
+
+	void update_decal_instances(const PagedArray<RID> &p_decals, const Transform3D &p_camera_xform);
+
+	/* DECAL DATA API */
+
+	void free_decal_data();
+	void set_max_decals(const uint32_t p_max_decals);
+	PackedByteArray get_decal_buffer() { return decal_buffer; }
+	void update_decal_buffer(const PagedArray<RID> &p_decals, const Transform3D &p_camera_xform);
 
 	/* RENDER TARGET API */
 

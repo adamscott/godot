@@ -68,6 +68,7 @@ public:
 	int64_t max_renderable_elements = 0;
 	int64_t max_renderable_lights = 0;
 	int64_t max_lights_per_object = 0;
+	int64_t max_decals_per_object = 8;
 
 	bool generate_wireframes = false;
 
