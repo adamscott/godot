@@ -169,6 +169,7 @@ private:
 
 	void _set_n3d_tool(SelectMode p_tool);
 
+	void _root_ready();
 	void _root_window_input(const Ref<InputEvent> &p_event);
 	void _items_popup_index_pressed(int p_index, PopupMenu *p_popup);
 	void _update_input_state();
