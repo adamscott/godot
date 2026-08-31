@@ -35,6 +35,7 @@
 #include "core/config/engine.h"
 #include "core/input/input.h"
 #include "core/input/shortcut.h"
+#include "scene/3d/camera_3d.h"
 #include "scene/main/scene_tree.h"
 
 using namespace View3DControllerConsts;
@@ -326,25 +327,28 @@ void View3DController::cancel_navigation() {
 }
 
 void View3DController::cursor_pan(const Ref<InputEventWithModifiers> &p_event, const Vector2 &p_relative) {
-	float pan_speed = translation_sensitivity / 150.0;
-	if (p_event.is_valid() && navigation_scheme == NAV_SCHEME_MAYA && p_event->is_shift_pressed()) {
-		pan_speed *= 10;
-	}
+	ERR_FAIL_NULL(viewport);
+	Camera3D *camera = viewport->get_camera_3d();
+	ERR_FAIL_NULL(camera);
 
-	Transform3D camera_transform;
+	bool viewport_position_valid = false;
+	Vector2 viewport_position = p_event->get("position", &viewport_position_valid);
+	ERR_FAIL_COND(!viewport_position_valid);
 
-	camera_transform.translate_local(Vector3(cursor.pos_x, cursor.pos_y, cursor.pos_z));
-	camera_transform.basis.rotate(Vector3(1, 0, 0), -cursor.x_rot);
-	camera_transform.basis.rotate(Vector3(0, 1, 0), -cursor.y_rot);
-	Vector3 translation(
-			(invert_x_axis ? -1 : 1) * -p_relative.x * pan_speed,
-			(invert_y_axis ? -1 : 1) * p_relative.y * pan_speed,
-			0);
-	translation *= cursor.distance / DISTANCE_DEFAULT;
-	camera_transform.translate_local(translation);
-	cursor.pos_x = camera_transform.origin.x;
-	cursor.pos_y = camera_transform.origin.y;
-	cursor.pos_z = camera_transform.origin.z;
+	Vector2 from_position_2d = viewport_position - p_relative;
+	Vector2 to_position_2d = viewport_position;
+	Vector2 invert_position_2d = Vector2(
+			invert_x_axis ? -1 : 1,
+			invert_y_axis ? -1 : 1);
+	Vector2 diff_position_2d = (to_position_2d - from_position_2d) * invert_position_2d;
+
+	Vector3 from_position = camera->project_position(from_position_2d, cursor.distance);
+	Vector3 to_position = camera->project_position(from_position_2d - diff_position_2d, cursor.distance);
+	Vector3 diff_position = to_position - from_position;
+
+	cursor.pos_x += diff_position.x;
+	cursor.pos_y += diff_position.y;
+	cursor.pos_z += diff_position.z;
 
 	emit_signal(SNAME("cursor_panned"));
 }

@@ -34,6 +34,7 @@
 
 #include "core/object/ref_counted.h"
 #include "core/os/keyboard.h"
+#include "scene/main/viewport.h"
 
 namespace View3DControllerConsts {
 constexpr float DISTANCE_DEFAULT = 4;
@@ -192,6 +193,8 @@ protected:
 	static void _bind_methods();
 
 private:
+	Viewport *viewport = nullptr;
+
 	HashMap<int, Ref<Shortcut>> inputs;
 
 	NavigationScheme navigation_scheme = NAV_SCHEME_GODOT;
@@ -264,6 +267,13 @@ private:
 	NavigationMode _get_nav_mode_from_shortcuts(NavigationMouseButton p_mouse_button, const Vector<ShortcutCheck> &p_shortcut_checks, bool p_not_empty);
 
 public:
+	void set_viewport(Viewport *p_viewport) {
+		viewport = p_viewport;
+	}
+	Viewport *get_viewport() const {
+		return viewport;
+	}
+
 	bool gui_input(const Ref<InputEvent> &p_event, const Rect2 &p_surface_rect);
 	bool is_navigating() const { return navigating; }
 
