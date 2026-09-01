@@ -28,6 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
+#include "core/math/math_funcs.h"
 #ifndef _3D_DISABLED
 
 #include "view_3d_controller.h"
@@ -335,20 +336,19 @@ void View3DController::cursor_pan(const Ref<InputEventWithModifiers> &p_event, c
 	Vector2 viewport_position = p_event->get("position", &viewport_position_valid);
 	ERR_FAIL_COND(!viewport_position_valid);
 
-	Vector2 from_position_2d = viewport_position - p_relative;
-	Vector2 to_position_2d = viewport_position;
 	Vector2 invert_position_2d = Vector2(
-			invert_x_axis ? -1 : 1,
-			invert_y_axis ? -1 : 1);
-	Vector2 diff_position_2d = (to_position_2d - from_position_2d) * invert_position_2d;
+			invert_x_axis ? -1.0 : 1.0,
+			invert_y_axis ? -1.0 : 1.0);
+	Vector2 from_position_2d = viewport_position - (p_relative * invert_position_2d);
+	Vector2 to_position_2d = viewport_position;
 
-	Vector3 from_position = camera->project_position(from_position_2d, cursor.distance);
-	Vector3 to_position = camera->project_position(from_position_2d - diff_position_2d, cursor.distance);
-	Vector3 diff_position = to_position - from_position;
+	Vector3 from_position_3d = camera->project_position(from_position_2d, cursor.distance);
+	Vector3 to_position_3d = camera->project_position(to_position_2d, cursor.distance);
+	Vector3 diff_position_3d = to_position_3d - from_position_3d;
 
-	cursor.pos_x += diff_position.x;
-	cursor.pos_y += diff_position.y;
-	cursor.pos_z += diff_position.z;
+	cursor.pos_x -= diff_position_3d.x;
+	cursor.pos_y -= diff_position_3d.y;
+	cursor.pos_z -= diff_position_3d.z;
 
 	emit_signal(SNAME("cursor_panned"));
 }
@@ -359,58 +359,435 @@ void View3DController::cursor_orbit(const Ref<InputEventWithModifiers> &p_event,
 		return;
 	}
 
-	const float radians_per_pixel = Math::deg_to_rad(orbit_sensitivity);
+	ERR_FAIL_NULL(viewport);
+	Camera3D *camera = viewport->get_camera_3d();
+	ERR_FAIL_NULL(camera);
+	// Basis camera_basis = camera->get_global_basis();
 
-	cursor.unsnapped_x_rot += p_relative.y * radians_per_pixel * (invert_y_axis ? -1 : 1);
-	cursor.unsnapped_x_rot = CLAMP(cursor.unsnapped_x_rot, -1.57, 1.57);
-	cursor.unsnapped_y_rot += p_relative.x * radians_per_pixel * (invert_x_axis ? -1 : 1);
+	bool viewport_position_valid = false;
+	Vector2 viewport_position = p_event->get("position", &viewport_position_valid);
+	ERR_FAIL_COND(!viewport_position_valid);
+
+	// Vector2 center_position_2d = viewport->get_camera_rect_size();
+
+	Vector2 invert_position_2d = Vector2(
+			invert_x_axis ? -1.0 : 1.0,
+			invert_y_axis ? -1.0 : 1.0);
+	Vector2 from_position_2d = viewport_position - (p_relative * invert_position_2d);
+	Vector2 to_position_2d = viewport_position;
+
+	// Vector3 center_position = camera->project_position(center_position_2d, cursor.distance);
+	// Vector3 from_position_3d_ray_origin = camera->project_ray_origin(from_position_2d);
+	// Vector3 from_position_3d_ray_normal = camera->project_ray_normal(from_position_2d);
+
+	// print_line(vformat("2d from: %s, to: %s, diff: %s", from_position_2d, to_position_2d, to_position_2d - from_position_2d));
+	Vector3 from_position = camera->project_position(from_position_2d, cursor.distance);
+	// Vector3 from_position;
+	Vector3 to_linear_position = camera->project_position(to_position_2d, cursor.distance);
+	// Plane to_linear_plane(to_linear_position, to_linear_position + camera_basis[1], to_linear_position + camera_basis[0]);
+	// to_linear_plane.intersects_ray(from_position_3d_ray_origin, from_position_3d_ray_normal, &from_position);
+	// to_linear_plane.intersects_ray(
+	// 		from_position,
+	// 		-camera_basis[2],
+	// 		&from_position);
+	// double from_to_length = from_position.distance_to(to_linear_position);
+
+	// Vector3 center_position = camera->project_position(center_position_2d, cursor.distance);
+
+	// print_line(vformat("from_position: %s, to_linear_position: %s", from_position, to_linear_position));
+
+	// =======
+
+	// Transform3D test_transform;
+	// float test_transform_x_rot_before = 0.0;
+	// float test_transform_y_rot_before = 0.0;
+	// float test_transform_x_rot = 0.0;
+	// float test_transform_y_rot = 0.0;
+	// test_transform.basis.rotate(test_transform.basis[0], test_transform_x_rot_before);
+	// test_transform.basis.rotate(test_transform.basis[1], test_transform_y_rot_before);
+	// test_transform.basis.get_axis_angle(test_transform.basis[0], test_transform_x_rot);
+	// test_transform.basis.get_axis_angle(test_transform.basis[1], test_transform_y_rot);
+	// Vector3 test_transform_euler = test_transform.basis.get_euler();
+	// print_line(vformat("test_transform_x_rot_before: %s, after: %s", test_transform_x_rot_before, test_transform_euler.x));
+	// print_line(vformat("test_transform_y_rot_before: %s, after: %s", test_transform_y_rot_before, test_transform_euler.y));
+
+	// test_transform.basis.rotate(test_transform.basis[0], cursor.unsnapped_x_rot);
+	// test_transform.basis.rotate(test_transform.basis[1], cursor.unsnapped_y_rot);
+	// test_transform.basis.set_axis_angle(test_transform.basis[1], cursor.unsnapped_y_rot);
+	// test_transform.basis.rotate(test_transform.basis[0], -cursor.unsnapped_x_rot);
+	// test_transform.basis.rotate(test_transform.basis[1], -cursor.unsnapped_y_rot);
+
+	// float cursor_unsnapped_x_rot_before = cursor.unsnapped_x_rot;
+	// float cursor_unsnapped_y_rot_before = cursor.unsnapped_y_rot;
+	// float cursor_unsnapped_x_rot = 0.0;
+	// float cursor_unsnapped_y_rot = 0.0;
+	// test_transform.basis.get_axis_angle(test_transform.basis[0], cursor_unsnapped_x_rot);
+	// test_transform.basis.get_axis_angle(test_transform.basis[1], cursor_unsnapped_y_rot);
+	// Vector3 test_transform_euler = test_transform.basis.get_euler();
+	// cursor.unsnapped_x_rot = cursor_unsnapped_x_rot_before;
+	// cursor.unsnapped_y_rot = cursor_unsnapped_y_rot_before;
+
+	// print_line(vformat("before x: %s, after x: %s, unsnapped vs? %s", cursor_unsnapped_x_rot_before, test_transform_euler.x, Math::is_equal_approx(cursor.x_rot, cursor_unsnapped_x_rot_before)));
+	// print_line(vformat("before y: %s, after y: %s, unsnapped vs? %s", cursor_unsnapped_y_rot_before, test_transform_euler.y, Math::is_equal_approx(cursor.x_rot, cursor_unsnapped_x_rot_before)));
+	// print_line(vformat("==="));
+
+	// cursor.x_rot = cursor.unsnapped_x_rot;
+	// cursor.y_rot = cursor.unsnapped_y_rot;
+
+	// ==========
+
+	// Transform3D cursor_transform;
+
+	// // cursor_transform.translate_local(Vector3(cursor.pos_x, cursor.pos_y, cursor.pos_z));
+	// Basis cursor_basis = Basis::from_euler(Vector3(cursor.unsnapped_x_rot, cursor.unsnapped_y_rot, 0.0));
+	//
+	// Transform3D cursor_transform;
+	// cursor_transform.origin = Vector3(cursor.pos_x, cursor.pos_y, cursor.pos_z);
+	// cursor_transform.basis = Basis::from_euler(Vector3(cursor.unsnapped_x_rot, cursor.unsnapped_y_rot, 0.0));
+	//
+	// cursor_transform.basis.rotate(cursor_transform.basis[1], cursor.unsnapped_y_rot);
+	// cursor_transform.basis.rotate(cursor_transform.basis[0], cursor.unsnapped_x_rot);
+
+	// // if (orthogonal) {
+	// // 	cursor_transform.translate_local(0, 0, (zfar - znear) / 2.0);
+	// // } else {
+	// // 	cursor_transform.translate_local(0, 0, cursor.distance);
+	// // }
+	// // cursor_transform.translate_local(Vector3(cursor.pos_x, cursor.pos_y, cursor.pos_z) * -1.0);
+
+	// Vector3 camera_basis_x = cursor_transform.basis[0];
+	// Vector3 camera_basis_y = cursor_transform.basis[1];
+
+	// Vector3 diff_linear_position = to_linear_position - from_position;
+
+	// For orbiting purposes:
+	//  - moving along Vector2.RIGHT means to rotate Vector3.UP counter-clockwise.
+	//  - moving along Vector2.UP means to rotate Vector3.RIGHT clockwise.
+
+	// Vector3 from_position_x = from_position * camera_basis[0];
+	// Vector3 from_position_y = from_position * camera_basis[1];
+	// Vector3 to_linear_position_x = to_linear_position * camera_basis[0];
+	// Vector3 to_linear_position_y = to_linear_position * camera_basis[1];
+	// Vector3 from_to_direction_x = from_position_x.direction_to(to_linear_position_x);
+	// Vector3 from_to_direction_y = from_position_y.direction_to(to_linear_position_y);
+	// double from_to_length_x = from_position_x.distance_to(to_linear_position_x);
+	// double from_to_length_y = from_position_y.distance_to(to_linear_position_y);
+	// print_line(vformat("x: %s, y: %s", from_to_length_x, from_to_length_y));
+
+	// Vector3 relative_position = (from_to_length_x * camera_basis[0]) + (from_to_length_x * camera_basis[1])
+	// 	+ (center_position * camera_basis[2]);
+
+	// Vector3 from_to_direction = from_position.direction_to(to_linear_position);
+	// double from_to_length = from_position.distance_to(to_linear_position);
+
+	// double dot_x = camera_basis_x.dot(from_to_direction);
+	// double dot_y = camera_basis_y.dot(from_to_direction);
+	// double dot_x = camera_basis[0].dot(from_to_direction);
+	// double dot_y = camera_basis[1].dot(from_to_direction);
+	// double dot_x = cursor_transform.basis[0].dot(from_to_direction);
+	// double dot_y = cursor_transform.basis[1].dot(from_to_direction);
+	// print_line(vformat("dot_x: %s, dot_y: %s, from_to_direction: %s, n? %s", dot_x, dot_y, from_to_direction, from_to_direction.is_normalized()));
+	// print_line(vformat("camera_basis[0]: %s, [1]: %s", camera_basis[0], camera_basis[1]));
+
+	// from_to_direction_x_arr.push_front(from_to_direction_x);
+	// from_to_direction_y_arr.push_front(from_to_direction_y);
+	// from_to_length_x_arr.push_front(from_to_length_x);
+	// from_to_length_y_arr.push_front(from_to_length_y);
+
+	// if (from_to_direction_x_arr.size() > 100) {
+	// 	from_to_direction_x_arr.resize(100);
+	// }
+	// if (from_to_direction_y_arr.size() > 100) {
+	// 	from_to_direction_y_arr.resize(100);
+	// }
+	// if (from_to_length_x_arr.size() > 100) {
+	// 	from_to_length_x_arr.resize(100);
+	// }
+	// if (from_to_length_y_arr.size() > 100) {
+	// 	from_to_length_y_arr.resize(100);
+	// }
+
+	// Vector3 from_to_direction_x_avg;
+	// for (const Variant &var : from_to_direction_x_arr) {
+	// 	from_to_direction_x_avg += var;
+	// }
+	// from_to_direction_x_avg /= from_to_direction_x_arr.size();
+
+	// Vector3 from_to_direction_y_avg;
+	// for (const Variant &var : from_to_direction_y_arr) {
+	// 	from_to_direction_y_avg += var;
+	// }
+	// from_to_direction_y_avg /= from_to_direction_y_arr.size();
+
+	// double from_to_length_x_avg = 0.0;
+	// for (const Variant &var : from_to_length_x_arr) {
+	// 	from_to_length_x_avg += double(var);
+	// }
+	// from_to_length_x_avg /= from_to_length_x_arr.size();
+
+	// double from_to_length_y_avg = 0.0;
+	// for (const Variant &var : from_to_length_y_arr) {
+	// 	from_to_length_y_avg += double(var);
+	// }
+	// from_to_length_y_avg /= from_to_length_y_arr.size();
+
+	// print_line(vformat("[x] from_to_dir: %s, length: %s", from_to_direction_x_avg, from_to_length_x_avg));
+	// print_line(vformat("[y] from_to_dir: %s, length: %s", from_to_direction_y_avg, from_to_length_y_avg));
+
+	// Vector3 diff_linear_position_x = (to_linear_position * camera_basis_x) - (from_position * camera_basis_x);
+	// Vector3 diff_linear_position_y = (to_linear_position * camera_basis_y) - (from_position * camera_basis_y);
+	// // Vector3 diff_linear_position_z = (to_linear_position * camera_basis_z) - (from_position * camera_basis_z);
+	// Vector2 diff_length(
+	// 		from_to_length_x,
+	// 		from_to_length_y);
+
+	// Vector3 from_position_x = from_position * camera_basis[0];
+	// Vector3 from_position_y = from_position * camera_basis[1];
+	// Vector3 to_linear_position_x = to_linear_position * camera_basis[0];
+	// Vector3 to_linear_position_y = to_linear_position * camera_basis[1];
+
+	// Vector2 diff_length(
+	// 		// Math::abs(from_to_length),
+	// 		// Math::abs(from_to_length));
+	// 		// from_position_x.distance_to(to_linear_position_x),
+	// 		// from_position_y.distance_to(to_linear_position_y));
+	// 		from_position_x.distance_to(to_linear_position_x) * cursor.distance,
+	// 		from_position_y.distance_to(to_linear_position_y) * cursor.distance);
+	// print_line(vformat("lx: %s, ly: %s", diff_length.x, diff_length.y));
+
+	// print_line(vformat("p_relative: %s", p_relative));
+	// print_line(vformat("dot_x: %s, dot_y: %s, total_len? %s, x: %s, y: %s",
+	// 		camera_basis[0].dot(from_position_x.direction_to(to_linear_position_x)),
+	// 		camera_basis[1].dot(from_position_y.direction_to(to_linear_position_y)),
+	// 		from_position.distance_to(to_linear_position),
+	// 		from_position_x.distance_to(to_linear_position_x),
+	// 		from_position_y.distance_to(to_linear_position_y)));
+
+	// double direction_x = to_linear_position_x.length() - from_position_x.length() >= 0
+	// 		? 1.0
+	// 		: -1.0;
+	// double direction_y = to_linear_position_y.length() - from_position_y.length() >= 0
+	// 		? 1.0
+	// 		: -1.0;
+
+	// Vector2 direction(p_relative.x, -p_relative.y);
+	Vector2 direction = p_relative;
+	direction.normalize();
+	Vector2 direction_sign = direction.sign();
+	// Vector2 direction_sign = direction.sign();
+
+	print_line(vformat("x: %s, y: %s", direction.x, direction.y));
+
+	double diff_length = from_position.distance_to(to_linear_position);
+
+	// Vector2i rotate_factor = p_relative.sign();
+	// if (rotate_factor.x == 0) {
+	// 	rotate_factor.x = 1;
+	// }
+	// if (rotate_factor.y == 0) {
+	// 	rotate_factor.y = 1;
+	// }
+	// rotate_factor.y *= -1;
+	double cursor_circumference = cursor.distance * Math::TAU;
+	// Vector2 diff_circumference_ratio = diff_length.posmod(cursor_circumference) / cursor_circumference;
+	// Vector2 diff_circumference_ratio = diff_length.posmod(cursor_circumference) / cursor_circumference;
+	// Vector2 diff_circumference_ratio =
+	// 		(direction.abs() * diff_length).posmod(cursor_circumference) / cursor_circumference;
+	Vector2 diff_circumference_ratio =
+			(direction.abs() * diff_length) / cursor_circumference;
+	// Vector2 rotation_angle = direction * diff_circumference_ratio * Math::TAU;
+	// Vector2 rotation_angle = direction * diff_circumference_ratio * Math::TAU;
+	// Vector2 rotation_angle = direction * diff_circumference_ratio * Math::TAU * cursor.distance;
+	// Vector2 rotation_angle = direction_sign * diff_circumference_ratio * Math::TAU;
+	Vector2 rotation_angle = direction_sign * diff_circumference_ratio * Math::TAU * cursor.distance;
+	print_line(vformat("rot_angle: x: %s", rotation_angle));
+
+	// // In 2D, Y-Up is -1.
+	// // In 3D, Y-Up is 1.
+	static const double HALF_PI = Math::PI / 2.0;
+	// cursor_transform.rotate(cursor_transform.basis[0], rotation_angle.x * rotate_factor.x);
+	// cursor_transform.rotate(cursor_transform.basis[1], rotation_angle.y * rotate_factor.y);
+	// double rotate_x = rotation_angle.y * double(rotate_factor.y);
+	// double rotate_y = rotation_angle.x * double(rotate_factor.x) * -1.0;
+	// double rotate_x = rotation_angle.y * SIGN(dot_x);
+	// double rotate_y = rotation_angle.x * SIGN(dot_y);
+	// double rotate_x = rotation_angle.x * rotate_factor.y;
+	// double rotate_y = rotation_angle.y * rotate_factor.x;
+	// double rotate_x = rotation_angle.y * direction_x;
+	// double rotate_y = rotation_angle.x * direction_y;
+	double rotate_x = rotation_angle.y;
+	double rotate_y = rotation_angle.x;
+	// cursor_transform.rotate(cursor_transform.basis[0], rotate_x);
+	// cursor_transform.rotate(cursor_transform.basis[1], rotate_y);
+	//
+	// cursor_transform.basis.rotate(cursor_transform.basis[0], rotate_x);
+	// cursor_transform.basis.rotate(cursor_transform.basis[1], rotate_y);
+	//
+	// cursor_transform.basis.rotate_local(cursor_transform.basis[1], rotate_y);
+	// cursor_transform.basis.rotate_local(cursor_transform.basis[0], rotate_x);
+	//
+	// cursor_transform.basis.rotate(cursor_transform.basis[0], rotate_x);
+	// cursor_transform.basis.rotate(cursor_transform.basis[1], rotate_y);
+	// cursor_transform.rotate(cursor_transform.basis[0], rotate_x);
+	// cursor_transform.rotate(cursor_transform.basis[1], rotate_y);
+	// cursor_transform.rotate(cursor_transform.basis[1], rotate_y);
+	// cursor_transform.rotate(cursor_transform.basis[0], rotate_x);
+	// cursor_basis.rotate_local(cursor_basis[1], rotate_y);
+	// cursor_basis.rotate_local(cursor_basis[0], rotate_x);
+	// cursor_basis.rotate_local(cursor_basis[1], rotate_y);
+	// cursor_basis.rotate_local(cursor_basis[0], rotate_x);
+	// cursor_transform.rotate(cursor_transform.basis[1], rotate_y);
+	// cursor_transform.rotate(cursor_transform.basis[0], rotate_x);
+	// print_line(vformat("rotate x: %s, y: %s", rotate_x, rotate_y));
+	// * // cursor_transform.rotate(camera_basis_x, rotation_angle.x);
+	// // cursor_transform.rotate(camera_basis_y, rotation_angle.y);
+
+	// double before_cursor_unsnapped_x_rot = cursor.unsnapped_x_rot;
+	// double before_cursor_unsnapped_y_rot = cursor.unsnapped_y_rot;
+
+	// cursor_transform.basis.get_rotation_axis_angle(cursor_transform.basis[0], cursor.unsnapped_x_rot);
+	// cursor_transform.basis.get_rotation_axis_angle(cursor_transform.basis[1], cursor.unsnapped_y_rot);
+
+	// Vector3 cursor_transform_euler = cursor_transform.basis.get_euler();
+
+	// Vector3 cursor_basis_euler = cursor_basis.get_euler();
+	// cursor.unsnapped_x_rot = cursor_basis_euler.x;
+	// cursor.unsnapped_y_rot = cursor_basis_euler.y;
+
+	// cursor.unsnapped_x_rot = cursor_transform_euler.x;
+	// cursor.unsnapped_y_rot = cursor_transform_euler.y;
+
+	cursor.unsnapped_x_rot += rotate_x;
+	cursor.unsnapped_y_rot += rotate_y;
+
+	// print_line(vformat("before: %s, now: %s", Vector2(before_cursor_unsnapped_x_rot, before_cursor_unsnapped_y_rot), Vector2(cursor.unsnapped_x_rot, cursor.unsnapped_y_rot)));
+
+	cursor.unsnapped_x_rot = CLAMP(cursor.unsnapped_x_rot, -HALF_PI, HALF_PI);
+	// print_line(vformat("cursor.unsnapped_x_rot: %s", cursor.unsnapped_x_rot));
+	print_line(vformat("[cursor.unsnapped rot] x: %s, y: %s", cursor.unsnapped_x_rot, cursor.unsnapped_y_rot));
 
 	cursor.x_rot = cursor.unsnapped_x_rot;
 	cursor.y_rot = cursor.unsnapped_y_rot;
 
-	ViewType new_view_type = VIEW_TYPE_USER;
+	// ==========
 
-	bool snap_modifier_configured = !_is_shortcut_empty(SHORTCUT_ORBIT_SNAP_MOD_1) || !_is_shortcut_empty(SHORTCUT_ORBIT_SNAP_MOD_2);
-	if (snap_modifier_configured && _is_shortcut_pressed(SHORTCUT_ORBIT_SNAP_MOD_1, true) && _is_shortcut_pressed(SHORTCUT_ORBIT_SNAP_MOD_2, true)) {
-		const float snap_angle = Math::deg_to_rad(45.0);
-		const float snap_threshold = Math::deg_to_rad(angle_snap_threshold);
+	// cursor.unsnapped_y_rot += rotation_angle.x * rotate_factor.x;
+	// cursor.y_rot = cursor.unsnapped_y_rot;
 
-		float x_rot_snapped = Math::snapped(cursor.unsnapped_x_rot, snap_angle);
-		float y_rot_snapped = Math::snapped(cursor.unsnapped_y_rot, snap_angle);
+	// cursor.unsnapped_x_rot += rotation_angle.y * rotate_factor.y;
+	// cursor.unsnapped_x_rot = CLAMP(cursor.unsnapped_x_rot, -HALF_PI, HALF_PI);
+	// cursor.x_rot = cursor.unsnapped_x_rot;
 
-		float x_dist = Math::abs(cursor.unsnapped_x_rot - x_rot_snapped);
-		float y_dist = Math::abs(cursor.unsnapped_y_rot - y_rot_snapped);
+	// Vector2 cursor_unsnapped_rot(cursor.x_rot, cursor.y_rot);
+	// cursor_unsnapped_rot -= rotation_angle;
+	// cursor_unsnapped_rot.x = CLAMP(cursor_unsnapped_rot.x, -(Math::PI / 2.0), Math::PI / 2.0);
 
-		if (x_dist < snap_threshold && y_dist < snap_threshold) {
-			cursor.x_rot = x_rot_snapped;
-			cursor.y_rot = y_rot_snapped;
+	// cursor.unsnapped_x_rot = cursor_unsnapped_rot.x;
+	// cursor.unsnapped_y_rot = cursor_unsnapped_rot.y;
+	// cursor.x_rot = cursor_unsnapped_rot.x;
+	// cursor.y_rot = cursor_unsnapped_rot.y;
 
-			float y_rot_wrapped = Math::wrapf(y_rot_snapped, (float)-Math::PI, (float)Math::PI);
+	// Vector2 rotation_angle(
+	// 		diff_circumference_ratio.x * (2.0 * double(Math::PI)) * rotate_factor.x,
+	// 		diff_circumference_ratio.y * (2.0 * double(Math::PI)) * rotate_factor.y);
 
-			if (Math::abs(x_rot_snapped) < snap_threshold) {
-				// Only switch to ortho for 90-degree views.
-				if (Math::abs(y_rot_wrapped) < snap_threshold) {
-					new_view_type = VIEW_TYPE_FRONT;
-				} else if (Math::abs(Math::abs(y_rot_wrapped) - Math::PI) < snap_threshold) {
-					new_view_type = VIEW_TYPE_REAR;
-				} else if (Math::abs(y_rot_wrapped - Math::PI / 2.0) < snap_threshold) {
-					new_view_type = VIEW_TYPE_LEFT;
-				} else if (Math::abs(y_rot_wrapped + Math::PI / 2.0) < snap_threshold) {
-					new_view_type = VIEW_TYPE_RIGHT;
-				}
+	// print_line(vformat("x_rot: %s, y_rot: %s, new_x_rot: %s, new_y_rot: %s", cursor.x_rot, cursor.y_rot, cursor_x_rot, cursor_y_rot));
 
-			} else if (Math::abs(Math::abs(x_rot_snapped) - Math::PI / 2.0) < snap_threshold) {
-				if (Math::abs(y_rot_wrapped) < snap_threshold ||
-						Math::abs(Math::abs(y_rot_wrapped) - Math::PI) < snap_threshold ||
-						Math::abs(y_rot_wrapped - Math::PI / 2.0) < snap_threshold ||
-						Math::abs(y_rot_wrapped + Math::PI / 2.0) < snap_threshold) {
-					new_view_type = x_rot_snapped > 0 ? VIEW_TYPE_TOP : VIEW_TYPE_BOTTOM;
-				}
-			}
-		}
-	}
+	// cursor.x_rot = cursor_x_rot;
+	// cursor.y_rot = cursor_y_rot;
 
-	set_view_type(new_view_type);
+	// Vector2 rotation_angle(
+	// 		diff_circumference_ratio.x * (2.0 * double(Math::PI)),
+	// 		diff_circumference_ratio.y * (2.0 * double(Math::PI)));
+	// rotation_angle *= rotate_factor * -1.0;
+	// print_line(vformat("diff_l: %s, rotation_angle: %s, rotate_factor: %s, cursor.rot: [%s,%s]", diff_length, rotation_angle, rotate_factor, cursor.x_rot, cursor.y_rot));
+
+	// cursor.x_rot += rotation_angle.x;
+	// cursor.y_rot += rotation_angle.y;
+
+	// Transform3D from_transform;
+	// from_transform.origin = from_position;
+	// from_transform.rotate(Vector3(0.0, 1.0, 0.0), rotation_angle);
+
+	// Vector3 from_transform_rotation_euler = from_transform.basis.get_euler();
+	// cursor.x_rot += from_transform_rotation_euler.y;
+	// cursor.y_rot += from_transform_rotation_euler.x;
+
+	// double new_x_rot = Vector3(0.0, 1.0, 0.0).signed_angle_to(from_transform.basis[1], Vector3(0.0, 0.0, -1.0));
+	// double new_y_rot = Vector3(1.0, 0.0, 0.0).signed_angle_to(from_transform.basis[0], Vector3(0.0, 0.0, -1.0));
+
+	// double new_x_rot = Vector3(0.0, 1.0, 0.0).signed_angle_to(from_basis[1], Vector3(0.0, 0.0, -1.0));
+	// double new_y_rot = Vector3(1.0, 0.0, 0.0).signed_angle_to(from_basis[0], Vector3(0.0, 0.0, -1.0));
+
+	// cursor.x_rot += new_x_rot;
+	// cursor.y_rot += new_y_rot;
+
+	// print_line(vformat("RC: %s, (x: %s, y: %s) => (x: %s, y: %s)", rotate_left, new_x_rot, new_y_rot, cursor.x_rot, cursor.y_rot));
+
+	// print_line(vformat("[%s] a: %s, b: %s, c: %s, d: %s, RA: %s",
+	// 		rotate_clockwize,
+	// 		diff_linear_position,
+	// 		diff_length,
+	// 		cursor_circumference,
+	// 		diff_circumference_ratio,
+	// 		Math::rad_to_deg(rotation_angle)));
+
+	// from_transform.rotate(Vector3(0, 1, 0), real_t p_angle);
+
+	// ============
+
+	// const float radians_per_pixel = Math::deg_to_rad(orbit_sensitivity);
+
+	// cursor.unsnapped_x_rot += p_relative.y * radians_per_pixel * (invert_y_axis ? -1 : 1);
+	// cursor.unsnapped_x_rot = CLAMP(cursor.unsnapped_x_rot, -1.57, 1.57);
+	// cursor.unsnapped_y_rot += p_relative.x * radians_per_pixel * (invert_x_axis ? -1 : 1);
+
+	// cursor.x_rot = cursor.unsnapped_x_rot;
+	// cursor.y_rot = cursor.unsnapped_y_rot;
+
+	// ViewType new_view_type = VIEW_TYPE_USER;
+
+	// bool snap_modifier_configured = !_is_shortcut_empty(SHORTCUT_ORBIT_SNAP_MOD_1) || !_is_shortcut_empty(SHORTCUT_ORBIT_SNAP_MOD_2);
+	// if (snap_modifier_configured && _is_shortcut_pressed(SHORTCUT_ORBIT_SNAP_MOD_1, true) && _is_shortcut_pressed(SHORTCUT_ORBIT_SNAP_MOD_2, true)) {
+	// 	const float snap_angle = Math::deg_to_rad(45.0);
+	// 	const float snap_threshold = Math::deg_to_rad(angle_snap_threshold);
+
+	// 	float x_rot_snapped = Math::snapped(cursor.unsnapped_x_rot, snap_angle);
+	// 	float y_rot_snapped = Math::snapped(cursor.unsnapped_y_rot, snap_angle);
+
+	// 	float x_dist = Math::abs(cursor.unsnapped_x_rot - x_rot_snapped);
+	// 	float y_dist = Math::abs(cursor.unsnapped_y_rot - y_rot_snapped);
+
+	// 	if (x_dist < snap_threshold && y_dist < snap_threshold) {
+	// 		cursor.x_rot = x_rot_snapped;
+	// 		cursor.y_rot = y_rot_snapped;
+
+	// 		float y_rot_wrapped = Math::wrapf(y_rot_snapped, (float)-Math::PI, (float)Math::PI);
+
+	// 		if (Math::abs(x_rot_snapped) < snap_threshold) {
+	// 			// Only switch to ortho for 90-degree views.
+	// 			if (Math::abs(y_rot_wrapped) < snap_threshold) {
+	// 				new_view_type = VIEW_TYPE_FRONT;
+	// 			} else if (Math::abs(Math::abs(y_rot_wrapped) - Math::PI) < snap_threshold) {
+	// 				new_view_type = VIEW_TYPE_REAR;
+	// 			} else if (Math::abs(y_rot_wrapped - Math::PI / 2.0) < snap_threshold) {
+	// 				new_view_type = VIEW_TYPE_LEFT;
+	// 			} else if (Math::abs(y_rot_wrapped + Math::PI / 2.0) < snap_threshold) {
+	// 				new_view_type = VIEW_TYPE_RIGHT;
+	// 			}
+
+	// 		} else if (Math::abs(Math::abs(x_rot_snapped) - Math::PI / 2.0) < snap_threshold) {
+	// 			if (Math::abs(y_rot_wrapped) < snap_threshold ||
+	// 					Math::abs(Math::abs(y_rot_wrapped) - Math::PI) < snap_threshold ||
+	// 					Math::abs(y_rot_wrapped - Math::PI / 2.0) < snap_threshold ||
+	// 					Math::abs(y_rot_wrapped + Math::PI / 2.0) < snap_threshold) {
+	// 				new_view_type = x_rot_snapped > 0 ? VIEW_TYPE_TOP : VIEW_TYPE_BOTTOM;
+	// 			}
+	// 		}
+	// 	}
+	// }
+
+	// set_view_type(new_view_type);
 }
 
 void View3DController::cursor_look(const Ref<InputEventWithModifiers> &p_event, const Vector2 &p_relative) {
