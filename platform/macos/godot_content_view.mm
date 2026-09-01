@@ -896,12 +896,12 @@
 	DisplayServerMacOS::WindowData &wd = ds->get_window(window_id);
 	ds->update_mouse_pos(wd, [event locationInWindow]);
 
-	double delta_x = [event scrollingDeltaX];
-	double delta_y = [event scrollingDeltaY];
+	double delta_x = [event deltaX];
+	double delta_y = [event deltaY];
 
 	if ([event hasPreciseScrollingDeltas]) {
-		delta_x *= 0.03;
-		delta_y *= 0.03;
+		delta_x = [event scrollingDeltaX];
+		delta_y = [event scrollingDeltaY];
 	}
 
 	if ([event momentumPhase] != NSEventPhaseNone) {
