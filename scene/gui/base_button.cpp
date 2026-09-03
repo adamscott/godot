@@ -83,6 +83,8 @@ void BaseButton::gui_input(const Ref<InputEvent> &p_event) {
 				on_action_event(p_event);
 			}
 		}
+
+		return;
 	}
 
 	Ref<InputEventScreenDrag> drag = p_event;
@@ -93,6 +95,8 @@ void BaseButton::gui_input(const Ref<InputEvent> &p_event) {
 		if (last_press_inside != status.pressing_inside) {
 			queue_redraw();
 		}
+
+		return;
 	}
 
 	Ref<InputEventMouseButton> mouse_button = p_event;
@@ -103,17 +107,21 @@ void BaseButton::gui_input(const Ref<InputEvent> &p_event) {
 		was_mouse_pressed = button_masked;
 		on_action_event(p_event);
 		was_mouse_pressed = false;
-	} else {
-		Ref<InputEventMouseMotion> mouse_motion = p_event;
-		if (mouse_motion.is_valid()) {
-			if (status.press_attempt) {
-				bool last_press_inside = status.pressing_inside;
-				status.pressing_inside = has_point(mouse_motion->get_position());
-				if (last_press_inside != status.pressing_inside) {
-					queue_redraw();
-				}
+
+		return;
+	}
+
+	Ref<InputEventMouseMotion> mouse_motion = p_event;
+	if (mouse_motion.is_valid()) {
+		if (status.press_attempt) {
+			bool last_press_inside = status.pressing_inside;
+			status.pressing_inside = has_point(mouse_motion->get_position());
+			if (last_press_inside != status.pressing_inside) {
+				queue_redraw();
 			}
 		}
+
+		return;
 	}
 }
 

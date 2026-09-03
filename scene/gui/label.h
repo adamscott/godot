@@ -85,6 +85,12 @@ private:
 
 	Ref<LabelSettings> settings;
 
+	bool mouse_entered = false;
+	ObjectID label_for;
+	bool label_for_mouse_entered = false;
+	HashMap<int, Ref<InputEventScreenTouch>> label_for_touch_active;
+	MouseFilter previous_mouse_filter = MOUSE_FILTER_IGNORE;
+
 	struct ThemeCache {
 		Ref<StyleBox> normal_style;
 		Ref<StyleBox> focus_style;
@@ -109,6 +115,12 @@ private:
 	bool _shape_lines(int p_font_size, int p_width, int p_height) const;
 	void _invalidate();
 	void _maximum_size_changed();
+	void _gui_input(const Ref<InputEvent> &p_event);
+
+	void _label_for_handle_gui_input(const Ref<InputEvent> &p_event);
+	void _label_for_update(const ObjectID &p_previous_label_for = ObjectID(), bool p_is_exiting_tree = false);
+	void _label_for_on_mouse_enter();
+	void _label_for_on_mouse_exit();
 
 protected:
 	RID get_line_rid(int p_line) const;
@@ -209,6 +221,9 @@ public:
 	int get_visible_line_count() const;
 
 	Rect2 get_character_bounds(int p_pos) const;
+
+	void set_label_for(Control *p_label_for_target);
+	Control *get_label_for() const;
 
 	Label(const String &p_text = String());
 	~Label();

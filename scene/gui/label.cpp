@@ -30,9 +30,13 @@
 
 #include "label.h"
 
+#include "core/config/engine.h"
+#include "core/input/input.h"
 #include "core/object/callable_mp.h"
 #include "core/object/class_db.h"
+#include "scene/gui/base_button.h"
 #include "scene/main/scene_tree.h"
+#include "scene/main/viewport.h"
 #include "scene/theme/theme_db.h"
 #include "servers/display/accessibility_server.h"
 #include "servers/rendering/rendering_server.h"
@@ -988,6 +992,32 @@ void Label::_notification(int p_what) {
 				para.lines_dirty = true;
 			}
 		} break;
+
+		case NOTIFICATION_ENTER_TREE: {
+			_label_for_update();
+		} break;
+
+		case NOTIFICATION_READY: {
+			connect(SceneStringName(gui_input), callable_mp(this, &Label::_gui_input));
+		} break;
+
+		case NOTIFICATION_EXIT_TREE: {
+			_label_for_update(ObjectID(), true);
+		} break;
+
+		case NOTIFICATION_MOUSE_ENTER: {
+			_label_for_on_mouse_enter();
+		} break;
+
+		case NOTIFICATION_VISIBILITY_CHANGED: {
+			if (!is_visible()) {
+				_label_for_on_mouse_exit();
+			}
+		} break;
+
+		case NOTIFICATION_MOUSE_EXIT: {
+			_label_for_on_mouse_exit();
+		} break;
 	}
 }
 
@@ -1560,6 +1590,230 @@ int Label::get_total_character_count() const {
 	return xl_text.length();
 }
 
+void Label::set_label_for(Control *p_label_for_target) {
+	ERR_MAIN_THREAD_GUARD;
+
+	if (unlikely((p_label_for_target == nullptr && label_for == ObjectID()) || (p_label_for_target->get_instance_id() == label_for))) {
+		return;
+	}
+
+	ERR_FAIL_COND_MSG(Object::cast_to<Label>(p_label_for_target) != nullptr, "Cannot set `label_for` to another `Label`.");
+
+	ObjectID previous_label_for = label_for;
+	label_for = p_label_for_target->get_instance_id();
+
+	_label_for_update(previous_label_for);
+}
+
+Control *Label::get_label_for() const {
+	ERR_READ_THREAD_GUARD_V(nullptr);
+	Object *label_for_object = ObjectDB::get_instance(label_for);
+	Control *label_for_control = Object::cast_to<Control>(label_for_object);
+
+	return label_for_control;
+}
+
+void Label::_label_for_update(const ObjectID &p_previous_label_for, bool p_is_exiting_tree) {
+	if (!is_inside_tree() || Engine::get_singleton()->is_editor_hint()) {
+		return;
+	}
+
+	Object *previous_label_for_object = ObjectDB::get_instance(p_previous_label_for);
+	Control *previous_label_for_control = Object::cast_to<Control>(previous_label_for_object);
+
+	Object *label_for_object = ObjectDB::get_instance(label_for);
+	Control *label_for_control = Object::cast_to<Control>(label_for_object);
+
+	if (p_is_exiting_tree) {
+		// We're exiting the tree, so we remove the influence of this label of `label_for`.
+		previous_label_for_control = label_for_control;
+	}
+
+	if (previous_label_for_control != nullptr) {
+		Vector2 previous_label_for_control_local_center =
+				previous_label_for_control->get_global_transform().affine_inverse().xform(
+						previous_label_for_control->get_global_rect().get_center());
+
+		if (label_for_mouse_entered) {
+			Vector2 previous_label_for_local_mouse_position =
+					previous_label_for_control->get_global_transform().affine_inverse().xform(
+							previous_label_for_control->get_viewport()->get_mouse_position());
+			if (previous_label_for_control->has_point(previous_label_for_local_mouse_position)) {
+				return;
+			}
+			previous_label_for_control->notification(NOTIFICATION_MOUSE_EXIT);
+			previous_label_for_control->emit_signal(SceneStringName(mouse_exited));
+			label_for_mouse_entered = false;
+		}
+
+		if (!label_for_touch_active.is_empty()) {
+			for (const KeyValue<int, Ref<InputEventScreenTouch>> &KV : label_for_touch_active) {
+				Vector2 touch_position_local_previous_label_for =
+						previous_label_for_control->get_global_transform().affine_inverse().xform(
+								KV.value->get_position());
+				if (previous_label_for_control->has_point(touch_position_local_previous_label_for)) {
+					continue;
+				}
+
+				Ref<InputEventScreenTouch> screen_touch_event = KV.value->duplicate();
+				screen_touch_event->set_pressed(false);
+				screen_touch_event->set_position(previous_label_for_control_local_center);
+
+				previous_label_for_control->gui_input(screen_touch_event);
+			}
+		}
+	}
+
+	if (label_for_control == nullptr) {
+		set_mouse_filter(MOUSE_FILTER_IGNORE);
+		label_for_mouse_entered = false;
+		label_for_touch_active = false;
+	} else {
+		set_mouse_filter(MOUSE_FILTER_PASS);
+
+		Vector2 label_for_control_local_center =
+				label_for_control->get_global_transform().affine_inverse().xform(
+						label_for_control->get_global_rect().get_center());
+
+		if (mouse_entered) {
+			Label::_label_for_on_mouse_enter();
+		}
+
+		if (!label_for_touch_active.is_empty()) {
+			for (const KeyValue<int, Ref<InputEventScreenTouch>> &KV : label_for_touch_active) {
+				Vector2 touch_position_local_previous_label_for =
+						label_for_control->get_global_transform().affine_inverse().xform(
+								KV.value->get_position());
+				if (label_for_control->has_point(touch_position_local_previous_label_for)) {
+					continue;
+				}
+
+				Ref<InputEventScreenTouch> screen_touch_event = KV.value->duplicate();
+				screen_touch_event->set_pressed(true);
+				screen_touch_event->set_position(label_for_control_local_center);
+
+				label_for_control->gui_input(screen_touch_event);
+			}
+		}
+	}
+}
+
+void Label::_label_for_on_mouse_enter() {
+	if (Engine::get_singleton()->is_editor_hint()) {
+		return;
+	}
+
+	mouse_entered = true;
+
+	Control *label_for_control = get_label_for();
+	if (label_for_control != nullptr) {
+		Vector2 label_for_local_mouse_position =
+				get_label_for()->get_global_transform().affine_inverse().xform(
+						label_for_control->get_viewport()->get_mouse_position());
+
+		if (!label_for_control->has_point(label_for_local_mouse_position)) {
+			label_for_mouse_entered = true;
+			label_for_control->notification(NOTIFICATION_MOUSE_ENTER);
+			label_for_control->emit_signal(SceneStringName(mouse_entered));
+		}
+	}
+}
+
+void Label::_label_for_on_mouse_exit() {
+	if (Engine::get_singleton()->is_editor_hint()) {
+		return;
+	}
+
+	Control *label_for_control = get_label_for();
+	if (label_for_control != nullptr) {
+		Vector2 label_for_local_mouse_position =
+				label_for_control->get_global_transform().affine_inverse().xform(
+						label_for_control->get_viewport()->get_mouse_position());
+		if (!label_for_control->has_point(label_for_local_mouse_position)) {
+			label_for_control->notification(NOTIFICATION_MOUSE_EXIT);
+			label_for_control->emit_signal(SceneStringName(mouse_exited));
+		}
+	}
+
+	label_for_mouse_entered = false;
+	mouse_entered = false;
+}
+
+void Label::_label_for_handle_gui_input(const Ref<InputEvent> &p_event) {
+	if (Engine::get_singleton()->is_editor_hint()) {
+		return;
+	}
+
+	Control *label_for_control = get_label_for();
+	if (label_for_control == nullptr) {
+		return;
+	}
+	Rect2 label_for_control_global_rect = label_for_control->get_global_rect();
+	Vector2 label_for_global_position = label_for_control_global_rect.get_center();
+	Vector2 label_for_position = label_for_control->get_global_transform()
+										 .affine_inverse()
+										 .xform(label_for_global_position);
+
+	Ref<InputEventScreenTouch> screen_touch_event = p_event;
+	if (screen_touch_event.is_valid()) {
+		int screen_touch_index = screen_touch_event->get_index();
+		if (label_for_touch_active.has(screen_touch_index)) {
+			if (!screen_touch_event->is_pressed()) {
+				label_for_touch_active.erase(screen_touch_index);
+			}
+		} else {
+			if (screen_touch_event->is_pressed()) {
+				label_for_touch_active.insert(screen_touch_index, screen_touch_event);
+			}
+		}
+
+		Ref<InputEventScreenTouch> label_for_screen_touch_event = screen_touch_event->duplicate();
+		label_for_screen_touch_event->set_position(label_for_position);
+		label_for_control->gui_input(label_for_screen_touch_event);
+
+		if (!screen_touch_event->is_released()) {
+			if (!label_for_control->has_focus() && label_for_control->get_focus_mode_with_override() != FOCUS_NONE) {
+				label_for_control->grab_focus(true);
+			}
+		}
+
+		return;
+	}
+
+	Ref<InputEventMouse> mouse_event = p_event;
+	if (mouse_event.is_valid()) {
+		Ref<InputEventMouse> label_for_mouse_event = mouse_event->duplicate();
+		label_for_mouse_event->set_position(label_for_position);
+		label_for_mouse_event->set_global_position(label_for_global_position);
+
+		if (!label_for_mouse_entered) {
+			label_for_mouse_entered = true;
+			label_for_control->notification(NOTIFICATION_MOUSE_ENTER);
+			label_for_control->emit_signal(SceneStringName(mouse_entered));
+		}
+
+		label_for_control->gui_input(label_for_mouse_event);
+
+		// Make sure to focus on the current element.
+		Ref<InputEventMouseButton> mouse_button_event = mouse_event;
+		if (mouse_button_event.is_valid()) {
+			bool ui_accept = mouse_button_event->is_action("ui_accept", true) && !mouse_button_event->is_echo();
+			bool left_mouse_pressed = mouse_button_event->get_button_index() == MouseButton::LEFT && mouse_button_event->is_pressed();
+			if (ui_accept || left_mouse_pressed) {
+				if (!label_for_control->has_focus() && label_for_control->get_focus_mode_with_override() != FOCUS_NONE) {
+					label_for_control->grab_focus(true);
+				}
+			}
+		}
+
+		return;
+	}
+}
+
+void Label::_gui_input(const Ref<InputEvent> &p_event) {
+	_label_for_handle_gui_input(p_event);
+}
+
 void Label::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_horizontal_alignment", "alignment"), &Label::set_horizontal_alignment);
 	ClassDB::bind_method(D_METHOD("get_horizontal_alignment"), &Label::get_horizontal_alignment);
@@ -1620,6 +1874,9 @@ void Label::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_character_bounds", "pos"), &Label::get_character_bounds);
 
+	ClassDB::bind_method(D_METHOD("set_label_for", "label_for_target"), &Label::set_label_for);
+	ClassDB::bind_method(D_METHOD("get_label_for"), &Label::get_label_for);
+
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "text", PROPERTY_HINT_MULTILINE_TEXT), "set_text", "get_text");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "label_settings", PROPERTY_HINT_RESOURCE_TYPE, LabelSettings::get_class_static()), "set_label_settings", "get_label_settings");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "horizontal_alignment", PROPERTY_HINT_ENUM, "Left,Center,Right,Fill"), "set_horizontal_alignment", "get_horizontal_alignment");
@@ -1634,6 +1891,8 @@ void Label::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "ellipsis_char"), "set_ellipsis_char", "get_ellipsis_char");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "uppercase"), "set_uppercase", "is_uppercase");
 	ADD_PROPERTY(PropertyInfo(Variant::PACKED_FLOAT32_ARRAY, "tab_stops"), "set_tab_stops", "get_tab_stops");
+
+	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "label_for", PROPERTY_HINT_NODE_TYPE, "Control"), "set_label_for", "get_label_for");
 
 	ADD_GROUP("Resize Font to Fit", "");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "resize_font_to_fit", PROPERTY_HINT_GROUP_ENABLE), "set_resize_font_to_fit", "is_resize_font_to_fit_enabled");
