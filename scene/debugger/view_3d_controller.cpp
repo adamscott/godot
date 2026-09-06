@@ -265,21 +265,32 @@ bool View3DController::gui_input(const Ref<InputEvent> &p_event, const Rect2 &p_
 			}
 		}
 
+		Vector2 pixel_based_delta;
+		switch (pan_gesture->get_delta_unit()) {
+			case InputEventPanGesture::DELTA_UNIT_LINE: {
+				const real_t PIXELS_PER_LINE = 5.0;
+				pixel_based_delta = pan_gesture->get_delta() * PIXELS_PER_LINE;
+			} break;
+			case InputEventPanGesture::DELTA_UNIT_PIXEL: {
+				pixel_based_delta = pan_gesture->get_delta();
+			} break;
+		}
+
 		switch (nav_mode) {
 			case NAV_MODE_PAN: {
-				cursor_pan(pan_gesture, -pan_gesture->get_delta());
+				cursor_pan(pan_gesture, -pixel_based_delta);
 			} break;
 
 			case NAV_MODE_ZOOM: {
-				cursor_zoom(pan_gesture, pan_gesture->get_delta());
+				cursor_zoom(pan_gesture, pixel_based_delta);
 			} break;
 
 			case NAV_MODE_ORBIT: {
-				cursor_orbit(pan_gesture, -pan_gesture->get_delta());
+				cursor_orbit(pan_gesture, -pixel_based_delta);
 			} break;
 
 			case NAV_MODE_LOOK: {
-				cursor_look(pan_gesture, pan_gesture->get_delta());
+				cursor_look(pan_gesture, pixel_based_delta);
 			} break;
 
 			default: {

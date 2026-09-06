@@ -1069,7 +1069,18 @@ EditorPlugin::AfterGUIInput GridMapEditor::forward_spatial_input_event(Camera3D 
 	Ref<InputEventPanGesture> pan_gesture = p_event;
 	if (pan_gesture.is_valid()) {
 		if (pan_gesture->is_alt_pressed() && pan_gesture->is_command_or_control_pressed()) {
-			const real_t delta = pan_gesture->get_delta().y * 0.5;
+			real_t delta;
+
+			switch (pan_gesture->get_delta_unit()) {
+				case InputEventPanGesture::DELTA_UNIT_LINE: {
+					const real_t PIXELS_PER_LINE = 1.0 / 5.0;
+					delta = pan_gesture->get_delta().y * PIXELS_PER_LINE;
+				} break;
+				case InputEventPanGesture::DELTA_UNIT_PIXEL: {
+					delta = pan_gesture->get_delta().y;
+				} break;
+			}
+
 			accumulated_floor_delta += delta;
 			int step = 0;
 			if (Math::abs(accumulated_floor_delta) > 1.0) {
@@ -1079,6 +1090,7 @@ EditorPlugin::AfterGUIInput GridMapEditor::forward_spatial_input_event(Camera3D 
 			if (step) {
 				floor->set_value(floor->get_value() + step);
 			}
+
 			return EditorPlugin::AFTER_GUI_INPUT_STOP;
 		}
 	}

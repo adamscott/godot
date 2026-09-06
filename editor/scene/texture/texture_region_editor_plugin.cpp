@@ -699,15 +699,42 @@ void TextureRegionEditor::_texture_overlay_input(const Ref<InputEvent> &p_input)
 
 	Ref<InputEventPanGesture> pan_gesture = p_input;
 	if (pan_gesture.is_valid()) {
-		hscroll->set_value(hscroll->get_value() + hscroll->get_page() * pan_gesture->get_delta().x / 8);
-		vscroll->set_value(vscroll->get_value() + vscroll->get_page() * pan_gesture->get_delta().y / 8);
+		Vector2 hv_scroll(hscroll->get_value(), vscroll->get_value());
+
+		switch (pan_gesture->get_delta_unit()) {
+			case InputEventPanGesture::DELTA_UNIT_LINE: {
+				const real_t PIXELS_PER_LINE = 5.0;
+				hv_scroll -= pan_gesture->get_delta() * PIXELS_PER_LINE;
+			} break;
+			case InputEventPanGesture::DELTA_UNIT_PIXEL: {
+				hv_scroll -= pan_gesture->get_delta();
+			} break;
+		}
 	}
 }
 
 void TextureRegionEditor::_pan_callback(Vector2 p_scroll_vec, Ref<InputEvent> p_event) {
+	Vector2 hv_scroll(hscroll->get_value(), vscroll->get_value());
+
+	InputEventPanGesture::DeltaUnit delta_unit = InputEventPanGesture::DELTA_UNIT_PIXEL;
+
+	Ref<InputEventPanGesture> pan_gesture_event = p_event;
+	if (pan_gesture_event.is_valid()) {
+		delta_unit = pan_gesture_event->get_delta_unit();
+	}
+
+	switch (delta_unit) {
+		case InputEventPanGesture::DELTA_UNIT_LINE: {
+			const real_t PIXELS_PER_LINE = 5.0;
+			hv_scroll -= p_scroll_vec * PIXELS_PER_LINE;
+		} break;
+		case InputEventPanGesture::DELTA_UNIT_PIXEL: {
+			hv_scroll -= p_scroll_vec;
+		} break;
+	}
 	p_scroll_vec /= draw_zoom;
-	hscroll->set_value(hscroll->get_value() - p_scroll_vec.x);
-	vscroll->set_value(vscroll->get_value() - p_scroll_vec.y);
+	hscroll->set_value(hv_scroll.x);
+	vscroll->set_value(hv_scroll.y);
 }
 
 void TextureRegionEditor::_zoom_callback(float p_zoom_factor, Vector2 p_origin, Ref<InputEvent> p_event) {

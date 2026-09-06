@@ -35,6 +35,7 @@
 #import "key_mapping_macos.h"
 
 #include "core/input/input.h"
+#include "core/input/input_enums.h"
 #include "core/input/input_event.h"
 #include "core/os/keyboard.h"
 #include "core/os/os.h"
@@ -868,7 +869,10 @@
 	Input::get_singleton()->parse_input_event(sc);
 }
 
-- (void)processPanEvent:(NSEvent *)event dx:(double)dx dy:(double)dy {
+- (void)processPanEvent:(NSEvent *)event
+				delta_x:(double)delta_x
+				delta_y:(double)delta_y
+			 delta_unit:(InputEventPanGesture::DeltaUnit)delta_unit {
 	DisplayServerMacOS *ds = (DisplayServerMacOS *)DisplayServer::get_singleton();
 	if (!ds || !ds->has_window(window_id)) {
 		return;
@@ -879,10 +883,11 @@
 	Ref<InputEventPanGesture> pg;
 	pg.instantiate();
 
+	pg->set_delta_unit(delta_unit);
 	pg->set_window_id(window_id);
 	ds->get_key_modifier_state([event modifierFlags], pg);
 	pg->set_position(wd.mouse_pos);
-	pg->set_delta(Vector2(-dx, -dy));
+	pg->set_delta(Vector2(-delta_x, -delta_y));
 
 	Input::get_singleton()->parse_input_event(pg);
 }
@@ -898,10 +903,21 @@
 
 	double delta_x = [event deltaX];
 	double delta_y = [event deltaY];
+	InputEventPanGesture::DeltaUnit delta_unit = InputEventPanGesture::DELTA_UNIT_LINE;
 
-	if ([event hasPreciseScrollingDeltas]) {
-		delta_x = [event scrollingDeltaX];
-		delta_y = [event scrollingDeltaY];
+	switch ([event type]) {
+		case NSEventTypeScrollWheel: {
+			// Apple recommends to use `scrollingDelta{X,Y} for `NSEventTypeScrollWheel` events.
+			delta_x = [event scrollingDeltaX];
+			delta_y = [event scrollingDeltaY];
+			if ([event hasPreciseScrollingDeltas]) {
+				delta_unit = InputEventPanGesture::DELTA_UNIT_PIXEL;
+			}
+		} break;
+
+		default: {
+			// Do nothing.
+		}
 	}
 
 	if ([event momentumPhase] != NSEventPhaseNone) {
@@ -913,7 +929,7 @@
 	}
 
 	if ([event phase] != NSEventPhaseNone || [event momentumPhase] != NSEventPhaseNone) {
-		[self processPanEvent:event dx:delta_x dy:delta_y];
+		[self processPanEvent:event delta_x:delta_x delta_y:delta_y delta_unit:delta_unit];
 	} else {
 		double delta_x_abs = Math::abs(delta_x);
 		double delta_y_abs = Math::abs(delta_y);

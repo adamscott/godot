@@ -34,6 +34,7 @@
 #include "core/config/engine.h"
 #include "core/config/project_settings.h"
 #include "core/input/input.h"
+#include "core/input/input_enums.h"
 #include "core/input/input_map.h"
 #include "core/object/callable_mp.h"
 #include "core/object/class_db.h"
@@ -2992,13 +2993,27 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 		// to detect that the interaction was part of a pan gesture and avoid showing the virtual keyboard.
 		touch_dragging_in_progress = true;
 		pan_gesture_performed = true;
-		const real_t delta = pan_gesture->get_delta().y;
-		if (delta < 0) {
-			_scroll_up(-delta, false);
-		} else {
-			_scroll_down(delta, false);
+		Vector2 delta = pan_gesture->get_delta();
+
+		switch (pan_gesture->get_delta_unit()) {
+			case InputEventPanGesture::DELTA_UNIT_PIXEL: {
+				// Convert the pixel-based delta to a line-based delta.
+				delta *= get_minimum_size().y;
+			} break;
+
+			default: {
+				// Do nothing.
+			}
 		}
-		h_scroll->set_value(h_scroll->get_value() + pan_gesture->get_delta().x * 100);
+
+		if (delta.y < 0) {
+			_scroll_up(-delta.y, false);
+		} else {
+			_scroll_down(delta.y, false);
+		}
+
+		// TODO: Validate that `100` magic number, it seems super intense.
+		h_scroll->set_value(h_scroll->get_value() + delta.x * 100);
 		if (v_scroll->get_value() != prev_v_scroll || h_scroll->get_value() != prev_h_scroll) {
 			accept_event(); // Accept event if scroll changed.
 		}

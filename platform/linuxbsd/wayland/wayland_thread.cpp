@@ -2185,6 +2185,10 @@ void WaylandThread::_wl_pointer_on_frame(void *data, struct wl_pointer *wl_point
 				Ref<InputEventPanGesture> pg;
 				pg.instantiate();
 
+				if (pd.scroll_type == WL_POINTER_AXIS_SOURCE_FINGER) {
+					pg->set_precise(true);
+				}
+
 				// Set all pressed modifiers.
 				pg->set_shift_pressed(ss->shift_pressed);
 				pg->set_ctrl_pressed(ss->ctrl_pressed);

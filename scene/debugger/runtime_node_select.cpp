@@ -1157,8 +1157,23 @@ void RuntimeNodeSelect::_find_canvas_items_at_rect(const Rect2 &p_rect, Node *p_
 
 void RuntimeNodeSelect::_pan_callback(Vector2 p_scroll_vec, Ref<InputEvent> p_event) {
 	Vector2 scroll = SceneTree::get_singleton()->get_root()->get_screen_transform().affine_inverse().xform(p_scroll_vec);
-	view_2d_offset.x -= scroll.x / view_2d_zoom;
-	view_2d_offset.y -= scroll.y / view_2d_zoom;
+
+	InputEventPanGesture::DeltaUnit delta_unit = InputEventPanGesture::DELTA_UNIT_PIXEL;
+
+	Ref<InputEventPanGesture> pan_gesture_event = p_event;
+	if (pan_gesture_event.is_valid()) {
+		delta_unit = pan_gesture_event->get_delta_unit();
+	}
+
+	switch (delta_unit) {
+		case InputEventPanGesture::DELTA_UNIT_LINE: {
+			const real_t PIXELS_PER_LINE = 5.0;
+			view_2d_offset -= (scroll * PIXELS_PER_LINE) / view_2d_zoom;
+		} break;
+		case InputEventPanGesture::DELTA_UNIT_PIXEL: {
+			view_2d_offset -= scroll / view_2d_zoom;
+		} break;
+	}
 
 #ifndef _2D_DISABLED
 	_update_view_2d();

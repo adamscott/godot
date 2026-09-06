@@ -49,7 +49,23 @@ void TileAtlasView::gui_input(const Ref<InputEvent> &p_event) {
 }
 
 void TileAtlasView::_pan_callback(Vector2 p_scroll_vec, Ref<InputEvent> p_event) {
-	panning += p_scroll_vec;
+	InputEventPanGesture::DeltaUnit delta_unit = InputEventPanGesture::DELTA_UNIT_PIXEL;
+
+	Ref<InputEventPanGesture> pan_gesture_event = p_event;
+	if (pan_gesture_event.is_valid()) {
+		delta_unit = pan_gesture_event->get_delta_unit();
+	}
+
+	switch (delta_unit) {
+		case InputEventPanGesture::DELTA_UNIT_LINE: {
+			const real_t PIXELS_PER_LINE = 5.0;
+			panning += p_scroll_vec * PIXELS_PER_LINE;
+		} break;
+		case InputEventPanGesture::DELTA_UNIT_PIXEL: {
+			panning += p_scroll_vec;
+		} break;
+	}
+
 	_update_zoom_and_panning(true);
 	emit_signal(SNAME("transform_changed"), zoom_widget->get_zoom(), panning);
 }

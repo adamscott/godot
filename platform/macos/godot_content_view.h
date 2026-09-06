@@ -31,6 +31,7 @@
 #pragma once
 
 #include "core/input/input_enums.h"
+#include "core/input/input_event.h"
 #include "core/typedefs.h"
 #include "servers/display/display_server_enums.h"
 
@@ -72,7 +73,10 @@ GODOT_CLANG_WARNING_PUSH_AND_IGNORE("-Wdeprecated-declarations") // OpenGL is de
 }
 
 - (void)processScrollEvent:(NSEvent *)event button:(MouseButton)button factor:(double)factor;
-- (void)processPanEvent:(NSEvent *)event dx:(double)dx dy:(double)dy;
+- (void)processPanEvent:(NSEvent *)event
+				delta_x:(double)delta_x
+				delta_y:(double)delta_y
+			 delta_unit:(InputEventPanGesture::DeltaUnit)delta_unit;
 - (void)processMouseEvent:(NSEvent *)event index:(MouseButton)index pressed:(bool)pressed outofstream:(bool)outofstream;
 - (void)setWindowID:(DisplayServerEnums::WindowID)wid;
 - (void)updateLayerDelegate;

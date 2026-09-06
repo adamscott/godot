@@ -2362,12 +2362,41 @@ bool AnimationBezierTrackEdit::_try_select_at_ui_pos(const Point2 &p_pos, bool p
 }
 
 void AnimationBezierTrackEdit::_pan_callback(Vector2 p_scroll_vec, Ref<InputEvent> p_event) {
-	Ref<InputEventMouseMotion> mm = p_event;
-	if (mm.is_valid()) {
-		if (mm->get_position().x > timeline->get_name_limit()) {
-			timeline_v_scroll += p_scroll_vec.y * timeline_v_zoom;
+	InputEventPanGesture::DeltaUnit delta_unit = InputEventPanGesture::DELTA_UNIT_PIXEL;
+
+	Vector2 position;
+	bool event_valid = false;
+
+	Ref<InputEventMouseMotion> mouse_motion_event = p_event;
+	if (mouse_motion_event.is_valid()) {
+		event_valid = true;
+		position = mouse_motion_event->get_position();
+	}
+
+	Ref<InputEventPanGesture> pan_gesture_event = p_event;
+	if (pan_gesture_event.is_valid()) {
+		event_valid = true;
+		position = pan_gesture_event->get_position();
+		delta_unit = pan_gesture_event->get_delta_unit();
+	}
+
+	if (event_valid) {
+		Vector2 actual_pan = p_scroll_vec;
+
+		switch (delta_unit) {
+			case InputEventPanGesture::DELTA_UNIT_LINE: {
+				const real_t PIXELS_PER_LINE = 5.0;
+				actual_pan *= PIXELS_PER_LINE;
+			} break;
+			default: {
+				// Do nothing.
+			} break;
+		}
+
+		if (position.x > timeline->get_name_limit()) {
+			timeline_v_scroll += actual_pan.y * timeline_v_zoom;
 			timeline_v_scroll = CLAMP(timeline_v_scroll, -100000, 100000);
-			timeline->set_value(timeline->get_value() - p_scroll_vec.x / timeline->get_zoom_scale());
+			timeline->set_value(timeline->get_value() - actual_pan.x / timeline->get_zoom_scale());
 		} else {
 			track_v_scroll += p_scroll_vec.y;
 			if (track_v_scroll < -track_v_scroll_max) {

@@ -516,7 +516,16 @@ void CodeEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 
 	Ref<InputEventPanGesture> pan_gesture = p_gui_input;
 	if (pan_gesture.is_valid() && code_completion_active && code_completion_rect.has_point(pan_gesture->get_position())) {
-		delta = pan_gesture->get_delta().y;
+		switch (pan_gesture->get_delta_unit()) {
+			case InputEventPanGesture::DELTA_UNIT_LINE: {
+				const real_t PIXELS_PER_LINE = 5.0;
+				delta = pan_gesture->get_delta().y * PIXELS_PER_LINE;
+			} break;
+			case InputEventPanGesture::DELTA_UNIT_PIXEL: {
+				delta = pan_gesture->get_delta().y;
+			} break;
+		}
+
 		is_valid_scroll_event = true;
 	}
 

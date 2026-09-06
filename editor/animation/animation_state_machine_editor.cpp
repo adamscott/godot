@@ -768,8 +768,19 @@ void AnimationNodeStateMachineEditor::_state_machine_gui_input(const Ref<InputEv
 
 	Ref<InputEventPanGesture> pan_gesture = p_event;
 	if (pan_gesture.is_valid()) {
-		h_scroll->set_value(h_scroll->get_value() + h_scroll->get_page() * pan_gesture->get_delta().x / 8);
-		v_scroll->set_value(v_scroll->get_value() + v_scroll->get_page() * pan_gesture->get_delta().y / 8);
+		Vector2 hv_scroll(h_scroll->get_value(), v_scroll->get_value());
+
+		switch (pan_gesture->get_delta_unit()) {
+			case InputEventPanGesture::DELTA_UNIT_LINE: {
+				const real_t PIXELS_PER_LINE = 5.0;
+				hv_scroll -= (pan_gesture->get_delta() * PIXELS_PER_LINE);
+			} break;
+			case InputEventPanGesture::DELTA_UNIT_PIXEL: {
+				hv_scroll -= pan_gesture->get_delta();
+			} break;
+		}
+		h_scroll->set_value(hv_scroll.x);
+		v_scroll->set_value(hv_scroll.y);
 	}
 }
 

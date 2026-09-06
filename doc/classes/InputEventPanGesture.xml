@@ -14,5 +14,16 @@
 		<member name="delta" type="Vector2" setter="set_delta" getter="get_delta" default="Vector2(0, 0)">
 			Panning amount since last pan event.
 		</member>
+		<member name="delta_unit" type="int" setter="set_delta_unit" getter="get_delta_unit" enum="InputEventPanGesture.DeltaUnit" default="0">
+			Unit of length for [member delta].
+		</member>
 	</members>
+	<constants>
+		<constant name="DELTA_UNIT_LINE" value="0" enum="DeltaUnit">
+			 The delta represents the number of lines travelled.
+		</constant>
+		<constant name="DELTA_UNIT_PIXEL" value="1" enum="DeltaUnit">
+			 The delta represents the number of pixels travelled.
+		</constant>
+	</constants>
 </class>

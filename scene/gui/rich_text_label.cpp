@@ -3174,7 +3174,19 @@ void RichTextLabel::gui_input(const Ref<InputEvent> &p_event) {
 	Ref<InputEventPanGesture> pan_gesture = p_event;
 	if (pan_gesture.is_valid()) {
 		if (scroll_active) {
-			vscroll->scroll(vscroll->get_page() * pan_gesture->get_delta().y * 0.5 / 8);
+			real_t v_scroll = vscroll->get_value();
+
+			switch (pan_gesture->get_delta_unit()) {
+				case InputEventPanGesture::DELTA_UNIT_LINE: {
+					const real_t PIXELS_PER_LINE = 5.0;
+					v_scroll -= pan_gesture->get_delta().y * PIXELS_PER_LINE;
+				} break;
+				case InputEventPanGesture::DELTA_UNIT_PIXEL: {
+					v_scroll -= pan_gesture->get_delta().y;
+				} break;
+			}
+
+			vscroll->scroll(v_scroll);
 			queue_accessibility_update();
 		}
 

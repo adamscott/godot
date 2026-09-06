@@ -31,6 +31,7 @@
 #include "scroll_container.h"
 
 #include "core/config/project_settings.h"
+#include "core/input/input_enums.h"
 #include "core/object/callable_mp.h"
 #include "core/object/class_db.h"
 #include "scene/gui/panel_container.h"
@@ -325,14 +326,27 @@ void ScrollContainer::gui_input(const Ref<InputEvent> &p_gui_input) {
 
 	Ref<InputEventPanGesture> pan_gesture = p_gui_input;
 	if (pan_gesture.is_valid()) {
-		if (h_scroll_enabled) {
-			h_scroll->scroll(h_scroll->get_page() * pan_gesture->get_delta().x / ScrollBar::PAGE_DIVISOR);
-		}
-		if (v_scroll_enabled) {
-			v_scroll->scroll(v_scroll->get_page() * pan_gesture->get_delta().y / ScrollBar::PAGE_DIVISOR);
+		switch (pan_gesture->get_delta_unit()) {
+			case InputEventPanGesture::DELTA_UNIT_LINE: {
+				if (h_scroll_enabled) {
+					h_scroll->scroll(h_scroll->get_page() * pan_gesture->get_delta().x / ScrollBar::PAGE_DIVISOR);
+				}
+				if (v_scroll_enabled) {
+					v_scroll->scroll(v_scroll->get_page() * pan_gesture->get_delta().y / ScrollBar::PAGE_DIVISOR);
+				}
+			} break;
+
+			case InputEventPanGesture::DELTA_UNIT_PIXEL: {
+				if (h_scroll_enabled) {
+					h_scroll->scroll(h_scroll->get_value() - pan_gesture->get_delta().x);
+				}
+				if (v_scroll_enabled) {
+					v_scroll->scroll(v_scroll->get_value() - pan_gesture->get_delta().x);
+				}
+			} break;
 		}
 
-		if (v_scroll->get_value() != prev_v_scroll || h_scroll->get_value() != prev_h_scroll) {
+		if (!Math::is_equal_approx(v_scroll->get_value(), prev_v_scroll) || !Math::is_equal_approx(h_scroll->get_value(), prev_h_scroll)) {
 			accept_event(); // Accept event if scroll changed.
 		}
 		return;

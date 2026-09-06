@@ -1519,8 +1519,23 @@ bool CanvasItemEditor::_gui_input_zoom_or_pan(const Ref<InputEvent> &p_event, bo
 }
 
 void CanvasItemEditor::_pan_callback(Vector2 p_scroll_vec, Ref<InputEvent> p_event) {
-	view_offset.x -= p_scroll_vec.x / zoom;
-	view_offset.y -= p_scroll_vec.y / zoom;
+	InputEventPanGesture::DeltaUnit delta_unit = InputEventPanGesture::DELTA_UNIT_PIXEL;
+
+	Ref<InputEventPanGesture> pan_gesture_event = p_event;
+	if (pan_gesture_event.is_valid()) {
+		delta_unit = pan_gesture_event->get_delta_unit();
+	}
+
+	switch (delta_unit) {
+		case InputEventPanGesture::DELTA_UNIT_LINE: {
+			const real_t PIXELS_PER_LINE = 5.0;
+			view_offset -= (p_scroll_vec * PIXELS_PER_LINE) / zoom;
+		} break;
+		case InputEventPanGesture::DELTA_UNIT_PIXEL: {
+			view_offset -= p_scroll_vec / zoom;
+		} break;
+	}
+
 	update_viewport();
 }
 

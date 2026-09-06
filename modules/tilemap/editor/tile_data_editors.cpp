@@ -532,7 +532,16 @@ void GenericTilePolygonEditor::_base_control_gui_input(Ref<InputEvent> p_event) 
 
 	Ref<InputEventPanGesture> pan_gesture = p_event;
 	if (pan_gesture.is_valid()) {
-		panning += pan_gesture->get_delta() * 8;
+		switch (pan_gesture->get_delta_unit()) {
+			case InputEventPanGesture::DELTA_UNIT_LINE: {
+				const real_t PIXELS_PER_LINE = 5.0;
+				panning += pan_gesture->get_delta() * PIXELS_PER_LINE;
+			} break;
+			case InputEventPanGesture::DELTA_UNIT_PIXEL: {
+				panning += pan_gesture->get_delta();
+			} break;
+		}
+
 		drag_last_pos = Vector2();
 		button_center_view->set_disabled(panning.is_zero_approx());
 		accept_event();

@@ -1768,6 +1768,14 @@ Vector2 InputEventPanGesture::get_delta() const {
 	return delta;
 }
 
+void InputEventPanGesture::set_delta_unit(DeltaUnit p_delta_unit) {
+	delta_unit = p_delta_unit;
+}
+
+InputEventPanGesture::DeltaUnit InputEventPanGesture::get_delta_unit() const {
+	return delta_unit;
+}
+
 RequiredResult<InputEvent> InputEventPanGesture::xformed_by(const Transform2D &p_xform, const Vector2 &p_local_ofs) const {
 	Ref<InputEventPanGesture> ev;
 	ev.instantiate();
@@ -1779,6 +1787,7 @@ RequiredResult<InputEvent> InputEventPanGesture::xformed_by(const Transform2D &p
 
 	ev->set_position(p_xform.xform(get_position() + p_local_ofs));
 	ev->set_delta(get_delta());
+	ev->set_delta_unit(get_delta_unit());
 
 	ev->merge_meta_from(this);
 
@@ -1796,8 +1805,14 @@ String InputEventPanGesture::_to_string() {
 void InputEventPanGesture::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_delta", "delta"), &InputEventPanGesture::set_delta);
 	ClassDB::bind_method(D_METHOD("get_delta"), &InputEventPanGesture::get_delta);
+	ClassDB::bind_method(D_METHOD("set_delta_unit", "delta_unit"), &InputEventPanGesture::set_delta_unit);
+	ClassDB::bind_method(D_METHOD("get_delta_unit"), &InputEventPanGesture::get_delta_unit);
 
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "delta"), "set_delta", "get_delta");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "delta_unit", PROPERTY_HINT_ENUM, "Pixel,Line"), "set_delta_unit", "get_delta_unit");
+
+	BIND_ENUM_CONSTANT(DELTA_UNIT_LINE);
+	BIND_ENUM_CONSTANT(DELTA_UNIT_PIXEL);
 }
 
 ///////////////////////////////////

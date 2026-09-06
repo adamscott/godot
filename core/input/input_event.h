@@ -518,7 +518,16 @@ public:
 
 class InputEventPanGesture : public InputEventGesture {
 	GDCLASS(InputEventPanGesture, InputEventGesture);
+
+public:
+	enum DeltaUnit : int {
+		DELTA_UNIT_LINE,
+		DELTA_UNIT_PIXEL,
+	};
+
+private:
 	Vector2 delta;
+	DeltaUnit delta_unit;
 
 protected:
 	static void _bind_methods();
@@ -526,6 +535,8 @@ protected:
 public:
 	void set_delta(const Vector2 &p_delta);
 	Vector2 get_delta() const;
+	void set_delta_unit(DeltaUnit p_delta_unit);
+	DeltaUnit get_delta_unit() const;
 
 	virtual RequiredResult<InputEvent> xformed_by(const Transform2D &p_xform, const Vector2 &p_local_ofs = Vector2()) const override;
 	virtual String as_text() const override;
@@ -533,6 +544,8 @@ public:
 
 	InputEventType get_type() const final override { return InputEventType::PAN_GESTURE; }
 };
+
+VARIANT_ENUM_CAST(InputEventPanGesture::DeltaUnit);
 
 class InputEventMIDI : public InputEvent {
 	GDCLASS(InputEventMIDI, InputEvent);

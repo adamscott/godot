@@ -33,6 +33,7 @@
 
 #include "core/config/project_settings.h"
 #include "core/input/input.h"
+#include "core/input/input_enums.h"
 #include "core/math/math_funcs.h"
 #include "core/object/callable_mp.h"
 #include "core/object/class_db.h"
@@ -4447,13 +4448,27 @@ void Tree::gui_input(const Ref<InputEvent> &p_event) {
 	Ref<InputEventPanGesture> pan_gesture = p_event;
 	if (pan_gesture.is_valid()) {
 		double prev_v = v_scroll->get_value();
-		v_scroll->set_value(v_scroll->get_value() + v_scroll->get_page() * pan_gesture->get_delta().y / 8);
-
 		double prev_h = h_scroll->get_value();
-		if (is_layout_rtl()) {
-			h_scroll->set_value(h_scroll->get_value() + h_scroll->get_page() * -pan_gesture->get_delta().x / 8);
-		} else {
-			h_scroll->set_value(h_scroll->get_value() + h_scroll->get_page() * pan_gesture->get_delta().x / 8);
+		double rtl_factor = is_layout_rtl()
+				? -1
+				: 1;
+
+		switch (pan_gesture->get_delta_unit()) {
+			case InputEventPanGesture::DELTA_UNIT_LINE: {
+				Size2 min_size = get_internal_min_size();
+				double line_height = min_size.y;
+				// For now, let's make it square.
+				double column_width = min_size.y;
+
+				v_scroll->set_value(v_scroll->get_value() + line_height * pan_gesture->get_delta().y);
+				h_scroll->set_value(h_scroll->get_value() + column_width * pan_gesture->get_delta().x * rtl_factor);
+
+			} break;
+
+			case InputEventPanGesture::DELTA_UNIT_PIXEL: {
+				v_scroll->set_value(v_scroll->get_value() + pan_gesture->get_delta().y);
+				h_scroll->set_value(h_scroll->get_value() + pan_gesture->get_delta().x * rtl_factor);
+			} break;
 		}
 
 		if (v_scroll->get_value() != prev_v || h_scroll->get_value() != prev_h) {

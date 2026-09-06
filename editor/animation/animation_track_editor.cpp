@@ -33,6 +33,7 @@
 #include "core/config/project_settings.h"
 #include "core/error/error_macros.h"
 #include "core/input/input.h"
+#include "core/input/input_enums.h"
 #include "core/io/resource_loader.h"
 #include "core/object/callable_mp.h"
 #include "core/object/class_db.h"
@@ -2013,7 +2014,21 @@ Control::CursorShape AnimationTimelineEdit::get_cursor_shape(const Point2 &p_pos
 }
 
 void AnimationTimelineEdit::_pan_callback(Vector2 p_scroll_vec, Ref<InputEvent> p_event) {
-	set_value(get_value() - p_scroll_vec.x / get_zoom_scale());
+	InputEventPanGesture::DeltaUnit delta_unit = InputEventPanGesture::DELTA_UNIT_LINE;
+
+	Ref<InputEventPanGesture> pan_gesture_event = p_event;
+	if (pan_gesture_event.is_valid()) {
+		delta_unit = pan_gesture_event->get_delta_unit();
+	}
+
+	switch (delta_unit) {
+		case InputEventPanGesture::DELTA_UNIT_LINE: {
+			set_value(get_value() - (p_scroll_vec.x * track_edit->get_minimum_size().y) / get_zoom_scale());
+		} break;
+		case InputEventPanGesture::DELTA_UNIT_PIXEL: {
+			set_value(get_value() - p_scroll_vec.x / get_zoom_scale());
+		} break;
+	}
 }
 
 void AnimationTimelineEdit::_zoom_callback(float p_zoom_factor, Vector2 p_origin, Ref<InputEvent> p_event) {

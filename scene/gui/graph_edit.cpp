@@ -2332,7 +2332,22 @@ void GraphEdit::key_input(const Ref<InputEvent> &p_ev) {
 void GraphEdit::_pan_callback(Vector2 p_scroll_vec, Ref<InputEvent> p_event) {
 	ERR_FAIL_NULL_MSG(connections_layer, "connections_layer is missing.");
 
-	scroll_offset = (scroll_offset - p_scroll_vec).clamp(min_scroll_offset, max_scroll_offset - get_size());
+	InputEventPanGesture::DeltaUnit delta_unit = InputEventPanGesture::DELTA_UNIT_PIXEL;
+
+	Ref<InputEventPanGesture> pan_gesture_event = p_event;
+	if (pan_gesture_event.is_valid()) {
+		delta_unit = pan_gesture_event->get_delta_unit();
+	}
+
+	switch (delta_unit) {
+		case InputEventPanGesture::DELTA_UNIT_LINE: {
+			const real_t PIXELS_PER_LINE = 5.0;
+			scroll_offset = (scroll_offset - (p_scroll_vec * PIXELS_PER_LINE)).clamp(min_scroll_offset, max_scroll_offset - get_size());
+		} break;
+		case InputEventPanGesture::DELTA_UNIT_PIXEL: {
+			scroll_offset = (scroll_offset - p_scroll_vec).clamp(min_scroll_offset, max_scroll_offset - get_size());
+		} break;
+	}
 
 	if (!awaiting_scroll_offset_update) {
 		callable_mp(this, &GraphEdit::_update_scroll_offset).call_deferred();

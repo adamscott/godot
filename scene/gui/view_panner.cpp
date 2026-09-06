@@ -156,7 +156,18 @@ bool ViewPanner::gui_input(const Ref<InputEvent> &p_event, Rect2 p_canvas_rect) 
 			if (zoom_direction == 0.f) {
 				return true;
 			}
+
 			float zoom = zoom_direction < 0 ? 1.0 / pan_zoom_factor : pan_zoom_factor;
+			switch (pan_gesture->get_delta_unit()) {
+				case InputEventPanGesture::DELTA_UNIT_LINE: {
+					const real_t PIXELS_PER_LINE = 5.0;
+					zoom *= (pan_gesture->get_delta().length() * PIXELS_PER_LINE);
+				} break;
+				case InputEventPanGesture::DELTA_UNIT_PIXEL: {
+					zoom *= pan_gesture->get_delta().length();
+				} break;
+			}
+
 			zoom_callback.call(zoom, pan_gesture->get_position(), p_event);
 			return true;
 		}
